@@ -1,0 +1,275 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "standard",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "Round-one protocol correction author",
+    "provider": "OpenAI",
+    "model": "GPT-6.1 Sol"
+  },
+  "note": "Successor draft: correct the contradictory priority sentence in transition 3; projection and decisions unchanged. Original draft preserved.",
+  "cards": {
+    "leak": {
+      "owner": "A",
+      "oracle": "ead1ee6a-e0da-46d5-89e8-31e8c0270bc2",
+      "name": "No More Lies"
+    },
+    "target": {
+      "owner": "B",
+      "oracle": "a9d288b8-cdc1-4e55-a0c9-d6edfc95e65d",
+      "name": "Shock"
+    },
+    "pay3": {
+      "owner": "B",
+      "oracle": "05d24b0c-904a-46b6-b42a-96a4d91a0dd4",
+      "name": "Wastes"
+    },
+    "pay4": {
+      "owner": "B",
+      "oracle": "05d24b0c-904a-46b6-b42a-96a4d91a0dd4",
+      "name": "Wastes"
+    },
+    "pay5": {
+      "owner": "B",
+      "oracle": "05d24b0c-904a-46b6-b42a-96a4d91a0dd4",
+      "name": "Wastes"
+    },
+    "pay6": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    },
+    "pay7": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    },
+    "pay8": {
+      "owner": "B",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 2,
+        "step": "precombat_main",
+        "active": "B"
+      },
+      "pending": {
+        "seat": "B",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [],
+        "A.hand": [
+          "leak"
+        ],
+        "A.graveyard": [],
+        "B.library": [],
+        "B.hand": [
+          "target"
+        ],
+        "B.graveyard": [],
+        "battlefield": [
+          "pay3",
+          "pay4",
+          "pay5",
+          "pay6",
+          "pay7",
+          "pay8"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      },
+      "objects": {}
+    }
+  },
+  "transitions": [
+    {
+      "seat": "B",
+      "do": {
+        "kind": "cast",
+        "card": "target",
+        "targets": [
+          [
+            "A"
+          ]
+        ],
+        "pay": {
+          "abilities": [
+            {
+              "source": "pay8",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "R"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "objects": {
+          "target": {
+            "zone": "stack",
+            "targets": [
+              [
+                "A"
+              ]
+            ]
+          }
+        }
+      },
+      "note": "CR 601.2, 117.3c-117.3d: active B casts Shock at A, paying with Mountain, then passes priority to A before Shock resolves."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "leak",
+        "pay": {
+          "abilities": [
+            {
+              "source": "pay6",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "W"
+              ]
+            },
+            {
+              "source": "pay7",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            }
+          ]
+        },
+        "targets": [
+          [
+            "target"
+          ]
+        ]
+      },
+      "delta": {
+        "objects": {
+          "leak": {
+            "zone": "stack",
+            "targets": [
+              [
+                "target"
+              ]
+            ]
+          }
+        },
+        "pending": {
+          "seat": "B",
+          "kind": "pay",
+          "about": {
+            "object": "leak"
+          }
+        }
+      },
+      "note": "CR 601.2, 117.4, 608.2: pay the announced cost; all pass to the stated mandatory choice."
+    },
+    {
+      "seat": "B",
+      "do": {
+        "kind": "pay",
+        "pay": {
+          "abilities": [
+            {
+              "source": "pay3",
+              "ability": {
+                "face": 0,
+                "paragraph": 1
+              },
+              "adding": [
+                "C"
+              ]
+            },
+            {
+              "source": "pay4",
+              "ability": {
+                "face": 0,
+                "paragraph": 1
+              },
+              "adding": [
+                "C"
+              ]
+            },
+            {
+              "source": "pay5",
+              "ability": {
+                "face": 0,
+                "paragraph": 1
+              },
+              "adding": [
+                "C"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "pending": {
+          "seat": "B",
+          "kind": "priority"
+        },
+        "objects": {
+          "leak": {
+            "zone": "A.graveyard"
+          }
+        }
+      },
+      "note": "CR 118.12, 608.2d, 117.3b: B pays 3 with three Wastes, so No More Lies does not counter Shock. Active player B receives priority with Shock still on the stack."
+    }
+  ],
+  "lineage": {
+    "supersedes": "sha256:3818ba9cc41472be5817c28a7665c16c542857901feaf423d5713aff99cfde4a"
+  }
+}

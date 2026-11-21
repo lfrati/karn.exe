@@ -1,0 +1,30 @@
+karn.exe is unofficial Fan Content permitted under the Fan Content Policy.
+Not approved/endorsed by Wizards. Portions of the materials used are property
+of Wizards of the Coast. ©Wizards of the Coast LLC.
+
+Fan Content Policy: https://company.wizards.com/en/legal/fancontentpolicy
+
+Magic: The Gathering, its card names, mana symbols, game mechanics and
+character names (including Karn) are trademarks and/or copyrights of Wizards
+of the Coast LLC. This project uses them only to identify the game it
+implements and implies no affiliation with or endorsement by Wizards.
+
+The MIT license in LICENSE covers only the original source code, scripts, tests
+and documentation written for this project. It does not cover, and grants no
+rights in, material owned by Wizards of the Coast or other third parties. The
+following third-party materials are excluded from it and remain the property
+of their owners:
+
+- resources/rules/: the Magic: The Gathering Comprehensive Rules,
+  ©Wizards of the Coast LLC, as published at https://magic.wizards.com/en/rules.
+- resources/oracle/: Oracle card text, card characteristics, legality and
+  rulings. Card text is ©Wizards of the Coast LLC; the data was obtained from
+  Scryfall (https://scryfall.com) under its API terms. Scryfall is not
+  affiliated with this project and does not endorse it.
+- resources/decks/ and decks/: deck lists made of Wizards card names; published
+  tournament lists also belong to their original publishers, whose source URLs
+  are recorded with each list.
+- docs/images/karn.webp: art from Karn, Silver Golem by Mark Zug,
+  ©Wizards of the Coast LLC.
+
+This project is free and will not be sold or placed behind a paywall.

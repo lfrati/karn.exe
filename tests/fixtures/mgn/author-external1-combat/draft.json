@@ -1,0 +1,185 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "Independent external author",
+    "provider": "OpenAI",
+    "model": "GPT-6"
+  },
+  "cards": {
+    "big": {
+      "owner": "A",
+      "oracle": "08c7db90-c0cf-4482-b7ee-bb033e5996d2",
+      "name": "Colossal Dreadmaw"
+    },
+    "small": {
+      "owner": "B",
+      "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0",
+      "name": "Grizzly Bears"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 3,
+        "active": "A",
+        "step": "declare_attackers"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "declare_attackers"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [],
+        "A.hand": [],
+        "A.graveyard": [],
+        "B.library": [],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [
+          "big",
+          "small"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      },
+      "objects": {}
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "declare_attackers",
+        "attacks": [
+          [
+            "big",
+            "B"
+          ]
+        ]
+      },
+      "delta": {
+        "turn": {
+          "number": 3,
+          "active": "A",
+          "step": "declare_blockers"
+        },
+        "pending": {
+          "seat": "B",
+          "kind": "declare_blockers"
+        },
+        "objects": {
+          "big": {
+            "attacking": "B"
+          }
+        }
+      },
+      "note": "CR 508.1, 509.1: attack B, implied passes reach blockers."
+    },
+    {
+      "seat": "B",
+      "do": {
+        "kind": "declare_blockers",
+        "blocks": [
+          [
+            "small",
+            "big"
+          ]
+        ]
+      },
+      "delta": {
+        "turn": {
+          "number": 3,
+          "active": "A",
+          "step": "combat_damage"
+        },
+        "pending": {
+          "seat": "A",
+          "kind": "assign_combat_damage",
+          "about": {
+            "creature": "big"
+          }
+        },
+        "objects": {
+          "big": {
+            "blocked": true
+          },
+          "small": {
+            "blocking": [
+              "big"
+            ]
+          }
+        }
+      },
+      "note": "CR 509.1h, 510.1, 702.19b: trample requires assignment choice."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "assign_combat_damage",
+        "assignments": [
+          [
+            "small",
+            2
+          ],
+          [
+            "B",
+            4
+          ]
+        ]
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "players": {
+          "B": {
+            "life": 16
+          }
+        },
+        "objects": {
+          "small": {
+            "zone": "B.graveyard"
+          }
+        }
+      },
+      "note": "CR 510.1c, 510.2, 702.19b, 704.5g: assign lethal 2 and trample 4; bear dies; Dreadmaw remains attacking and blocked."
+    }
+  ],
+  "note": "External first-encounter tier-1 draft. Expectations authored from pinned CR and Oracle; no engine or fixture consulted."
+}

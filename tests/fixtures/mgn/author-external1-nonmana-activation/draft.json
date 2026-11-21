@@ -1,0 +1,171 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "Independent external author",
+    "provider": "OpenAI",
+    "model": "GPT-6"
+  },
+  "cards": {
+    "bear": {
+      "owner": "A",
+      "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0",
+      "name": "Grizzly Bears"
+    },
+    "rod": {
+      "owner": "A",
+      "oracle": "c29a04ab-4e14-45d8-a993-3fffd0e2f6eb",
+      "name": "Rod of Ruin"
+    },
+    "f1": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "f2": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "f3": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 3,
+        "active": "A",
+        "step": "precombat_main"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [],
+        "A.hand": [],
+        "A.graveyard": [],
+        "B.library": [],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [
+          "bear",
+          "rod",
+          "f1",
+          "f2",
+          "f3"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      },
+      "objects": {}
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "activate",
+        "source": "rod",
+        "ability": {
+          "face": 0,
+          "paragraph": 1
+        },
+        "targets": [
+          [
+            "B"
+          ]
+        ],
+        "pay": {
+          "abilities": [
+            {
+              "source": "f1",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            },
+            {
+              "source": "f2",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            },
+            {
+              "source": "f3",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "objects": {
+          "S1": {
+            "zone": "stack",
+            "kind": "ability",
+            "source": "rod",
+            "ability": {
+              "face": 0,
+              "paragraph": 1
+            },
+            "controller": "A",
+            "targets": [
+              [
+                "B"
+              ]
+            ]
+          }
+        }
+      },
+      "note": "Rod of Ruin; CR 602.2a: pay {3}, tap Rod, put targeted activated ability onto stack; stop with A priority."
+    }
+  ],
+  "note": "External first-encounter tier-1 draft. Expectations authored from pinned CR and Oracle; no engine or fixture consulted."
+}

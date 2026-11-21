@@ -1,0 +1,158 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "standard",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "Independent round-one author",
+    "provider": "OpenAI",
+    "model": "GPT-6.1 Sol"
+  },
+  "note": "",
+  "cards": {
+    "anim": {
+      "owner": "A",
+      "oracle": "05551d91-50c6-46d1-86a4-cd3d177d0923",
+      "name": "Anim Pakal, Thousandth Moon"
+    },
+    "elf": {
+      "owner": "A",
+      "oracle": "68954295-54e3-4303-a6bc-fc4547a4e3a3",
+      "name": "Llanowar Elves"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 1,
+        "step": "declare_attackers",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "declare_attackers"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [],
+        "A.hand": [],
+        "A.graveyard": [],
+        "B.library": [],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [
+          "anim",
+          "elf"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      },
+      "objects": {}
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "declare_attackers",
+        "attacks": [
+          [
+            "elf",
+            "B"
+          ]
+        ]
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "choose_defender",
+          "about": {
+            "object": "S1"
+          }
+        },
+        "objects": {
+          "elf": {
+            "attacking": "B"
+          },
+          "S1": {
+            "zone": "stack",
+            "kind": "ability",
+            "source": "anim",
+            "ability": {
+              "face": 0,
+              "paragraph": 1
+            },
+            "controller": "A"
+          }
+        }
+      },
+      "note": "CR 508.1m, 603.3, 117.4: attacking non-Gnome Elf triggers Anim; resolve trigger, put counter on Anim, then choose defender for the one created token."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "choose_defender",
+        "defender": "B"
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "objects": {
+          "S1": null,
+          "T1": {
+            "zone": "battlefield",
+            "controller": "A",
+            "attacking": "B",
+            "token": {
+              "name": "Gnome Token",
+              "types": [
+                "artifact",
+                "creature"
+              ],
+              "subtypes": [
+                "Gnome"
+              ],
+              "colors": [],
+              "power": 1,
+              "toughness": 1
+            }
+          }
+        }
+      },
+      "note": "CR 508.4, 111.4: create one 1/1 colorless Gnome artifact creature token tapped and attacking B; tapping/counter outside tier 1."
+    }
+  ]
+}

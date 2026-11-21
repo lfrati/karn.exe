@@ -1,0 +1,151 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "Independent external author",
+    "provider": "OpenAI",
+    "model": "GPT-6"
+  },
+  "cards": {
+    "f1": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "f2": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "f3": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "f4": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "f5": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "f6": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "f7": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "f8": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 3,
+        "active": "A",
+        "step": "cleanup"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "discard",
+        "about": {
+          "count": 1
+        }
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [],
+        "A.hand": [
+          "f1",
+          "f2",
+          "f3",
+          "f4",
+          "f5",
+          "f6",
+          "f7",
+          "f8"
+        ],
+        "A.graveyard": [],
+        "B.library": [],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [],
+        "stack": [],
+        "exile": [],
+        "command": []
+      },
+      "objects": {}
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "discard",
+        "cards": [
+          "f8"
+        ]
+      },
+      "delta": {
+        "pending": {
+          "seat": "B",
+          "kind": "priority"
+        },
+        "turn": {
+          "number": 4,
+          "active": "B",
+          "step": "upkeep"
+        },
+        "objects": {
+          "f8": {
+            "zone": "A.graveyard"
+          }
+        }
+      },
+      "note": "CR 514.1-3, 502.3, 503.1: discard eighth card, finish cleanup; next boundary B upkeep before any draw."
+    }
+  ],
+  "note": "External first-encounter tier-1 draft. Expectations authored from pinned CR and Oracle; no engine or fixture consulted."
+}

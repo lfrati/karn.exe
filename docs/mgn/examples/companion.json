@@ -1,0 +1,420 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "step-4 author",
+    "provider": "Anthropic",
+    "model": "claude-opus-5-5"
+  },
+  "note": "Tier 1, from the decks. A owns Lurrus of the Dream-Den in its sideboard (outside the game, 400.11a) and every permanent card of A's starting deck (Plains, Memnite, Savannah Lions) has mana value 2 or less (702.139b), so after choosing to play first A is asked the companion question (103.2b) and reveals Lurrus; B owns no companion card and is never asked. The decks are then shuffled (103.3) and the hands drawn (103.5); both keep (implied). Each deck has nine cards, not eight: A draws on turns 3 and 5 and B on turns 2 and 4, and with eight cards a seat would draw from an empty library and lose (104.3c, 704.5b). B plays a Forest on each of its turns, since an eighth card in hand at B's cleanup would force a recorded discard (514.1). On turn 5, A plays its third Plains and takes the companion special action (116.2g, 702.139a), paying {3}: Lurrus moves from outside the game into A's hand. Draws: A draws lionsA2 on turn 3 and lionsA3 on turn 5 (A skips the turn-1 draw, 103.8a); B draws forestB8 on turn 2 and forestB9 on turn 4.",
+  "cards": {
+    "plainsA1": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    },
+    "plainsA2": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    },
+    "plainsA3": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    },
+    "memniteA1": {
+      "owner": "A",
+      "oracle": "7663ac7c-1de3-4250-b96a-fae9dbd66a27",
+      "name": "Memnite"
+    },
+    "memniteA2": {
+      "owner": "A",
+      "oracle": "7663ac7c-1de3-4250-b96a-fae9dbd66a27",
+      "name": "Memnite"
+    },
+    "memniteA3": {
+      "owner": "A",
+      "oracle": "7663ac7c-1de3-4250-b96a-fae9dbd66a27",
+      "name": "Memnite"
+    },
+    "lionsA1": {
+      "owner": "A",
+      "oracle": "60ba93eb-39e6-4af2-9c66-cd38f72daff2",
+      "name": "Savannah Lions"
+    },
+    "lionsA2": {
+      "owner": "A",
+      "oracle": "60ba93eb-39e6-4af2-9c66-cd38f72daff2",
+      "name": "Savannah Lions"
+    },
+    "lionsA3": {
+      "owner": "A",
+      "oracle": "60ba93eb-39e6-4af2-9c66-cd38f72daff2",
+      "name": "Savannah Lions"
+    },
+    "lurrus": {
+      "owner": "A",
+      "oracle": "3bc757c1-3adb-4321-8832-8e1cc9e687f7",
+      "name": "Lurrus of the Dream-Den",
+      "from": "sideboard"
+    },
+    "forestB1": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forestB2": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forestB3": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forestB4": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forestB5": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forestB6": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forestB7": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forestB8": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forestB9": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    }
+  },
+  "start": {
+    "kind": "decks",
+    "random": [
+      {
+        "kind": "starting_player",
+        "method": "coin",
+        "result": "A"
+      }
+    ]
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "choose_first",
+        "first": "A"
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "companion"
+        }
+      },
+      "note": "A won the coin and chooses to play first (103.1). 103.2, 103.2a: A's sideboard card is set aside and A's deck becomes its starting deck. 103.2b: A owns a card with companion outside the game (Lurrus of the Dream-Den, \"Companion — Each permanent card in your starting deck has mana value 2 or less.\") and its starting deck holds only Plains (mana value 0), Memnite ({0}) and Savannah Lions ({W}), so A may reveal it and is asked. Nothing is shuffled yet: the shuffle comes after the additional steps of 103.2 (103.3). B owns no card with companion, so B is never asked."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "companion",
+        "card": "lurrus"
+      },
+      "random": [
+        {
+          "kind": "shuffle",
+          "seat": "A",
+          "order": [
+            "plainsA1",
+            "memniteA1",
+            "plainsA2",
+            "lionsA1",
+            "plainsA3",
+            "memniteA2",
+            "memniteA3",
+            "lionsA2",
+            "lionsA3"
+          ]
+        },
+        {
+          "kind": "shuffle",
+          "seat": "B",
+          "order": [
+            "forestB1",
+            "forestB2",
+            "forestB3",
+            "forestB4",
+            "forestB5",
+            "forestB6",
+            "forestB7",
+            "forestB8",
+            "forestB9"
+          ]
+        }
+      ],
+      "delta": {
+        "turn": {
+          "number": 1,
+          "step": "precombat_main",
+          "active": "A"
+        },
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "objects": {
+          "plainsA1": {
+            "zone": "A.hand"
+          },
+          "plainsA2": {
+            "zone": "A.hand"
+          },
+          "plainsA3": {
+            "zone": "A.hand"
+          },
+          "memniteA1": {
+            "zone": "A.hand"
+          },
+          "memniteA2": {
+            "zone": "A.hand"
+          },
+          "memniteA3": {
+            "zone": "A.hand"
+          },
+          "lionsA1": {
+            "zone": "A.hand"
+          },
+          "forestB1": {
+            "zone": "B.hand"
+          },
+          "forestB2": {
+            "zone": "B.hand"
+          },
+          "forestB3": {
+            "zone": "B.hand"
+          },
+          "forestB4": {
+            "zone": "B.hand"
+          },
+          "forestB5": {
+            "zone": "B.hand"
+          },
+          "forestB6": {
+            "zone": "B.hand"
+          },
+          "forestB7": {
+            "zone": "B.hand"
+          }
+        }
+      },
+      "note": "103.2b, 702.139a: A reveals Lurrus; it remains outside the game, in no zone, so no fact changes for it. 103.3: each deck is shuffled and becomes its library (the outcomes, top first). 103.5: each player draws seven, the top seven of each order; A holds all three Plains. A declares first and keeps, then B keeps: the null answers, implied (spec 5.6). 103.6: neither hand holds a card that allows an opening-hand action. 103.8: A takes the first turn. Untap step: no priority (502.4). Upkeep: A receives priority (503.1); both pass and the step ends (117.4, 500.2). 103.8a: A skips the draw step of its first turn. Precombat main phase: A receives priority (117.3a), the state in which A plays a land. Library order left: A lionsA2, lionsA3; B forestB8, forestB9."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "play_land",
+        "card": "plainsA1"
+      },
+      "delta": {
+        "turn": {
+          "number": 2,
+          "step": "precombat_main",
+          "active": "B"
+        },
+        "pending": {
+          "seat": "B",
+          "kind": "priority"
+        },
+        "objects": {
+          "plainsA1": {
+            "zone": "battlefield"
+          },
+          "forestB8": {
+            "zone": "B.hand"
+          }
+        }
+      },
+      "note": "305.1: A plays a Plains from its hand in its main phase with the stack empty; playing a land is a special action and A receives priority afterwards (116.3, 117.3c). A passes, B passes, and the main phase ends (117.4, 500.2). Combat: A controls no creature, so no attack declaration is asked (508.1a) and none is declared, so the declare blockers and combat damage steps are skipped (508.8); the remaining steps pass with no action. Cleanup: A holds six cards, nothing to discard (514.1), nothing to remove (514.2), no priority (514.3a). Turn 2, B active: untap with no priority (502.3, 502.4), upkeep passes (503.1, 500.2), draw step: B draws forestB8, the top card of its library (504.1), then passes; B now holds eight cards and receives priority in its precombat main phase (117.3a)."
+    },
+    {
+      "seat": "B",
+      "do": {
+        "kind": "play_land",
+        "card": "forestB1"
+      },
+      "delta": {
+        "turn": {
+          "number": 3,
+          "step": "precombat_main",
+          "active": "A"
+        },
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "objects": {
+          "forestB1": {
+            "zone": "battlefield"
+          },
+          "lionsA2": {
+            "zone": "A.hand"
+          }
+        }
+      },
+      "note": "305.1, 116.3: B plays a Forest and keeps priority, then everyone passes through the rest of turn 2 (117.4, 500.2); B controls no creature, so no attackers (508.1a, 508.8). Cleanup: B holds seven cards, the maximum, so nothing is discarded (514.1, 402.2) and no player receives priority (514.3a). Turn 3, A active: untap (502.3), upkeep (503.1), draw: A draws lionsA2 (504.1); A receives priority in its precombat main phase (117.3a)."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "play_land",
+        "card": "plainsA2"
+      },
+      "delta": {
+        "turn": {
+          "number": 4,
+          "step": "precombat_main",
+          "active": "B"
+        },
+        "pending": {
+          "seat": "B",
+          "kind": "priority"
+        },
+        "objects": {
+          "plainsA2": {
+            "zone": "battlefield"
+          },
+          "forestB9": {
+            "zone": "B.hand"
+          }
+        }
+      },
+      "note": "305.1, 116.3: A plays its second Plains; A casts nothing, so the turn passes as turn 1 did (117.4, 500.2, 508.1a, 508.8); A holds six cards at cleanup (514.1, 514.3a). Turn 4, B active: untap (502.3), upkeep (503.1), draw: B draws forestB9, its last library card (504.1); B's library is now empty, which costs nothing until B would draw again (704.5b). B receives priority in its precombat main phase (117.3a)."
+    },
+    {
+      "seat": "B",
+      "do": {
+        "kind": "play_land",
+        "card": "forestB2"
+      },
+      "delta": {
+        "turn": {
+          "number": 5,
+          "step": "precombat_main",
+          "active": "A"
+        },
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "objects": {
+          "forestB2": {
+            "zone": "battlefield"
+          },
+          "lionsA3": {
+            "zone": "A.hand"
+          }
+        }
+      },
+      "note": "305.1, 116.3: B plays a second Forest; the rest of turn 4 passes with no attack (508.1a, 508.8) and B holds seven cards at cleanup (514.1, 514.3a). Turn 5, A active: untap (502.3; A's Plains were never tapped), upkeep (503.1), draw: A draws lionsA3, its last library card (504.1). A receives priority in its precombat main phase (117.3a)."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "play_land",
+        "card": "plainsA3"
+      },
+      "delta": {
+        "objects": {
+          "plainsA3": {
+            "zone": "battlefield"
+          }
+        }
+      },
+      "note": "305.1: A plays its third Plains (its first land this turn, 305.2); A receives priority afterwards (116.3, 117.3c) with the stack still empty."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "special_action",
+        "action": "companion",
+        "object": "lurrus",
+        "pay": {
+          "abilities": [
+            {
+              "source": "plainsA1",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "W"
+              ]
+            },
+            {
+              "source": "plainsA2",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "W"
+              ]
+            },
+            {
+              "source": "plainsA3",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "W"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "objects": {
+          "lurrus": {
+            "zone": "A.hand"
+          }
+        }
+      },
+      "note": "116.2g, 702.139a: A chose Lurrus as its companion (103.2b), has priority with the stack empty in a main phase of its own turn and has not taken this action this game, so A may pay {3} and put Lurrus from outside the game into its hand. 605.3a: A activates the intrinsic mana ability \"{T}: Add {W}\" of each Plains (305.6) while paying, and the three {W} pay the generic {3}; the pool is empty again. Lurrus was in no zone (400.11a); now in A's hand it is in the game until the game ends (400.11b, 702.139c), owned by A (108.3). The Plains are tapped, a tier-2 fact this tier-1 record does not state. 116.3: A receives priority afterwards; the record ends there."
+    }
+  ]
+}

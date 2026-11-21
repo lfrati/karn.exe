@@ -1,0 +1,275 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "step-4 author",
+    "provider": "Anthropic",
+    "model": "claude-opus-5-5"
+  },
+  "note": "Tier 1, from a position. The pay question with a payment (118.12, 118.12a): A casts Grizzly Bears, B answers with Dazzling Denial (\"Counter target spell unless its controller pays {2}. If you control a Bird, counter that spell unless its controller pays {4} instead.\"); B controls no Bird, so as Denial resolves A is asked whether to pay {2}, pays it with two Forests (608.2g), and the Bears is not countered and resolves. Tapped status and the mana pool are tier-2 facts and are not stated. The position is stipulated (spec 2.4), not reached by ordinary play.",
+  "cards": {
+    "bears": {
+      "owner": "A",
+      "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0",
+      "name": "Grizzly Bears"
+    },
+    "forest1": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forest2": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forest3": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forest4": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forest5": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "denial": {
+      "owner": "B",
+      "oracle": "6d56bd32-f47a-4e54-a88e-b69d16283ea4",
+      "name": "Dazzling Denial"
+    },
+    "island1": {
+      "owner": "B",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    },
+    "island2": {
+      "owner": "B",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    },
+    "island3": {
+      "owner": "B",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 3,
+        "step": "precombat_main",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [
+          "forest5"
+        ],
+        "A.hand": [
+          "bears"
+        ],
+        "A.graveyard": [],
+        "B.library": [
+          "island3"
+        ],
+        "B.hand": [
+          "denial"
+        ],
+        "B.graveyard": [],
+        "battlefield": [
+          "forest1",
+          "forest2",
+          "forest3",
+          "forest4",
+          "island1",
+          "island2"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      }
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "bears",
+        "pay": {
+          "abilities": [
+            {
+              "source": "forest1",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            },
+            {
+              "source": "forest2",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "pending": {
+          "seat": "B",
+          "kind": "priority"
+        },
+        "objects": {
+          "bears": {
+            "zone": "stack"
+          }
+        }
+      },
+      "note": "A creature spell may be cast in A's main phase with priority and an empty stack (302.1, 117.1a). 601.2a: the Bears moves from A's hand to the top of the stack; it has no targets (601.2c). 601.2g, 601.2h: A taps two Forests for {G} each (305.6, 106.4) and pays {1}{G}. 601.2i, 117.3c: A, who had priority, receives priority again; A passes (implied, 117.3d) and B, next in turn order, receives priority. One pass resolves nothing (117.4)."
+    },
+    {
+      "seat": "B",
+      "do": {
+        "kind": "cast",
+        "card": "denial",
+        "targets": [
+          [
+            "bears"
+          ]
+        ],
+        "pay": {
+          "abilities": [
+            {
+              "source": "island1",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            },
+            {
+              "source": "island2",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "pay",
+          "about": {
+            "object": "denial"
+          }
+        },
+        "objects": {
+          "denial": {
+            "zone": "stack",
+            "targets": [
+              [
+                "bears"
+              ]
+            ]
+          }
+        }
+      },
+      "note": "Dazzling Denial is an instant, so B may cast it with priority while the Bears is on the stack (117.1a). 601.2a, 601.2c: it goes on top of the stack (405.2) targeting the Bears spell. 601.2g, 601.2h: B taps two Islands for {U} each (305.6) and pays {1}{U}. 117.3c: B receives priority and passes (implied); A passes (implied); B's casting was an action between the earlier pass and these, so these two passes are the succession of 117.4 and Denial, the top object, resolves (608.1). 608.2b: its target is still on the stack and legal. B controls no Bird, so the instruction is \"counter target spell unless its controller pays {2}\"; 118.12a reads that as \"its controller may pay {2}; if they don't, counter it\", and the payment is a cost paid while Denial resolves (118.12). The Bears' controller, A, is asked; spec 4.2: Denial is still on the stack (above the Bears) at this boundary."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "pay",
+        "pay": {
+          "abilities": [
+            {
+              "source": "forest3",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            },
+            {
+              "source": "forest4",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "objects": {
+          "denial": {
+            "zone": "B.graveyard"
+          },
+          "bears": {
+            "zone": "battlefield"
+          }
+        }
+      },
+      "note": "608.2g: offered the option to pay mana, A activates the mana abilities of the two remaining Forests (605.3a, 305.6) and pays {2} (118.12). Since A paid, the counter instruction does not happen (118.12a); the Bears stays on the stack. 608.2n: as the final part of its resolution the instant Dazzling Denial goes to its owner's graveyard. 117.3b: the active player, A, receives priority after a resolution (not B, Denial's controller). A passes and B passes (implied, 117.4) and the Bears resolves: it has no targets, so it becomes a permanent and enters the battlefield under the control of its controller A (608.3a), which is its owner, so no controller fact is written. 117.3b: A, the active player, receives priority again, in the precombat main phase with an empty stack. The mana pool emptied as each payment spent it (tier 2, not stated)."
+    }
+  ]
+}

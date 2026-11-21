@@ -1,0 +1,263 @@
+{
+  "mgn": "1",
+  "tier": 2,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5",
+      "updated_at": "2026-10-11T09:01:56.463+00:00"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "tool",
+    "name": "mgn-scenario",
+    "version": "1"
+  },
+  "cards": {
+    "bear": {
+      "owner": "A",
+      "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0",
+      "name": "Grizzly Bears"
+    },
+    "forest": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "mountain": {
+      "owner": "B",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain"
+    },
+    "growth": {
+      "owner": "A",
+      "oracle": "5748ebf1-24e3-499d-ab7c-c2cebd462a24",
+      "name": "Giant Growth"
+    },
+    "bolt": {
+      "owner": "B",
+      "oracle": "4457ed35-7c10-48c8-9776-456485fdf070",
+      "name": "Lightning Bolt"
+    },
+    "top": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "bottom": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    },
+    "btop": {
+      "owner": "B",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain"
+    },
+    "old": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    },
+    "away": {
+      "owner": "B",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp"
+    },
+    "borrowed": {
+      "owner": "B",
+      "oracle": "342199e0-15b6-4824-83da-25caef2592b3",
+      "name": "Hill Giant"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 3,
+        "step": "precombat_main",
+        "active": "A"
+      },
+      "pending": {
+        "kind": "priority",
+        "seat": "A"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 18,
+          "mana": {
+            "C": 1
+          }
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [
+          "top",
+          "bottom"
+        ],
+        "A.hand": [
+          "growth"
+        ],
+        "A.graveyard": [
+          "old"
+        ],
+        "B.library": [
+          "btop"
+        ],
+        "B.hand": [
+          "bolt"
+        ],
+        "B.graveyard": [],
+        "battlefield": [
+          "bear",
+          "forest",
+          "mountain",
+          "borrowed"
+        ],
+        "stack": [],
+        "exile": [
+          "away"
+        ],
+        "command": []
+      },
+      "objects": {
+        "borrowed": {
+          "power": 4,
+          "toughness": 4,
+          "controller": "A",
+          "tapped": true,
+          "counters": {
+            "+1/+1": 1
+          },
+          "damage": 1
+        }
+      }
+    },
+    "assumptions": {
+      "summoning_sick": [
+        "borrowed"
+      ]
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "growth",
+        "targets": [
+          [
+            "bear"
+          ]
+        ],
+        "pay": {
+          "abilities": [
+            {
+              "source": "forest",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "pending": {
+          "seat": "B",
+          "kind": "priority"
+        },
+        "objects": {
+          "forest": {
+            "tapped": true
+          },
+          "growth": {
+            "zone": "stack",
+            "targets": [
+              [
+                "bear"
+              ]
+            ]
+          }
+        }
+      },
+      "note": "CR 601.2a/c/g/h/i, 305.6, 605.3b: A casts Giant Growth targeting its 2/2 Bears, tapping Forest for G to pay. A receives priority and passes (117.3c/d); B receives priority with Growth still on the stack (117.4). The effect has not resolved, so Bears is still 2/2. A retains its unused C."
+    },
+    {
+      "seat": "B",
+      "do": {
+        "kind": "cast",
+        "card": "bolt",
+        "targets": [
+          [
+            "bear"
+          ]
+        ],
+        "pay": {
+          "abilities": [
+            {
+              "source": "mountain",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "R"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "objects": {
+          "mountain": {
+            "tapped": true
+          },
+          "bolt": {
+            "zone": "B.graveyard"
+          },
+          "bear": {
+            "zone": "A.graveyard"
+          },
+          "growth": {
+            "zone": "A.graveyard"
+          }
+        },
+        "zones": {
+          "A.graveyard": {
+            "top": [
+              "growth",
+              "bear"
+            ]
+          }
+        }
+      },
+      "note": "CR 405.2, 117.4: B responds with Bolt, paying R from Mountain; both pass and the top spell resolves first. Bolt deals 3 to the still-2/2 Bears (120.3e); Bolt goes to B graveyard (608.2n) and the Bears dies as a state-based action before priority (704.3, 704.5g). After both players pass again, Growth has no legal target and does not resolve (608.2b); it goes to A graveyard above the Bears, with old Plains below both (404.2). No +3/+3 effect is created. The borrowed Hill Giant retains its counter, marked damage and control; neither cleanup nor a phase change has occurred."
+    }
+  ],
+  "note": "Rule-authored ordinary scenario setup; review pending. All supported setup zones and explicit control/status premises are present. Effects and the stack interaction are established through ordinary recorded casts and explicit mana payments, not imported effects. No engine output supplied the expectations. This is a short scenario, not a completed game or card certification."
+}

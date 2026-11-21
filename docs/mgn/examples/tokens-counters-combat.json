@@ -1,0 +1,359 @@
+{
+  "mgn": "1",
+  "tier": 2,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "worked example",
+    "provider": "Anthropic",
+    "model": "claude-fable-5-1"
+  },
+  "note": "Tier 2 across a whole turn. Dragon Fodder creates two tokens (creation-order ids, 111.2); Maximum Overdrive puts a +1/+1 counter on Llanowar Elves and grants deathtouch and indestructible until end of turn (final characteristics, 613.1); the Elves attack, are blocked by Swab Goblin and survive lethal damage through indestructible (702.12b) while the Goblin dies (704.5g); cleanup removes the damage and ends the granted abilities (514.2).",
+  "cards": {
+    "elves": {
+      "owner": "A",
+      "oracle": "68954295-54e3-4303-a6bc-fc4547a4e3a3",
+      "name": "Llanowar Elves"
+    },
+    "mountain1": {
+      "owner": "A",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain"
+    },
+    "mountain2": {
+      "owner": "A",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain"
+    },
+    "swamp1": {
+      "owner": "A",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp"
+    },
+    "swamp2": {
+      "owner": "A",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp"
+    },
+    "fodder": {
+      "owner": "A",
+      "oracle": "d0d2c45b-b6e3-4999-bdab-976e8f0d6617",
+      "name": "Dragon Fodder"
+    },
+    "overdrive": {
+      "owner": "A",
+      "oracle": "f0e85b74-12fb-4d63-853e-7a3f41f731b4",
+      "name": "Maximum Overdrive"
+    },
+    "plains1": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    },
+    "goblin": {
+      "owner": "B",
+      "oracle": "343ecf2f-0bbc-4840-8fb3-f5f61b26e76f",
+      "name": "Swab Goblin"
+    },
+    "forest1": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forest2": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "island1": {
+      "owner": "B",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 7,
+        "step": "precombat_main",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [
+          "plains1"
+        ],
+        "A.hand": [
+          "fodder",
+          "overdrive"
+        ],
+        "A.graveyard": [],
+        "B.library": [
+          "forest2"
+        ],
+        "B.hand": [
+          "island1"
+        ],
+        "B.graveyard": [],
+        "battlefield": [
+          "elves",
+          "mountain1",
+          "mountain2",
+          "swamp1",
+          "swamp2",
+          "goblin",
+          "forest1"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      }
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "fodder",
+        "pay": {
+          "abilities": [
+            {
+              "source": "mountain1",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "R"
+              ]
+            },
+            {
+              "source": "mountain2",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "R"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "objects": {
+          "T1": {
+            "zone": "battlefield",
+            "controller": "A",
+            "token": {
+              "name": "Goblin Token",
+              "types": [
+                "creature"
+              ],
+              "subtypes": [
+                "Goblin"
+              ],
+              "colors": [
+                "red"
+              ],
+              "power": 1,
+              "toughness": 1
+            }
+          },
+          "T2": {
+            "zone": "battlefield",
+            "controller": "A",
+            "token": {
+              "name": "Goblin Token",
+              "types": [
+                "creature"
+              ],
+              "subtypes": [
+                "Goblin"
+              ],
+              "colors": [
+                "red"
+              ],
+              "power": 1,
+              "toughness": 1
+            }
+          },
+          "fodder": {
+            "zone": "A.graveyard"
+          },
+          "mountain1": {
+            "tapped": true
+          },
+          "mountain2": {
+            "tapped": true
+          }
+        }
+      },
+      "note": "Dragon Fodder ({1}{R}) is cast with two Mountains; A keeps priority (117.3c), both pass (implied) and it resolves (117.4): two 1/1 red Goblin creature tokens, numbered in creation order and owned and controlled by their creator (111.2); the effect names no name, so each is named Goblin Token (111.4). The battlefield is unordered, so simultaneous entry needs no order. The sorcery goes to the graveyard (608.2n) and the active player receives priority again (117.3b)."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "overdrive",
+        "targets": [
+          [
+            "elves"
+          ]
+        ],
+        "pay": {
+          "abilities": [
+            {
+              "source": "swamp1",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "B"
+              ]
+            },
+            {
+              "source": "swamp2",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "B"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "turn": {
+          "number": 7,
+          "step": "declare_attackers",
+          "active": "A"
+        },
+        "pending": {
+          "seat": "A",
+          "kind": "declare_attackers"
+        },
+        "objects": {
+          "elves": {
+            "power": 2,
+            "keywords": [
+              "deathtouch",
+              "indestructible"
+            ],
+            "counters": {
+              "+1/+1": 1
+            },
+            "toughness": 2
+          },
+          "overdrive": {
+            "zone": "A.graveyard"
+          },
+          "swamp1": {
+            "tapped": true
+          },
+          "swamp2": {
+            "tapped": true
+          }
+        }
+      },
+      "note": "Maximum Overdrive resolves after both pass (implied): the counter (122.1a) makes the Elves 2/2 (613.4c), and the two keywords are final characteristics until end of turn (613.1). Llanowar Elves prints no keyword, so the final list is exactly the granted pair. The active player receives priority (117.3b); both pass and the main phase ends (500.2); both pass in the beginning of combat step; the declare attackers step asks A for the declaration (508.1a), since A controls creatures."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "declare_attackers",
+        "attacks": [
+          [
+            "elves",
+            "B"
+          ]
+        ]
+      },
+      "delta": {
+        "turn": {
+          "number": 7,
+          "step": "declare_blockers",
+          "active": "A"
+        },
+        "pending": {
+          "seat": "B",
+          "kind": "declare_blockers"
+        },
+        "objects": {
+          "elves": {
+            "attacking": "B",
+            "tapped": true
+          }
+        }
+      },
+      "note": "508.1a, 508.1f: the Elves attack B and become tapped. The tokens entered this turn and cannot attack (302.6); they are simply not declared. 508.2: the active player receives priority; both pass (implied). 509.1a: B controls a creature and a creature attacks B, so the declaration is asked."
+    },
+    {
+      "seat": "B",
+      "do": {
+        "kind": "declare_blockers",
+        "blocks": [
+          [
+            "goblin",
+            "elves"
+          ]
+        ]
+      },
+      "delta": {
+        "turn": {
+          "number": 8,
+          "step": "upkeep",
+          "active": "B"
+        },
+        "pending": {
+          "seat": "B",
+          "kind": "priority"
+        },
+        "objects": {
+          "elves": {
+            "attacking": null,
+            "keywords": []
+          },
+          "goblin": {
+            "zone": "B.graveyard"
+          }
+        }
+      },
+      "note": "509.1h: the Elves become a blocked creature and stay blocked until removed from combat, whatever happens to the blocker. 509.2: the active player receives priority; both pass (implied). No creature has first strike, so the combat damage step follows: each creature deals damage equal to its power simultaneously (510.1a, 510.2). Swab Goblin has 2 damage from a 2/2 with deathtouch and is destroyed (704.5g, 704.5h). The Elves have lethal damage marked but indestructible permanents are not destroyed (702.12b); the damage stays marked (120.6). The active player receives priority (510.3); both pass. 511.1: the Elves are still an attacking creature during the end of combat step and are removed from combat as the step ends (511.3), so they are neither attacking nor blocked. The postcombat main phase and the end step pass without a decision. 514.2: damage is removed and the until-end-of-turn effects end, so the Elves are back to no keywords; the +1/+1 counter and the 2/2 it gives stay. No state-based action would be performed and nothing triggers, so no player receives priority in the cleanup step (514.3a). Turn 8 begins; B's untap step untaps nothing of B's that was tapped (502.3), and B receives priority in the upkeep step (503.1). A's tapped permanents stay tapped: they untap during A's untap step."
+    }
+  ]
+}

@@ -1,0 +1,172 @@
+{
+  "schema": 1,
+  "sources": {
+    "oracle_cards": {
+      "imported_from": ".cache/oracle/cards.jsonl",
+      "sha256": "56b637262dc061e30553a31e3a1ebfda707708587fca2b5905120667107bc666",
+      "verification": {
+        "verified_at": "2026-10-11T14:39:58.846496+00:00",
+        "bulk_url": "https://data.scryfall.io/oracle-cards/oracle-cards-20261011090156.jsonl.gz",
+        "bulk_updated_at": "2026-10-11T09:01:56.463+00:00",
+        "bulk_sha256": "fff859224722e6e4c19df9f287e9c5aa5411d47e35f214fa4e44450c7ee67b28",
+        "pinned_faces_sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5",
+        "standard_pool_sha256": "c0e1a47e5865aa5d46507ba2d4263e2d3601d07937888c6cae11217e5d550a21",
+        "method": "Compare extract_faces/compact_face projection keyed by (oracle_id, face) against every pinned face.",
+        "result": {
+          "added_faces": 0,
+          "removed_faces": 0,
+          "standard_faces_compared": 5423,
+          "standard_face_differences": 0,
+          "other_differences": "Keldon Halberdier keywords appear in reverse order; same two keywords, no other field differs."
+        }
+      }
+    },
+    "rulings": {
+      "url": "https://data.scryfall.io/rulings/rulings-20261006090032.jsonl.gz",
+      "updated_at": "2026-10-06T09:00:32.666+00:00",
+      "sha256": "ca7bafbf44a4f83505ae676c759327b09d57a09c53328bcccc5f81ec6072d38b",
+      "verification": {
+        "verified_at": "2026-10-11T14:43:11.505074+00:00",
+        "bulk_url": "https://data.scryfall.io/rulings/rulings-20261011090033.jsonl.gz",
+        "bulk_updated_at": "2026-10-11T09:00:33.672+00:00",
+        "bulk_sha256": "e85bd47c7e6c164d7c87ec67beab4924ac8a48fcf17c1984a0e1dc430401a4de",
+        "method": "Project current bulk with deduplicate_rulings over the pinned Oracle identities; compare both output files byte-for-byte.",
+        "result": "Both pinned ruling records and card associations are byte-identical.",
+        "pinned_rulings_sha256": "950e2cff03f770e31a06f9faa3838e83b7b33371c938015d1ae0a1c3a0b593a6",
+        "pinned_card_rulings_sha256": "966313d9618cdf404319ee46fa2138cd7df12fe1a27b70396285f9ea006a559d"
+      }
+    },
+    "rules": {
+      "edition": "20260925",
+      "imported_from": ".cache/MagicCompRules-20260925.txt",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca",
+      "verification": {
+        "verified_at": "2026-10-11T14:43:57.862602+00:00",
+        "index_url": "https://magic.wizards.com/en/rules",
+        "url": "https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt",
+        "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca",
+        "result": "Current TXT linked from Wizards rules page is byte-identical to the pinned edition."
+      }
+    },
+    "legal_standard": {
+      "imported_from": "/tmp/standard-oracle-cards.jsonl.gz",
+      "sha256": "fff859224722e6e4c19df9f287e9c5aa5411d47e35f214fa4e44450c7ee67b28",
+      "url": "https://data.scryfall.io/oracle-cards/oracle-cards-20261011090156.jsonl.gz",
+      "bulk_id": "27bf3214-1271-490b-bdfe-c0be6c23d02e",
+      "metadata_url": "https://api.scryfall.com/bulk-data/27bf3214-1271-490b-bdfe-c0be6c23d02e",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "retrieved_at": "2026-10-11T13:59:35.239684+00:00",
+      "filtering_policy": {
+        "format": "standard",
+        "platform": "tabletop",
+        "legality": "legal",
+        "exclude": [
+          "meld_result"
+        ],
+        "identity": "oracle_id",
+        "order": [
+          "name",
+          "oracle_id"
+        ]
+      },
+      "scope": {
+        "effective_at": "2026-10-11T09:01:56.463+00:00",
+        "platform": "tabletop",
+        "sources": [
+          {
+            "url": "https://magic.wizards.com/en/formats/standard",
+            "retrieved_at": "2026-10-11T14:02:51.477638+00:00",
+            "sha256": "93ae505e9da26cb2cea0a5367737f879a6d65a773352b18585ff1f5b77943293"
+          },
+          {
+            "url": "https://magic.wizards.com/en/banned-restricted-list",
+            "retrieved_at": "2026-10-11T14:02:51.741757+00:00",
+            "sha256": "0092b6781b650a07baf8ff1a14e1c52f6e9ce895f13973d49909e16efe3fd4d0"
+          },
+          {
+            "url": "https://magic.wizards.com/en/news/announcements/banned-and-restricted-august-10-2026",
+            "retrieved_at": "2026-10-11T14:02:52.040281+00:00",
+            "sha256": "5f59c6964edbc077b4e72d0f1d244393de89abee7d261e26aa54caaf166c4df9"
+          }
+        ],
+        "legal_set_codes": [
+          "woe",
+          "lci",
+          "mkm",
+          "otj",
+          "big",
+          "blb",
+          "dsk",
+          "fdn",
+          "dft",
+          "tdm",
+          "fin",
+          "eoe",
+          "spm",
+          "tla",
+          "ecl",
+          "tmt",
+          "sos",
+          "msh",
+          "hob",
+          "fra"
+        ],
+        "banned_cards": [
+          "Abuelo's Awakening",
+          "Badgermole Cub",
+          "Cori-Steel Cutter",
+          "Gran-Gran",
+          "Heartfire Hero",
+          "Hopeless Nightmare",
+          "Monstrous Rage",
+          "Proft's Eidetic Memory",
+          "Screaming Nemesis",
+          "Stormchaser's Talent",
+          "This Town Ain't Big Enough",
+          "Up the Beanstalk",
+          "Vivi Ornitier"
+        ],
+        "reconciliation": {
+          "sets": "Wizards lists 19 tabletop releases, with BIG included in OTJ; exclude digital-only Through the Omenpaths. Reprints are legal by card identity, not the representative bulk printing set.",
+          "bans": "Wizards lists 13 tabletop bans; its Proft’s Eiditic Memory spelling is reconciled to Scryfall/Oracle Proft’s Eidetic Memory. Leyline of Resonance is banned only in Arena Best-of-One and remains tabletop legal.",
+          "rotation": "Wizards currently lists WOE through FRA; latest ban changes effective 2026-08-10, next announcement 2026-10-12.",
+          "set_membership_query": "f:standard game:paper -in:woe -in:lci -in:mkm -in:otj -in:big -in:blb -in:dsk -in:fdn -in:dft -in:tdm -in:fin -in:eoe -in:spm -in:tla -in:ecl -in:tmt -in:sos -in:msh -in:hob -in:fra",
+          "set_membership_result": "Scryfall search returned HTTP 404 not_found: no legal paper cards without a printing in these sets; in: matches any printing, including reprints.",
+          "reviewed_at": "2026-10-11T14:02:52.063620+00:00",
+          "set_membership_inverse_query": "game:paper (in:woe or in:lci or in:mkm or in:otj or in:big or in:blb or in:dsk or in:fdn or in:dft or in:tdm or in:fin or in:eoe or in:spm or in:tla or in:ecl or in:tmt or in:sos or in:msh or in:hob or in:fra) -f:standard -banned:standard",
+          "set_membership_inverse_result": "Scryfall search returned HTTP 404 not_found: no paper card with a printing in these sets was neither Standard-legal nor Standard-banned."
+        }
+      }
+    }
+  },
+  "counts": {
+    "cards": 32025,
+    "faces": 32872,
+    "rulings": 35752,
+    "cards_with_rulings": 19258,
+    "ruling_links": 75908,
+    "legal_standard": 5163
+  },
+  "files": {
+    "rules/MagicCompRules-20260925.txt": {
+      "bytes": 977752,
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle/cards.jsonl": {
+      "bytes": 12821497,
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    },
+    "oracle/rulings.jsonl": {
+      "bytes": 9519663,
+      "sha256": "950e2cff03f770e31a06f9faa3838e83b7b33371c938015d1ae0a1c3a0b593a6"
+    },
+    "oracle/card_rulings.jsonl": {
+      "bytes": 2270346,
+      "sha256": "966313d9618cdf404319ee46fa2138cd7df12fe1a27b70396285f9ea006a559d"
+    },
+    "oracle/legal-standard.jsonl": {
+      "bytes": 419234,
+      "sha256": "c0e1a47e5865aa5d46507ba2d4263e2d3601d07937888c6cae11217e5d550a21"
+    }
+  }
+}

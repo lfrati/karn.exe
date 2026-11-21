@@ -1,0 +1,264 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "step-4 author",
+    "provider": "Anthropic",
+    "model": "claude-opus-5-5"
+  },
+  "note": "Tier 1. change_targets for a copy of a spell (707.10, 707.10c): A casts Lightning Bolt at B's Grizzly Bears, then Twincast (\"Copy target instant or sorcery spell. You may choose new targets for the copy.\") on the Bolt; the copy's target is changed to B before the copy is put onto the stack (707.10c), then the copy and the original Bolt resolve: B at 17, B's Bears dead, A holding priority. The position is stipulated (spec 2.4), not reached by ordinary play.",
+  "cards": {
+    "bolt": {
+      "owner": "A",
+      "oracle": "4457ed35-7c10-48c8-9776-456485fdf070",
+      "name": "Lightning Bolt"
+    },
+    "twincast": {
+      "owner": "A",
+      "oracle": "8f878efc-850f-43d2-a6fe-5ea8d1dd5afb",
+      "name": "Twincast"
+    },
+    "amountain": {
+      "owner": "A",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain"
+    },
+    "amountain2": {
+      "owner": "A",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain"
+    },
+    "island1": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    },
+    "island2": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    },
+    "abears": {
+      "owner": "A",
+      "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0",
+      "name": "Grizzly Bears"
+    },
+    "bbears": {
+      "owner": "B",
+      "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0",
+      "name": "Grizzly Bears"
+    },
+    "bmountain": {
+      "owner": "B",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 3,
+        "step": "precombat_main",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [
+          "amountain2"
+        ],
+        "A.hand": [
+          "bolt",
+          "twincast"
+        ],
+        "A.graveyard": [],
+        "B.library": [
+          "bmountain"
+        ],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [
+          "amountain",
+          "island1",
+          "island2",
+          "abears",
+          "bbears"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      }
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "bolt",
+        "targets": [
+          [
+            "bbears"
+          ]
+        ],
+        "pay": {
+          "abilities": [
+            {
+              "source": "amountain",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "R"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "objects": {
+          "bolt": {
+            "zone": "stack",
+            "targets": [
+              [
+                "bbears"
+              ]
+            ]
+          }
+        }
+      },
+      "note": "601.2a: Lightning Bolt moves from A's hand to the stack; 601.2c: its target is B's Grizzly Bears ('any target', 115.4); 601.2g, 601.2h: the Mountain adds {R} (305.6), which pays {R}. 601.2i, 117.3c: A, who had priority, receives priority again and acts again without passing, so the pending question (A's priority) is unchanged and not written."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "twincast",
+        "targets": [
+          [
+            "bolt"
+          ]
+        ],
+        "pay": {
+          "abilities": [
+            {
+              "source": "island1",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            },
+            {
+              "source": "island2",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "change_targets",
+          "about": {
+            "object": "twincast"
+          }
+        },
+        "objects": {
+          "twincast": {
+            "zone": "stack",
+            "targets": [
+              [
+                "bolt"
+              ]
+            ]
+          }
+        }
+      },
+      "note": "Twincast is an instant targeting 'instant or sorcery spell': the Bolt (601.2c, 115.1). It costs {U}{U}, paid by the two Islands (305.6, 601.2g, 601.2h), and goes on top of the Bolt (405.2). 117.3c: A receives priority and passes, B passes (117.4) and Twincast resolves (608.2b: the Bolt is still a legal target). 707.10: it copies the Bolt, the copy copying the Bolt's characteristics and the decisions made for it, its target B's Bears included; the copy will be controlled by A. 707.10c, 115.7d: A may choose new targets for the copy, a choice made while Twincast is still resolving (608.2d), so Twincast is still on the stack (spec 4.2); the copy is put onto the stack only once its targets are chosen (707.10c), so at this boundary it does not exist and the question is about Twincast, the resolving object (spec 5.4)."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "change_targets",
+        "targets": [
+          [
+            "B"
+          ]
+        ]
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "players": {
+          "B": {
+            "life": 17
+          }
+        },
+        "zones": {
+          "A.graveyard": {
+            "top": [
+              "bolt",
+              "twincast"
+            ]
+          }
+        },
+        "objects": {
+          "twincast": {
+            "zone": "A.graveyard"
+          },
+          "bolt": {
+            "zone": "A.graveyard"
+          },
+          "bbears": {
+            "zone": "B.graveyard"
+          }
+        }
+      },
+      "note": "707.10c, 115.7d: A changes the copy's target to B, a legal target for 'any target', and the copy is put onto the stack above Twincast with that target (707.10c). 608.2n: Twincast, having finished resolving, is put into A's graveyard. 117.3b: the active player A receives priority; A and B pass (117.3d, 117.4) and the copy, on top of the stack, resolves: 608.2b, B is a legal target; 3 damage to B (120.3a, 119.3): B goes to 17. 608.2n puts the instant copy into its owner's graveyard as its final part, and as state-based actions are checked before A receives priority it ceases to exist (704.5e, 707.10a). Created and gone inside this stretch, the copy appears in no recorded state and takes no number (spec 1.8). 704.3: no other state-based action applies (B at 17). 117.3b: A receives priority; A and B pass and the original Bolt resolves: 608.2b, B's Bears still legal; 3 damage to it; 608.2n, the Bolt goes to A's graveyard, on top of Twincast; then 704.5g, the Bears (toughness 2, 3 damage marked) is destroyed and put into B's graveyard (701.8a). 117.3b: A, the active player, receives priority; the record ends there with B at 17."
+    }
+  ]
+}

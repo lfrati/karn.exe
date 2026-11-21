@@ -1,0 +1,132 @@
+{
+  "mgn": "1",
+  "tier": 2,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "MGN repair lead; authored before execution",
+    "provider": "OpenAI",
+    "model": "GPT-6"
+  },
+  "note": "Authored from full pinned Oracle text and CR 305.6, 601.2g-h, 605.1b, 605.4a, 608.3. The Forest is activated inside casting Grizzly Bears, produces G, and Vernal Bloom immediately adds its own G. Both pay 1G. The trigger is not another player activation and does not use the stack. After implied passes Bears resolves; stop with A holding priority. This is one short custom scenario, not a complete game or card certification.",
+  "cards": {
+    "forest": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    },
+    "bloom": {
+      "owner": "A",
+      "oracle": "238b270c-152a-48e5-a955-65f5cb80c174",
+      "name": "Vernal Bloom",
+      "faces": [
+        "6e8eea578a18888a1872c0d8d864e783a7c6ca1960e4ad2b8307c69330d14093"
+      ]
+    },
+    "bears": {
+      "owner": "A",
+      "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0",
+      "name": "Grizzly Bears",
+      "faces": [
+        "cccd0e7dbad8c134809da483e9f1e8d68a94e749ac7fb1809007c7533b8979d4"
+      ]
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 3,
+        "step": "precombat_main",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [],
+        "A.hand": [
+          "bears"
+        ],
+        "A.graveyard": [],
+        "B.library": [],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [
+          "forest",
+          "bloom"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      },
+      "objects": {}
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "bears",
+        "pay": {
+          "abilities": [
+            {
+              "source": "forest",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "objects": {
+          "forest": {
+            "tapped": true
+          },
+          "bears": {
+            "zone": "battlefield"
+          }
+        }
+      }
+    }
+  ]
+}

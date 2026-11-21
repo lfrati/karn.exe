@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "adapter-protocol.schema.json",
+  "title": "MGN adapter protocol messages",
+  "description": "One JSON line in either direction between the runner and an adapter (adapter-protocol.md). A message matches `request` (runner to adapter) or `reply` (adapter to runner).",
+  "oneOf": [{"$ref": "#/$defs/request"}, {"$ref": "#/$defs/reply"}],
+  "$defs": {
+    "id": {"type": "integer", "minimum": 1},
+    "request": {
+      "oneOf": [
+        {"type": "object", "required": ["id", "hello"], "properties": {"id": {"$ref": "#/$defs/id"}, "hello": {"type": "object", "required": ["mgn"], "properties": {"mgn": {"const": "1"}}, "additionalProperties": false}}, "additionalProperties": false},
+        {"type": "object", "required": ["id", "setup"], "properties": {"id": {"$ref": "#/$defs/id"}, "setup": {"type": "object", "required": ["tier", "pins", "game", "cards", "start"], "properties": {"tier": {"enum": [1, 2]}, "pins": {}, "game": {}, "match": {}, "cards": {}, "start": {}}, "additionalProperties": false}}, "additionalProperties": false},
+        {"type": "object", "required": ["id", "act"], "properties": {"id": {"$ref": "#/$defs/id"}, "act": {"$ref": "#/$defs/step"}}, "additionalProperties": false},
+        {"type": "object", "required": ["id", "attempt"], "properties": {"id": {"$ref": "#/$defs/id"}, "attempt": {"$ref": "#/$defs/step"}}, "additionalProperties": false},
+        {"type": "object", "required": ["id", "default"], "properties": {"id": {"$ref": "#/$defs/id"}, "default": {"type": "object", "properties": {"until": {"$ref": "#/$defs/until"}}, "additionalProperties": false}}, "additionalProperties": false},
+        {"type": "object", "required": ["id", "outcome"], "properties": {"id": {"$ref": "#/$defs/id"}, "outcome": {}}, "additionalProperties": false},
+        {"type": "object", "required": ["id", "project"], "properties": {"id": {"$ref": "#/$defs/id"}, "project": {"type": "object", "required": ["tier"], "properties": {"tier": {"enum": [1, 2]}}, "additionalProperties": false}}, "additionalProperties": false},
+        {"type": "object", "required": ["id", "end"], "properties": {"id": {"$ref": "#/$defs/id"}, "end": {"type": "object", "additionalProperties": false}}, "additionalProperties": false}
+      ]
+    },
+    "until": {
+      "type": "object",
+      "required": ["turn", "step", "active", "seat"],
+      "properties": {"turn": {"type": "integer", "minimum": 0}, "step": {"type": "string", "minLength": 1}, "occurrence": {"type": "integer", "minimum": 2}, "active": {"type": "string", "pattern": "^[A-Z]$"}, "seat": {"type": "string", "pattern": "^[A-Z]$"}},
+      "additionalProperties": false
+    },
+    "step": {
+      "type": "object",
+      "required": ["n", "seat", "do"],
+      "properties": {"n": {"type": "integer", "minimum": 1}, "seat": {"type": "string", "pattern": "^[A-Z]$"}, "do": {"type": "object"}},
+      "additionalProperties": false
+    },
+    "reply": {
+      "oneOf": [
+        {"type": "object", "required": ["id", "capabilities"], "properties": {"id": {"$ref": "#/$defs/id"}, "capabilities": {"$ref": "#/$defs/capabilities"}}, "additionalProperties": false},
+        {"type": "object", "required": ["id", "ok"], "properties": {"id": {"$ref": "#/$defs/id"}, "ok": {"type": "object", "properties": {"state": {"$ref": "mgn-1.schema.json#/$defs/explicit_state"}, "causal": {"$ref": "mgn-1.schema.json#/$defs/causal"}, "unsupported": {"type": "array", "items": {"type": "string"}}, "restored": {"type": "boolean"}, "asked": {"type": "string", "minLength": 1}, "random_unused": {"type": "array", "items": {"type": "object"}}, "renewed": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": false}}, "additionalProperties": false},
+        {"type": "object", "required": ["id", "random"], "properties": {"id": {"$ref": "#/$defs/id"}, "random": {"type": "object", "required": ["kind"], "properties": {"kind": {"enum": ["shuffle", "random_order", "random_choice", "coin", "die", "starting_player"]}, "seat": {"type": "string", "pattern": "^[A-Z]$"}, "objects": {"type": "array", "items": {"type": "string"}}, "from": {"type": "array", "items": {"type": "string"}}, "sides": {"type": "integer", "minimum": 2}}, "additionalProperties": false}}, "additionalProperties": false},
+        {"type": "object", "required": ["id", "refused"], "properties": {"id": {"$ref": "#/$defs/id"}, "refused": {"$ref": "#/$defs/failure"}}, "additionalProperties": false},
+        {"type": "object", "required": ["id", "error"], "properties": {"id": {"$ref": "#/$defs/id"}, "error": {"$ref": "#/$defs/failure"}}, "additionalProperties": false}
+      ]
+    },
+    "capabilities": {
+      "type": "object",
+      "required": ["mgn", "engine", "adapter", "tiers", "starts", "kinds", "random", "formats"],
+      "properties": {
+        "mgn": {"const": "1"},
+        "engine": {"$ref": "#/$defs/software"},
+        "adapter": {"$ref": "#/$defs/software"},
+        "tiers": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": [1, 2]}},
+        "starts": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["decks", "position"]}},
+        "kinds": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "random": {"type": "array", "uniqueItems": true, "items": {"enum": ["shuffle", "random_order", "random_choice", "coin", "die", "starting_player"]}},
+        "formats": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "unsupported_facts": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+      },
+      "additionalProperties": false
+    },
+    "software": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {"name": {"type": "string", "minLength": 1}, "version": {"type": "string", "minLength": 1}},
+      "additionalProperties": false
+    },
+    "failure": {
+      "type": "object",
+      "required": ["class", "code", "message"],
+      "properties": {
+        "class": {"enum": ["illegal", "unsupported", "fault"]},
+        "code": {"enum": ["illegal_action", "unknown_reference", "unsupported_start", "unsupported_card", "unsupported_kind", "unsupported_fact", "unsupported_random", "unsupported_format", "pins_mismatch", "random_missing", "random_mismatch", "engine_fault", "protocol", "timeout"]},
+        "message": {"type": "string"},
+        "path": {"type": "string"}
+      },
+      "additionalProperties": false
+    }
+  }
+}

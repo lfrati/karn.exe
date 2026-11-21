@@ -1,0 +1,241 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "step-4 author",
+    "provider": "Anthropic",
+    "model": "claude-opus-5-5"
+  },
+  "note": "Tier 1, from a position. Choices made as a permanent enters (614.1c, 614.12a): Diamond Mare (\"As this creature enters, choose a color.\") resolves and A chooses red, retained as its chosen fact; then A plays Multiversal Passage (\"As this land enters, choose a basic land type. Then you may pay 2 life. If you don't, it enters tapped.\"), chooses Mountain and pays 2 life. At each question the entering card is still where it was before entering: the Mare on the stack as the resolving spell (spec 4.2), the Passage in A's hand (spec 4.1). Tapped status, subtypes and the mana pool are tier-2 facts and are not stated: that the Passage entered untapped and is a Mountain is visible only in a tier-2 upgrade. The position is stipulated (spec 2.4), not reached by ordinary play.",
+  "cards": {
+    "mare": {
+      "owner": "A",
+      "oracle": "9a440122-a015-4af2-b270-37f019884458",
+      "name": "Diamond Mare"
+    },
+    "passage": {
+      "owner": "A",
+      "oracle": "17770eeb-ecbf-4510-af2d-acececfbe146",
+      "name": "Multiversal Passage"
+    },
+    "island1": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    },
+    "island2": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    },
+    "island3": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    },
+    "bisland1": {
+      "owner": "B",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 3,
+        "step": "precombat_main",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [
+          "island3"
+        ],
+        "A.hand": [
+          "mare",
+          "passage"
+        ],
+        "A.graveyard": [],
+        "B.library": [
+          "bisland1"
+        ],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [
+          "island1",
+          "island2"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      }
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "mare",
+        "pay": {
+          "abilities": [
+            {
+              "source": "island1",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            },
+            {
+              "source": "island2",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "choose_value",
+          "about": {
+            "object": "mare",
+            "of": "color"
+          }
+        },
+        "objects": {
+          "mare": {
+            "zone": "stack"
+          }
+        }
+      },
+      "note": "Diamond Mare is an artifact creature spell cast in A's main phase with an empty stack (302.1, 117.1a). 601.2a: it moves to the stack. 601.2g, 601.2h: two Islands tapped for {U} each (305.6) pay the generic {2} (107.4b). 117.3c: A receives priority; A and B pass (implied) and the Mare resolves (117.4, 608.1). It has no targets, so it becomes a permanent and enters under A's control (608.3a). \"As this creature enters, choose a color\" is a replacement effect (614.1c) whose choice is made before the permanent enters the battlefield (614.12a), by A, its controller; there is no null answer (spec 5.6). At this boundary the card has not yet entered: spec 4.2 keeps the resolving object on the stack at a question asked while it resolves, so the Mare is still on the stack, and the question is about it as the permanent that is entering (spec 5.4, choose_value)."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "choose_value",
+        "value": "red"
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "objects": {
+          "mare": {
+            "zone": "battlefield",
+            "chosen": {
+              "color": "red"
+            }
+          }
+        }
+      },
+      "note": "A chooses red, one of the five colors (105.1). 614.1c, 614.12a: the Mare enters the battlefield (608.3a) with red as its chosen color, which its second ability (\"Whenever you cast a spell of the chosen color, you gain 1 life.\") refers to; the value is retained, so it is the Mare's chosen fact (spec 3.1). The Mare's controller is A, its owner (default). Nothing triggers on its entering. 117.3b: A, the active player, receives priority after the resolution, in the main phase with an empty stack."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "play_land",
+        "card": "passage"
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "choose_value",
+          "about": {
+            "object": "passage",
+            "of": "basic_land_type"
+          }
+        }
+      },
+      "note": "305.1, 305.2: A has played no land this turn (start assumption) and holds priority in a main phase of A's turn with an empty stack, so A may play a land; playing it is a special action that doesn't use the stack (305.1, 116.2a). Playing a land isn't casting a spell, so the Mare's ability does not trigger. \"As this land enters, choose a basic land type\" is a replacement effect (614.1c) whose choice is made before the land enters (614.12a). Spec 4.1: the played land may still be where it was when the next boundary is a question about it asked as it enters, so the Passage is still in A's hand and the delta changes only the pending question. The basic land types are Plains, Island, Swamp, Mountain and Forest (305.6, 205.3i)."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "choose_value",
+        "value": "Mountain"
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "optional",
+          "about": {
+            "object": "passage"
+          }
+        }
+      },
+      "note": "A chooses Mountain. The Passage's first paragraph continues \"Then you may pay 2 life. If you don't, it enters tapped.\", so after the choice of type (\"Then\", in the order written, 608.2c applied to the replacement's own text) A is asked whether to pay 2 life; it is still part of the one replacement effect applied before the land enters (614.1c, 614.12a), so the Passage is still in A's hand. Spec 5.4 classes this question as optional (\"you may pay 2 life; if you don't, it enters tapped\", 614.1c), not as pay. A's life total, 20, is at least 2, so A may pay (119.4, 118.3). No fact changes besides the pending question; the chosen type is recorded when the Passage enters."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "optional",
+        "yes": true
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "players": {
+          "A": {
+            "life": 18
+          }
+        },
+        "objects": {
+          "passage": {
+            "zone": "battlefield",
+            "chosen": {
+              "basic_land_type": "Mountain"
+            }
+          }
+        }
+      },
+      "note": "A pays 2 life: A loses 2 life, 20 to 18 (119.4). Because A paid, the \"If you don't, it enters tapped\" part does not apply (118.12) and the Passage enters the battlefield untapped (untapped status is the default and a tier-2 fact) with Mountain as its chosen type (614.1c). Its second paragraph, \"This land is the chosen type\", makes it a Mountain with the intrinsic {T}: Add {R} ability (305.6, 305.7); its subtypes are tier-2 facts and are not stated. 116.3: having taken a special action, A receives priority afterward, in the main phase with an empty stack. The record ends here."
+    }
+  ]
+}

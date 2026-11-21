@@ -1,0 +1,286 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "standard",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "Independent round-one author",
+    "provider": "OpenAI",
+    "model": "GPT-6.1 Sol"
+  },
+  "note": "",
+  "cards": {
+    "hulk": {
+      "owner": "A",
+      "oracle": "e4d52559-7624-48b2-96ba-e52ada6c507a",
+      "name": "Daring Waverider"
+    },
+    "shock": {
+      "owner": "A",
+      "oracle": "a9d288b8-cdc1-4e55-a0c9-d6edfc95e65d",
+      "name": "Shock"
+    },
+    "pay3": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    },
+    "pay4": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    },
+    "pay5": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    },
+    "pay6": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    },
+    "pay7": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    },
+    "pay8": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 1,
+        "step": "precombat_main",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [],
+        "A.hand": [
+          "hulk"
+        ],
+        "A.graveyard": [
+          "shock"
+        ],
+        "B.library": [],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [
+          "pay3",
+          "pay4",
+          "pay5",
+          "pay6",
+          "pay7",
+          "pay8"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      },
+      "objects": {}
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "hulk",
+        "pay": {
+          "abilities": [
+            {
+              "source": "pay3",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            },
+            {
+              "source": "pay4",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            },
+            {
+              "source": "pay5",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            },
+            {
+              "source": "pay6",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            },
+            {
+              "source": "pay7",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            },
+            {
+              "source": "pay8",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "objects": {
+          "hulk": {
+            "zone": "battlefield"
+          },
+          "S1": {
+            "zone": "stack",
+            "kind": "ability",
+            "source": "hulk",
+            "ability": {
+              "face": 0,
+              "paragraph": 1
+            },
+            "controller": "A",
+            "targets": []
+          }
+        },
+        "pending": {
+          "seat": "A",
+          "kind": "choose_targets",
+          "about": {
+            "object": "S1"
+          }
+        }
+      },
+      "note": "CR 601.2, 117.4, 608.2: pay the announced cost; all pass to the stated mandatory choice."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "choose_targets",
+        "targets": [
+          [
+            "shock"
+          ]
+        ]
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "cast_during_resolution",
+          "about": {
+            "object": "S1"
+          }
+        },
+        "objects": {
+          "S1": {
+            "targets": [
+              [
+                "shock"
+              ]
+            ]
+          }
+        }
+      },
+      "note": "CR 603.3d, 117.4: target Shock (mana value 1) in graveyard, then resolve Waverider trigger to casting permission."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast_during_resolution",
+        "card": "shock",
+        "cost": {
+          "kind": "alternative",
+          "effect": "without_paying"
+        },
+        "targets": [
+          [
+            "B"
+          ]
+        ],
+        "pay": {}
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "objects": {
+          "S1": null,
+          "shock": {
+            "zone": "stack",
+            "targets": [
+              [
+                "B"
+              ]
+            ],
+            "cast": {
+              "cost": {
+                "kind": "alternative",
+                "effect": "without_paying"
+              }
+            }
+          }
+        }
+      },
+      "note": "CR 608.2g, 601.2: cast Shock without paying mana cost during Waverider trigger, target B; trigger finishes, Shock waits on stack."
+    }
+  ]
+}

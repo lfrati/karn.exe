@@ -1,0 +1,16 @@
+# build outputs and generated reports
+.cache
+target/
+.venv/
+.ruff_cache/
+__pycache__/
+*.pyc
+
+# local tool settings
+.claude/
+
+# local checkouts of other engines, kept for reference only; never commit them
+xmage/
+forge/
+argentum/
+mtgish/

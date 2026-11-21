@@ -1,0 +1,38 @@
+{
+  "meaning": "Exact native start/act commands captured while replaying reviewed MGN complete games. Explicit player/payment/ordering choices come from each source record. No new card certification or format-legality claim. Historical records and native traces remain unchanged.",
+  "games": [
+    {
+      "source_record": "tests/fixtures/mgn/bant-ordered-arrivals/record.json",
+      "source_sha256": "51685867da4c6093b1f89770e2f18e345456ae534ec4d12126ff30878bba01a1",
+      "engine": "~/karn-work/evidence/main/mgn-closure-20261020/integration/partition-game-serve",
+      "engine_sha256": "90e80ecc904bc8aaaf6beeeecab73092f175fab3848ca09df08a48a4a9730bcc",
+      "trace_sha256": "32b11e0edbfb39c7e93646f75106f3cf4ac5ed2e0bb9a34ae993b6013bf9a94e",
+      "commands": 371,
+      "capture": "Exact successful start/new/act requests from replay; quotes and observations omitted. No inferred choices.",
+      "trace": "bant-ordered-mgn.jsonl",
+      "capture_evidence": "~/karn-work/evidence/main/mgn-closure-20261020/performance/bant-ordered.provenance.json"
+    },
+    {
+      "source_record": "tests/fixtures/mgn/vivi-decks/record.json",
+      "source_sha256": "6f82132078063832408fc1a3aa1508a451a981a8cc234de8753686db147087e6",
+      "engine": "~/karn-work/evidence/main/explicit-pool-20261019/candidate-1-game-serve",
+      "engine_sha256": "5c17577674d353289a140ec300fbe9f540db1aa280a32de11472364fe8f57ef7",
+      "trace_sha256": "d6a51f9bf91c4ccc468d57323cba77b7ad984f9b57f2df2a85425b9a122452df",
+      "commands": 247,
+      "capture": "Exact successful start/act commands from the MGN adapter; quotes and observation requests omitted. Source expectations unchanged.",
+      "trace": "vivi-mgn.jsonl",
+      "capture_evidence": "~/karn-work/evidence/main/explicit-pool-20261019/performance-inputs/vivi-decks.provenance.json"
+    },
+    {
+      "source_record": "tests/fixtures/mgn/torch-decks-keyword-paragraphs/record.json",
+      "source_sha256": "d2c0846f03b30d0280a41d5cd5bd233c02eb8c1cf7c970a5c508f9c13bb74557",
+      "engine": "~/karn-work/evidence/main/explicit-pool-20261019/candidate-1-game-serve",
+      "engine_sha256": "5c17577674d353289a140ec300fbe9f540db1aa280a32de11472364fe8f57ef7",
+      "trace_sha256": "066d8a67273e1ed6155cdec1cb0fb9c6ff6e24010e675870be7a38b66402816f",
+      "commands": 277,
+      "capture": "Exact successful start/act commands from the MGN adapter; quotes and observation requests omitted. Source expectations unchanged.",
+      "trace": "torch-mgn.jsonl",
+      "capture_evidence": "~/karn-work/evidence/main/explicit-pool-20261019/performance-inputs/torch-decks-keyword-paragraphs.provenance.json"
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {"effective": "2026-09-25", "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"},
+    "oracle": {"source": "scryfall-oracle-cards", "updated_at": "2026-10-11T09:01:56.463+00:00", "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"}
+  },
+  "game": {"format": "custom", "life": 20, "hand_size": 7, "seats": ["A", "B"]},
+  "author": {"kind": "agent", "name": "step-4 author", "provider": "Anthropic", "model": "claude-opus-5-5"},
+  "note": "Tier 1. A plays a land from a nine-card hand in the precombat main phase of turn 3; with no creatures and no further decision the turn runs to the cleanup step, where A holds eight cards against a maximum hand size of seven and must discard one (402.2, 514.1). The discard is a question without a null answer (spec 5.6). After it nothing happens in the cleanup step (514.2, 514.3a) and the record ends at B's first priority of turn 4, in the upkeep (502.4, 503.1), before B's draw. The nine-card hand on turn 3 is stipulated by the position (spec 2.4), not reached by ordinary play.",
+  "cards": {
+    "plains1": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains2": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains3": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains4": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains5": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains6": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains7": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains8": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains9": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "lions": {"owner": "A", "oracle": "60ba93eb-39e6-4af2-9c66-cd38f72daff2", "name": "Savannah Lions"},
+    "forest": {"owner": "B", "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6", "name": "Forest"}
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {"number": 3, "step": "precombat_main", "active": "A"},
+      "pending": {"seat": "A", "kind": "priority"},
+      "result": {"kind": "unfinished"},
+      "players": {"A": {"life": 20}, "B": {"life": 20}},
+      "zones": {
+        "A.library": ["plains9"],
+        "A.hand": ["plains1", "plains2", "plains3", "plains4", "plains5", "plains6", "plains7", "plains8", "lions"],
+        "A.graveyard": [],
+        "B.library": ["forest"],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [],
+        "stack": [],
+        "exile": [],
+        "command": []
+      }
+    }
+  },
+  "transitions": [
+    {"seat": "A", "do": {"kind": "play_land", "card": "plains1"},
+     "delta": {"objects": {"plains1": {"zone": "battlefield"}}, "turn": {"number": 3, "step": "cleanup", "active": "A"}, "pending": {"seat": "A", "kind": "discard", "about": {"count": 1}}},
+     "note": "305.1, 116.2a: A has priority in a main phase of A's turn with the stack empty and has played no land this turn (assumption default, 305.2a), so A puts the Plains onto the battlefield; it does not use the stack. 117.3c: A keeps priority; A and B pass with the stack empty (implied, 117.3d) and the precombat main phase ends (500.2). Beginning of combat: two players, so 507.1 does nothing; both pass. Declare attackers: A controls no creature, so no declaration is asked (spec 5.3, 508.1a) and no creature is declared as an attacker, so the declare blockers and combat damage steps are skipped (508.8, 506.1); A gets priority (508.2), both pass. End of combat (511.1): both pass; postcombat main phase: both pass; end step (513.1): nothing triggers, both pass. Cleanup: A's hand holds eight cards and the maximum hand size is seven (402.2), so A must discard one (514.1); the discard is a question without a null answer (spec 5.6), asked with its count."},
+    {"seat": "A", "do": {"kind": "discard", "cards": ["lions"]},
+     "delta": {"objects": {"lions": {"zone": "A.graveyard"}}, "turn": {"number": 4, "step": "upkeep", "active": "B"}, "pending": {"seat": "B", "kind": "priority"}},
+     "note": "514.1, 701.9a: the discarded Savannah Lions moves from A's hand to A's graveyard; A's hand is seven cards. 514.2: no damage is marked and no until-end-of-turn effect exists, so nothing changes. 514.3a, 704.3: no state-based action would be performed and nothing triggers, so no player receives priority and the cleanup step ends; it does not repeat. Turn 4 begins with B active (the seats alternate, 103.1 via spec 2.4). Untap step: B controls no permanents, so 502.3 untaps nothing; no player receives priority (502.4). Upkeep: no turn-based action, B receives priority (503.1). The draw (504.1) comes in the next step, so B's library is untouched."}
+  ]
+}

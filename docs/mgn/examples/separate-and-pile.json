@@ -1,0 +1,93 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {"effective": "2026-09-25", "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"},
+    "oracle": {"source": "scryfall-oracle-cards", "updated_at": "2026-10-11T09:01:56.463+00:00", "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"}
+  },
+  "game": {"format": "custom", "life": 20, "hand_size": 7, "seats": ["A", "B"]},
+  "author": {"kind": "agent", "name": "step-4 author", "provider": "Anthropic", "model": "claude-opus-5-5"},
+  "note": "Tier 1. Fact or Fiction (\"Reveal the top five cards of your library. An opponent separates those cards into two piles. Put one pile into your hand and the other into your graveyard.\"): a separate question and a pile question asked while the spell resolves (700.3), each a boundary at which the spell is still on the stack (spec 4.2); separating moves nothing (700.3c); the cards put into the graveyard at once are ordered by their owner (404.3) and the spell goes there last (608.2n). The position is stipulated (spec 2.4), not reached by ordinary play.",
+  "cards": {
+    "fof": {"owner": "A", "oracle": "437b2dab-15e0-4b9a-a204-58622d37a3b3", "name": "Fact or Fiction"},
+    "island1": {"owner": "A", "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373", "name": "Island"},
+    "island2": {"owner": "A", "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373", "name": "Island"},
+    "island3": {"owner": "A", "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373", "name": "Island"},
+    "island4": {"owner": "A", "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373", "name": "Island"},
+    "forest1": {"owner": "A", "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6", "name": "Forest"},
+    "bears": {"owner": "A", "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0", "name": "Grizzly Bears"},
+    "forest2": {"owner": "A", "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6", "name": "Forest"},
+    "bolt": {"owner": "A", "oracle": "4457ed35-7c10-48c8-9776-456485fdf070", "name": "Lightning Bolt"},
+    "forest3": {"owner": "A", "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6", "name": "Forest"},
+    "forest4": {"owner": "A", "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6", "name": "Forest"},
+    "bswamp": {"owner": "B", "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68", "name": "Swamp"}
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {"number": 3, "step": "precombat_main", "active": "A"},
+      "pending": {"seat": "A", "kind": "priority"},
+      "result": {"kind": "unfinished"},
+      "players": {"A": {"life": 20}, "B": {"life": 20}},
+      "zones": {
+        "A.library": ["forest1", "bears", "forest2", "bolt", "forest3", "forest4"],
+        "A.hand": ["fof"],
+        "A.graveyard": [],
+        "B.library": ["bswamp"],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": ["island1", "island2", "island3", "island4"],
+        "stack": [],
+        "exile": [],
+        "command": []
+      }
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "fof",
+        "pay": {
+          "abilities": [
+            {"source": "island1", "ability": {"rule": "305.6"}, "adding": ["U"]},
+            {"source": "island2", "ability": {"rule": "305.6"}, "adding": ["U"]},
+            {"source": "island3", "ability": {"rule": "305.6"}, "adding": ["U"]},
+            {"source": "island4", "ability": {"rule": "305.6"}, "adding": ["U"]}
+          ]
+        }
+      },
+      "delta": {
+        "pending": {"seat": "B", "kind": "separate", "about": {"object": "fof", "cards": ["forest1", "bears", "forest2", "bolt", "forest3"]}},
+        "objects": {"fof": {"zone": "stack"}}
+      },
+      "note": "601.2a: Fact or Fiction ({3}{U}, instant) moves from A's hand to the stack; it has no targets (601.2c). 601.2g, 601.2h: four Islands each add {U} through their intrinsic mana ability (305.6, 106.4) and pay {3}{U}; the pool is empty again (tapped status is tier 2, not written). 117.3c: A receives priority; A passes, then B (117.3d, implied), so the spell resolves (117.4). 608.2c: A reveals the top five cards of A's library (701.20a), which changes no tier-1 fact; then an opponent separates them: B is A's only opponent, so no player is chosen (spec 5.4 choose_player is for several opponents) and B is asked (700.3). The question is asked during the resolution, so the spell is still on the stack (spec 4.2) and the five cards are still in A's library in their order: grouping into piles moves nothing (700.3c)."
+    },
+    {
+      "seat": "B",
+      "do": {"kind": "separate", "piles": [["forest1", "bears"], ["forest2", "bolt", "forest3"]]},
+      "delta": {
+        "pending": {"seat": "A", "kind": "pile", "about": {"object": "fof"}}
+      },
+      "note": "700.3a: each of the five revealed cards is in exactly one pile; 700.3d would allow an empty pile, B makes piles of two and three. The text names two piles, the first listed first. 700.3b, 700.3c: the piles are not objects and the cards stay in A's library, so no fact but the pending question changes. A, the spell's controller (\"Put one pile into your hand\"), now chooses a pile (700.3); the spell is still resolving and on the stack (608.2c, spec 4.2)."
+    },
+    {
+      "seat": "A",
+      "do": {"kind": "pile", "pile": 2},
+      "delta": {
+        "pending": {"seat": "A", "kind": "priority"},
+        "zones": {"A.graveyard": {"top": ["fof", "bears", "forest1"]}},
+        "objects": {
+          "forest2": {"zone": "A.hand"},
+          "bolt": {"zone": "A.hand"},
+          "forest3": {"zone": "A.hand"},
+          "forest1": {"zone": "A.graveyard"},
+          "bears": {"zone": "A.graveyard"},
+          "fof": {"zone": "A.graveyard"}
+        }
+      },
+      "note": "A puts the second pile (Forest, Lightning Bolt, Forest) into A's hand and the first (Forest, Grizzly Bears) into A's graveyard, both by the one instruction of 608.2c. 404.3: the two cards go into the same graveyard at the same time, so their owner, A, arranges them; A chose Forest first and Grizzly Bears above it (spec 1.2: that choice is the order this delta states, not a decision of its own). 608.2: the effect's steps (608.2c) come before 608.2n, which is followed last: as the final part of its resolution the instant is put into its owner's graveyard, after and therefore on top of the two cards its effect put there. So A's graveyard reads, top down, Fact or Fiction, Grizzly Bears, Forest. The sixth card, a Forest, is now alone in A's library. 117.3b: the active player, A, receives priority after the spell resolves; the record ends there."
+    }
+  ]
+}

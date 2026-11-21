@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Run a command while holding one of the machine's build slots.
+#
+# Every checkout's cargo builds, test runs and `make check` share these slots, so parallel
+# workers don't oversubscribe the machine. Read-only work needs no slot.
+# Usage: scripts/slot cargo test --locked -p game --test rules scenarios::r701_25_surveil::
+#
+# KARN_SLOTS      how many commands may run at once (default 3)
+# KARN_SLOT_JOBS  cargo jobs and test threads for each (default 6)
+# KARN_SLOT_DIR   where the lock files live; every checkout must use the same directory
+set -u
+slots=${KARN_SLOTS:-3}
+jobs=${KARN_SLOT_JOBS:-6}
+dir=${KARN_SLOT_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/karn/slots}
+mkdir -p "$dir"
+while :; do
+  for i in $(seq 1 "$slots"); do
+    exec 9>"$dir/slot-$i.lock"
+    if flock -n 9; then
+      export CARGO_BUILD_JOBS=$jobs RUST_TEST_THREADS=${RUST_TEST_THREADS:-$jobs}
+      # The command must not inherit the lock: a process it leaves behind would hold the slot.
+      "$@" 9>&-
+      exit $?
+    fi
+    exec 9>&-
+  done
+  sleep 3
+done

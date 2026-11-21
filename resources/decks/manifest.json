@@ -1,0 +1,28 @@
+{
+  "snapshot": "2026-10-08",
+  "lists": 2012,
+  "formats": {
+    "block": 168,
+    "explorer": 25,
+    "extended": 105,
+    "historic": 80,
+    "legacy": 126,
+    "modern": 228,
+    "pauper": 135,
+    "pioneer": 50,
+    "premodern": 21,
+    "standard": 974,
+    "vintage": 100
+  },
+  "sources": {
+    "mtgtop8": 1434,
+    "tournament": 17,
+    "wizards-official": 561
+  },
+  "files": {
+    "selected-decks.jsonl": {
+      "sha256": "7343dacd78616ff86985b8bbc9bedefbb2eb86483d82040f02fde9dcc16034f0",
+      "bytes": 2900351
+    }
+  }
+}

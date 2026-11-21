@@ -1,0 +1,153 @@
+{
+  "mgn": "1",
+  "tier": 2,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "independent-public-contract-author",
+    "provider": "OpenAI",
+    "model": "gpt-6.1-sol"
+  },
+  "cards": {
+    "rebuff": {
+      "owner": "A",
+      "oracle": "c0b7e989-8194-484c-93aa-a44df0764a77",
+      "name": "Ureni's Rebuff"
+    },
+    "bear": {
+      "owner": "A",
+      "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0",
+      "name": "Grizzly Bears"
+    },
+    "victim": {
+      "owner": "B",
+      "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0",
+      "name": "Grizzly Bears"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "assumptions": {
+      "land_played": {
+        "A": 0,
+        "B": 0
+      },
+      "spells_cast": {
+        "A": 0,
+        "B": 0
+      },
+      "summoning_sick": [
+        "bear"
+      ],
+      "consecutive_passes": 0
+    },
+    "state": {
+      "turn": {
+        "number": 3,
+        "step": "precombat_main",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20,
+          "mana": {
+            "U": 1,
+            "C": 3
+          }
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [],
+        "A.hand": [],
+        "A.graveyard": [
+          "rebuff"
+        ],
+        "B.library": [],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [
+          "bear",
+          "victim"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      },
+      "objects": {}
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "rebuff",
+        "cost": {
+          "kind": "alternative",
+          "keyword": "harmonize",
+          "tapped": "bear"
+        },
+        "targets": [
+          [
+            "victim"
+          ]
+        ],
+        "pay": {
+          "pool": {
+            "U": 1,
+            "C": 3
+          }
+        }
+      },
+      "delta": {
+        "players": {
+          "A": {
+            "mana": {}
+          }
+        },
+        "objects": {
+          "rebuff": {
+            "zone": "exile"
+          },
+          "victim": {
+            "zone": "B.hand"
+          },
+          "bear": {
+            "tapped": true
+          }
+        }
+      },
+      "note": "The 2-power bear reduces {5}{U} to {3}{U}. Implied passes resolve the spell, return the target to its owner, and exile Rebuff instead of putting it in the graveyard; A regains priority. CR 117.3b, 117.4, 608.2c, 702.180a."
+    }
+  ],
+  "note": "Independent draft. CR 702.180a-b: harmonize is an alternative cost; its optional tap is chosen at announcement, paid with the total cost, and reduces only generic mana. Bear is newly controlled (302.6), which does not prohibit this cost tap. Victim has been controlled since before B's most recent turn. No pending or historical effects are assumed."
+}

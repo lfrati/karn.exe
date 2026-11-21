@@ -1,0 +1,221 @@
+{
+ "author": {
+  "kind": "tool",
+  "name": "karn-recorder",
+  "version": "eba836b9"
+ },
+ "cards": {
+  "callerA": {
+   "faces": [
+    "c204b1f124a1f206cb2986042576a469d4e39fc59a36b487cbb10b2373274c24"
+   ],
+   "name": "Orochi Leafcaller",
+   "oracle": "081db161-1ad0-4ee7-9d34-c415984080f0",
+   "owner": "A"
+  },
+  "callerB": {
+   "faces": [
+    "c204b1f124a1f206cb2986042576a469d4e39fc59a36b487cbb10b2373274c24"
+   ],
+   "name": "Orochi Leafcaller",
+   "oracle": "081db161-1ad0-4ee7-9d34-c415984080f0",
+   "owner": "B"
+  },
+  "forestA": {
+   "faces": [
+    "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+   ],
+   "name": "Forest",
+   "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+   "owner": "A"
+  },
+  "forestB": {
+   "faces": [
+    "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+   ],
+   "name": "Forest",
+   "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+   "owner": "B"
+  }
+ },
+ "game": {
+  "format": "custom",
+  "hand_size": 7,
+  "life": 20,
+  "seats": [
+   "A",
+   "B"
+  ]
+ },
+ "mgn": "1",
+ "note": "Orochi Leafcaller pays {G} from the acting player\u2019s existing pool and adds {G} (Oracle; CR 601.2h, 602.2b, 605.3b). Its activation resets consecutive passes (117.4); mana empties when the phase ends (106.4). Successor of the retained historical record: the payment is explicit; all expected deltas remain the original rule-derived expectations.",
+ "pins": {
+  "oracle": {
+   "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5",
+   "source": "scryfall-oracle-cards",
+   "updated_at": "2026-10-11T09:01:56.463+00:00"
+  },
+  "rules": {
+   "effective": "2026-09-25",
+   "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+  }
+ },
+ "producer": {
+  "name": "mgn-convert",
+  "version": "3"
+ },
+ "start": {
+  "kind": "position",
+  "state": {
+   "objects": {},
+   "pending": {
+    "kind": "priority",
+    "seat": "A"
+   },
+   "players": {
+    "A": {
+     "life": 20
+    },
+    "B": {
+     "life": 20
+    }
+   },
+   "result": {
+    "kind": "unfinished"
+   },
+   "turn": {
+    "active": "A",
+    "number": 3,
+    "step": "precombat_main"
+   },
+   "zones": {
+    "A.graveyard": [],
+    "A.hand": [],
+    "A.library": [],
+    "B.graveyard": [],
+    "B.hand": [],
+    "B.library": [],
+    "battlefield": [
+     "callerA",
+     "callerB",
+     "forestA",
+     "forestB"
+    ],
+    "command": [],
+    "exile": [],
+    "stack": []
+   }
+  }
+ },
+ "tier": 2,
+ "transitions": [
+  {
+   "delta": {
+    "objects": {
+     "forestA": {
+      "tapped": true
+     }
+    },
+    "pending": {
+     "kind": "priority",
+     "seat": "B"
+    },
+    "players": {
+     "A": {
+      "mana": {
+       "G": 1
+      }
+     }
+    }
+   },
+   "do": {
+    "ability": {
+     "rule": "305.6"
+    },
+    "adding": [
+     "G"
+    ],
+    "kind": "activate",
+    "source": "forestA"
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "forestB": {
+      "tapped": true
+     }
+    },
+    "pending": {
+     "kind": "priority",
+     "seat": "A"
+    },
+    "players": {
+     "B": {
+      "mana": {
+       "G": 1
+      }
+     }
+    }
+   },
+   "do": {
+    "ability": {
+     "rule": "305.6"
+    },
+    "adding": [
+     "G"
+    ],
+    "kind": "activate",
+    "source": "forestB"
+   },
+   "seat": "B"
+  },
+  {
+   "delta": {
+    "players": {
+     "A": {
+      "mana": {}
+     },
+     "B": {
+      "mana": {}
+     }
+    },
+    "turn": {
+     "active": "A",
+     "number": 3,
+     "step": "begin_combat"
+    }
+   },
+   "do": {
+    "ability": {
+     "face": 0,
+     "paragraph": 1
+    },
+    "adding": [
+     "G"
+    ],
+    "kind": "activate",
+    "source": "callerA",
+    "pay": {
+     "pool": {
+      "G": 1
+     }
+    }
+   },
+   "seat": "A"
+  }
+ ],
+ "x-source": {
+  "attempts_added": 0,
+  "case": "tests/fixtures/game-records/scenario-turn-history/priority-passed/case.json",
+  "decisions": 7,
+  "game_sha256": "3815d561983afe5892c2c689d506b31dd8f1706a6fc4d1b41d2f91b63b318b92",
+  "implied": {
+   "pass": 4
+  }
+ },
+ "lineage": {
+  "supersedes": "sha256:d454775190b01e87da9ea3f354f0855013fc59c6c912626aa632dcfeeb821078"
+ }
+}

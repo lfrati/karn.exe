@@ -1,0 +1,415 @@
+{
+ "format": "mgn-inventory/1",
+ "records": [
+  {
+   "record": "dogfood-11-reanimate-aura/record.json",
+   "recorded_from": {
+    "draft": "dogfood-11-reanimate-aura/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "dogfood-12-attacking-token/record.json",
+   "recorded_from": {
+    "draft": "dogfood-12-attacking-token/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "dogfood-13-cleanup-discard/record.json",
+   "recorded_from": {
+    "draft": "dogfood-13-cleanup-discard/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "dogfood-14-library-destination/record.json",
+   "recorded_from": {
+    "draft": "dogfood-14-library-destination/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "dogfood-17-mana-payment/record.json",
+   "recorded_from": {
+    "draft": "dogfood-17-mana-payment/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "dogfood-18-cast-during-resolution/record.json",
+   "recorded_from": {
+    "draft": "dogfood-18-cast-during-resolution/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "dogfood-22-trigger-order/record.json",
+   "recorded_from": {
+    "draft": "dogfood-22-trigger-order/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "scenario-activation-uses/record.json",
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "scenario-announcements/record.json",
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "scenario-cast-costs/base/record.json",
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "scenario-cast-costs/kicked/record.json",
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "scenario-cost-branches/paid-life-reviewed/record.json",
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "scenario-incarnation/record.json",
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "scenario-optional-objects/accept-second/record.json",
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "scenario-optional-objects/decline/record.json",
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "scenario-trigger-subjects/record.json",
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "scenario-turn-history/land-played-v2/record.json",
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "scenario-turn-history/land-put-v2/record.json",
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "scenario-library-destinations/source-identified/vanish-bottom-surveil/record.json",
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "scenario-library-destinations/source-identified/lost-days-second-clue/record.json",
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "scenario-tracker-player/capture/record.json",
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "vivi-decks/record.json",
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "scenario-linked-first-v2/record.json",
+   "recorded_from": {
+    "draft": "scenario-linked-first-v2/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "scenario-prevention-resources-v2/record.json",
+   "recorded_from": {
+    "draft": "scenario-prevention-resources-v2/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "scenario-linked-second-v2/record.json",
+   "recorded_from": {
+    "draft": "scenario-linked-second-v2/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "native-counter-removal-decks/record.json",
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "scenario-x-keyword-paragraphs/record.json",
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "clause-defined-x-keyword-paragraphs/record.json",
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "torch-decks-keyword-paragraphs/record.json",
+   "disposition": "active",
+   "premise": "faithful",
+   "recorded_from": {
+    "draft": "torch-decks-keyword-paragraphs/draft.json"
+   }
+  },
+  {
+   "record": "author-external2-activate/record.json",
+   "disposition": "active",
+   "premise": "faithful",
+   "recorded_from": {
+    "draft": "author-external2-activate/draft.json"
+   }
+  },
+  {
+   "record": "author-external2-concede/record.json",
+   "disposition": "active",
+   "premise": "faithful",
+   "recorded_from": {
+    "draft": "author-external2-concede/draft.json"
+   }
+  },
+  {
+   "record": "author-external2-discard/record.json",
+   "disposition": "active",
+   "premise": "faithful",
+   "recorded_from": {
+    "draft": "author-external2-discard/draft.json"
+   }
+  },
+  {
+   "record": "author-external2-play-land/record.json",
+   "disposition": "active",
+   "premise": "faithful",
+   "recorded_from": {
+    "draft": "author-external2-play-land/draft.json"
+   }
+  },
+  {
+   "record": "author-external2-prepare-copy-face/record.json",
+   "disposition": "active",
+   "premise": "faithful",
+   "recorded_from": {
+    "draft": "author-external2-prepare-copy-face/draft.json"
+   }
+  },
+  {
+   "record": "author-external2-unlimited-hand-tier2/record.json",
+   "disposition": "active",
+   "premise": "faithful",
+   "recorded_from": {
+    "draft": "author-external2-unlimited-hand-tier2/draft.json"
+   }
+  },
+  {
+   "record": "author-external3-copy-retains-kicker/record.json",
+   "disposition": "active",
+   "premise": "faithful",
+   "recorded_from": {
+    "draft": "author-external3-copy-retains-kicker/draft.json"
+   }
+  },
+  {
+   "record": "author-external3-harmonize-no-tap-full-cost/record.json",
+   "disposition": "active",
+   "premise": "faithful",
+   "recorded_from": {
+    "draft": "author-external3-harmonize-no-tap-full-cost/draft.json"
+   }
+  },
+  {
+   "record": "author-external3-harmonize-tap-reduces-generic/record.json",
+   "disposition": "active",
+   "premise": "faithful",
+   "recorded_from": {
+    "draft": "author-external3-harmonize-tap-reduces-generic/draft.json"
+   }
+  },
+  {
+   "record": "author-external3-retrace-permission-and-discard/record.json",
+   "disposition": "active",
+   "premise": "faithful",
+   "recorded_from": {
+    "draft": "author-external3-retrace-permission-and-discard/draft.json"
+   }
+  },
+  {
+   "record": "author-external1-combat/record.json",
+   "disposition": "active",
+   "premise": "faithful",
+   "recorded_from": {
+    "draft": "author-external1-combat/draft.json"
+   }
+  },
+  {
+   "record": "author-external1-discard/record.json",
+   "disposition": "active",
+   "premise": "faithful",
+   "recorded_from": {
+    "draft": "author-external1-discard/draft.json"
+   }
+  },
+  {
+   "record": "author-external1-nonmana-activation/record.json",
+   "disposition": "active",
+   "premise": "faithful",
+   "recorded_from": {
+    "draft": "author-external1-nonmana-activation/draft.json"
+   }
+  },
+  {
+   "record": "author-external1-priority/record.json",
+   "disposition": "active",
+   "premise": "faithful",
+   "recorded_from": {
+    "draft": "author-external1-priority/draft.json"
+   }
+  },
+  {
+   "record": "author-round1-04-modal-trigger-and-scry/record.json",
+   "disposition": "active",
+   "premise": "faithful",
+   "recorded_from": {
+    "draft": "author-round1-04-modal-trigger-and-scry/draft.json"
+   }
+  },
+  {
+   "record": "author-round1-17-mana-payment-v2/record.json",
+   "disposition": "active",
+   "premise": "faithful",
+   "recorded_from": {
+    "draft": "author-round1-17-mana-payment-v2/draft.json"
+   }
+  },
+  {
+   "record": "author-fixed-foretell/record.json",
+   "disposition": "active",
+   "premise": "faithful",
+   "recorded_from": {
+    "draft": "author-fixed-foretell/draft.json"
+   }
+  },
+  {
+   "record": "author-fixed-convoke/record.json",
+   "disposition": "active",
+   "premise": "faithful",
+   "recorded_from": {
+    "draft": "author-fixed-convoke/draft.json"
+   }
+  },
+  {
+   "record": "scenario-turn-history/priority-passed-explicit-payment/record.json",
+   "disposition": "active",
+   "premise": "faithful",
+   "recorded_from": {
+    "draft": "scenario-turn-history/priority-passed-explicit-payment/draft.json"
+   }
+  },
+  {
+   "record": "scenario-turn-history/priority-reset-explicit-payment/record.json",
+   "disposition": "active",
+   "premise": "faithful",
+   "recorded_from": {
+    "draft": "scenario-turn-history/priority-reset-explicit-payment/draft.json"
+   }
+  },
+  {
+   "record": "owner-ordered-arrivals-citations/record.json",
+   "recorded_from": {
+    "draft": "owner-ordered-arrivals-citations/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "departed-token-shock/record.json",
+   "recorded_from": {
+    "draft": "departed-token-shock/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "bant-ordered-arrivals/record.json",
+   "recorded_from": {
+    "draft": "bant-ordered-arrivals/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "forest-bloom-payment/record.json",
+   "recorded_from": {
+    "draft": "forest-bloom-payment/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "second-sight-opponent-order/record.json",
+   "recorded_from": {
+    "draft": "second-sight-opponent-order/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "fertile-two-mana-choices/record.json",
+   "recorded_from": {
+    "draft": "fertile-two-mana-choices/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "causal-growth-expiration/record.json",
+   "recorded_from": {
+    "draft": "causal-growth-expiration/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "causal-delayed-return/record.json",
+   "recorded_from": {
+    "draft": "causal-delayed-return/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "scenario-growth-response/record.json",
+   "recorded_from": {
+    "draft": "scenario-growth-response/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
+  }
+ ]
+}

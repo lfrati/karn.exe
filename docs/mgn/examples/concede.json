@@ -1,0 +1,163 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "step-4 author",
+    "provider": "Anthropic",
+    "model": "claude-opus-5-5"
+  },
+  "note": "Tier 1, from a position. A casts Grizzly Bears and keeps priority (117.3c); in that state, while A is the seat to answer, B concedes (104.3a: a player can concede at any time). B leaves the game and loses it; A, the only player left, wins (104.2a), and the game ends at once (104.1), with Grizzly Bears still on the stack. The position is stipulated (spec 2.4), not reached by ordinary play.",
+  "cards": {
+    "bears": {
+      "owner": "A",
+      "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0",
+      "name": "Grizzly Bears"
+    },
+    "forestA1": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forestA2": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forestA3": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "islandB1": {
+      "owner": "B",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 3,
+        "step": "precombat_main",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [
+          "forestA3"
+        ],
+        "A.hand": [
+          "bears"
+        ],
+        "A.graveyard": [],
+        "B.library": [
+          "islandB1"
+        ],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [
+          "forestA1",
+          "forestA2"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      }
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "bears",
+        "pay": {
+          "abilities": [
+            {
+              "source": "forestA1",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            },
+            {
+              "source": "forestA2",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "objects": {
+          "bears": {
+            "zone": "stack"
+          }
+        }
+      },
+      "note": "Grizzly Bears is a creature spell, so A may cast it with priority in its main phase with the stack empty (302.1, 117.1a). 601.2a: it moves from A's hand to the stack. 601.2g, 601.2h: A activates the intrinsic mana ability of each Forest (305.6, 605.3a), adding {G}{G}, and pays {1}{G}; the pool is empty again. Tapped status is tier 2 and not recorded here. 601.2i: the spell becomes cast. 117.3c: A, who had priority when it cast the spell, receives priority afterwards, so the pending question is unchanged: A's priority."
+    },
+    {
+      "seat": "B",
+      "do": {
+        "kind": "concede"
+      },
+      "delta": {
+        "pending": null,
+        "result": {
+          "kind": "win",
+          "winner": "A",
+          "cause": "concession"
+        },
+        "players": {
+          "B": {
+            "left": true
+          }
+        }
+      },
+      "note": "104.3a: a player can concede the game at any time; B, who is not the seat to answer, concedes while A holds priority (spec 4: a concession may be entered by any seat at any boundary). B leaves the game immediately and loses it. 104.2a: A, the only player still in the game, wins immediately. 104.1: the game ends at once; a two-player game does not continue after a player leaves (800.4), so nothing resolves and nothing moves: Grizzly Bears stays on the stack and every other card stays where it was. No question is pending."
+    }
+  ]
+}

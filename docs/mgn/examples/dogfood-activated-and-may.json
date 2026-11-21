@@ -1,0 +1,421 @@
+{
+  "mgn": "1",
+  "tier": 2,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "standard",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "dogfood author",
+    "provider": "Anthropic",
+    "model": "claude-opus-5-5"
+  },
+  "note": "Tier 2, from a position, Standard-legal cards only. A activates Intrepid Tenderfoot's \"{3}: Put a +1/+1 counter on this creature. Activate only as a sorcery.\" paying with three Forests (602.2, 305.6); the ability is S1 on the stack. B responds with Giant Growth (\"Target creature gets +3/+3 until end of turn.\") on B's Swab Goblin, so the stack holds S1 and Giant Growth when A next has priority. A then tries to activate Tenderfoot's ability again, which the sorcery-timing restriction forbids while the stack is not empty (602.5d, 307.1); the attempt is refused and A passes (implied), so the attempt carries the stretch: Giant Growth resolves, then S1, and the game moves to the declare attackers step. A attacks with Attack-in-the-Box; its trigger \"Whenever this creature attacks, you may have it get +4/+0 until end of turn. If you do, sacrifice it at the beginning of the next end step.\" resolves and A declines the \"may\" (the null answer, implied). B blocks with the 5/5 Goblin; Attack-in-the-Box is destroyed and the record ends in B's upkeep of turn 6, after the cleanup has ended Giant Growth's effect.",
+  "cards": {
+    "forest1": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    },
+    "forest2": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    },
+    "forest3": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    },
+    "forest4": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    },
+    "forest5": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    },
+    "forest6": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    },
+    "forest7": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    },
+    "tenderfoot": {
+      "owner": "A",
+      "oracle": "94023b23-339a-426e-85cc-cc361ef68754",
+      "name": "Intrepid Tenderfoot",
+      "faces": [
+        "fc12840cdef0ccd191283d517de0eddab4709bac2b3ab703b7915d8805b49d14"
+      ]
+    },
+    "box": {
+      "owner": "A",
+      "oracle": "f0fd78bb-cb83-4dfa-a910-0334d225f87c",
+      "name": "Attack-in-the-Box",
+      "faces": [
+        "bd2d7cd40d463a47ece8de92a5784bb4c8797237232c97dca5d0d50e148c09e5"
+      ]
+    },
+    "goblin": {
+      "owner": "B",
+      "oracle": "343ecf2f-0bbc-4840-8fb3-f5f61b26e76f",
+      "name": "Swab Goblin",
+      "faces": [
+        "51279ebcbf1c1cc1f6c13f90c61ba39807a312d94b7b217a205d782eed434b92"
+      ]
+    },
+    "growth": {
+      "owner": "B",
+      "oracle": "5748ebf1-24e3-499d-ab7c-c2cebd462a24",
+      "name": "Giant Growth",
+      "faces": [
+        "e88d6bd163d93d579bd45e095e57d42bd89e26c962b43caa3d8076e172896aa5"
+      ]
+    },
+    "bforest1": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    },
+    "mountain1": {
+      "owner": "B",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain",
+      "faces": [
+        "e8d7ace3e741297a789003d6898ced6a5069cbf969835830fb1bb8ccc6a1144d"
+      ]
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 5,
+        "step": "precombat_main",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [
+          "forest7"
+        ],
+        "A.hand": [],
+        "A.graveyard": [],
+        "B.library": [
+          "mountain1"
+        ],
+        "B.hand": [
+          "growth"
+        ],
+        "B.graveyard": [],
+        "battlefield": [
+          "forest1",
+          "forest2",
+          "forest3",
+          "forest4",
+          "forest5",
+          "forest6",
+          "tenderfoot",
+          "box",
+          "goblin",
+          "bforest1"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      }
+    },
+    "assumptions": {
+      "land_played": {
+        "A": 1,
+        "B": 0
+      }
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "activate",
+        "source": "tenderfoot",
+        "ability": {
+          "face": 0,
+          "paragraph": 1
+        },
+        "pay": {
+          "abilities": [
+            {
+              "source": "forest1",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            },
+            {
+              "source": "forest2",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            },
+            {
+              "source": "forest3",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "pending": {
+          "seat": "B",
+          "kind": "priority"
+        },
+        "objects": {
+          "S1": {
+            "zone": "stack",
+            "kind": "ability",
+            "source": "tenderfoot",
+            "ability": {
+              "face": 0,
+              "paragraph": 1
+            },
+            "controller": "A"
+          },
+          "forest1": {
+            "tapped": true
+          },
+          "forest2": {
+            "tapped": true
+          },
+          "forest3": {
+            "tapped": true
+          }
+        }
+      },
+      "note": "Intrepid Tenderfoot's only paragraph is \"{3}: Put a +1/+1 counter on this creature. Activate only as a sorcery.\" It is A's precombat main phase, A has priority and the stack is empty, so the sorcery timing of 602.5d and 307.1 is met. 602.2a: the ability is created on the stack as an object that is not a card, controlled by A: S1, the first stack object of the record. It has no targets (601.2c via 602.2b). 602.2b, 601.2g, 601.2h: A activates the intrinsic mana ability of three Forests (305.6), each adding {G} (106.4), and pays the generic cost {3}; the pool is empty again, so no mana fact changes. Its cost has no {T}, so 302.6 is irrelevant. 117.3c: A receives priority after activating; A passes (implied, 117.3d) and B receives priority. One pass with a non-empty stack resolves nothing (117.4 needs all players to pass in succession)."
+    },
+    {
+      "seat": "B",
+      "do": {
+        "kind": "cast",
+        "card": "growth",
+        "targets": [
+          [
+            "goblin"
+          ]
+        ],
+        "pay": {
+          "abilities": [
+            {
+              "source": "bforest1",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "objects": {
+          "growth": {
+            "zone": "stack",
+            "targets": [
+              [
+                "goblin"
+              ]
+            ]
+          },
+          "bforest1": {
+            "tapped": true
+          }
+        }
+      },
+      "note": "Giant Growth is an instant (\"Target creature gets +3/+3 until end of turn.\"), so B may cast it with priority while S1 is on the stack (117.1). 601.2a: it moves from B's hand to the top of the stack, above S1 (405.2). 601.2c: its one target is Swab Goblin, a creature. 601.2g, 601.2h: B taps the Forest for {G} (305.6) and pays {G}; the pool is empty again. 117.3c: B receives priority afterwards, passes (implied, 117.3d), and A receives priority. B's pass is the first pass of a new succession: B's casting was an action taken in between (117.4), so nothing resolves yet. The stack now holds S1 (bottom) and Giant Growth (top)."
+    },
+    {
+      "seat": "A",
+      "attempt": {
+        "kind": "activate",
+        "source": "tenderfoot",
+        "ability": {
+          "face": 0,
+          "paragraph": 1
+        }
+      },
+      "illegal": true,
+      "delta": {
+        "turn": {
+          "number": 5,
+          "step": "declare_attackers",
+          "active": "A"
+        },
+        "pending": {
+          "seat": "A",
+          "kind": "declare_attackers"
+        },
+        "objects": {
+          "growth": {
+            "zone": "B.graveyard"
+          },
+          "S1": null,
+          "goblin": {
+            "power": 5,
+            "toughness": 5
+          },
+          "tenderfoot": {
+            "counters": {
+              "+1/+1": 1
+            },
+            "power": 3,
+            "toughness": 3
+          }
+        }
+      },
+      "note": "602.5d: \"Activate only as a sorcery\" means the timing rules for casting a sorcery, which 307.1 limits to a main phase of the player's own turn when the stack is empty. The stack holds S1 and Giant Growth, so A can't begin to activate the ability (602.5); A has three untapped Forests, so timing is the only obstacle. The attempt is refused and reversed with nothing paid (733.1); the state is unchanged. A then passes, the null answer, so this attempt carries the stretch (spec 4.2). B passed just before A's attempt, and the refused attempt is not an action taken in between (733.1 reverses it entirely), so A's pass completes a succession of passes (117.4): Giant Growth resolves. Swab Goblin (a vanilla 2/2) gets +3/+3 until end of turn, a layer 7c effect (613.4c): 5/5. 608.2n: Giant Growth goes to its owner's graveyard. 117.3b: A receives priority; A and B pass; S1 resolves: A puts a +1/+1 counter on Intrepid Tenderfoot (122.1a, 613.4c), making it 3/3; the ability leaves the stack and ceases to exist (608.2n). A receives priority (117.3b); with the stack empty both pass and the precombat main phase ends (500.2). Beginning of combat step: there is one opponent, so 507.1 does nothing; both pass (507.2, 500.2). Declare attackers step: A controls creatures, so the declaration is asked (508.1a)."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "declare_attackers",
+        "attacks": [
+          [
+            "box",
+            "B"
+          ]
+        ]
+      },
+      "delta": {
+        "turn": {
+          "number": 5,
+          "step": "declare_blockers",
+          "active": "A"
+        },
+        "pending": {
+          "seat": "B",
+          "kind": "declare_blockers"
+        },
+        "objects": {
+          "box": {
+            "attacking": "B",
+            "tapped": true
+          }
+        }
+      },
+      "note": "508.1a: Attack-in-the-Box has been under A's control since the turn began (start assumption: nothing is summoning sick, 302.6) and attacks B; A chooses not to attack with Tenderfoot. 508.1f: the attacker becomes tapped. 508.3a: its ability \"Whenever this creature attacks, you may have it get +4/+0 until end of turn. If you do, sacrifice it at the beginning of the next end step.\" triggers (603.2) and is put on the stack, controlled by A, the next time a player would receive priority (603.3, 603.3a), before A gets priority (508.2, 117.2a). A single trigger needs no ordering (603.3b) and it has no targets. Both pass and it resolves (117.4): A declines the \"may\" (608.2d; the null answer of the optional question, spec 5.6, implied), so Attack-in-the-Box stays 2/4 and, since A didn't, no sacrifice instruction applies and no delayed triggered ability is created. 608.2n: the ability ceases to exist; created and gone within this stretch, it is in no recorded state and takes no stack id. A receives priority (117.3b); both pass with the stack empty and the step ends (500.2). 509.1a: B controls an untapped creature and a creature attacks B, so the declaration is asked."
+    },
+    {
+      "seat": "B",
+      "do": {
+        "kind": "declare_blockers",
+        "blocks": [
+          [
+            "goblin",
+            "box"
+          ]
+        ]
+      },
+      "delta": {
+        "turn": {
+          "number": 6,
+          "step": "upkeep",
+          "active": "B"
+        },
+        "pending": {
+          "seat": "B",
+          "kind": "priority"
+        },
+        "objects": {
+          "box": {
+            "zone": "A.graveyard"
+          },
+          "goblin": {
+            "power": 2,
+            "toughness": 2
+          },
+          "bforest1": {
+            "tapped": false
+          }
+        }
+      },
+      "note": "509.1a: the untapped Swab Goblin (5/5 until end of turn) blocks Attack-in-the-Box; Swab Goblin has no restriction (509.1b, 509.1c). 509.1h: Attack-in-the-Box becomes blocked. 509.2: A receives priority; both pass (implied). No creature has first strike or double strike, so there is no first-strike combat damage step (510.4). 510.1a, 510.1c: Attack-in-the-Box (2/4) assigns its 2 damage to the Goblin, its only blocker; the Goblin assigns 5 to Attack-in-the-Box (510.1d with one attacker). 510.2: the damage is dealt simultaneously and marked (120.3e). 704.5g: Attack-in-the-Box has 5 damage and toughness 4 and is destroyed, going to its owner's graveyard (701.8a); it is removed from combat (506.4) and, as a new object (400.7), keeps none of its battlefield facts. The Goblin has 2 damage and toughness 5 and survives. 510.3: A receives priority; both pass. End of combat step (511.1): both pass; 511.3: the Goblin is removed from combat, so its blocking returns to none, as before this delta. Postcombat main phase and end step: no decision, both pass (500.2, 513.1); no \"at the beginning of the next end step\" ability exists, since A declined the may. Cleanup: A's hand has no cards, so nothing is discarded (514.1); 514.2: the Goblin's 2 damage is removed and Giant Growth's until-end-of-turn effect ends, so it is a 2/2 again (written back explicitly) and its damage is 0, as it was at the previous boundary. No state-based action would be performed and nothing triggers, so no player receives priority in the cleanup step (514.3a). Turn 6, B is the active player: untap step: B untaps B's Forest (502.3); A's tapped Forests stay tapped (they untap in A's untap step). Upkeep: B receives priority (503.1). The Tenderfoot's counter stays."
+    }
+  ]
+}

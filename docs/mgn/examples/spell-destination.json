@@ -1,0 +1,104 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {"effective": "2026-09-25", "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"},
+    "oracle": {"source": "scryfall-oracle-cards", "updated_at": "2026-10-11T09:01:56.463+00:00", "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"}
+  },
+  "game": {"format": "custom", "life": 20, "hand_size": 7, "seats": ["A", "B"]},
+  "author": {"kind": "agent", "name": "step-4 author", "provider": "Anthropic", "model": "claude-opus-5-5"},
+  "note": "Tier 1. A spell_destination question (616.1): B's Leyline of the Void (\"If a card would be put into an opponent's graveyard from anywhere, exile it instead.\") and the Omen rule (720.3d: the Omen spell's controller shuffles it into its owner's library instead of putting it into its owner's graveyard as it resolves) would both replace the final move of A's resolving Skimming Strike, the Omen face of Dirgur Island Dragon. A, the spell's controller, chooses which applies; A chooses the Leyline, and the card is exiled. Interpretation: the record treats 720.3d, whose wording is \"instead of\", as a replacement the rules create (614.1a); the pinned rules do not call it a replacement effect in so many words (contrast 903.9b, 717.6). The position is stipulated (spec 2.4), not reached by ordinary play.",
+  "cards": {
+    "leyline": {"owner": "B", "oracle": "f4e32fc1-1b8d-441e-8e76-71f19f98e925", "name": "Leyline of the Void"},
+    "swamp1": {"owner": "B", "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68", "name": "Swamp"},
+    "swamp2": {"owner": "B", "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68", "name": "Swamp"},
+    "swamp3": {"owner": "B", "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68", "name": "Swamp"},
+    "swamp4": {"owner": "B", "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68", "name": "Swamp"},
+    "swamp5": {"owner": "B", "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68", "name": "Swamp"},
+    "bears": {"owner": "B", "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0", "name": "Grizzly Bears"},
+    "dragon": {"owner": "A", "oracle": "23cda76b-6e47-4922-a38d-93f7aae1eb00", "name": "Dirgur Island Dragon // Skimming Strike"},
+    "island1": {"owner": "A", "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373", "name": "Island"},
+    "island2": {"owner": "A", "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373", "name": "Island"},
+    "island3": {"owner": "A", "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373", "name": "Island"},
+    "island4": {"owner": "A", "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373", "name": "Island"}
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {"number": 4, "step": "precombat_main", "active": "B"},
+      "pending": {"seat": "B", "kind": "priority"},
+      "result": {"kind": "unfinished"},
+      "players": {"A": {"life": 20}, "B": {"life": 20}},
+      "zones": {
+        "A.library": ["island3", "island4"],
+        "A.hand": ["dragon"],
+        "A.graveyard": [],
+        "B.library": ["swamp5"],
+        "B.hand": ["leyline"],
+        "B.graveyard": [],
+        "battlefield": ["swamp1", "swamp2", "swamp3", "swamp4", "bears", "island1", "island2"],
+        "stack": [],
+        "exile": [],
+        "command": []
+      }
+    }
+  },
+  "transitions": [
+    {
+      "seat": "B",
+      "do": {
+        "kind": "cast",
+        "card": "leyline",
+        "pay": {
+          "abilities": [
+            {"source": "swamp1", "ability": {"rule": "305.6"}, "adding": ["B"]},
+            {"source": "swamp2", "ability": {"rule": "305.6"}, "adding": ["B"]},
+            {"source": "swamp3", "ability": {"rule": "305.6"}, "adding": ["B"]},
+            {"source": "swamp4", "ability": {"rule": "305.6"}, "adding": ["B"]}
+          ]
+        }
+      },
+      "delta": {
+        "turn": {"number": 5, "step": "precombat_main", "active": "A"},
+        "pending": {"seat": "A", "kind": "priority"},
+        "objects": {
+          "leyline": {"zone": "battlefield"},
+          "island3": {"zone": "A.hand"}
+        }
+      },
+      "note": "601.2a: Leyline of the Void ({2}{B}{B}, enchantment) is cast in B's main phase with an empty stack (117.1a, the timing of a noninstant spell); its opening-hand paragraph does not matter here (103.6 is past). 601.2g, 601.2h: four Swamps each add {B} (305.6) and pay the cost. 117.3c: B receives priority; B and A pass (117.3d, implied) and the spell resolves (117.4): a permanent spell enters the battlefield under its controller's control (608.3). 117.3b: B receives priority; both pass with an empty stack and the main phase ends (500.2). Combat: B controls Grizzly Bears, which could attack, so the declaration is asked (508.1a); B declares none, the null answer (spec 5.6), so the declare blockers and combat damage steps are skipped (508.8, 506.1). Postcombat main and end step: both pass (500.2). Cleanup: B's hand is empty, nothing is discarded (514.1), nothing happens that would give priority (514.3a). Turn 5, A active: untap (502.3; no priority, 502.4), upkeep (503.1, both pass), draw: A draws the top card of A's library, an Island (504.1), both pass; precombat main: A receives priority (117.3a). From now on the Leyline's static ability (604.1) generates its replacement effect (614.1a: \"instead\")."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "dragon",
+        "face": 1,
+        "targets": [["bears"]],
+        "pay": {
+          "abilities": [
+            {"source": "island1", "ability": {"rule": "305.6"}, "adding": ["U"]},
+            {"source": "island2", "ability": {"rule": "305.6"}, "adding": ["U"]}
+          ]
+        }
+      },
+      "delta": {
+        "pending": {"seat": "A", "kind": "spell_destination", "about": {"object": "dragon"}},
+        "objects": {
+          "dragon": {"zone": "stack", "face": 1, "targets": [["bears"]]},
+          "island4": {"zone": "A.hand"}
+        }
+      },
+      "note": "720.3: A chooses to cast the omen card as an Omen; 720.3a, 720.3b: as Skimming Strike it has only its alternative characteristics ({1}{U}, Instant - Omen: \"Tap up to one target creature. Draw a card.\"), so the spell on the stack has face 1. 601.2c: its one target is Grizzly Bears (up to one, A chooses one). 601.2g, 601.2h: two Islands add {U}{U} (305.6) and pay {1}{U}. 117.3c: A receives priority; A then B pass (117.3d, implied) and the spell resolves (117.4). 608.2b: the Bears is still a legal target. 608.2c: the Bears becomes tapped (701.26a; tier 2, not written) and A draws a card: the Island on top of A's library goes to A's hand (121.1). 608.2n would now put the instant into its owner's graveyard as the final part of its resolution, but two effects would replace that move: the Omen's shuffle (720.3d) and the Leyline's exile (B's static ability, paragraph 2: A is B's opponent and the card would be put into A's graveyard). 616.1: the affected object's controller, A, chooses one to apply; neither is a self-replacement effect (614.15: the shuffle comes from rule 720.3d, which Skimming Strike's text only reminds of in parenthesized reminder text, 207.2a), and 616.1b-d concern entering the battlefield, so 616.1e lets A choose either. The question is asked as the spell resolves, so the spell is still on the stack with its face and target (spec 4.2)."
+    },
+    {
+      "seat": "A",
+      "do": {"kind": "spell_destination", "effect": {"source": "leyline", "ability": {"face": 0, "paragraph": 2}}},
+      "delta": {
+        "pending": {"seat": "A", "kind": "priority"},
+        "objects": {"dragon": {"zone": "exile"}}
+      },
+      "note": "A chooses the Leyline's replacement effect (616.1, 616.1e), named by its source and its second paragraph (spec 3.3). 614.6: the replaced event never happens; the card is exiled instead. 616.1f: the process repeats only with effects that would now be applicable; the modified event is a move to exile, not into a graveyard, so 720.3d no longer applies, there is no shuffle and no shuffle outcome. 720.4: in exile the card has only its normal characteristics, so its face returns to the default 0 and its targets end with the zone change (400.7); the delta states only the new object's zone. 117.3b: the active player, A, receives priority after the resolution; the record ends there."
+    }
+  ]
+}

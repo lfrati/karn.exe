@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "divergence-report.schema.json",
+  "title": "MGN divergence report",
+  "description": "The result of replaying one record on one engine (verification.md).",
+  "type": "object",
+  "required": ["mgn_report", "record", "game", "engine", "adapter", "tier", "levels", "transitions", "replayed", "stopped_at", "divergences", "inconclusive", "refusals"],
+  "properties": {
+    "mgn_report": {"const": "1"},
+    "record": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "game": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "engine": {"$ref": "#/$defs/software"},
+    "adapter": {"$ref": "#/$defs/software"},
+    "tier": {"enum": [1, 2]},
+    "levels": {
+      "type": "object",
+      "required": ["L0", "L1", "L2", "L3", "L4", "L5"],
+      "properties": {
+        "L0": {"$ref": "#/$defs/outcome"}, "L1": {"$ref": "#/$defs/outcome"}, "L2": {"$ref": "#/$defs/outcome"},
+        "L3": {"$ref": "#/$defs/outcome"}, "L4": {"$ref": "#/$defs/outcome"}, "L5": {"$ref": "#/$defs/outcome"}
+      },
+      "additionalProperties": false
+    },
+    "transitions": {"type": "integer", "minimum": 0},
+    "replayed": {"type": "integer", "minimum": 0},
+    "stopped_at": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 0}]},
+    "divergences": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["after", "level", "path", "expected", "actual", "first"],
+        "properties": {
+          "after": {"type": "integer", "minimum": 0},
+          "level": {"enum": ["L1", "L2", "L3", "L4", "L5"]},
+          "path": {"type": "string", "minLength": 1},
+          "expected": {},
+          "actual": {},
+          "first": {"type": "boolean"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "inconclusive": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["after", "level", "path", "reason"],
+        "properties": {
+          "after": {"type": "integer", "minimum": 0},
+          "level": {"enum": ["L1", "L2", "L3", "L4", "L5"]},
+          "path": {"type": "string", "minLength": 1},
+          "reason": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    },
+    "refusals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["after", "class", "code", "message"],
+        "properties": {
+          "after": {"type": "integer", "minimum": 0},
+          "class": {"enum": ["illegal", "unsupported", "fault"]},
+          "code": {"type": "string", "minLength": 1},
+          "message": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "usage": {"type": "object", "properties": {"seconds": {"type": "number", "minimum": 0}, "notes": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": true},
+    "unsupported": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "software": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {"name": {"type": "string", "minLength": 1}, "version": {"type": "string", "minLength": 1}},
+      "additionalProperties": false
+    },
+    "outcome": {"enum": ["pass", "fail", "inconclusive", "not_applicable"]}
+  }
+}

@@ -1,0 +1,227 @@
+{
+  "mgn": "1",
+  "tier": 2,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "independent-public-contract-author",
+    "provider": "OpenAI",
+    "model": "gpt-6.1-sol"
+  },
+  "cards": {
+    "burst": {
+      "owner": "A",
+      "oracle": "ac2086fe-98ee-4280-9c7c-c5c2d6548a8b",
+      "name": "Burst Lightning"
+    },
+    "echo": {
+      "owner": "A",
+      "oracle": "a1f55890-31c5-4ed4-a2cd-7a4a9f05f8ca",
+      "name": "Reverberate"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "assumptions": {
+      "land_played": {
+        "A": 0,
+        "B": 0
+      },
+      "spells_cast": {
+        "A": 0,
+        "B": 0
+      },
+      "summoning_sick": [],
+      "consecutive_passes": 0
+    },
+    "state": {
+      "turn": {
+        "number": 3,
+        "step": "precombat_main",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20,
+          "mana": {
+            "R": 7
+          }
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [],
+        "A.hand": [
+          "burst",
+          "echo"
+        ],
+        "A.graveyard": [],
+        "B.library": [],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [],
+        "stack": [],
+        "exile": [],
+        "command": []
+      },
+      "objects": {}
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "burst",
+        "additional": {
+          "kicker": 1
+        },
+        "targets": [
+          [
+            "B"
+          ]
+        ],
+        "pay": {
+          "pool": {
+            "R": 5
+          }
+        }
+      },
+      "delta": {
+        "players": {
+          "A": {
+            "mana": {
+              "R": 2
+            }
+          }
+        },
+        "objects": {
+          "burst": {
+            "zone": "stack",
+            "targets": [
+              [
+                "B"
+              ]
+            ],
+            "cast": {
+              "additional": {
+                "kicker": 1
+              }
+            }
+          }
+        }
+      },
+      "note": "Pay {R}+{4}; A retains priority (117.3c). No passes yet."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "echo",
+        "targets": [
+          [
+            "burst"
+          ]
+        ],
+        "pay": {
+          "pool": {
+            "R": 2
+          }
+        }
+      },
+      "delta": {
+        "players": {
+          "A": {
+            "mana": {}
+          }
+        },
+        "objects": {
+          "echo": {
+            "zone": "stack",
+            "targets": [
+              [
+                "burst"
+              ]
+            ]
+          }
+        },
+        "pending": {
+          "seat": "A",
+          "kind": "change_targets",
+          "about": {
+            "object": "echo"
+          }
+        }
+      },
+      "note": "Implied priority passes resolve Reverberate up to its optional new-target choice. The copy is not yet put on the stack (707.10c); Reverberate is still resolving."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "change_targets",
+        "targets": [
+          [
+            "A"
+          ]
+        ]
+      },
+      "delta": {
+        "objects": {
+          "echo": {
+            "zone": "A.graveyard"
+          },
+          "S1": {
+            "zone": "stack",
+            "kind": "copy",
+            "copy_of": "burst",
+            "controller": "A",
+            "targets": [
+              [
+                "A"
+              ]
+            ],
+            "cast": {
+              "additional": {
+                "kicker": 1
+              }
+            }
+          }
+        },
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        }
+      },
+      "note": "Choose a different legal player target. S1 is kicked through retained choices, with no permission, convoke, delve or payment asserted. Reverberate finishes; A gets priority (117.3b). Burst and S1 each would deal 4 on resolution, but neither resolves in this record."
+    }
+  ],
+  "note": "Independent draft. CR 702.33a,d, 707.10, 707.10c and pinned Burst Lightning/Reverberate rulings: a spell copy retains kicker without being cast or paid for again. This record ends with the copy on the stack; no damage resolution is claimed."
+}

@@ -1,0 +1,175 @@
+{
+  "mgn": "1",
+  "tier": 2,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "independent-public-contract-author",
+    "provider": "OpenAI",
+    "model": "gpt-6.1-sol"
+  },
+  "cards": {
+    "boost": {
+      "owner": "A",
+      "oracle": "d7fa5c42-7cd5-42e7-a42e-724c1a3df96a",
+      "name": "Aerial Boost"
+    },
+    "guild1": {
+      "owner": "A",
+      "oracle": "8fbdca3a-7aa3-4b5a-98d7-9168856045ac",
+      "name": "Selesnya Guildmage"
+    },
+    "guild2": {
+      "owner": "A",
+      "oracle": "8fbdca3a-7aa3-4b5a-98d7-9168856045ac",
+      "name": "Selesnya Guildmage"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "assumptions": {
+      "land_played": {
+        "A": 0,
+        "B": 0
+      },
+      "spells_cast": {
+        "A": 0,
+        "B": 0
+      },
+      "summoning_sick": [
+        "guild1",
+        "guild2"
+      ],
+      "consecutive_passes": 0
+    },
+    "state": {
+      "turn": {
+        "number": 3,
+        "step": "precombat_main",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [],
+        "A.hand": [
+          "boost"
+        ],
+        "A.graveyard": [],
+        "B.library": [],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [
+          "guild1",
+          "guild2"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      },
+      "objects": {}
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "attempt": {
+        "kind": "cast",
+        "card": "boost",
+        "targets": [
+          [
+            "guild1"
+          ]
+        ],
+        "convoke": [
+          {
+            "object": "guild1",
+            "mana": "G"
+          },
+          {
+            "object": "guild2",
+            "mana": null
+          }
+        ],
+        "pay": {}
+      },
+      "illegal": true,
+      "note": "Both allocations would pay generic or green, leaving the required white mana unpaid. CR 702.51a, 601.2h, 733.1-2. Attempt rolls back all tapping."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "boost",
+        "targets": [
+          [
+            "guild1"
+          ]
+        ],
+        "convoke": [
+          {
+            "object": "guild1",
+            "mana": "W"
+          },
+          {
+            "object": "guild2",
+            "mana": null
+          }
+        ],
+        "pay": {}
+      },
+      "delta": {
+        "objects": {
+          "boost": {
+            "zone": "A.graveyard"
+          },
+          "guild1": {
+            "tapped": true,
+            "power": 4,
+            "toughness": 4,
+            "keywords": [
+              "flying"
+            ]
+          },
+          "guild2": {
+            "tapped": true
+          }
+        }
+      },
+      "note": "Each creature taps exactly once. All priority passes are implied; Boost resolves, then A receives priority in the same main phase. CR 117.3b, 117.4, 608.2c, 608.2n. No end-of-turn cleanup is included."
+    }
+  ],
+  "note": "Independent draft. CR 702.51a-c, 302.6 and pinned Aerial Boost rulings: a newly controlled multicolored creature may convoke for a color it has or for one generic mana. No mana abilities are activated."
+}

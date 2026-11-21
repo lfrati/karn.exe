@@ -1,0 +1,207 @@
+{
+  "mgn": "1",
+  "tier": 2,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "step-4 author",
+    "provider": "Anthropic",
+    "model": "claude-opus-5-5"
+  },
+  "note": "Tier 2. Ball Lightning (6/1; \"Trample\", \"Haste\", \"At the beginning of the end step, sacrifice this creature.\") came under A's control this turn (how is not stated: the position claims no spell cast this turn, only that it has not been controlled continuously since A's turn began, 302.6) and attacks anyway thanks to haste (702.10b). B blocks with Grizzly Bears (2/2). Under trample A assigns lethal damage, 2, to the Bears and the excess, 4, to B (702.19b). The Bears' 2 damage kills Ball Lightning (toughness 1) at the same time (510.2, 704.5g), so its end-step sacrifice never triggers. The record starts at the declare attackers step, A's declaration pending: an entry must answer the pending question (spec 4), and declare_attackers does not answer the priority of the precombat main phase, so the position is the boundary of the first decision (spec 2.4). The position is stipulated (spec 2.4), not reached by ordinary play: how Ball Lightning came under A's control this turn is not shown.",
+  "cards": {
+    "ball": {
+      "owner": "A",
+      "oracle": "7485cf25-eb41-4397-be13-7f0b8c10c70a",
+      "name": "Ball Lightning"
+    },
+    "bears": {
+      "owner": "B",
+      "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0",
+      "name": "Grizzly Bears"
+    },
+    "plains": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    },
+    "forest": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 3,
+        "step": "declare_attackers",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "declare_attackers"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [
+          "plains"
+        ],
+        "A.hand": [],
+        "A.graveyard": [],
+        "B.library": [
+          "forest"
+        ],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [
+          "ball",
+          "bears"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      }
+    },
+    "assumptions": {
+      "summoning_sick": [
+        "ball"
+      ]
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "declare_attackers",
+        "attacks": [
+          [
+            "ball",
+            "B"
+          ]
+        ]
+      },
+      "delta": {
+        "turn": {
+          "number": 3,
+          "step": "declare_blockers",
+          "active": "A"
+        },
+        "pending": {
+          "seat": "B",
+          "kind": "declare_blockers"
+        },
+        "objects": {
+          "ball": {
+            "attacking": "B",
+            "tapped": true
+          }
+        }
+      },
+      "note": "508.1a, 302.6, 702.10b: Ball Lightning has not been under A's control since the turn began, but it has haste, so it may attack; it attacks B (508.1b). 508.1f: it becomes tapped; 508.1k: it is an attacking creature. Nothing triggers (508.1m). 508.2: A gets priority; A and B pass (implied, 117.3d) and the step ends (500.2). Declare blockers step: B controls a creature and a creature attacks B, so B's declaration is asked (509.1a)."
+    },
+    {
+      "seat": "B",
+      "do": {
+        "kind": "declare_blockers",
+        "blocks": [
+          [
+            "bears",
+            "ball"
+          ]
+        ]
+      },
+      "delta": {
+        "turn": {
+          "number": 3,
+          "step": "combat_damage",
+          "active": "A"
+        },
+        "pending": {
+          "seat": "A",
+          "kind": "assign_combat_damage",
+          "about": {
+            "creature": "ball"
+          }
+        },
+        "objects": {
+          "ball": {
+            "blocked": true
+          },
+          "bears": {
+            "blocking": [
+              "ball"
+            ]
+          }
+        }
+      },
+      "note": "509.1a, 509.1g: the untapped Grizzly Bears blocks Ball Lightning; 509.1h: Ball Lightning becomes blocked. 509.2: A gets priority; both pass (implied). No creature has first strike or double strike: one combat damage step (510.4). 510.1, 510.1a: Ball Lightning assigns 6, its power. Without trample, 510.1c would send all of it to its one blocker; with trample, 702.19b lets A assign the excess over lethal damage among the blocker and B, the player it attacks, so the assignment is A's question (spec 5.3). The Bears blocks exactly one creature and assigns its 2 to it (510.1d): no question for B."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "assign_combat_damage",
+        "assignments": [
+          [
+            "bears",
+            2
+          ],
+          [
+            "B",
+            4
+          ]
+        ]
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "players": {
+          "B": {
+            "life": 16
+          }
+        },
+        "objects": {
+          "ball": {
+            "zone": "A.graveyard"
+          },
+          "bears": {
+            "zone": "B.graveyard"
+          }
+        }
+      },
+      "note": "702.19b: A first assigns lethal damage to the blocker: the Bears has toughness 2 and no damage marked, so 2 is lethal (120.6, 704.5g); the remaining 4 is excess, which A assigns to B, the player Ball Lightning is attacking. 510.1e: the total assignment complies. 510.1d: the Bears assigns its 2 to Ball Lightning. 510.2: the damage is dealt simultaneously: 120.3a: B loses 4 life, 20 to 16; 120.3e: 2 damage is marked on the Bears and 2 on Ball Lightning. 510.3, 704.3: state-based actions before A gets priority: 704.5g: Ball Lightning (toughness 1, 2 damage) and the Bears (toughness 2, 2 damage) are destroyed and go to their owners' graveyards (701.8a), new objects (400.7) whose damage and combat facts are not written (spec 4.1). B's life is above 0 (704.5a). Nothing triggers; 510.3: A gets priority in the combat damage step. Ball Lightning's \"At the beginning of the end step, sacrifice this creature.\" never triggers (603.2b): it has left the battlefield before the end step begins."
+    }
+  ]
+}

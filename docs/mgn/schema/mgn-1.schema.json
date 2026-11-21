@@ -1,0 +1,1013 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mgn-1.schema.json",
+  "title": "MGN 1 record",
+  "description": "Magic: the Gathering Game Notation, format mgn/1. Normative structure; docs/mgn/spec.md gives the meaning.",
+  "type": "object",
+  "required": ["mgn", "tier", "pins", "game", "author", "cards", "start", "transitions"],
+  "properties": {
+    "mgn": {"const": "1"},
+    "tier": {"enum": [1, 2]},
+    "pins": {"$ref": "#/$defs/pins"},
+    "game": {"$ref": "#/$defs/game"},
+    "match": {"$ref": "#/$defs/match"},
+    "author": {"$ref": "#/$defs/party"},
+    "producer": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {"name": {"type": "string", "minLength": 1}, "version": {"type": "string"}},
+      "additionalProperties": false
+    },
+    "lineage": {
+      "type": "object",
+      "properties": {"supersedes": {"$ref": "#/$defs/record_identity"}, "upgrades": {"$ref": "#/$defs/record_identity"}},
+      "additionalProperties": false,
+      "minProperties": 1
+    },
+    "note": {"type": "string"},
+    "cards": {
+      "type": "object",
+      "patternProperties": {"^(?![A-Z]$)(?!T[1-9][0-9]*$)(?!S[1-9][0-9]*$)(?!E[1-9][0-9]*$)[A-Za-z][A-Za-z0-9_-]{0,31}$": {"$ref": "#/$defs/card"}},
+      "additionalProperties": false
+    },
+    "start": {"$ref": "#/$defs/start"},
+    "transitions": {"type": "array", "items": {"$ref": "#/$defs/transition"}},
+    "checkpoints": {
+      "type": "object",
+      "patternProperties": {"^[1-9][0-9]*$": {"$ref": "#/$defs/sha256"}},
+      "additionalProperties": false
+    }
+  },
+  "patternProperties": {"^x-": {}},
+  "additionalProperties": false,
+  "$defs": {
+    "seat": {"type": "string", "pattern": "^[A-Z]$"},
+    "card_id": {"type": "string", "pattern": "^(?![A-Z]$)(?!T[1-9][0-9]*$)(?!S[1-9][0-9]*$)(?!E[1-9][0-9]*$)[A-Za-z][A-Za-z0-9_-]{0,31}$"},
+    "designation": {"enum": ["solved", "saddled", "suspected", "harnessed", "prepared", "plotted", "foretold", "left half unlocked", "right half unlocked"]},
+    "player_designation": {"enum": ["enduring story"]},
+    "casting_permission": {
+      "type": "object", "required": ["source", "ability"],
+      "properties": {"source": {"$ref": "#/$defs/object_id"}, "ability": {"$ref": "#/$defs/ability_ref"}},
+      "additionalProperties": false
+    },
+    "convoke": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "required": ["object", "mana"],
+        "properties": {"object": {"$ref": "#/$defs/object_id"}, "mana": {"enum": ["W", "U", "B", "R", "G", null]}},
+        "additionalProperties": false
+      }
+    },
+    "cast_choices": {
+      "type": "object",
+      "properties": {
+        "cost": {"$ref": "#/$defs/cost"},
+        "permission": {"$ref": "#/$defs/casting_permission"},
+        "additional": {"$ref": "#/$defs/additional_costs"},
+        "convoke": {"$ref": "#/$defs/convoke"},
+        "delve": {"type": "array", "items": {"$ref": "#/$defs/object_id"}}
+      },
+      "additionalProperties": false,
+      "minProperties": 1
+    },
+    "chosen_values": {
+      "type": "object",
+      "properties": {
+        "color": {"$ref": "#/$defs/color"},
+        "creature_type": {"type": "string", "minLength": 1},
+        "land_type": {"type": "string", "minLength": 1},
+        "basic_land_type": {"type": "string", "minLength": 1},
+        "card_type": {"$ref": "#/$defs/card_type"},
+        "card_name": {"type": "string", "minLength": 1},
+        "player": {"$ref": "#/$defs/seat"},
+        "number": {"type": "integer"}
+      },
+      "additionalProperties": false
+    },
+    "attacking_value": {"oneOf": [{"$ref": "#/$defs/target"}, {"const": ""}, {"type": "null"}]},
+    "token_id": {"type": "string", "pattern": "^T[1-9][0-9]*$"},
+    "stack_id": {"type": "string", "pattern": "^S[1-9][0-9]*$"},
+    "object_id": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,31}$"},
+    "target": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,31}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "record_identity": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+    "uuid": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"},
+    "natural": {"type": "integer", "minimum": 0},
+    "positive": {"type": "integer", "minimum": 1},
+    "mana_type": {"enum": ["W", "U", "B", "R", "G", "C"]},
+    "mana_pool": {
+      "type": "object",
+      "properties": {
+        "W": {"$ref": "#/$defs/positive"}, "U": {"$ref": "#/$defs/positive"}, "B": {"$ref": "#/$defs/positive"},
+        "R": {"$ref": "#/$defs/positive"}, "G": {"$ref": "#/$defs/positive"}, "C": {"$ref": "#/$defs/positive"}
+      },
+      "additionalProperties": false
+    },
+    "restricted_mana_identity": {
+      "type": "object", "required": ["type", "restriction"],
+      "properties": {
+        "type": {"$ref": "#/$defs/mana_type"},
+        "restriction": {"type": "string", "minLength": 1},
+        "producer": {"$ref": "#/$defs/ability_instance"},
+        "chosen": {"$ref": "#/$defs/chosen_values"}
+      },
+      "additionalProperties": false
+    },
+    "restricted_mana_lot": {
+      "type": "object", "required": ["type", "count", "restriction"],
+      "properties": {
+        "type": {"$ref": "#/$defs/mana_type"}, "count": {"$ref": "#/$defs/positive"},
+        "restriction": {"type": "string", "minLength": 1},
+        "producer": {"$ref": "#/$defs/ability_instance"},
+        "chosen": {"$ref": "#/$defs/chosen_values"}
+      },
+      "additionalProperties": false
+    },
+    "cost_choices": {
+      "type": "object", "properties": {"choices": {"type": "array", "items": {"$ref": "#/$defs/positive"}}},
+      "additionalProperties": false
+    },
+    "color": {"enum": ["white", "blue", "black", "red", "green"]},
+    "card_type": {"enum": ["artifact", "battle", "conspiracy", "creature", "dungeon", "enchantment", "instant", "kindred", "land", "phenomenon", "plane", "planeswalker", "scheme", "sorcery", "vanguard"]},
+    "supertype": {"enum": ["basic", "legendary", "ongoing", "snow", "world"]},
+    "step": {"enum": ["pregame", "untap", "upkeep", "draw", "precombat_main", "begin_combat", "declare_attackers", "declare_blockers", "first_strike_damage", "combat_damage", "end_combat", "postcombat_main", "end", "cleanup"]},
+    "zone": {"type": "string", "pattern": "^([A-Z]\\.(library|hand|graveyard)|battlefield|stack|exile|command)$"},
+    "ordered_zone": {"type": "string", "pattern": "^([A-Z]\\.(library|graveyard)|stack)$"},
+    "counters": {
+      "type": "object",
+      "patternProperties": {"^(?:[+-][0-9]+/[+-][0-9]+|[a-z][a-z0-9'-]*(?: [a-z][a-z0-9'-]*)?)$": {"$ref": "#/$defs/positive"}},
+      "additionalProperties": false
+    },
+    "library_position": {
+      "oneOf": [
+        {"enum": ["top", "bottom"]},
+        {"type": "object", "required": ["from_top"], "properties": {"from_top": {"$ref": "#/$defs/positive"}}, "additionalProperties": false}
+      ]
+    },
+    "ability_ref": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["face", "paragraph"],
+          "properties": {"face": {"$ref": "#/$defs/natural"}, "paragraph": {"$ref": "#/$defs/positive"}, "sub": {"$ref": "#/$defs/positive"}, "of": {"enum": ["text", "card"]}},
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["rule"],
+          "properties": {"rule": {"type": "string", "pattern": "^[0-9]{3}\\.[0-9]+[a-z]?$"}, "sub": {"$ref": "#/$defs/positive"}},
+          "allOf": [{"if": {"properties": {"rule": {"enum": ["725.2", "726.2"]}}}, "then": {"required": ["sub"], "properties": {"sub": {"maximum": 3}}}, "else": {"not": {"required": ["sub"]}}}, {"if": {"properties": {"rule": {"const": "725.2"}}}, "then": {"properties": {"sub": {"maximum": 2}}}}],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["inherited_from", "granted_by"],
+          "properties": {"inherited_from": {"$ref": "#/$defs/effect_ref", "required": ["source", "ability"]}, "granted_by": {"$ref": "#/$defs/effect_ref", "required": ["source", "ability"]}},
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["granted_by", "face", "paragraph"],
+          "properties": {"granted_by": {"$ref": "#/$defs/object_id"}, "face": {"$ref": "#/$defs/natural"}, "paragraph": {"$ref": "#/$defs/positive"}, "sub": {"$ref": "#/$defs/positive"}},
+          "additionalProperties": false
+        }
+      ]
+    },
+    "source_free_ability": {"oneOf": [
+      {"type": "object", "required": ["rule", "sub"], "properties": {"rule": {"const": "725.2"}, "sub": {"enum": [1, 2]}}, "additionalProperties": false},
+      {"type": "object", "required": ["rule", "sub"], "properties": {"rule": {"const": "726.2"}, "sub": {"enum": [1, 2, 3]}}, "additionalProperties": false},
+      {"type": "object", "required": ["rule"], "properties": {"rule": {"const": "702.179d"}}, "additionalProperties": false}
+    ]},
+    "ability_instance": {
+      "type": "object",
+      "required": ["ability"],
+      "allOf": [{"if": {"properties": {"ability": {"$ref": "#/$defs/source_free_ability"}}}, "then": {"not": {"required": ["source"]}}, "else": {"required": ["source"]}}],
+      "properties": {
+        "source": {"$ref": "#/$defs/object_id"},
+        "ability": {"$ref": "#/$defs/ability_ref"},
+        "for": {"type": "array", "items": {"$ref": "#/$defs/target"}}
+      },
+      "additionalProperties": false
+    },
+    "effect_ref": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["source", "ability"],
+          "properties": {"source": {"$ref": "#/$defs/object_id"}, "ability": {"$ref": "#/$defs/ability_ref"}},
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["rule"],
+          "properties": {"rule": {"type": "string", "pattern": "^[0-9]{3}\\.[0-9]+[a-z]?$"}, "sub": {"$ref": "#/$defs/positive"}},
+          "allOf": [{"if": {"properties": {"rule": {"enum": ["725.2", "726.2"]}}}, "then": {"required": ["sub"], "properties": {"sub": {"maximum": 3}}}, "else": {"not": {"required": ["sub"]}}}, {"if": {"properties": {"rule": {"const": "725.2"}}}, "then": {"properties": {"sub": {"maximum": 2}}}}],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "target_groups": {"type": "array", "items": {"type": "array", "items": {"$ref": "#/$defs/target"}}},
+    "division": {"type": "array", "items": {"type": "array", "items": {"$ref": "#/$defs/positive"}}},
+    "pins": {
+      "type": "object",
+      "required": ["rules", "oracle"],
+      "properties": {
+        "rules": {
+          "type": "object",
+          "required": ["effective", "sha256"],
+          "properties": {"effective": {"$ref": "#/$defs/date"}, "sha256": {"$ref": "#/$defs/sha256"}},
+          "additionalProperties": false
+        },
+        "oracle": {
+          "type": "object",
+          "required": ["source", "updated_at", "sha256"],
+          "properties": {"source": {"type": "string", "minLength": 1}, "updated_at": {"type": "string", "minLength": 1}, "sha256": {"$ref": "#/$defs/sha256"}},
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "game": {
+      "type": "object",
+      "required": ["format", "life", "hand_size", "seats"],
+      "properties": {
+        "format": {"enum": ["standard", "pioneer", "modern", "legacy", "vintage", "pauper", "commander", "brawl", "limited", "custom"]},
+        "life": {"$ref": "#/$defs/positive"},
+        "hand_size": {"$ref": "#/$defs/natural"},
+        "seats": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/seat"}}
+      },
+      "additionalProperties": false
+    },
+    "match": {
+      "type": "object",
+      "properties": {
+        "game": {"$ref": "#/$defs/positive"},
+        "chooser": {"$ref": "#/$defs/seat"},
+        "sideboarding": {
+          "type": "object",
+          "patternProperties": {
+            "^[A-Z]$": {
+              "type": "object",
+              "properties": {"out": {"type": "array", "items": {"$ref": "#/$defs/card_id"}}, "in": {"type": "array", "items": {"$ref": "#/$defs/card_id"}}},
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "party": {
+      "type": "object",
+      "required": ["kind", "name"],
+      "properties": {
+        "kind": {"enum": ["agent", "person", "tool"]},
+        "name": {"type": "string", "minLength": 1},
+        "provider": {"type": "string"},
+        "model": {"type": "string"},
+        "version": {"type": "string"}
+      },
+      "additionalProperties": false,
+      "if": {"properties": {"kind": {"const": "agent"}}},
+      "then": {"required": ["provider", "model"]}
+    },
+    "card": {
+      "type": "object",
+      "required": ["owner", "oracle", "name"],
+      "properties": {
+        "owner": {"$ref": "#/$defs/seat"},
+        "oracle": {"$ref": "#/$defs/uuid"},
+        "name": {"type": "string", "minLength": 1},
+        "faces": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/sha256"}},
+        "from": {"enum": ["main", "sideboard", "command"]}
+      },
+      "additionalProperties": false
+    },
+    "turn": {
+      "type": "object",
+      "required": ["number", "step", "active"],
+      "properties": {
+        "number": {"$ref": "#/$defs/natural"},
+        "step": {"$ref": "#/$defs/step"},
+        "active": {"oneOf": [{"$ref": "#/$defs/seat"}, {"type": "null"}]},
+        "occurrence": {"type": "integer", "minimum": 2}
+      },
+      "additionalProperties": false
+    },
+    "pending": {
+      "type": "object",
+      "required": ["seat", "kind"],
+      "properties": {
+        "seat": {"$ref": "#/$defs/seat"},
+        "kind": {"enum": ["priority", "choose_first", "companion", "mulligan", "bottom", "opening_hand_action", "declare_attackers", "declare_blockers", "assign_combat_damage", "order_triggers", "legend_rule", "choose_replacement", "skip", "choose_targets", "choose_modes", "change_targets", "optional", "choose_objects", "choose_player", "choose_number", "choose_value", "choose_mana", "divide", "separate", "pile", "attach", "choose_defender", "discard", "library_destination", "arrange", "order_cards", "search", "choose_alternative", "pay", "cast_during_resolution", "spell_destination", "holders", "coin_call", "command_zone"]},
+        "about": {
+          "type": "object",
+          "properties": {
+            "object": {"$ref": "#/$defs/target"},
+            "creature": {"$ref": "#/$defs/object_id"},
+            "abilities": {"type": "array", "items": {"$ref": "#/$defs/ability_instance"}},
+            "objects": {"type": "array", "items": {"$ref": "#/$defs/object_id"}, "minItems": 2},
+            "count": {"$ref": "#/$defs/natural"},
+            "cards": {"type": "array", "items": {"$ref": "#/$defs/object_id"}},
+            "zone": {"type": "string", "pattern": "^[A-Z]\\.(library|graveyard)$"},
+            "placement": {"$ref": "#/$defs/library_position"},
+            "of": {"enum": ["color", "creature_type", "land_type", "basic_land_type", "card_type", "card_name"]}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "result": {
+      "oneOf": [
+        {"type": "object", "required": ["kind"], "properties": {"kind": {"const": "unfinished"}}, "additionalProperties": false},
+        {
+          "type": "object",
+          "required": ["kind", "winner", "cause"],
+          "properties": {
+            "kind": {"const": "win"},
+            "winner": {"$ref": "#/$defs/seat"},
+            "cause": {"enum": ["life", "draw_empty", "poison", "concession", "effect", "opponents_left"]}
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["kind", "cause"],
+          "properties": {"kind": {"const": "draw"}, "cause": {"enum": ["simultaneous", "loop", "effect"]}},
+          "additionalProperties": false
+        }
+      ]
+    },
+    "player_facts": {
+      "type": "object",
+      "properties": {
+        "life": {"type": "integer"},
+        "left": {"type": "boolean"},
+        "counters": {"$ref": "#/$defs/counters"},
+        "mana": {"$ref": "#/$defs/mana_pool"},
+        "mana_restricted": {"type": "array", "items": {"$ref": "#/$defs/restricted_mana_lot"}},
+        "speed": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 1}]},
+        "max_hand_size": {"oneOf": [{"$ref": "#/$defs/natural"}, {"type": "null"}]},
+        "designations": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/player_designation"}}
+      },
+      "additionalProperties": false
+    },
+    "game_facts": {
+      "type": "object",
+      "properties": {
+        "monarch": {"oneOf": [{"$ref": "#/$defs/seat"}, {"type": "null"}]},
+        "initiative": {"oneOf": [{"$ref": "#/$defs/seat"}, {"type": "null"}]},
+        "day_night": {"enum": ["day", "night", null]}
+      },
+      "additionalProperties": false
+    },
+    "copy_definition": {
+      "oneOf": [
+        {"type": "object", "required": ["oracle", "face"], "properties": {"oracle": {"$ref": "#/$defs/uuid"}, "face": {"$ref": "#/$defs/natural"}}, "additionalProperties": false},
+        {"type": "object", "required": ["oracle", "fused"], "properties": {"oracle": {"$ref": "#/$defs/uuid"}, "fused": {"const": true}}, "additionalProperties": false},
+        {"$ref": "#/$defs/copiable_characteristics"},
+        {"$ref": "#/$defs/double_faced_copy_definition"}
+      ]
+    },
+    "double_faced_copy_definition": {
+      "type": "object", "required": ["faces", "face"],
+      "properties": {
+        "faces": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"$ref": "#/$defs/copiable_characteristics"}},
+        "face": {"enum": [0, 1]}
+      },
+      "additionalProperties": false
+    },
+    "copiable_characteristics": {
+      "type": "object",
+      "required": ["name", "mana_cost", "color_indicator", "colors", "types", "supertypes", "subtypes", "text"],
+      "properties": {
+        "name": {"type": ["string", "null"]},
+        "mana_cost": {"type": ["string", "null"], "pattern": "^(\\{[^{}]+\\})+$"},
+        "color_indicator": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/color"}},
+        "colors": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/color"}},
+        "types": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/card_type"}},
+        "supertypes": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/supertype"}},
+        "subtypes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "text": {"type": "string"},
+        "power": {"type": "string", "minLength": 1},
+        "toughness": {"type": "string", "minLength": 1},
+        "loyalty": {"type": "string", "minLength": 1},
+        "defense": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "token_definition": {
+      "type": "object",
+      "required": ["name", "types", "colors"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "types": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/card_type"}},
+        "supertypes": {"type": "array", "items": {"$ref": "#/$defs/supertype"}},
+        "subtypes": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "colors": {"type": "array", "items": {"$ref": "#/$defs/color"}},
+        "power": {"type": "integer"},
+        "toughness": {"type": "integer"},
+        "keywords": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "text": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "departed_definition": {
+      "type": "object", "required": ["token", "owner"],
+      "properties": {"token": {"$ref": "#/$defs/token_definition"}, "owner": {"$ref": "#/$defs/seat"}},
+      "additionalProperties": false
+    },
+    "departed": {
+      "type": "object", "minProperties": 1,
+      "patternProperties": {"^T[1-9][0-9]*$": {"$ref": "#/$defs/departed_definition"}},
+      "additionalProperties": false
+    },
+    "object_fact_properties": {
+      "controller": {"$ref": "#/$defs/seat"},
+      "owner": {"$ref": "#/$defs/seat"},
+      "copy_of": {"oneOf": [{"$ref": "#/$defs/object_id"}, {"type": "null"}]},
+      "copy_face": {"const": 1},
+        "copy_definition": {"$ref": "#/$defs/copy_definition"},
+      "face": {"$ref": "#/$defs/natural"},
+      "fused": {"const": true},
+      "token": {"$ref": "#/$defs/token_definition"},
+      "emblem": {"type": "object", "required": ["text"], "properties": {"text": {"type": "string", "minLength": 1}}, "additionalProperties": false},
+      "kind": {"enum": ["ability", "copy"]},
+      "source": {"$ref": "#/$defs/object_id"},
+      "ability": {"$ref": "#/$defs/ability_ref"},
+      "targets": {"$ref": "#/$defs/target_groups"},
+      "modes": {"type": "array", "items": {"$ref": "#/$defs/positive"}},
+      "x": {"$ref": "#/$defs/natural"},
+      "division": {"$ref": "#/$defs/division"},
+      "cast": {"$ref": "#/$defs/cast_choices"},
+      "chosen": {"$ref": "#/$defs/chosen_values"},
+      "attacking": {"$ref": "#/$defs/attacking_value"},
+      "blocked": {"type": "boolean"},
+      "blocking": {"type": "array", "items": {"$ref": "#/$defs/object_id"}},
+      "in_combat": {"type": "boolean"},
+      "tapped": {"type": "boolean"},
+      "flipped": {"type": "boolean"},
+      "face_down": {"type": "boolean"},
+      "phased_out": {"type": "boolean"},
+      "counters": {"$ref": "#/$defs/counters"},
+      "damage": {"$ref": "#/$defs/natural"},
+      "attached_to": {"oneOf": [{"$ref": "#/$defs/target"}, {"type": "null"}]},
+      "power": {"type": ["integer", "null"]},
+      "toughness": {"type": ["integer", "null"]},
+      "colors": {"type": "array", "items": {"$ref": "#/$defs/color"}},
+      "types": {"type": "array", "items": {"$ref": "#/$defs/card_type"}},
+      "supertypes": {"type": "array", "items": {"$ref": "#/$defs/supertype"}},
+      "subtypes": {"type": "array", "items": {"type": "string", "minLength": 1}},
+      "keywords": {"type": "array", "items": {"type": "string", "minLength": 1}},
+      "granted": {"type": "array", "items": {"type": "string", "minLength": 1}},
+      "designations": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/designation"}},
+      "level": {"$ref": "#/$defs/natural"}
+    },
+    "object_facts": {
+      "type": "object",
+      "properties": {
+        "controller": {"$ref": "#/$defs/seat"},
+        "owner": {"$ref": "#/$defs/seat"},
+        "copy_of": {"oneOf": [{"$ref": "#/$defs/object_id"}, {"type": "null"}]},
+        "copy_face": {"const": 1},
+        "copy_definition": {"$ref": "#/$defs/copy_definition"},
+        "face": {"$ref": "#/$defs/natural"},
+        "fused": {"const": true},
+        "token": {"$ref": "#/$defs/token_definition"},
+        "emblem": {"type": "object", "required": ["text"], "properties": {"text": {"type": "string", "minLength": 1}}, "additionalProperties": false},
+        "kind": {"enum": ["ability", "copy"]},
+        "source": {"$ref": "#/$defs/object_id"},
+        "ability": {"$ref": "#/$defs/ability_ref"},
+        "targets": {"$ref": "#/$defs/target_groups"},
+        "modes": {"type": "array", "items": {"$ref": "#/$defs/positive"}},
+        "x": {"$ref": "#/$defs/natural"},
+        "division": {"$ref": "#/$defs/division"},
+        "cast": {"$ref": "#/$defs/cast_choices"},
+        "chosen": {"$ref": "#/$defs/chosen_values"},
+        "attacking": {"$ref": "#/$defs/attacking_value"},
+        "blocked": {"type": "boolean"},
+        "blocking": {"type": "array", "items": {"$ref": "#/$defs/object_id"}},
+        "in_combat": {"type": "boolean"},
+        "tapped": {"type": "boolean"},
+        "flipped": {"type": "boolean"},
+        "face_down": {"type": "boolean"},
+        "phased_out": {"type": "boolean"},
+        "counters": {"$ref": "#/$defs/counters"},
+        "damage": {"$ref": "#/$defs/natural"},
+        "attached_to": {"oneOf": [{"$ref": "#/$defs/target"}, {"type": "null"}]},
+        "power": {"type": ["integer", "null"]},
+        "toughness": {"type": ["integer", "null"]},
+        "colors": {"type": "array", "items": {"$ref": "#/$defs/color"}},
+        "types": {"type": "array", "items": {"$ref": "#/$defs/card_type"}},
+        "supertypes": {"type": "array", "items": {"$ref": "#/$defs/supertype"}},
+        "subtypes": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "keywords": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "granted": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "designations": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/designation"}},
+        "level": {"$ref": "#/$defs/natural"}
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {"if": {"required": ["kind"], "properties": {"kind": {"const": "ability"}}}, "then": {"required": ["ability", "controller"], "allOf": [{"if": {"properties": {"ability": {"$ref": "#/$defs/source_free_ability"}}}, "then": {"not": {"required": ["source"]}}, "else": {"required": ["source"]}}]}},
+        {"if": {"required": ["kind"], "properties": {"kind": {"const": "copy"}}}, "then": {"required": ["copy_of", "controller"]}},
+        {"if": {"required": ["token"]}, "then": {"required": ["controller"]}},
+        {"if": {"required": ["emblem"]}, "then": {"required": ["controller"]}}
+      ]
+    },
+    "object_delta": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/object_facts_with_zone"}
+      ]
+    },
+    "object_facts_with_zone": {
+      "type": "object",
+      "properties": {
+        "zone": {"$ref": "#/$defs/zone"},
+        "at": {"$ref": "#/$defs/library_position"},
+        "controller": {"$ref": "#/$defs/seat"},
+        "owner": {"$ref": "#/$defs/seat"},
+        "copy_of": {"oneOf": [{"$ref": "#/$defs/object_id"}, {"type": "null"}]},
+        "copy_face": {"const": 1},
+        "copy_definition": {"$ref": "#/$defs/copy_definition"},
+        "face": {"$ref": "#/$defs/natural"},
+        "fused": {"const": true},
+        "token": {"$ref": "#/$defs/token_definition"},
+        "emblem": {"type": "object", "required": ["text"], "properties": {"text": {"type": "string", "minLength": 1}}, "additionalProperties": false},
+        "kind": {"enum": ["ability", "copy"]},
+        "source": {"$ref": "#/$defs/object_id"},
+        "ability": {"$ref": "#/$defs/ability_ref"},
+        "targets": {"$ref": "#/$defs/target_groups"},
+        "modes": {"type": "array", "items": {"$ref": "#/$defs/positive"}},
+        "x": {"$ref": "#/$defs/natural"},
+        "division": {"$ref": "#/$defs/division"},
+        "cast": {"$ref": "#/$defs/cast_choices"},
+        "chosen": {"$ref": "#/$defs/chosen_values"},
+        "attacking": {"$ref": "#/$defs/attacking_value"},
+        "blocked": {"type": "boolean"},
+        "blocking": {"type": "array", "items": {"$ref": "#/$defs/object_id"}},
+        "in_combat": {"type": "boolean"},
+        "tapped": {"type": "boolean"},
+        "flipped": {"type": "boolean"},
+        "face_down": {"type": "boolean"},
+        "phased_out": {"type": "boolean"},
+        "counters": {"$ref": "#/$defs/counters"},
+        "damage": {"$ref": "#/$defs/natural"},
+        "attached_to": {"oneOf": [{"$ref": "#/$defs/target"}, {"type": "null"}]},
+        "power": {"type": ["integer", "null"]},
+        "toughness": {"type": ["integer", "null"]},
+        "colors": {"type": "array", "items": {"$ref": "#/$defs/color"}},
+        "types": {"type": "array", "items": {"$ref": "#/$defs/card_type"}},
+        "supertypes": {"type": "array", "items": {"$ref": "#/$defs/supertype"}},
+        "subtypes": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "keywords": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "granted": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "designations": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/designation"}},
+        "level": {"$ref": "#/$defs/natural"}
+      },
+      "additionalProperties": false,
+      "minProperties": 1,
+      "allOf": [
+        {"if": {"required": ["kind"], "properties": {"kind": {"const": "ability"}}}, "then": {"required": ["ability", "controller"], "allOf": [{"if": {"properties": {"ability": {"$ref": "#/$defs/source_free_ability"}}}, "then": {"not": {"required": ["source"]}}, "else": {"required": ["source"]}}]}},
+        {"if": {"required": ["kind"], "properties": {"kind": {"const": "copy"}}}, "then": {"required": ["copy_of", "controller"]}},
+        {"if": {"required": ["token"]}, "then": {"required": ["controller"]}},
+        {"if": {"required": ["emblem"]}, "then": {"required": ["controller"]}}
+      ]
+    },
+    "explicit_turn": {"type": "object", "required": ["number", "step", "active"], "additionalProperties": false, "properties": {"number": {"$ref": "#/$defs/turn/properties/number"}, "step": {"$ref": "#/$defs/turn/properties/step"}, "active": {"$ref": "#/$defs/turn/properties/active"}, "occurrence": {"type": "integer", "minimum": 1}}},
+    "explicit_state": {"type": "object", "required": ["turn", "pending", "result", "players", "zones"], "additionalProperties": false, "properties": {"turn": {"$ref": "#/$defs/explicit_turn"}, "pending": {"$ref": "#/$defs/state/properties/pending"}, "result": {"$ref": "#/$defs/state/properties/result"}, "players": {"$ref": "#/$defs/state/properties/players"}, "game": {"$ref": "#/$defs/state/properties/game"}, "zones": {"$ref": "#/$defs/state/properties/zones"}, "departed": {"$ref": "#/$defs/state/properties/departed"}, "objects": {"$ref": "#/$defs/state/properties/objects"}}},
+    "state": {
+      "type": "object",
+      "required": ["turn", "pending", "result", "players", "zones"],
+      "properties": {
+        "turn": {"$ref": "#/$defs/turn"},
+        "pending": {"oneOf": [{"$ref": "#/$defs/pending"}, {"type": "null"}]},
+        "result": {"$ref": "#/$defs/result"},
+        "players": {
+          "type": "object",
+          "patternProperties": {"^[A-Z]$": {"allOf": [{"$ref": "#/$defs/player_facts"}, {"required": ["life"]}]}},
+          "additionalProperties": false
+        },
+        "game": {"$ref": "#/$defs/game_facts"},
+        "zones": {
+          "type": "object",
+          "patternProperties": {"^([A-Z]\\.(library|hand|graveyard)|battlefield|stack|exile|command)$": {"type": "array", "items": {"$ref": "#/$defs/object_id"}, "uniqueItems": true}},
+          "additionalProperties": false
+        },
+        "departed": {"$ref": "#/$defs/departed"},
+        "objects": {
+          "type": "object",
+          "patternProperties": {"^[A-Za-z][A-Za-z0-9_-]{0,31}$": {"$ref": "#/$defs/object_facts"}},
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "causal_lki": {
+      "type":"object","required":["characteristics","controller"],
+      "properties":{"characteristics":{"$ref":"#/$defs/copiable_characteristics"},"controller":{"$ref":"#/$defs/seat"},"tapped":{"type":"boolean"},"damage":{"type":"integer","minimum":0},"counters":{"type":"object","additionalProperties":{"type":"integer","minimum":0}}},"additionalProperties":false
+    },
+    "causal_subject": {
+      "oneOf":[
+        {"type":"object","required":["object"],"properties":{"object":{"$ref":"#/$defs/object_id"}},"additionalProperties":false},
+        {"type":"object","required":["player"],"properties":{"player":{"$ref":"#/$defs/seat"}},"additionalProperties":false},
+        {"type":"object","required":["game"],"properties":{"game":{"const":true}},"additionalProperties":false},
+        {"type":"object","required":["scope"],"properties":{"scope":{"type":"string","minLength":1}},"additionalProperties":false}
+      ]
+    },
+    "causal_value": {
+      "oneOf": [
+        {"type":"object","required":["object"],"properties":{"object":{"$ref":"#/$defs/object_id"}},"additionalProperties":false},
+        {"type":"object","required":["player"],"properties":{"player":{"$ref":"#/$defs/seat"}},"additionalProperties":false},
+        {"type":"object","required":["number"],"properties":{"number":{"type":"integer"}},"additionalProperties":false},
+        {"type":"object","required":["text"],"properties":{"text":{"type":"string"}},"additionalProperties":false},
+        {"type":"object","required":["boolean"],"properties":{"boolean":{"type":"boolean"}},"additionalProperties":false}
+      ]
+    },
+    "causal_binding": {
+      "type":"object","required":["kind","values"],
+      "properties": {
+        "kind":{"enum":["targets","exiled","created","destroyed","discarded","chosen","event_subject","event_amount","paid","x"]},
+        "group":{"type":"integer","minimum":1},
+        "choice":{"type":"string","minLength":1},
+        "values":{"type":"array","items":{"$ref":"#/$defs/causal_value"}}
+      },"additionalProperties":false
+    },
+    "causal_duration": {
+      "oneOf":[
+        {"type":"object","required":["kind"],"properties":{"kind":{"const":"indefinite"}},"additionalProperties":false},
+        {"type":"object","required":["kind","turn"],"properties":{"kind":{"const":"end_of_turn"},"turn":{"type":"integer","minimum":1}},"additionalProperties":false},
+        {"type":"object","required":["kind","player"],"properties":{"kind":{"const":"until_your_next_turn"},"player":{"$ref":"#/$defs/seat"}},"additionalProperties":false},
+        {"type":"object","required":["kind","source","player"],"properties":{"kind":{"const":"while_controlled"},"source":{"$ref":"#/$defs/object_id"},"player":{"$ref":"#/$defs/seat"}},"additionalProperties":false},
+        {"type":"object","required":["kind","text"],"properties":{"kind":{"const":"oracle"},"text":{"type":"string","minLength":1}},"additionalProperties":false}
+      ]
+    },
+    "causal_change": {
+      "oneOf":[
+        {"type":"object","required":["kind","power","toughness"],"properties":{"kind":{"enum":["add_pt","set_pt"]},"power":{"type":"integer"},"toughness":{"type":"integer"}},"additionalProperties":false},
+        {"type":"object","required":["kind","player"],"properties":{"kind":{"const":"control"},"player":{"$ref":"#/$defs/seat"}},"additionalProperties":false},
+        {"type":"object","required":["kind","text"],"properties":{"kind":{"enum":["grant","remove","types","colors","oracle"]},"text":{"type":"string","minLength":1}},"additionalProperties":false}
+      ]
+    },
+    "causal_when": {
+      "oneOf":[
+        {"type":"object","required":["kind","step","whose","next"],"properties":{"kind":{"const":"step"},"step":{"$ref":"#/$defs/step"},"whose":{"oneOf":[{"const":"any"},{"$ref":"#/$defs/seat"}]},"next":{"type":"boolean"},"turn":{"type":"integer","minimum":1}},"additionalProperties":false},
+        {"type":"object","required":["kind","text"],"properties":{"kind":{"const":"event"},"text":{"type":"string","minLength":1}},"additionalProperties":false}
+      ]
+    },
+    "causal": {
+      "type":"object","required":["objects","producers","continuous_effects","delayed_triggers"],
+      "properties": {
+        "objects":{"type":"object","patternProperties":{"^[A-Za-z][A-Za-z0-9_-]{0,31}$":{
+          "type":"object","required":["definition","zone"],"oneOf":[{"required":["card"],"not":{"required":["owner"]}},{"required":["owner"],"not":{"required":["card"]}}],
+          "properties":{"card":{"$ref":"#/$defs/card_id"},"owner":{"$ref":"#/$defs/seat"},"definition":{"$ref":"#/$defs/copy_definition"},"zone":{"type":"string","minLength":1},"current":{"$ref":"#/$defs/object_id"},"lki":{"$ref":"#/$defs/causal_lki"}},"additionalProperties":false}},"additionalProperties":false},
+        "producers":{"type":"array","items":{"type":"object","required":["id","source","ability","controller"],
+          "properties":{"id":{"$ref":"#/$defs/object_id"},"source":{"$ref":"#/$defs/object_id"},"ability":{"$ref":"#/$defs/ability_ref"},"controller":{"$ref":"#/$defs/seat"},"retained":{"type":"array","items":{"$ref":"#/$defs/causal_binding"}}},"additionalProperties":false}},
+        "continuous_effects":{"type":"array","items":{"type":"object","required":["id","producer","subjects","changes","duration"],
+          "properties":{"id":{"$ref":"#/$defs/object_id"},"producer":{"$ref":"#/$defs/object_id"},"subjects":{"type":"array","items":{"$ref":"#/$defs/causal_subject"},"uniqueItems":true},"changes":{"type":"array","minItems":1,"items":{"$ref":"#/$defs/causal_change"}},"duration":{"$ref":"#/$defs/causal_duration"}},"additionalProperties":false}},
+        "delayed_triggers":{"type":"array","items":{"type":"object","required":["id","producer","clause","retained","when","once","duration"],
+          "properties":{"id":{"$ref":"#/$defs/object_id"},"producer":{"$ref":"#/$defs/object_id"},"clause":{"type":"integer","minimum":1},"retained":{"type":"array","items":{"$ref":"#/$defs/causal_binding"}},"when":{"$ref":"#/$defs/causal_when"},"once":{"type":"boolean"},"duration":{"$ref":"#/$defs/causal_duration"}},"additionalProperties":false}},
+        "base_controllers":{"type":"object","additionalProperties":{"$ref":"#/$defs/seat"}},
+        "casts_this_turn":{"type":"array","items":{"type":"object","required":["source","player"],"properties":{"source":{"$ref":"#/$defs/object_id"},"player":{"$ref":"#/$defs/seat"},"announcement":{"allOf":[{"$ref":"#/$defs/cast_fields"},{"not":{"anyOf":[{"required":["kind"]},{"required":["card"]}]}}]}},"additionalProperties":false}},
+        "timestamp_order":{"type":"array","items":{"oneOf":[
+          {"type":"object","required":["object"],"properties":{"object":{"$ref":"#/$defs/object_id"}},"additionalProperties":false},
+          {"type":"object","required":["effect"],"properties":{"effect":{"$ref":"#/$defs/object_id"}},"additionalProperties":false},
+          {"type":"object","required":["counter","on"],"properties":{"counter":{"type":"string","minLength":1},"on":{"$ref":"#/$defs/object_id"}},"additionalProperties":false}
+        ]},"uniqueItems":true}
+      },"additionalProperties":false
+    },
+    "assumptions": {
+      "type": "object",
+      "properties": {
+        "land_played": {"type": "object", "patternProperties": {"^[A-Z]$": {"$ref": "#/$defs/natural"}}, "additionalProperties": false},
+        "summoning_sick": {"type": "array", "items": {"$ref": "#/$defs/object_id"}},
+        "spells_cast": {"type": "object", "patternProperties": {"^[A-Z]$": {"$ref": "#/$defs/natural"}}, "additionalProperties": false},
+        "consecutive_passes": {"$ref": "#/$defs/natural"}
+      },
+      "additionalProperties": false
+    },
+    "start": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["kind"],
+          "properties": {
+            "kind": {"const": "decks"},
+            "random": {"type": "array", "items": {"$ref": "#/$defs/random_outcome"}}
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["kind", "state"],
+          "properties": {
+            "kind": {"const": "position"},
+            "state": {"$ref": "#/$defs/state"},
+            "assumptions": {"$ref": "#/$defs/assumptions"},
+            "causal": {"$ref": "#/$defs/causal"}
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "random_outcome": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["kind", "order"],
+          "oneOf": [{"required": ["seat"]}, {"required": ["pile"]}],
+          "properties": {
+            "kind": {"const": "shuffle"},
+            "seat": {"$ref": "#/$defs/seat"},
+            "pile": {"type": "array", "items": {"$ref": "#/$defs/card_id"}, "uniqueItems": true},
+            "order": {"type": "array", "items": {"$ref": "#/$defs/card_id"}, "uniqueItems": true},
+            "scope": {
+              "type": "object",
+              "properties": {
+                "excluding": {"type": "array", "items": {"$ref": "#/$defs/card_id"}},
+                "fixed": {"type": "array", "items": {"type": "array", "prefixItems": [{"$ref": "#/$defs/card_id"}, {"$ref": "#/$defs/library_position"}], "items": false, "minItems": 2}}
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["kind", "objects", "order"],
+          "properties": {
+            "kind": {"const": "random_order"},
+            "objects": {"type": "array", "items": {"$ref": "#/$defs/target"}, "uniqueItems": true},
+            "order": {"type": "array", "items": {"$ref": "#/$defs/target"}, "uniqueItems": true}
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["kind", "from", "chosen"],
+          "properties": {
+            "kind": {"const": "random_choice"},
+            "from": {"type": "array", "items": {"$ref": "#/$defs/target"}, "uniqueItems": true},
+            "chosen": {"type": "array", "items": {"$ref": "#/$defs/target"}, "uniqueItems": true}
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["kind", "result"],
+          "properties": {
+            "kind": {"const": "coin"},
+            "caller": {"$ref": "#/$defs/seat"},
+            "call": {"enum": ["heads", "tails"]},
+            "result": {"enum": ["heads", "tails"]},
+            "winner": {"oneOf": [{"$ref": "#/$defs/seat"}, {"type": "null"}]}
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["kind", "sides", "result"],
+          "properties": {
+            "kind": {"const": "die"},
+            "sides": {"type": "integer", "minimum": 2},
+            "result": {"$ref": "#/$defs/positive"}
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["kind", "method", "result"],
+          "properties": {
+            "kind": {"const": "starting_player"},
+            "method": {"enum": ["coin", "die", "other"]},
+            "result": {"$ref": "#/$defs/seat"}
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "payment": {
+      "type": "object",
+      "properties": {
+        "abilities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["source", "ability", "adding"],
+            "properties": {
+              "source": {"$ref": "#/$defs/object_id"},
+              "ability": {"$ref": "#/$defs/ability_ref"},
+              "adding": {"type": "array", "items": {"$ref": "#/$defs/mana_type"}},
+              "x": {"$ref": "#/$defs/natural"},
+              "additional": {"$ref": "#/$defs/cost_choices"},
+              "pay": {"$ref": "#/$defs/payment"}
+            },
+            "additionalProperties": false
+          }
+        },
+        "pool": {"$ref": "#/$defs/mana_pool"},
+        "pool_restricted": {"type": "array", "items": {"$ref": "#/$defs/restricted_mana_lot"}},
+        "objects": {"type": "array", "items": {"type": "array", "items": {"$ref": "#/$defs/object_id"}}},
+        "life": {"type": "array", "items": {"type": "boolean"}},
+        "allocation": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["symbol", "mana"],
+            "properties": {"symbol": {"$ref": "#/$defs/natural"}, "mana": {"$ref": "#/$defs/mana_type"}, "restricted": {"$ref": "#/$defs/restricted_mana_identity"}},
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "cost": {
+      "oneOf": [
+        {"type": "object", "required": ["kind"], "properties": {"kind": {"const": "mana"}}, "additionalProperties": false},
+        {
+          "type": "object",
+          "required": ["kind", "keyword"],
+          "properties": {"kind": {"const": "alternative"}, "keyword": {"type": "string", "minLength": 1}, "tapped": {"$ref": "#/$defs/object_id"}},
+          "if": {"required": ["tapped"]},
+          "then": {"properties": {"keyword": {"const": "harmonize"}}},
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["kind", "source", "ability"],
+          "properties": {"kind": {"const": "alternative"}, "source": {"$ref": "#/$defs/object_id"}, "ability": {"$ref": "#/$defs/ability_ref"}},
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["kind", "effect"],
+          "properties": {"kind": {"const": "alternative"}, "effect": {"const": "without_paying"}},
+          "additionalProperties": false
+        }
+      ]
+    },
+    "additional_costs": {
+      "type": "object",
+      "properties": {
+        "kicker": {"$ref": "#/$defs/positive"},
+        "buyback": {"type": "boolean"},
+        "entwine": {"type": "boolean"},
+        "replicate": {"$ref": "#/$defs/positive"},
+        "paid": {"type": "array", "items": {"enum": ["bargain", "offspring", "casualty", "gift", "teamwork"]}},
+        "gift": {"$ref": "#/$defs/seat"},
+        "choices": {"type": "array", "items": {"$ref": "#/$defs/positive"}}
+      },
+      "additionalProperties": false
+    },
+    "cast_fields": {
+      "type": "object",
+      "properties": {
+        "kind": {"enum": ["cast", "cast_during_resolution"]},
+        "card": {"$ref": "#/$defs/object_id"},
+        "face": {"$ref": "#/$defs/natural"},
+        "fused": {"const": true},
+        "cost": {"$ref": "#/$defs/cost"},
+        "permission": {"$ref": "#/$defs/casting_permission"},
+        "x": {"$ref": "#/$defs/natural"},
+        "modes": {"type": "array", "items": {"$ref": "#/$defs/positive"}},
+        "targets": {"$ref": "#/$defs/target_groups"},
+        "division": {"$ref": "#/$defs/division"},
+        "additional": {"$ref": "#/$defs/additional_costs"},
+        "convoke": {"$ref": "#/$defs/convoke"},
+        "delve": {"type": "array", "items": {"$ref": "#/$defs/object_id"}},
+        "pay": {"$ref": "#/$defs/payment"}
+      },
+      "additionalProperties": false
+    },
+    "action": {
+      "oneOf": [
+        {"type": "object", "required": ["kind", "first"], "properties": {"kind": {"const": "choose_first"}, "first": {"$ref": "#/$defs/seat"}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "card"], "properties": {"kind": {"const": "companion"}, "card": {"oneOf": [{"$ref": "#/$defs/card_id"}, {"type": "null"}]}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "keep"], "properties": {"kind": {"const": "mulligan"}, "keep": {"type": "boolean"}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "cards"], "properties": {"kind": {"const": "bottom"}, "cards": {"type": "array", "items": {"$ref": "#/$defs/card_id"}, "uniqueItems": true}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind"], "properties": {"kind": {"const": "opening_hand_action"}, "card": {"$ref": "#/$defs/card_id"}, "done": {"const": true}}, "additionalProperties": false, "oneOf": [{"required": ["card"]}, {"required": ["done"]}]},
+        {"type": "object", "required": ["kind"], "properties": {"kind": {"const": "concede"}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "card"], "properties": {"kind": {"const": "play_land"}, "card": {"$ref": "#/$defs/card_id"}, "face": {"$ref": "#/$defs/natural"}}, "additionalProperties": false},
+        {"allOf": [{"$ref": "#/$defs/cast_fields"}, {"required": ["kind", "card"], "properties": {"kind": {"const": "cast"}}}]},
+        {
+          "type": "object",
+          "required": ["kind", "source", "ability"],
+          "properties": {
+            "kind": {"const": "activate"},
+            "source": {"$ref": "#/$defs/object_id"},
+            "ability": {"$ref": "#/$defs/ability_ref"},
+            "x": {"$ref": "#/$defs/natural"},
+            "modes": {"type": "array", "items": {"$ref": "#/$defs/positive"}},
+            "targets": {"$ref": "#/$defs/target_groups"},
+            "division": {"$ref": "#/$defs/division"},
+            "adding": {"type": "array", "items": {"$ref": "#/$defs/mana_type"}},
+            "additional": {"$ref": "#/$defs/cost_choices"},
+            "pay": {"$ref": "#/$defs/payment"}
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["kind", "action", "object"],
+          "properties": {
+            "kind": {"const": "special_action"},
+            "action": {"enum": ["turn_face_up", "suspend", "foretell", "plot", "unlock", "companion", "end_effect", "ignore_effect"]},
+            "object": {"$ref": "#/$defs/object_id"},
+            "half": {"enum": [0, 1]},
+            "pay": {"$ref": "#/$defs/payment"}
+          },
+          "additionalProperties": false
+        },
+        {"type": "object", "required": ["kind", "attacks"], "properties": {"kind": {"const": "declare_attackers"}, "attacks": {"type": "array", "items": {"type": "array", "prefixItems": [{"$ref": "#/$defs/object_id"}, {"$ref": "#/$defs/target"}], "items": false, "minItems": 2}}, "pay": {"$ref": "#/$defs/payment"}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "blocks"], "properties": {"kind": {"const": "declare_blockers"}, "blocks": {"type": "array", "items": {"type": "array", "prefixItems": [{"$ref": "#/$defs/object_id"}, {"$ref": "#/$defs/object_id"}], "items": false, "minItems": 2}}, "pay": {"$ref": "#/$defs/payment"}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "keep"], "properties": {"kind": {"const": "legend_rule"}, "keep": {"$ref": "#/$defs/object_id"}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "piles"], "properties": {"kind": {"const": "separate"}, "piles": {"type": "array", "minItems": 2, "items": {"type": "array", "items": {"$ref": "#/$defs/object_id"}}}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "assignments"], "properties": {"kind": {"const": "assign_combat_damage"}, "assignments": {"type": "array", "items": {"type": "array", "prefixItems": [{"$ref": "#/$defs/target"}, {"$ref": "#/$defs/positive"}], "items": false, "minItems": 2}}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "order"], "properties": {"kind": {"const": "order_cards"}, "order": {"type": "array", "items": {"$ref": "#/$defs/card_id"}, "uniqueItems": true}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "order"], "properties": {"kind": {"const": "order_triggers"}, "order": {"type": "array", "items": {"$ref": "#/$defs/ability_instance"}}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "effect"], "properties": {"kind": {"const": "choose_replacement"}, "effect": {"$ref": "#/$defs/effect_ref"}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "effect"], "properties": {"kind": {"const": "skip"}, "effect": {"$ref": "#/$defs/effect_ref"}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "effect"], "properties": {"kind": {"const": "spell_destination"}, "effect": {"$ref": "#/$defs/effect_ref"}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "targets"], "properties": {"kind": {"const": "choose_targets"}, "targets": {"$ref": "#/$defs/target_groups"}, "division": {"$ref": "#/$defs/division"}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "targets"], "properties": {"kind": {"const": "change_targets"}, "targets": {"$ref": "#/$defs/target_groups"}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "modes"], "properties": {"kind": {"const": "choose_modes"}, "modes": {"type": "array", "items": {"$ref": "#/$defs/positive"}}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "yes"], "properties": {"kind": {"const": "optional"}, "yes": {"type": "boolean"}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "objects"], "properties": {"kind": {"const": "choose_objects"}, "objects": {"type": "array", "items": {"$ref": "#/$defs/target"}}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "player"], "properties": {"kind": {"const": "choose_player"}, "player": {"$ref": "#/$defs/seat"}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "number"], "properties": {"kind": {"const": "choose_number"}, "number": {"$ref": "#/$defs/natural"}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "value"], "properties": {"kind": {"const": "choose_value"}, "value": {"type": "string", "minLength": 1}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "mana"], "properties": {"kind": {"const": "choose_mana"}, "mana": {"type": "array", "items": {"$ref": "#/$defs/mana_type"}}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "amounts"], "properties": {"kind": {"const": "divide"}, "amounts": {"type": "array", "items": {"type": "array", "prefixItems": [{"$ref": "#/$defs/target"}, {"$ref": "#/$defs/positive"}], "items": false, "minItems": 2}}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "pile"], "properties": {"kind": {"const": "pile"}, "pile": {"$ref": "#/$defs/positive"}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "to"], "properties": {"kind": {"const": "attach"}, "to": {"$ref": "#/$defs/target"}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "defender"], "properties": {"kind": {"const": "choose_defender"}, "defender": {"$ref": "#/$defs/target"}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "cards"], "properties": {"kind": {"const": "discard"}, "cards": {"type": "array", "items": {"$ref": "#/$defs/card_id"}, "uniqueItems": true}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "at"], "properties": {"kind": {"const": "library_destination"}, "at": {"$ref": "#/$defs/library_position"}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "top", "away"], "properties": {"kind": {"const": "arrange"}, "top": {"type": "array", "items": {"$ref": "#/$defs/card_id"}, "uniqueItems": true}, "away": {"type": "array", "items": {"$ref": "#/$defs/card_id"}, "uniqueItems": true}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "found"], "properties": {"kind": {"const": "search"}, "found": {"type": "array", "items": {"$ref": "#/$defs/card_id"}, "uniqueItems": true}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind"], "properties": {"kind": {"const": "choose_alternative"}, "alternative": {"$ref": "#/$defs/positive"}, "decline": {"const": true}}, "additionalProperties": false, "oneOf": [{"required": ["alternative"]}, {"required": ["decline"]}]},
+        {"type": "object", "required": ["kind"], "properties": {"kind": {"const": "pay"}, "pay": {"$ref": "#/$defs/payment"}, "decline": {"const": true}}, "additionalProperties": false, "oneOf": [{"required": ["pay"]}, {"required": ["decline"]}]},
+        {"allOf": [{"$ref": "#/$defs/cast_fields"}, {"required": ["kind", "card"], "properties": {"kind": {"const": "cast_during_resolution"}}}]},
+        {"type": "object", "required": ["kind", "decline"], "properties": {"kind": {"const": "cast_during_resolution"}, "decline": {"const": true}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "holders"], "properties": {"kind": {"const": "holders"}, "holders": {"type": "array", "items": {"$ref": "#/$defs/target"}}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "call"], "properties": {"kind": {"const": "coin_call"}, "call": {"enum": ["heads", "tails"]}}, "additionalProperties": false},
+        {"type": "object", "required": ["kind", "yes"], "properties": {"kind": {"const": "command_zone"}, "yes": {"type": "boolean"}}, "additionalProperties": false}
+      ]
+    },
+    "zone_reorder": {
+      "type": "object",
+      "properties": {
+        "top": {"type": "array", "items": {"$ref": "#/$defs/object_id"}, "uniqueItems": true},
+        "bottom": {"type": "array", "items": {"$ref": "#/$defs/object_id"}, "uniqueItems": true},
+        "order": {"type": "array", "items": {"$ref": "#/$defs/object_id"}, "uniqueItems": true}
+      },
+      "additionalProperties": false,
+      "minProperties": 1
+    },
+    "delta": {
+      "type": "object",
+      "properties": {
+        "turn": {"$ref": "#/$defs/turn"},
+        "pending": {"oneOf": [{"$ref": "#/$defs/pending"}, {"type": "null"}]},
+        "result": {"$ref": "#/$defs/result"},
+        "players": {"type": "object", "patternProperties": {"^[A-Z]$": {"allOf": [{"$ref": "#/$defs/player_facts"}, {"minProperties": 1}]}}, "additionalProperties": false},
+        "game": {"$ref": "#/$defs/game_facts"},
+        "zones": {"type": "object", "patternProperties": {"^([A-Z]\\.(library|graveyard)|stack)$": {"$ref": "#/$defs/zone_reorder"}}, "additionalProperties": false},
+        "departed": {"$ref": "#/$defs/departed"},
+        "objects": {"type": "object", "patternProperties": {"^[A-Za-z][A-Za-z0-9_-]{0,31}$": {"$ref": "#/$defs/object_delta"}}, "additionalProperties": false}
+      },
+      "additionalProperties": false
+    },
+    "transition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["seat", "do", "delta"],
+          "properties": {
+            "seat": {"$ref": "#/$defs/seat"},
+            "do": {"$ref": "#/$defs/action"},
+            "delta": {"$ref": "#/$defs/delta"},
+            "random": {"type": "array", "items": {"$ref": "#/$defs/random_outcome"}},
+            "note": {"type": "string"}
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["seat", "attempt", "illegal"],
+          "properties": {
+            "seat": {"$ref": "#/$defs/seat"},
+            "attempt": {"$ref": "#/$defs/action"},
+            "illegal": {"const": true},
+            "delta": {"$ref": "#/$defs/delta"},
+            "random": {"type": "array", "items": {"$ref": "#/$defs/random_outcome"}},
+            "note": {"type": "string"}
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

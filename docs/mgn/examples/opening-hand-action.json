@@ -1,0 +1,237 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "step-4 author",
+    "provider": "Anthropic",
+    "model": "claude-opus-5-5"
+  },
+  "note": "Tier 1, from the decks. A chooses to play first, the decks are shuffled and the hands drawn (103.3, 103.5), and both keep (implied). Once the mulligan process is complete, A holds Leyline of the Void (\"If this card is in your opening hand, you may begin the game with it on the battlefield.\") and is asked the opening-hand action question (103.6); A begins the game with Leyline on the battlefield (103.6a). Neither seat then holds a card that allows such an action, so the first turn begins and the record ends at A's priority in the upkeep of turn 1 (502.4, 503.1).",
+  "cards": {
+    "leyline": {
+      "owner": "A",
+      "oracle": "f4e32fc1-1b8d-441e-8e76-71f19f98e925",
+      "name": "Leyline of the Void"
+    },
+    "swampA1": {
+      "owner": "A",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp"
+    },
+    "swampA2": {
+      "owner": "A",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp"
+    },
+    "swampA3": {
+      "owner": "A",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp"
+    },
+    "swampA4": {
+      "owner": "A",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp"
+    },
+    "swampA5": {
+      "owner": "A",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp"
+    },
+    "swampA6": {
+      "owner": "A",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp"
+    },
+    "swampA7": {
+      "owner": "A",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp"
+    },
+    "forestB1": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forestB2": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forestB3": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forestB4": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forestB5": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forestB6": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forestB7": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forestB8": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    }
+  },
+  "start": {
+    "kind": "decks",
+    "random": [
+      {
+        "kind": "starting_player",
+        "method": "coin",
+        "result": "A"
+      }
+    ]
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "choose_first",
+        "first": "A"
+      },
+      "random": [
+        {
+          "kind": "shuffle",
+          "seat": "A",
+          "order": [
+            "swampA1",
+            "swampA2",
+            "leyline",
+            "swampA3",
+            "swampA4",
+            "swampA5",
+            "swampA6",
+            "swampA7"
+          ]
+        },
+        {
+          "kind": "shuffle",
+          "seat": "B",
+          "order": [
+            "forestB1",
+            "forestB2",
+            "forestB3",
+            "forestB4",
+            "forestB5",
+            "forestB6",
+            "forestB7",
+            "forestB8"
+          ]
+        }
+      ],
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "opening_hand_action"
+        },
+        "objects": {
+          "leyline": {
+            "zone": "A.hand"
+          },
+          "swampA1": {
+            "zone": "A.hand"
+          },
+          "swampA2": {
+            "zone": "A.hand"
+          },
+          "swampA3": {
+            "zone": "A.hand"
+          },
+          "swampA4": {
+            "zone": "A.hand"
+          },
+          "swampA5": {
+            "zone": "A.hand"
+          },
+          "swampA6": {
+            "zone": "A.hand"
+          },
+          "forestB1": {
+            "zone": "B.hand"
+          },
+          "forestB2": {
+            "zone": "B.hand"
+          },
+          "forestB3": {
+            "zone": "B.hand"
+          },
+          "forestB4": {
+            "zone": "B.hand"
+          },
+          "forestB5": {
+            "zone": "B.hand"
+          },
+          "forestB6": {
+            "zone": "B.hand"
+          },
+          "forestB7": {
+            "zone": "B.hand"
+          }
+        }
+      },
+      "note": "A won the coin and chooses to play first (103.1). No additional step of 103.2 applies (no sideboards, no companion). 103.3: each deck is shuffled and becomes its library (the outcomes, top first). 103.5: each player draws seven, the top seven of each order, so Leyline of the Void (third from the top) is in A's hand; swampA7 and forestB8 stay in the libraries. A declares first and keeps, then B keeps: the null answers, implied (spec 5.6), and the mulligan process is complete; the kept hands are the opening hands (103.5). 103.6: the starting player may now take the actions its opening-hand cards allow; Leyline's first paragraph allows one, so A is asked."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "opening_hand_action",
+        "card": "leyline"
+      },
+      "delta": {
+        "turn": {
+          "number": 1,
+          "step": "upkeep",
+          "active": "A"
+        },
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "objects": {
+          "leyline": {
+            "zone": "battlefield"
+          }
+        }
+      },
+      "note": "103.6a: A begins the game with Leyline of the Void on the battlefield; it moves from A's hand onto the battlefield, under the control of A, who put it there (110.2), which is its owner, the projection's default controller. It is not cast and does not use the stack. A holds only Swamps now, so A has no further opening-hand action and is not asked again (spec 5.1: asked while the seat holds such a card); then B, in turn order (103.6), holds only Forests and is never asked. 103.8: A takes the first turn. Untap step: nothing to untap and no priority (502.3, 502.4). Upkeep: A receives priority (503.1). A will skip the draw step of this turn (103.8a). Leyline's replacement effect (614.1a) has had nothing to apply to."
+    }
+  ]
+}

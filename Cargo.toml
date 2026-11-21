@@ -1,0 +1,36 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+edition = "2024"
+license = "MIT"
+publish = false
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Keep file/line backtraces without the size of full variable/type debug info.
+# The test profile inherits this setting; rules modules share one executable.
+[profile.dev]
+debug = "line-tables-only"
+
+# The test suites, optimized: the slowest tests play hundreds of boards or whole games, and
+# unoptimized they took minutes. Debug assertions and overflow checks stay on, unlike in
+# `fast`/`release`: the engine's internal invariants are part of what every test checks.
+[profile.test]
+opt-level = 1
+debug-assertions = true
+overflow-checks = true
+
+# Optimized but incremental: for the grammar gates while editing grammars (`--profile fast`,
+# binaries in target/fast/). Release stays fully optimized for the engine.
+[profile.fast]
+inherits = "release"
+incremental = true
+codegen-units = 256
+lto = "off"

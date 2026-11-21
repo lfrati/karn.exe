@@ -1,0 +1,71 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {"effective": "2026-09-25", "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"},
+    "oracle": {"source": "scryfall-oracle-cards", "updated_at": "2026-10-11T09:01:56.463+00:00", "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"}
+  },
+  "game": {"format": "custom", "life": 20, "hand_size": 7, "seats": ["A", "B"]},
+  "lineage": {"supersedes": "sha256:fd6b968b6d67ca95a09d688e41f297c11602c29abb9551d6cdd0c44e42e80f27"},
+  "author": {"kind": "agent", "name": "Claude (lead, MGN step 5)", "provider": "Anthropic", "model": "claude-fable-5-1"},
+  "note": "Re-recording of scenario-linked-first from before its premise. The converted record started with a Fiend Hunter whose enters-the-battlefield ability had already exiled Aegis Turtle, a link between the two objects (607.2a) that the projection does not state, so no engine could construct its start. Here the first Fiend Hunter is cast in the record: its enters trigger targets the Turtle as it is put on the stack (603.3d), A chooses to exile when the ability resolves (608.2d, the 'may'), and Murder then destroys that Hunter: its leaves-the-battlefield trigger returns the exiled card (607.2a). The second Hunter, on the battlefield from the start, has no link to the Turtle and never leaves, so it plays no part. Position: turn 11, A's sixth turn (spec 2.4: the seats alternate from turn 1), precombat main phase, empty stack, six lands untapped, one per turn (305.2); three Plains pay for the Hunter ({1}{W}{W}) and three Swamps for Murder ({1}{B}{B}). The second Hunter and the Turtle have been under their controllers' control since the turn began (spec 2.4).",
+  "cards": {
+    "first": {"owner": "A", "oracle": "cb9d557a-fc06-428c-8be6-7d28add33028", "name": "Fiend Hunter"},
+    "second": {"owner": "A", "oracle": "cb9d557a-fc06-428c-8be6-7d28add33028", "name": "Fiend Hunter"},
+    "kill": {"owner": "A", "oracle": "938b4e2c-88d9-4637-bc00-e228920c9a78", "name": "Murder"},
+    "turtle": {"owner": "B", "oracle": "f84c30e7-2ea8-43ff-9356-1f907558cfd9", "name": "Aegis Turtle"},
+    "swamp0": {"owner": "A", "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68", "name": "Swamp"},
+    "swamp1": {"owner": "A", "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68", "name": "Swamp"},
+    "swamp2": {"owner": "A", "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68", "name": "Swamp"},
+    "plains0": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains1": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains2": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "libraryA": {"owner": "A", "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373", "name": "Island"},
+    "libraryB": {"owner": "B", "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373", "name": "Island"}
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {"number": 11, "step": "precombat_main", "active": "A"},
+      "pending": {"seat": "A", "kind": "priority"},
+      "result": {"kind": "unfinished"},
+      "players": {"A": {"life": 20}, "B": {"life": 20}},
+      "zones": {
+        "A.library": ["libraryA"], "A.hand": ["first", "kill"], "A.graveyard": [],
+        "B.library": ["libraryB"], "B.hand": [], "B.graveyard": [],
+        "battlefield": ["second", "swamp0", "swamp1", "swamp2", "plains0", "plains1", "plains2", "turtle"],
+        "stack": [], "exile": [], "command": []
+      },
+      "objects": {}
+    }
+  },
+  "transitions": [
+    {"seat": "A",
+     "do": {"kind": "cast", "card": "first", "pay": {"abilities": [
+       {"source": "plains0", "ability": {"rule": "305.6"}, "adding": ["W"]},
+       {"source": "plains1", "ability": {"rule": "305.6"}, "adding": ["W"]},
+       {"source": "plains2", "ability": {"rule": "305.6"}, "adding": ["W"]}]}},
+     "delta": {"pending": {"seat": "A", "kind": "choose_targets", "about": {"object": "S1"}},
+               "objects": {"first": {"zone": "battlefield"},
+                           "S1": {"zone": "stack", "kind": "ability", "source": "first", "ability": {"face": 0, "paragraph": 1}, "controller": "A"}}},
+     "note": "A casts the first Fiend Hunter (302.1, 601.2), paying {1}{W}{W} with the mana abilities of three Plains, activated while paying (601.2g, 605.3a; 305.6), which taps them (107.5). Both players pass (implied), it resolves and enters (608.3). Its enters trigger (603.2) is put on the stack the next time a player would receive priority (603.3), with its target chosen then (603.3d): 'another target creature' is the Turtle or the second Hunter, so A is asked."},
+    {"seat": "A",
+     "do": {"kind": "choose_targets", "targets": [["turtle"]]},
+     "delta": {"pending": {"seat": "A", "kind": "optional", "about": {"object": "S1"}},
+               "objects": {"S1": {"targets": [["turtle"]]}}},
+     "note": "A targets the Turtle (603.3d, 115.1). Both players pass (implied) and the ability resolves: 'you may exile' is decided as it resolves (608.2d), so A is asked while the ability is still on the stack."},
+    {"seat": "A",
+     "do": {"kind": "optional", "yes": true},
+     "delta": {"pending": {"seat": "A", "kind": "priority"},
+               "objects": {"S1": null, "turtle": {"zone": "exile"}}},
+     "note": "A exiles the Turtle (608.2d; 607.2a links this exile to this Hunter's leaves ability). The ability leaves the stack (608.2n) and A, the active player, receives priority (117.3b)."},
+    {"seat": "A",
+     "do": {"kind": "cast", "card": "kill", "targets": [["first"]], "pay": {"abilities": [
+       {"source": "swamp0", "ability": {"rule": "305.6"}, "adding": ["B"]},
+       {"source": "swamp1", "ability": {"rule": "305.6"}, "adding": ["B"]},
+       {"source": "swamp2", "ability": {"rule": "305.6"}, "adding": ["B"]}]}},
+     "delta": {"objects": {"kill": {"zone": "A.graveyard"}, "first": {"zone": "A.graveyard"}, "turtle": {"zone": "battlefield"}},
+               "zones": {"A.graveyard": {"top": ["kill", "first"]}}},
+     "note": "A casts Murder targeting the first Hunter, tapping three Swamps (601.2g, 605.3a). Both pass (implied); Murder resolves: the Hunter is destroyed, moved to its owner's graveyard (701.8a, 404.1), and Murder goes to the graveyard last, as the final step of its resolution (608.2n), so it lies on top. The Hunter's leaves-the-battlefield trigger triggers (603.2) and looks back in time to the object that left (603.6c, 603.10a); it goes on the stack and resolves after the implied passes: the Turtle returns under B's control (607.2a; 400.7: a new object). The second Hunter does not leave the battlefield, so its leaves ability never triggers, and its abilities are linked only to each other (607.2a), so it could never have returned the Turtle. The stack is empty and A holds priority in its main phase."}
+  ]
+}

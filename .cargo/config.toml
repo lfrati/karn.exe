@@ -1,0 +1,11 @@
+[build]
+# Compile in parallel on all logical CPUs but two, which stay free for the operating system.
+# Negative: the number of logical CPUs plus this value (Cargo reference, `build.jobs`).
+# Override per command with `-j N` or the CARGO_BUILD_JOBS environment variable.
+jobs = -2
+
+[env]
+# This checkout, tracked by crates/oracle/build.rs. Cargo's fingerprints ignore where sources
+# live, so a target directory built from another checkout would otherwise be reused here,
+# with that checkout's corpus path embedded. Builds still need their own target directories.
+KARN_CHECKOUT = { value = ".", relative = true }

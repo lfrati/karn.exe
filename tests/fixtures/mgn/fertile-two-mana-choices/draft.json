@@ -1,0 +1,328 @@
+{
+  "mgn": "1",
+  "tier": 2,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "Payment repair worker; rule-authored before draft execution",
+    "provider": "OpenAI",
+    "model": "GPT-6.1"
+  },
+  "cards": {
+    "forest": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    },
+    "f2": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    },
+    "f3": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    },
+    "f4": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    },
+    "fertile": {
+      "owner": "A",
+      "oracle": "cf14d4e5-5965-45ad-97f7-26facf2884b5",
+      "name": "Fertile Ground",
+      "faces": [
+        "49daafea9ca33fc33fd014e70a6fc240e5956ed56f4f80542e07abca4eb582d8"
+      ]
+    },
+    "fertile2": {
+      "owner": "A",
+      "oracle": "cf14d4e5-5965-45ad-97f7-26facf2884b5",
+      "name": "Fertile Ground",
+      "faces": [
+        "49daafea9ca33fc33fd014e70a6fc240e5956ed56f4f80542e07abca4eb582d8"
+      ]
+    },
+    "giant": {
+      "owner": "A",
+      "oracle": "342199e0-15b6-4824-83da-25caef2592b3",
+      "name": "Hill Giant",
+      "faces": [
+        "346e26c9102655882b509f3b04d0510690eeb7b1f984f8947f374fe41cb2a82f"
+      ]
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 3,
+        "step": "precombat_main",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20,
+          "mana": {
+            "G": 2
+          }
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [],
+        "A.hand": [
+          "fertile",
+          "fertile2",
+          "giant"
+        ],
+        "A.graveyard": [],
+        "B.library": [],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [
+          "forest",
+          "f2",
+          "f3",
+          "f4"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      },
+      "objects": {}
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "fertile",
+        "targets": [
+          [
+            "forest"
+          ]
+        ],
+        "pay": {
+          "abilities": [
+            {
+              "source": "f2",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            },
+            {
+              "source": "f3",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "objects": {
+          "fertile": {
+            "zone": "battlefield",
+            "attached_to": "forest"
+          },
+          "f2": {
+            "tapped": true
+          },
+          "f3": {
+            "tapped": true
+          }
+        }
+      }
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "fertile2",
+        "targets": [
+          [
+            "f4"
+          ]
+        ],
+        "pay": {
+          "pool": {
+            "G": 2
+          }
+        }
+      },
+      "delta": {
+        "players": {
+          "A": {
+            "mana": {}
+          }
+        },
+        "objects": {
+          "fertile2": {
+            "zone": "battlefield",
+            "attached_to": "f4"
+          }
+        }
+      }
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "giant",
+        "pay": {
+          "abilities": [
+            {
+              "source": "forest",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            },
+            {
+              "source": "f4",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "choose_mana",
+          "about": {
+            "object": "fertile"
+          }
+        },
+        "players": {
+          "A": {
+            "mana": {
+              "G": 1
+            }
+          }
+        },
+        "objects": {
+          "forest": {
+            "tapped": true
+          },
+          "giant": {
+            "zone": "stack"
+          }
+        }
+      }
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "choose_mana",
+        "mana": [
+          "U"
+        ]
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "choose_mana",
+          "about": {
+            "object": "fertile2"
+          }
+        },
+        "players": {
+          "A": {
+            "mana": {
+              "G": 2,
+              "U": 1
+            }
+          }
+        },
+        "objects": {
+          "f4": {
+            "tapped": true
+          }
+        }
+      }
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "choose_mana",
+        "mana": [
+          "R"
+        ]
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "players": {
+          "A": {
+            "mana": {}
+          }
+        },
+        "objects": {
+          "giant": {
+            "zone": "battlefield"
+          }
+        }
+      }
+    }
+  ],
+  "note": "Full pinned Fertile Ground and Hill Giant Oracle; CR 601.2g-h, 605.4a, 701.3. Establish both Auras by real casts. During the Giant cast, Forest and f4 each add only G; the enchanted lands controller separately chooses U and R. The first answer reaches another real color question with GGU and the Giant still unpaid. The second answer pays exactly GGUR for 3R. No pre-floating for the Giant, pre-answer, or intermediate Cast event. Stop with Giant resolved and A holding priority."
+}

@@ -1,0 +1,12 @@
+[project]
+name = "karn.exe"
+version = "0.1.0"
+description = "A rules engine for Magic: The Gathering"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "jsonschema>=4",
+    "pytest>=9",
+]

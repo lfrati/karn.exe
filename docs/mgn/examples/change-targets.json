@@ -1,0 +1,126 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": ["A", "B"]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "step-4 author",
+    "provider": "Anthropic",
+    "model": "claude-opus-5-5"
+  },
+  "note": "Tier 1. change_targets by an effect (115.7): A's Lightning Bolt targets B's Grizzly Bears; B answers with Bolt Bend (\"Change the target of target spell or ability with a single target.\"), and as Bolt Bend resolves B must change the Bolt's target (115.7a: mandatory, so the question has no null answer, spec 5.6) and moves it to A's own Grizzly Bears, which the Bolt then kills. The position is stipulated (spec 2.4), not reached by ordinary play.",
+  "cards": {
+    "bolt": {"owner": "A", "oracle": "4457ed35-7c10-48c8-9776-456485fdf070", "name": "Lightning Bolt"},
+    "amountain": {"owner": "A", "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685", "name": "Mountain"},
+    "amountain2": {"owner": "A", "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685", "name": "Mountain"},
+    "abears": {"owner": "A", "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0", "name": "Grizzly Bears"},
+    "boltbend": {"owner": "B", "oracle": "c20a96f7-aa5a-4c15-b8b1-806685c99b27", "name": "Bolt Bend"},
+    "bmountain1": {"owner": "B", "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685", "name": "Mountain"},
+    "bmountain2": {"owner": "B", "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685", "name": "Mountain"},
+    "bmountain3": {"owner": "B", "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685", "name": "Mountain"},
+    "bmountain4": {"owner": "B", "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685", "name": "Mountain"},
+    "bmountain5": {"owner": "B", "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685", "name": "Mountain"},
+    "bbears": {"owner": "B", "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0", "name": "Grizzly Bears"}
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {"number": 3, "step": "precombat_main", "active": "A"},
+      "pending": {"seat": "A", "kind": "priority"},
+      "result": {"kind": "unfinished"},
+      "players": {"A": {"life": 20}, "B": {"life": 20}},
+      "zones": {
+        "A.library": ["amountain2"],
+        "A.hand": ["bolt"],
+        "A.graveyard": [],
+        "B.library": ["bmountain5"],
+        "B.hand": ["boltbend"],
+        "B.graveyard": [],
+        "battlefield": ["amountain", "abears", "bmountain1", "bmountain2", "bmountain3", "bmountain4", "bbears"],
+        "stack": [],
+        "exile": [],
+        "command": []
+      }
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "bolt",
+        "targets": [["bbears"]],
+        "pay": {
+          "abilities": [
+            {"source": "amountain", "ability": {"rule": "305.6"}, "adding": ["R"]}
+          ]
+        }
+      },
+      "delta": {
+        "pending": {"seat": "B", "kind": "priority"},
+        "objects": {
+          "bolt": {"zone": "stack", "targets": [["bbears"]]}
+        }
+      },
+      "note": "Lightning Bolt (\"deals 3 damage to any target\") is an instant, castable with priority (117.1a). 601.2a: it moves from A's hand to the stack; 601.2c: its one target is B's Grizzly Bears, a creature (115.4 'any target'); 601.2g, 601.2h: the Mountain's intrinsic mana ability (305.6) adds {R}, which pays {R}. 601.2i, 117.3c: A receives priority afterwards; A passes (implied, 117.3d) and B, next in turn order, receives priority. One pass resolves nothing (117.4). The Mountain's tapped status is tier 2 and not stated."
+    },
+    {
+      "seat": "B",
+      "do": {
+        "kind": "cast",
+        "card": "boltbend",
+        "targets": [["bolt"]],
+        "pay": {
+          "abilities": [
+            {"source": "bmountain1", "ability": {"rule": "305.6"}, "adding": ["R"]},
+            {"source": "bmountain2", "ability": {"rule": "305.6"}, "adding": ["R"]},
+            {"source": "bmountain3", "ability": {"rule": "305.6"}, "adding": ["R"]},
+            {"source": "bmountain4", "ability": {"rule": "305.6"}, "adding": ["R"]}
+          ]
+        }
+      },
+      "delta": {
+        "pending": {"seat": "B", "kind": "change_targets", "about": {"object": "bolt"}},
+        "objects": {
+          "boltbend": {"zone": "stack", "targets": [["bolt"]]}
+        }
+      },
+      "note": "Bolt Bend is an instant; its target is 'target spell or ability with a single target', and Lightning Bolt has exactly one target (115.1, 601.2c). B controls no creature with power 4 or greater (Grizzly Bears is 2/2), so the cost reduction of its first paragraph does not apply and the total cost is its mana cost {3}{R} (601.2f), paid with four Mountains' {R} (305.6, 601.2g, 601.2h). Bolt Bend goes on top of the stack, above the Bolt (405.2). 117.3c: B receives priority and passes; A passes; both passed in succession (117.4), so Bolt Bend, the top object, resolves. 608.2b: its target, the Bolt, is still on the stack, so it resolves; 608.2c, 608.2d: its controller B follows its instruction 'Change the target', a mandatory change (115.7a), and the Bolt's other legal targets exist (A's Grizzly Bears, either player), so the question is asked with Bolt Bend still on the stack (spec 4.2); the Bolt still targets B's Bears at this boundary."
+    },
+    {
+      "seat": "B",
+      "do": {
+        "kind": "change_targets",
+        "targets": [["abears"]]
+      },
+      "delta": {
+        "pending": {"seat": "A", "kind": "priority"},
+        "zones": {
+          "A.graveyard": {"top": ["abears", "bolt"]}
+        },
+        "objects": {
+          "boltbend": {"zone": "B.graveyard"},
+          "bolt": {"zone": "A.graveyard"},
+          "abears": {"zone": "A.graveyard"}
+        }
+      },
+      "note": "115.7a: B changes the Bolt's target to A's Grizzly Bears, another legal target for 'any target'. 608.2n: Bolt Bend is put into B's graveyard as the final part of its resolution. 117.3b: the active player A receives priority; A passes and B passes (117.3d, 117.4) and the Bolt resolves: 608.2b, its target A's Bears is legal, and it deals 3 damage to it (120.3e, 120.6). 608.2n: as the final part of its resolution the Bolt is put into A's graveyard. Only then, before a player would receive priority, state-based actions are checked (704.3): A's Bears, toughness 2 with 3 damage marked, is destroyed (704.5g, 701.8a) and put into A's graveyard on top of the Bolt; the two arrive at different times, so 404.3 gives no choice and the order (Bolt below, Bears on top) follows from the rules. The Bolt's changed target is not a fact of the end state: the Bolt left the stack within this stretch and a new object in the graveyard has no targets (400.7, spec 4.1). 117.3b: A, the active player, receives priority; the record ends there. A's library and B's library are untouched."
+    }
+  ]
+}

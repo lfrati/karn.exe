@@ -1,0 +1,50 @@
+{
+  "mgn": "1",
+  "tier": 2,
+  "pins": {
+    "rules": {"effective": "2026-09-25", "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"},
+    "oracle": {"source": "scryfall-oracle-cards", "updated_at": "2026-10-11T09:01:56.463+00:00", "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"}
+  },
+  "game": {"format": "custom", "life": 20, "hand_size": 7, "seats": ["A", "B"]},
+  "author": {"kind": "agent", "name": "step-4 author", "provider": "Anthropic", "model": "claude-opus-5-5"},
+  "note": "Tier 2. Hill Giant (3/3) attacks and is blocked by two Grizzly Bears (2/2); A divides the Giant's 3 combat damage between the blockers as A chooses (510.1c), 2 and 1. The pinned 510.1c has no damage assignment order and no lethal-damage-first requirement: any division of the full 3 among the blockers is legal (its example lists every split of 4 between two blockers). Damage is dealt simultaneously (510.2); the Giant and the first Bears die (704.5g), the second Bears survives with 1 damage, blocking nothing. The record starts at the declare attackers step, A's declaration pending: an entry must answer the pending question (spec 4), and declare_attackers does not answer the priority of the precombat main phase, so the position is the boundary of the first decision (spec 2.4); A and B passed in the main phase and the beginning of combat step before it. Nothing is summoning sick: the Giant has been A's since before this turn (302.6). Every permanent is controlled by its owner and shows its printed values, so the start states no object facts.",
+  "cards": {
+    "giant": {"owner": "A", "oracle": "342199e0-15b6-4824-83da-25caef2592b3", "name": "Hill Giant"},
+    "bears1": {"owner": "B", "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0", "name": "Grizzly Bears"},
+    "bears2": {"owner": "B", "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0", "name": "Grizzly Bears"},
+    "plains": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "forest": {"owner": "B", "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6", "name": "Forest"}
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {"number": 3, "step": "declare_attackers", "active": "A"},
+      "pending": {"seat": "A", "kind": "declare_attackers"},
+      "result": {"kind": "unfinished"},
+      "players": {"A": {"life": 20}, "B": {"life": 20}},
+      "zones": {
+        "A.library": ["plains"],
+        "A.hand": [],
+        "A.graveyard": [],
+        "B.library": ["forest"],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": ["giant", "bears1", "bears2"],
+        "stack": [],
+        "exile": [],
+        "command": []
+      }
+    }
+  },
+  "transitions": [
+    {"seat": "A", "do": {"kind": "declare_attackers", "attacks": [["giant", "B"]]},
+     "delta": {"turn": {"number": 3, "step": "declare_blockers", "active": "A"}, "pending": {"seat": "B", "kind": "declare_blockers"}, "objects": {"giant": {"attacking": "B", "tapped": true}}},
+     "note": "508.1a: Hill Giant is untapped and has been under A's control continuously since the turn began (302.6), so it may attack; B has no planeswalker or battle, so it attacks B (508.1b). 508.1f: it becomes tapped (it has no vigilance); 508.1k: it is an attacking creature. Nothing triggers (508.1m). 508.2: A gets priority; A and B pass (implied, 117.3d) and the step ends (500.2). Declare blockers step: B controls creatures and a creature attacks B, so B's declaration is asked (509.1a)."},
+    {"seat": "B", "do": {"kind": "declare_blockers", "blocks": [["bears1", "giant"], ["bears2", "giant"]]},
+     "delta": {"turn": {"number": 3, "step": "combat_damage", "active": "A"}, "pending": {"seat": "A", "kind": "assign_combat_damage", "about": {"creature": "giant"}}, "objects": {"giant": {"blocked": true}, "bears1": {"blocking": ["giant"]}, "bears2": {"blocking": ["giant"]}}},
+     "note": "509.1a: both untapped Grizzly Bears block the Giant, which is attacking B; there are no restrictions or requirements (509.1b, 509.1c) and no costs (509.1d). 509.1g: each Bears is a blocking creature blocking the Giant; blocking does not tap them. 509.1h: the Giant becomes a blocked creature. 509.2: A gets priority; both pass (implied) and the step ends. Combat damage step: no creature has first strike or double strike, so there is a single combat damage step (510.4). 510.1: the active player first announces how each attacking creature assigns its damage; 510.1a: the Giant assigns damage equal to its power, 3; 510.1c: it is blocked by two creatures, so A divides it among them as A chooses: that is the question (spec 5.3). Each Bears blocks exactly one creature, so B has no choice (510.1d)."},
+    {"seat": "A", "do": {"kind": "assign_combat_damage", "assignments": [["bears1", 2], ["bears2", 1]]},
+     "delta": {"pending": {"seat": "A", "kind": "priority"}, "objects": {"giant": {"zone": "A.graveyard"}, "bears1": {"zone": "B.graveyard"}, "bears2": {"damage": 1, "blocking": [], "in_combat": true}}},
+     "note": "510.1c: the Giant's 3 damage is divided among its two blockers as A chooses: 2 to the first Bears, 1 to the second. The pinned 510.1c requires only that the whole amount (510.1a: equal to its power) go to the creatures blocking it; it imposes no order and does not require lethal damage to one blocker before another (only trample, 702.19b, speaks of lethal damage), and 510.1e checks the total assignment against exactly these rules, so the split is legal. 510.1d: each Bears blocks exactly the Giant and assigns its 2 to it. 510.2: all combat damage is dealt simultaneously; 120.3e: it is marked: 4 on the Giant, 2 on the first Bears, 1 on the second. 510.3, 704.3: before A gets priority, state-based actions are checked: 704.5g, 120.6: the Giant (toughness 3, 4 damage) and the first Bears (toughness 2, 2 damage) are destroyed and go to their owners' graveyards (701.8a), each a new object (400.7) whose damage and combat facts are not written (spec 4.1). The second Bears (toughness 2, 1 damage) survives with 1 damage marked (120.6). 506.4: the Giant left combat, so the second Bears blocks nothing; 509.1g: it remains a blocking creature until the combat phase ends, so it is in combat with an empty blocking list (spec 3.1, in_combat). Nothing triggers; 510.3: the active player gets priority in the combat damage step. Life totals are unchanged: no damage went to a player."}
+  ]
+}

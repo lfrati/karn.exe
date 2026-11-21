@@ -1,0 +1,2802 @@
+{
+ "author": {
+  "kind": "tool",
+  "name": "karn-recorder",
+  "version": "0.1.0+unknown"
+ },
+ "cards": {
+  "C001": {
+   "faces": [
+    "7cf7af410d8aabcb0ca7a4a8c53022eb127d477b90dc960ee1c4178b8e824deb"
+   ],
+   "name": "Island",
+   "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+   "owner": "A"
+  },
+  "C002": {
+   "faces": [
+    "08e66ca18e8c630089c2e745b7bae74233daf03bd2f07a70698668f27c771b1f"
+   ],
+   "name": "Opt",
+   "oracle": "713332c1-5bd8-400f-bfff-c1ca0697a043",
+   "owner": "A"
+  },
+  "C003": {
+   "faces": [
+    "00b9e7f7a16d781be8e05992daadf2572712d3e281db05da47496d0735c12e27"
+   ],
+   "name": "Drake Hatcher",
+   "oracle": "4de0ccab-bb5d-4c7c-827e-36aa1d00b182",
+   "owner": "A"
+  },
+  "C004": {
+   "faces": [
+    "77caf1534a4c4d2709902f5b6bc1044652270901714642f1f7daca1cff39415e"
+   ],
+   "name": "Into the Flood Maw",
+   "oracle": "8cb36a67-9206-4665-a03f-64f52ba559c4",
+   "owner": "A"
+  },
+  "C005": {
+   "faces": [
+    "08e66ca18e8c630089c2e745b7bae74233daf03bd2f07a70698668f27c771b1f"
+   ],
+   "name": "Opt",
+   "oracle": "713332c1-5bd8-400f-bfff-c1ca0697a043",
+   "owner": "A"
+  },
+  "C006": {
+   "faces": [
+    "9e9fd2d4907b6ac5ec7cad1b300c0682f107a42a923cf4399117132d1a2078f7"
+   ],
+   "name": "Shivan Reef",
+   "oracle": "0fe16212-66c3-4e45-a641-7391e9b2e304",
+   "owner": "A"
+  },
+  "C007": {
+   "faces": [
+    "531c20154ec3f5b66e24d43344ce2155e5b55b69d67721568aa32b98e490748e"
+   ],
+   "name": "Riverpyre Verge",
+   "oracle": "510a6ac5-f098-4145-ac07-771b1b6f7cdf",
+   "owner": "A"
+  },
+  "C008": {
+   "faces": [
+    "9e9fd2d4907b6ac5ec7cad1b300c0682f107a42a923cf4399117132d1a2078f7"
+   ],
+   "name": "Shivan Reef",
+   "oracle": "0fe16212-66c3-4e45-a641-7391e9b2e304",
+   "owner": "A"
+  },
+  "C009": {
+   "faces": [
+    "08e66ca18e8c630089c2e745b7bae74233daf03bd2f07a70698668f27c771b1f"
+   ],
+   "name": "Opt",
+   "oracle": "713332c1-5bd8-400f-bfff-c1ca0697a043",
+   "owner": "A"
+  },
+  "C010": {
+   "faces": [
+    "e8d7ace3e741297a789003d6898ced6a5069cbf969835830fb1bb8ccc6a1144d"
+   ],
+   "name": "Mountain",
+   "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+   "owner": "A"
+  },
+  "C011": {
+   "faces": [
+    "08e66ca18e8c630089c2e745b7bae74233daf03bd2f07a70698668f27c771b1f"
+   ],
+   "name": "Opt",
+   "oracle": "713332c1-5bd8-400f-bfff-c1ca0697a043",
+   "owner": "A"
+  },
+  "C012": {
+   "faces": [
+    "6f3fbb5fad26fcab46748961fd6f4cba8723d9d05eae4c4565a0a1a559ad7b5e"
+   ],
+   "name": "Stock Up",
+   "oracle": "2251e34e-4ce8-4452-9dc6-d8cce8583996",
+   "owner": "A"
+  },
+  "C013": {
+   "faces": [
+    "feeefaff11e90861ce51943be777ffeec290e219eb3c06c391f069e46a10ffcf"
+   ],
+   "name": "Monastery Swiftspear",
+   "oracle": "dafd2713-d1bc-474b-b390-d2ff20b5375e",
+   "owner": "A"
+  },
+  "C014": {
+   "faces": [
+    "531c20154ec3f5b66e24d43344ce2155e5b55b69d67721568aa32b98e490748e"
+   ],
+   "name": "Riverpyre Verge",
+   "oracle": "510a6ac5-f098-4145-ac07-771b1b6f7cdf",
+   "owner": "A"
+  },
+  "C015": {
+   "faces": [
+    "6f3fbb5fad26fcab46748961fd6f4cba8723d9d05eae4c4565a0a1a559ad7b5e"
+   ],
+   "name": "Stock Up",
+   "oracle": "2251e34e-4ce8-4452-9dc6-d8cce8583996",
+   "owner": "A"
+  },
+  "C016": {
+   "faces": [
+    "531c20154ec3f5b66e24d43344ce2155e5b55b69d67721568aa32b98e490748e"
+   ],
+   "name": "Riverpyre Verge",
+   "oracle": "510a6ac5-f098-4145-ac07-771b1b6f7cdf",
+   "owner": "A"
+  },
+  "C017": {
+   "faces": [
+    "7cf7af410d8aabcb0ca7a4a8c53022eb127d477b90dc960ee1c4178b8e824deb"
+   ],
+   "name": "Island",
+   "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+   "owner": "A"
+  },
+  "C018": {
+   "faces": [
+    "feeefaff11e90861ce51943be777ffeec290e219eb3c06c391f069e46a10ffcf"
+   ],
+   "name": "Monastery Swiftspear",
+   "oracle": "dafd2713-d1bc-474b-b390-d2ff20b5375e",
+   "owner": "A"
+  },
+  "C019": {
+   "faces": [
+    "c9657d58ebf8a112ced2053264800a7dcd585260ecd039667bf3b21c0c8a2bdb"
+   ],
+   "name": "Sleight of Hand",
+   "oracle": "05a039ad-1689-4d13-b393-6c1219583b5d",
+   "owner": "A"
+  },
+  "C020": {
+   "faces": [
+    "7c230af19a4e6b8cb3fd9bc25856cd5c6b88ac5486f8f32db5e9439ce8b2da6b"
+   ],
+   "name": "Stormchaser's Talent",
+   "oracle": "00c1788d-c52f-4839-9cd8-11fb86c418b6",
+   "owner": "A"
+  },
+  "C021": {
+   "faces": [
+    "c9657d58ebf8a112ced2053264800a7dcd585260ecd039667bf3b21c0c8a2bdb"
+   ],
+   "name": "Sleight of Hand",
+   "oracle": "05a039ad-1689-4d13-b393-6c1219583b5d",
+   "owner": "A"
+  },
+  "C022": {
+   "faces": [
+    "0010d1090f5e2f59d1312e6cea74e4fa92da7875e3b0d89a7a0df2a1099c2157"
+   ],
+   "name": "Monstrous Rage",
+   "oracle": "646a2371-54c0-4492-ac2f-20f109d6108c",
+   "owner": "A"
+  },
+  "C023": {
+   "faces": [
+    "00b9e7f7a16d781be8e05992daadf2572712d3e281db05da47496d0735c12e27"
+   ],
+   "name": "Drake Hatcher",
+   "oracle": "4de0ccab-bb5d-4c7c-827e-36aa1d00b182",
+   "owner": "A"
+  },
+  "C024": {
+   "faces": [
+    "77caf1534a4c4d2709902f5b6bc1044652270901714642f1f7daca1cff39415e"
+   ],
+   "name": "Into the Flood Maw",
+   "oracle": "8cb36a67-9206-4665-a03f-64f52ba559c4",
+   "owner": "A"
+  },
+  "C025": {
+   "faces": [
+    "77caf1534a4c4d2709902f5b6bc1044652270901714642f1f7daca1cff39415e"
+   ],
+   "name": "Into the Flood Maw",
+   "oracle": "8cb36a67-9206-4665-a03f-64f52ba559c4",
+   "owner": "A"
+  },
+  "C026": {
+   "faces": [
+    "0620bba51e60379da60a434ad215d355ab374d44f3c4d64f3727f321dfcae539"
+   ],
+   "name": "Spirebluff Canal",
+   "oracle": "eb0d8093-5f93-4b25-9384-08f9731bfb28",
+   "owner": "A"
+  },
+  "C027": {
+   "faces": [
+    "531c20154ec3f5b66e24d43344ce2155e5b55b69d67721568aa32b98e490748e"
+   ],
+   "name": "Riverpyre Verge",
+   "oracle": "510a6ac5-f098-4145-ac07-771b1b6f7cdf",
+   "owner": "A"
+  },
+  "C028": {
+   "faces": [
+    "7c230af19a4e6b8cb3fd9bc25856cd5c6b88ac5486f8f32db5e9439ce8b2da6b"
+   ],
+   "name": "Stormchaser's Talent",
+   "oracle": "00c1788d-c52f-4839-9cd8-11fb86c418b6",
+   "owner": "A"
+  },
+  "C029": {
+   "faces": [
+    "7c230af19a4e6b8cb3fd9bc25856cd5c6b88ac5486f8f32db5e9439ce8b2da6b"
+   ],
+   "name": "Stormchaser's Talent",
+   "oracle": "00c1788d-c52f-4839-9cd8-11fb86c418b6",
+   "owner": "A"
+  },
+  "C030": {
+   "faces": [
+    "e8d7ace3e741297a789003d6898ced6a5069cbf969835830fb1bb8ccc6a1144d"
+   ],
+   "name": "Mountain",
+   "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+   "owner": "A"
+  },
+  "C031": {
+   "faces": [
+    "a4c6598581be538072972f03b59b3ba56500136afeb8fd6fa9b28b56cadad88c"
+   ],
+   "name": "Cori-Steel Cutter",
+   "oracle": "46b1a169-bc32-47bf-b379-fa0c3d13878f",
+   "owner": "A"
+  },
+  "C032": {
+   "faces": [
+    "7cf7af410d8aabcb0ca7a4a8c53022eb127d477b90dc960ee1c4178b8e824deb"
+   ],
+   "name": "Island",
+   "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+   "owner": "A"
+  },
+  "C033": {
+   "faces": [
+    "c9657d58ebf8a112ced2053264800a7dcd585260ecd039667bf3b21c0c8a2bdb"
+   ],
+   "name": "Sleight of Hand",
+   "oracle": "05a039ad-1689-4d13-b393-6c1219583b5d",
+   "owner": "A"
+  },
+  "C034": {
+   "faces": [
+    "8bd632500692ef763d127e7cdf9fbe4cfda0628da5eff5dd36daccdb313bd33c"
+   ],
+   "name": "Spell Pierce",
+   "oracle": "d64b0848-0193-4025-ba62-63ecd8fb9f50",
+   "owner": "A"
+  },
+  "C035": {
+   "faces": [
+    "c9657d58ebf8a112ced2053264800a7dcd585260ecd039667bf3b21c0c8a2bdb"
+   ],
+   "name": "Sleight of Hand",
+   "oracle": "05a039ad-1689-4d13-b393-6c1219583b5d",
+   "owner": "A"
+  },
+  "C036": {
+   "faces": [
+    "77caf1534a4c4d2709902f5b6bc1044652270901714642f1f7daca1cff39415e"
+   ],
+   "name": "Into the Flood Maw",
+   "oracle": "8cb36a67-9206-4665-a03f-64f52ba559c4",
+   "owner": "A"
+  },
+  "C037": {
+   "faces": [
+    "a4c6598581be538072972f03b59b3ba56500136afeb8fd6fa9b28b56cadad88c"
+   ],
+   "name": "Cori-Steel Cutter",
+   "oracle": "46b1a169-bc32-47bf-b379-fa0c3d13878f",
+   "owner": "A"
+  },
+  "C038": {
+   "faces": [
+    "9dbf7af17faa45779bbed549c2efa9996fc94702f85880fb4a7b1adca6d36d90"
+   ],
+   "name": "Abrade",
+   "oracle": "f9db72dc-9a5b-48a4-a86e-7464d9a2166a",
+   "owner": "A"
+  },
+  "C039": {
+   "faces": [
+    "3849dd02354fef80fff576c0725fce3d395c848db5d6c708e2363adba877f5d1"
+   ],
+   "name": "Thundering Falls",
+   "oracle": "d2bcff58-7a8a-46ef-b6b3-39501d4c8e6e",
+   "owner": "A"
+  },
+  "C040": {
+   "faces": [
+    "0620bba51e60379da60a434ad215d355ab374d44f3c4d64f3727f321dfcae539"
+   ],
+   "name": "Spirebluff Canal",
+   "oracle": "eb0d8093-5f93-4b25-9384-08f9731bfb28",
+   "owner": "A"
+  },
+  "C041": {
+   "faces": [
+    "0010d1090f5e2f59d1312e6cea74e4fa92da7875e3b0d89a7a0df2a1099c2157"
+   ],
+   "name": "Monstrous Rage",
+   "oracle": "646a2371-54c0-4492-ac2f-20f109d6108c",
+   "owner": "A"
+  },
+  "C042": {
+   "faces": [
+    "00b9e7f7a16d781be8e05992daadf2572712d3e281db05da47496d0735c12e27"
+   ],
+   "name": "Drake Hatcher",
+   "oracle": "4de0ccab-bb5d-4c7c-827e-36aa1d00b182",
+   "owner": "A"
+  },
+  "C043": {
+   "faces": [
+    "7c230af19a4e6b8cb3fd9bc25856cd5c6b88ac5486f8f32db5e9439ce8b2da6b"
+   ],
+   "name": "Stormchaser's Talent",
+   "oracle": "00c1788d-c52f-4839-9cd8-11fb86c418b6",
+   "owner": "A"
+  },
+  "C044": {
+   "faces": [
+    "6f3fbb5fad26fcab46748961fd6f4cba8723d9d05eae4c4565a0a1a559ad7b5e"
+   ],
+   "name": "Stock Up",
+   "oracle": "2251e34e-4ce8-4452-9dc6-d8cce8583996",
+   "owner": "A"
+  },
+  "C045": {
+   "faces": [
+    "0620bba51e60379da60a434ad215d355ab374d44f3c4d64f3727f321dfcae539"
+   ],
+   "name": "Spirebluff Canal",
+   "oracle": "eb0d8093-5f93-4b25-9384-08f9731bfb28",
+   "owner": "A"
+  },
+  "C046": {
+   "faces": [
+    "0620bba51e60379da60a434ad215d355ab374d44f3c4d64f3727f321dfcae539"
+   ],
+   "name": "Spirebluff Canal",
+   "oracle": "eb0d8093-5f93-4b25-9384-08f9731bfb28",
+   "owner": "A"
+  },
+  "C047": {
+   "faces": [
+    "664ed538b08ac3ac6b9a3ddf79fcfc5f0513f91d3c3476e1e5afa65bb1e14dda"
+   ],
+   "name": "Burst Lightning",
+   "oracle": "ac2086fe-98ee-4280-9c7c-c5c2d6548a8b",
+   "owner": "A"
+  },
+  "C048": {
+   "faces": [
+    "e8d7ace3e741297a789003d6898ced6a5069cbf969835830fb1bb8ccc6a1144d"
+   ],
+   "name": "Mountain",
+   "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+   "owner": "A"
+  },
+  "C049": {
+   "faces": [
+    "7cf7af410d8aabcb0ca7a4a8c53022eb127d477b90dc960ee1c4178b8e824deb"
+   ],
+   "name": "Island",
+   "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+   "owner": "A"
+  },
+  "C050": {
+   "faces": [
+    "a4c6598581be538072972f03b59b3ba56500136afeb8fd6fa9b28b56cadad88c"
+   ],
+   "name": "Cori-Steel Cutter",
+   "oracle": "46b1a169-bc32-47bf-b379-fa0c3d13878f",
+   "owner": "A"
+  },
+  "C051": {
+   "faces": [
+    "6f3fbb5fad26fcab46748961fd6f4cba8723d9d05eae4c4565a0a1a559ad7b5e"
+   ],
+   "name": "Stock Up",
+   "oracle": "2251e34e-4ce8-4452-9dc6-d8cce8583996",
+   "owner": "A"
+  },
+  "C052": {
+   "faces": [
+    "869672fa5049b6c5a99f452b1b4b2cf85d83aee3c8f90c75603e34b67f043aae"
+   ],
+   "name": "Torch the Tower",
+   "oracle": "10d33e95-3e5d-447e-ba4a-acd3c33b4045",
+   "owner": "A"
+  },
+  "C053": {
+   "faces": [
+    "feeefaff11e90861ce51943be777ffeec290e219eb3c06c391f069e46a10ffcf"
+   ],
+   "name": "Monastery Swiftspear",
+   "oracle": "dafd2713-d1bc-474b-b390-d2ff20b5375e",
+   "owner": "A"
+  },
+  "C054": {
+   "faces": [
+    "869672fa5049b6c5a99f452b1b4b2cf85d83aee3c8f90c75603e34b67f043aae"
+   ],
+   "name": "Torch the Tower",
+   "oracle": "10d33e95-3e5d-447e-ba4a-acd3c33b4045",
+   "owner": "A"
+  },
+  "C055": {
+   "faces": [
+    "0010d1090f5e2f59d1312e6cea74e4fa92da7875e3b0d89a7a0df2a1099c2157"
+   ],
+   "name": "Monstrous Rage",
+   "oracle": "646a2371-54c0-4492-ac2f-20f109d6108c",
+   "owner": "A"
+  },
+  "C056": {
+   "faces": [
+    "a4c6598581be538072972f03b59b3ba56500136afeb8fd6fa9b28b56cadad88c"
+   ],
+   "name": "Cori-Steel Cutter",
+   "oracle": "46b1a169-bc32-47bf-b379-fa0c3d13878f",
+   "owner": "A"
+  },
+  "C057": {
+   "faces": [
+    "feeefaff11e90861ce51943be777ffeec290e219eb3c06c391f069e46a10ffcf"
+   ],
+   "name": "Monastery Swiftspear",
+   "oracle": "dafd2713-d1bc-474b-b390-d2ff20b5375e",
+   "owner": "A"
+  },
+  "C058": {
+   "faces": [
+    "9e9fd2d4907b6ac5ec7cad1b300c0682f107a42a923cf4399117132d1a2078f7"
+   ],
+   "name": "Shivan Reef",
+   "oracle": "0fe16212-66c3-4e45-a641-7391e9b2e304",
+   "owner": "A"
+  },
+  "C059": {
+   "faces": [
+    "7cf7af410d8aabcb0ca7a4a8c53022eb127d477b90dc960ee1c4178b8e824deb"
+   ],
+   "name": "Island",
+   "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+   "owner": "A"
+  },
+  "C060": {
+   "faces": [
+    "9e9fd2d4907b6ac5ec7cad1b300c0682f107a42a923cf4399117132d1a2078f7"
+   ],
+   "name": "Shivan Reef",
+   "oracle": "0fe16212-66c3-4e45-a641-7391e9b2e304",
+   "owner": "A"
+  },
+  "C061": {
+   "faces": [
+    "7c230af19a4e6b8cb3fd9bc25856cd5c6b88ac5486f8f32db5e9439ce8b2da6b"
+   ],
+   "name": "Stormchaser's Talent",
+   "oracle": "00c1788d-c52f-4839-9cd8-11fb86c418b6",
+   "owner": "B"
+  },
+  "C062": {
+   "faces": [
+    "0620bba51e60379da60a434ad215d355ab374d44f3c4d64f3727f321dfcae539"
+   ],
+   "name": "Spirebluff Canal",
+   "oracle": "eb0d8093-5f93-4b25-9384-08f9731bfb28",
+   "owner": "B"
+  },
+  "C063": {
+   "faces": [
+    "08e66ca18e8c630089c2e745b7bae74233daf03bd2f07a70698668f27c771b1f"
+   ],
+   "name": "Opt",
+   "oracle": "713332c1-5bd8-400f-bfff-c1ca0697a043",
+   "owner": "B"
+  },
+  "C064": {
+   "faces": [
+    "531c20154ec3f5b66e24d43344ce2155e5b55b69d67721568aa32b98e490748e"
+   ],
+   "name": "Riverpyre Verge",
+   "oracle": "510a6ac5-f098-4145-ac07-771b1b6f7cdf",
+   "owner": "B"
+  },
+  "C065": {
+   "faces": [
+    "45543adfbdb419c71822da02e86fc5898fb8d1fec2da67493824171a855b6ef5"
+   ],
+   "name": "Vibrant Outburst",
+   "oracle": "a0cbb1ba-73b1-4418-bbe3-5d1a02007c08",
+   "owner": "B"
+  },
+  "C066": {
+   "faces": [
+    "0620bba51e60379da60a434ad215d355ab374d44f3c4d64f3727f321dfcae539"
+   ],
+   "name": "Spirebluff Canal",
+   "oracle": "eb0d8093-5f93-4b25-9384-08f9731bfb28",
+   "owner": "B"
+  },
+  "C067": {
+   "faces": [
+    "c9657d58ebf8a112ced2053264800a7dcd585260ecd039667bf3b21c0c8a2bdb"
+   ],
+   "name": "Sleight of Hand",
+   "oracle": "05a039ad-1689-4d13-b393-6c1219583b5d",
+   "owner": "B"
+  },
+  "C068": {
+   "faces": [
+    "a0df50dbb1c09a8ec388e96be95cb7fe0751f34ef89c7b787f7ddb44e2fdd14c"
+   ],
+   "name": "Magic Damper",
+   "oracle": "ada82f93-dc93-4a95-a13f-42b5942b3413",
+   "owner": "B"
+  },
+  "C069": {
+   "faces": [
+    "e9fd93a44f31b09f2a4b4683f54ebcc00d4caa1407c3e71c0ee05a92b7aee170"
+   ],
+   "name": "Boomerang Basics",
+   "oracle": "acd881eb-f3b4-4174-9fc2-e3c7c213886b",
+   "owner": "B"
+  },
+  "C070": {
+   "faces": [
+    "0620bba51e60379da60a434ad215d355ab374d44f3c4d64f3727f321dfcae539"
+   ],
+   "name": "Spirebluff Canal",
+   "oracle": "eb0d8093-5f93-4b25-9384-08f9731bfb28",
+   "owner": "B"
+  },
+  "C071": {
+   "faces": [
+    "14e4ccea442b85df718da23c9fd16c9e86f37efa1680462be12f26d56fcc9485"
+   ],
+   "name": "Flow State",
+   "oracle": "e7194bca-0cf4-4a86-8b84-d2f9219a08b3",
+   "owner": "B"
+  },
+  "C072": {
+   "faces": [
+    "c9657d58ebf8a112ced2053264800a7dcd585260ecd039667bf3b21c0c8a2bdb"
+   ],
+   "name": "Sleight of Hand",
+   "oracle": "05a039ad-1689-4d13-b393-6c1219583b5d",
+   "owner": "B"
+  },
+  "C073": {
+   "faces": [
+    "8b56e2f63baff5308020efd2de403e57a27b6e1fe8733473bc40b8a45e668e5c"
+   ],
+   "name": "Steam Vents",
+   "oracle": "17039058-822d-409f-938c-b727a366ba63",
+   "owner": "B"
+  },
+  "C074": {
+   "faces": [
+    "664ed538b08ac3ac6b9a3ddf79fcfc5f0513f91d3c3476e1e5afa65bb1e14dda"
+   ],
+   "name": "Burst Lightning",
+   "oracle": "ac2086fe-98ee-4280-9c7c-c5c2d6548a8b",
+   "owner": "B"
+  },
+  "C075": {
+   "faces": [
+    "7cf7af410d8aabcb0ca7a4a8c53022eb127d477b90dc960ee1c4178b8e824deb"
+   ],
+   "name": "Island",
+   "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+   "owner": "B"
+  },
+  "C076": {
+   "faces": [
+    "7cf7af410d8aabcb0ca7a4a8c53022eb127d477b90dc960ee1c4178b8e824deb"
+   ],
+   "name": "Island",
+   "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+   "owner": "B"
+  },
+  "C077": {
+   "faces": [
+    "664ed538b08ac3ac6b9a3ddf79fcfc5f0513f91d3c3476e1e5afa65bb1e14dda"
+   ],
+   "name": "Burst Lightning",
+   "oracle": "ac2086fe-98ee-4280-9c7c-c5c2d6548a8b",
+   "owner": "B"
+  },
+  "C078": {
+   "faces": [
+    "7cf7af410d8aabcb0ca7a4a8c53022eb127d477b90dc960ee1c4178b8e824deb"
+   ],
+   "name": "Island",
+   "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+   "owner": "B"
+  },
+  "C079": {
+   "faces": [
+    "c9657d58ebf8a112ced2053264800a7dcd585260ecd039667bf3b21c0c8a2bdb"
+   ],
+   "name": "Sleight of Hand",
+   "oracle": "05a039ad-1689-4d13-b393-6c1219583b5d",
+   "owner": "B"
+  },
+  "C080": {
+   "faces": [
+    "8bd632500692ef763d127e7cdf9fbe4cfda0628da5eff5dd36daccdb313bd33c"
+   ],
+   "name": "Spell Pierce",
+   "oracle": "d64b0848-0193-4025-ba62-63ecd8fb9f50",
+   "owner": "B"
+  },
+  "C081": {
+   "faces": [
+    "c9657d58ebf8a112ced2053264800a7dcd585260ecd039667bf3b21c0c8a2bdb"
+   ],
+   "name": "Sleight of Hand",
+   "oracle": "05a039ad-1689-4d13-b393-6c1219583b5d",
+   "owner": "B"
+  },
+  "C082": {
+   "faces": [
+    "531c20154ec3f5b66e24d43344ce2155e5b55b69d67721568aa32b98e490748e"
+   ],
+   "name": "Riverpyre Verge",
+   "oracle": "510a6ac5-f098-4145-ac07-771b1b6f7cdf",
+   "owner": "B"
+  },
+  "C083": {
+   "faces": [
+    "7c230af19a4e6b8cb3fd9bc25856cd5c6b88ac5486f8f32db5e9439ce8b2da6b"
+   ],
+   "name": "Stormchaser's Talent",
+   "oracle": "00c1788d-c52f-4839-9cd8-11fb86c418b6",
+   "owner": "B"
+  },
+  "C084": {
+   "faces": [
+    "cf3f6a802550d498b1734b379ff349c842a0abb2d7775f3062d68a97daef2a13"
+   ],
+   "name": "Eddymurk Crab",
+   "oracle": "3c345e24-1726-45ac-91ca-e348d1e7acfe",
+   "owner": "B"
+  },
+  "C085": {
+   "faces": [
+    "14e4ccea442b85df718da23c9fd16c9e86f37efa1680462be12f26d56fcc9485"
+   ],
+   "name": "Flow State",
+   "oracle": "e7194bca-0cf4-4a86-8b84-d2f9219a08b3",
+   "owner": "B"
+  },
+  "C086": {
+   "faces": [
+    "14e4ccea442b85df718da23c9fd16c9e86f37efa1680462be12f26d56fcc9485"
+   ],
+   "name": "Flow State",
+   "oracle": "e7194bca-0cf4-4a86-8b84-d2f9219a08b3",
+   "owner": "B"
+  },
+  "C087": {
+   "faces": [
+    "7cf7af410d8aabcb0ca7a4a8c53022eb127d477b90dc960ee1c4178b8e824deb"
+   ],
+   "name": "Island",
+   "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+   "owner": "B"
+  },
+  "C088": {
+   "faces": [
+    "664ed538b08ac3ac6b9a3ddf79fcfc5f0513f91d3c3476e1e5afa65bb1e14dda"
+   ],
+   "name": "Burst Lightning",
+   "oracle": "ac2086fe-98ee-4280-9c7c-c5c2d6548a8b",
+   "owner": "B"
+  },
+  "C089": {
+   "faces": [
+    "531c20154ec3f5b66e24d43344ce2155e5b55b69d67721568aa32b98e490748e"
+   ],
+   "name": "Riverpyre Verge",
+   "oracle": "510a6ac5-f098-4145-ac07-771b1b6f7cdf",
+   "owner": "B"
+  },
+  "C090": {
+   "faces": [
+    "7c230af19a4e6b8cb3fd9bc25856cd5c6b88ac5486f8f32db5e9439ce8b2da6b"
+   ],
+   "name": "Stormchaser's Talent",
+   "oracle": "00c1788d-c52f-4839-9cd8-11fb86c418b6",
+   "owner": "B"
+  },
+  "C091": {
+   "faces": [
+    "7cf7af410d8aabcb0ca7a4a8c53022eb127d477b90dc960ee1c4178b8e824deb"
+   ],
+   "name": "Island",
+   "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+   "owner": "B"
+  },
+  "C092": {
+   "faces": [
+    "d5ea9f9fe465878004f94aa048173bb5f8ccef0fa47254089577babdc5fd9b70"
+   ],
+   "name": "Get Out",
+   "oracle": "b2f3c27e-b646-4449-901a-8b809cdfa84e",
+   "owner": "B"
+  },
+  "C093": {
+   "faces": [
+    "66a6a9210e59e5f8a77e6306cdcb22a893254cf804828389c3051da04123c550"
+   ],
+   "name": "Slickshot Show-Off",
+   "oracle": "74c7a029-59aa-4511-8e4c-f8f167cda4e2",
+   "owner": "B"
+  },
+  "C094": {
+   "faces": [
+    "66a6a9210e59e5f8a77e6306cdcb22a893254cf804828389c3051da04123c550"
+   ],
+   "name": "Slickshot Show-Off",
+   "oracle": "74c7a029-59aa-4511-8e4c-f8f167cda4e2",
+   "owner": "B"
+  },
+  "C095": {
+   "faces": [
+    "da890395ffb8df65636f7821e6e234ddd7ef2315c4b375999193954e06fd759b",
+    "6be41e456024a9febd7ed9d5254a25d8269a6e1084e189859e77dea6c01eb72d"
+   ],
+   "name": "Roaring Furnace // Steaming Sauna",
+   "oracle": "d5f31713-d380-42ba-8052-4b8d9beb3958",
+   "owner": "B"
+  },
+  "C096": {
+   "faces": [
+    "66a6a9210e59e5f8a77e6306cdcb22a893254cf804828389c3051da04123c550"
+   ],
+   "name": "Slickshot Show-Off",
+   "oracle": "74c7a029-59aa-4511-8e4c-f8f167cda4e2",
+   "owner": "B"
+  },
+  "C097": {
+   "faces": [
+    "8b56e2f63baff5308020efd2de403e57a27b6e1fe8733473bc40b8a45e668e5c"
+   ],
+   "name": "Steam Vents",
+   "oracle": "17039058-822d-409f-938c-b727a366ba63",
+   "owner": "B"
+  },
+  "C098": {
+   "faces": [
+    "6346063cb57e119495df0e28c27e6598cb0ee9842d6a5e3f26577167fef81d05"
+   ],
+   "name": "Multiversal Passage",
+   "oracle": "17770eeb-ecbf-4510-af2d-acececfbe146",
+   "owner": "B"
+  },
+  "C099": {
+   "faces": [
+    "08e66ca18e8c630089c2e745b7bae74233daf03bd2f07a70698668f27c771b1f"
+   ],
+   "name": "Opt",
+   "oracle": "713332c1-5bd8-400f-bfff-c1ca0697a043",
+   "owner": "B"
+  },
+  "C100": {
+   "faces": [
+    "08e66ca18e8c630089c2e745b7bae74233daf03bd2f07a70698668f27c771b1f"
+   ],
+   "name": "Opt",
+   "oracle": "713332c1-5bd8-400f-bfff-c1ca0697a043",
+   "owner": "B"
+  },
+  "C101": {
+   "faces": [
+    "7cf7af410d8aabcb0ca7a4a8c53022eb127d477b90dc960ee1c4178b8e824deb"
+   ],
+   "name": "Island",
+   "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+   "owner": "B"
+  },
+  "C102": {
+   "faces": [
+    "e9fd93a44f31b09f2a4b4683f54ebcc00d4caa1407c3e71c0ee05a92b7aee170"
+   ],
+   "name": "Boomerang Basics",
+   "oracle": "acd881eb-f3b4-4174-9fc2-e3c7c213886b",
+   "owner": "B"
+  },
+  "C103": {
+   "faces": [
+    "d5ea9f9fe465878004f94aa048173bb5f8ccef0fa47254089577babdc5fd9b70"
+   ],
+   "name": "Get Out",
+   "oracle": "b2f3c27e-b646-4449-901a-8b809cdfa84e",
+   "owner": "B"
+  },
+  "C104": {
+   "faces": [
+    "cf3f6a802550d498b1734b379ff349c842a0abb2d7775f3062d68a97daef2a13"
+   ],
+   "name": "Eddymurk Crab",
+   "oracle": "3c345e24-1726-45ac-91ca-e348d1e7acfe",
+   "owner": "B"
+  },
+  "C105": {
+   "faces": [
+    "cf3f6a802550d498b1734b379ff349c842a0abb2d7775f3062d68a97daef2a13"
+   ],
+   "name": "Eddymurk Crab",
+   "oracle": "3c345e24-1726-45ac-91ca-e348d1e7acfe",
+   "owner": "B"
+  },
+  "C106": {
+   "faces": [
+    "7c230af19a4e6b8cb3fd9bc25856cd5c6b88ac5486f8f32db5e9439ce8b2da6b"
+   ],
+   "name": "Stormchaser's Talent",
+   "oracle": "00c1788d-c52f-4839-9cd8-11fb86c418b6",
+   "owner": "B"
+  },
+  "C107": {
+   "faces": [
+    "cf3f6a802550d498b1734b379ff349c842a0abb2d7775f3062d68a97daef2a13"
+   ],
+   "name": "Eddymurk Crab",
+   "oracle": "3c345e24-1726-45ac-91ca-e348d1e7acfe",
+   "owner": "B"
+  },
+  "C108": {
+   "faces": [
+    "6346063cb57e119495df0e28c27e6598cb0ee9842d6a5e3f26577167fef81d05"
+   ],
+   "name": "Multiversal Passage",
+   "oracle": "17770eeb-ecbf-4510-af2d-acececfbe146",
+   "owner": "B"
+  },
+  "C109": {
+   "faces": [
+    "14e4ccea442b85df718da23c9fd16c9e86f37efa1680462be12f26d56fcc9485"
+   ],
+   "name": "Flow State",
+   "oracle": "e7194bca-0cf4-4a86-8b84-d2f9219a08b3",
+   "owner": "B"
+  },
+  "C110": {
+   "faces": [
+    "6b6b65cbdd81ce7cb47786c75b961adcc57991b9753a215faf62ec53b2f03194"
+   ],
+   "name": "Stormcarved Coast",
+   "oracle": "4722105b-0085-4bb8-bca1-9de0d3eb5600",
+   "owner": "B"
+  },
+  "C111": {
+   "faces": [
+    "8b56e2f63baff5308020efd2de403e57a27b6e1fe8733473bc40b8a45e668e5c"
+   ],
+   "name": "Steam Vents",
+   "oracle": "17039058-822d-409f-938c-b727a366ba63",
+   "owner": "B"
+  },
+  "C112": {
+   "faces": [
+    "664ed538b08ac3ac6b9a3ddf79fcfc5f0513f91d3c3476e1e5afa65bb1e14dda"
+   ],
+   "name": "Burst Lightning",
+   "oracle": "ac2086fe-98ee-4280-9c7c-c5c2d6548a8b",
+   "owner": "B"
+  },
+  "C113": {
+   "faces": [
+    "8b56e2f63baff5308020efd2de403e57a27b6e1fe8733473bc40b8a45e668e5c"
+   ],
+   "name": "Steam Vents",
+   "oracle": "17039058-822d-409f-938c-b727a366ba63",
+   "owner": "B"
+  },
+  "C114": {
+   "faces": [
+    "66a6a9210e59e5f8a77e6306cdcb22a893254cf804828389c3051da04123c550"
+   ],
+   "name": "Slickshot Show-Off",
+   "oracle": "74c7a029-59aa-4511-8e4c-f8f167cda4e2",
+   "owner": "B"
+  },
+  "C115": {
+   "faces": [
+    "531c20154ec3f5b66e24d43344ce2155e5b55b69d67721568aa32b98e490748e"
+   ],
+   "name": "Riverpyre Verge",
+   "oracle": "510a6ac5-f098-4145-ac07-771b1b6f7cdf",
+   "owner": "B"
+  },
+  "C116": {
+   "faces": [
+    "e9fd93a44f31b09f2a4b4683f54ebcc00d4caa1407c3e71c0ee05a92b7aee170"
+   ],
+   "name": "Boomerang Basics",
+   "oracle": "acd881eb-f3b4-4174-9fc2-e3c7c213886b",
+   "owner": "B"
+  },
+  "C117": {
+   "faces": [
+    "08e66ca18e8c630089c2e745b7bae74233daf03bd2f07a70698668f27c771b1f"
+   ],
+   "name": "Opt",
+   "oracle": "713332c1-5bd8-400f-bfff-c1ca0697a043",
+   "owner": "B"
+  },
+  "C118": {
+   "faces": [
+    "bf50663e102e3385fc0703ec5b6c91222fd285e30fda1d32d89c59e6f8b8d9c6"
+   ],
+   "name": "Impractical Joke",
+   "oracle": "c8da73ed-2834-4094-8723-a4ad75660290",
+   "owner": "B"
+  },
+  "C119": {
+   "faces": [
+    "0620bba51e60379da60a434ad215d355ab374d44f3c4d64f3727f321dfcae539"
+   ],
+   "name": "Spirebluff Canal",
+   "oracle": "eb0d8093-5f93-4b25-9384-08f9731bfb28",
+   "owner": "B"
+  },
+  "C120": {
+   "faces": [
+    "e9fd93a44f31b09f2a4b4683f54ebcc00d4caa1407c3e71c0ee05a92b7aee170"
+   ],
+   "name": "Boomerang Basics",
+   "oracle": "acd881eb-f3b4-4174-9fc2-e3c7c213886b",
+   "owner": "B"
+  }
+ },
+ "game": {
+  "format": "custom",
+  "hand_size": 7,
+  "life": 20,
+  "seats": [
+   "A",
+   "B"
+  ]
+ },
+ "lineage": {
+  "supersedes": "sha256:8b8a57d330cc8fe3f7327c35611a69e260fa1f03e2b18a553d077039ec38d1d3"
+ },
+ "mgn": "1",
+ "note": "Re-recorded from the decks through the Karn adapter from the decisions of tests/fixtures/mgn/torch-portable/record.json, which this record supersedes, with the pregame of the source tape tests/fixtures/player-tapes/torch-bargain-izzet-prowess-seed531: the tape fixed A as the starting player (spelled as a starting_player outcome and A choosing to play first, 103.1), its engine shuffled the decks (seed 531 there; here the outcomes, 103.3), and every seat kept (103.5). Every delta is the engine's projection (0.1.0+unknown); the facts it does not project are left at their defaults and listed in x-not-projected.",
+ "pins": {
+  "oracle": {
+   "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5",
+   "source": "scryfall-oracle-cards",
+   "updated_at": "2026-10-11T09:01:56.463+00:00"
+  },
+  "rules": {
+   "effective": "2026-09-25",
+   "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+  }
+ },
+ "producer": {
+  "name": "mgn-record",
+  "version": "2"
+ },
+ "start": {
+  "kind": "decks",
+  "random": [
+   {
+    "kind": "starting_player",
+    "method": "other",
+    "result": "A"
+   }
+  ]
+ },
+ "tier": 2,
+ "transitions": [
+  {
+   "delta": {
+    "objects": {
+     "C054": {
+      "zone": "A.hand"
+     },
+     "C055": {
+      "zone": "A.hand"
+     },
+     "C056": {
+      "zone": "A.hand"
+     },
+     "C057": {
+      "zone": "A.hand"
+     },
+     "C058": {
+      "zone": "A.hand"
+     },
+     "C059": {
+      "zone": "A.hand"
+     },
+     "C060": {
+      "zone": "A.hand"
+     },
+     "C114": {
+      "zone": "B.hand"
+     },
+     "C115": {
+      "zone": "B.hand"
+     },
+     "C116": {
+      "zone": "B.hand"
+     },
+     "C117": {
+      "zone": "B.hand"
+     },
+     "C118": {
+      "zone": "B.hand"
+     },
+     "C119": {
+      "zone": "B.hand"
+     },
+     "C120": {
+      "zone": "B.hand"
+     }
+    },
+    "pending": {
+     "kind": "priority",
+     "seat": "A"
+    },
+    "turn": {
+     "active": "A",
+     "number": 1,
+     "step": "precombat_main"
+    }
+   },
+   "do": {
+    "first": "A",
+    "kind": "choose_first"
+   },
+   "note": "The game begins from the decks. The source tape fixed A as the starting player; the record spells that as a starting_player outcome and A choosing to play first (103.1). Each library is shuffled (103.3) into the order the tape's engine produced: each outcome lists the seven cards drawn as the hand (103.5) first, in the card table's order since a hand is unordered (spec 3.1), then the library as the first recorded position lists it. Every seat keeps (the tape's answers; the null answer, implied; A declares first, then B). The first turn begins (103.8), the starting player skips its draw (103.8a), and the implied passes of the upkeep (502.4, 503.1) bring the game to the precombat main phase, where the first recorded decision is taken.",
+   "random": [
+    {
+     "kind": "shuffle",
+     "order": [
+      "C054",
+      "C055",
+      "C056",
+      "C057",
+      "C058",
+      "C059",
+      "C060",
+      "C053",
+      "C052",
+      "C051",
+      "C050",
+      "C049",
+      "C048",
+      "C047",
+      "C046",
+      "C045",
+      "C044",
+      "C043",
+      "C042",
+      "C041",
+      "C040",
+      "C039",
+      "C038",
+      "C037",
+      "C036",
+      "C035",
+      "C034",
+      "C033",
+      "C032",
+      "C031",
+      "C030",
+      "C029",
+      "C028",
+      "C027",
+      "C026",
+      "C025",
+      "C024",
+      "C023",
+      "C022",
+      "C021",
+      "C020",
+      "C019",
+      "C018",
+      "C017",
+      "C016",
+      "C015",
+      "C014",
+      "C013",
+      "C012",
+      "C011",
+      "C010",
+      "C009",
+      "C008",
+      "C007",
+      "C006",
+      "C005",
+      "C004",
+      "C003",
+      "C002",
+      "C001"
+     ],
+     "seat": "A"
+    },
+    {
+     "kind": "shuffle",
+     "order": [
+      "C114",
+      "C115",
+      "C116",
+      "C117",
+      "C118",
+      "C119",
+      "C120",
+      "C113",
+      "C112",
+      "C111",
+      "C110",
+      "C109",
+      "C108",
+      "C107",
+      "C106",
+      "C105",
+      "C104",
+      "C103",
+      "C102",
+      "C101",
+      "C100",
+      "C099",
+      "C098",
+      "C097",
+      "C096",
+      "C095",
+      "C094",
+      "C093",
+      "C092",
+      "C091",
+      "C090",
+      "C089",
+      "C088",
+      "C087",
+      "C086",
+      "C085",
+      "C084",
+      "C083",
+      "C082",
+      "C081",
+      "C080",
+      "C079",
+      "C078",
+      "C077",
+      "C076",
+      "C075",
+      "C074",
+      "C073",
+      "C072",
+      "C071",
+      "C070",
+      "C069",
+      "C068",
+      "C067",
+      "C066",
+      "C065",
+      "C064",
+      "C063",
+      "C062",
+      "C061"
+     ],
+     "seat": "B"
+    }
+   ],
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C058": {
+      "zone": "battlefield"
+     }
+    }
+   },
+   "do": {
+    "card": "C058",
+    "kind": "play_land"
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C057": {
+      "zone": "battlefield"
+     },
+     "C058": {
+      "tapped": true
+     }
+    },
+    "pending": {
+     "kind": "declare_attackers",
+     "seat": "A"
+    },
+    "players": {
+     "A": {
+      "life": 19
+     }
+    },
+    "turn": {
+     "active": "A",
+     "number": 1,
+     "step": "declare_attackers"
+    }
+   },
+   "do": {
+    "card": "C057",
+    "kind": "cast",
+    "pay": {
+     "abilities": [
+      {
+       "ability": {
+        "face": 0,
+        "paragraph": 2
+       },
+       "adding": [
+        "R"
+       ],
+       "source": "C058"
+      }
+     ]
+    }
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C057": {
+      "tapped": true
+     },
+     "C113": {
+      "zone": "B.hand"
+     }
+    },
+    "pending": {
+     "kind": "priority",
+     "seat": "B"
+    },
+    "players": {
+     "B": {
+      "life": 19
+     }
+    },
+    "turn": {
+     "active": "B",
+     "number": 2,
+     "step": "precombat_main"
+    }
+   },
+   "do": {
+    "attacks": [
+     [
+      "C057",
+      "B"
+     ]
+    ],
+    "kind": "declare_attackers"
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C119": {
+      "zone": "battlefield"
+     }
+    }
+   },
+   "do": {
+    "card": "C119",
+    "kind": "play_land"
+   },
+   "seat": "B"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C053": {
+      "zone": "A.hand"
+     },
+     "C057": {
+      "tapped": false
+     },
+     "C058": {
+      "tapped": false
+     },
+     "C112": {
+      "zone": "B.hand"
+     },
+     "C117": {
+      "zone": "B.graveyard"
+     },
+     "C119": {
+      "tapped": true
+     }
+    },
+    "pending": {
+     "kind": "priority",
+     "seat": "A"
+    },
+    "turn": {
+     "active": "A",
+     "number": 3,
+     "step": "precombat_main"
+    }
+   },
+   "do": {
+    "card": "C117",
+    "kind": "cast",
+    "pay": {
+     "abilities": [
+      {
+       "ability": {
+        "face": 0,
+        "paragraph": 2
+       },
+       "adding": [
+        "U"
+       ],
+       "source": "C119"
+      }
+     ]
+    }
+   },
+   "seat": "B"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C059": {
+      "zone": "battlefield"
+     }
+    }
+   },
+   "do": {
+    "card": "C059",
+    "kind": "play_land"
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C056": {
+      "zone": "battlefield"
+     },
+     "C057": {
+      "power": 2,
+      "toughness": 3
+     },
+     "C058": {
+      "tapped": true
+     },
+     "C059": {
+      "tapped": true
+     }
+    },
+    "pending": {
+     "kind": "declare_attackers",
+     "seat": "A"
+    },
+    "players": {
+     "A": {
+      "life": 18
+     }
+    },
+    "turn": {
+     "active": "A",
+     "number": 3,
+     "step": "declare_attackers"
+    }
+   },
+   "do": {
+    "card": "C056",
+    "kind": "cast",
+    "pay": {
+     "abilities": [
+      {
+       "ability": {
+        "face": 0,
+        "paragraph": 2
+       },
+       "adding": [
+        "R"
+       ],
+       "source": "C058"
+      },
+      {
+       "ability": {
+        "rule": "305.6"
+       },
+       "adding": [
+        "U"
+       ],
+       "source": "C059"
+      }
+     ]
+    }
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C057": {
+      "power": 1,
+      "tapped": true,
+      "toughness": 2
+     },
+     "C111": {
+      "zone": "B.hand"
+     },
+     "C119": {
+      "tapped": false
+     }
+    },
+    "pending": {
+     "kind": "priority",
+     "seat": "B"
+    },
+    "players": {
+     "B": {
+      "life": 17
+     }
+    },
+    "turn": {
+     "active": "B",
+     "number": 4,
+     "step": "precombat_main"
+    }
+   },
+   "do": {
+    "attacks": [
+     [
+      "C057",
+      "B"
+     ]
+    ],
+    "kind": "declare_attackers"
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "pending": {
+     "about": {
+      "object": "C113"
+     },
+     "kind": "optional",
+     "seat": "B"
+    }
+   },
+   "do": {
+    "card": "C113",
+    "kind": "play_land"
+   },
+   "seat": "B"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C113": {
+      "zone": "battlefield"
+     }
+    },
+    "pending": {
+     "kind": "priority",
+     "seat": "B"
+    },
+    "players": {
+     "B": {
+      "life": 15
+     }
+    }
+   },
+   "do": {
+    "kind": "optional",
+    "yes": true
+   },
+   "seat": "B"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C113": {
+      "tapped": true
+     },
+     "C114": {
+      "zone": "battlefield"
+     },
+     "C119": {
+      "tapped": true
+     }
+    },
+    "pending": {
+     "kind": "declare_attackers",
+     "seat": "B"
+    },
+    "turn": {
+     "active": "B",
+     "number": 4,
+     "step": "declare_attackers"
+    }
+   },
+   "do": {
+    "card": "C114",
+    "kind": "cast",
+    "pay": {
+     "abilities": [
+      {
+       "ability": {
+        "rule": "305.6"
+       },
+       "adding": [
+        "R"
+       ],
+       "source": "C113"
+      },
+      {
+       "ability": {
+        "face": 0,
+        "paragraph": 2
+       },
+       "adding": [
+        "U"
+       ],
+       "source": "C119"
+      }
+     ]
+    }
+   },
+   "seat": "B"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C052": {
+      "zone": "A.hand"
+     },
+     "C057": {
+      "tapped": false
+     },
+     "C058": {
+      "tapped": false
+     },
+     "C059": {
+      "tapped": false
+     },
+     "C114": {
+      "tapped": true
+     }
+    },
+    "pending": {
+     "kind": "priority",
+     "seat": "A"
+    },
+    "players": {
+     "A": {
+      "life": 17
+     }
+    },
+    "turn": {
+     "active": "A",
+     "number": 5,
+     "step": "precombat_main"
+    }
+   },
+   "do": {
+    "attacks": [
+     [
+      "C114",
+      "A"
+     ]
+    ],
+    "kind": "declare_attackers"
+   },
+   "seat": "B"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C060": {
+      "zone": "battlefield"
+     }
+    }
+   },
+   "do": {
+    "card": "C060",
+    "kind": "play_land"
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C055": {
+      "zone": "A.graveyard"
+     },
+     "C057": {
+      "keywords": [
+       "haste",
+       "prowess",
+       "trample"
+      ],
+      "power": 5,
+      "toughness": 4
+     },
+     "C058": {
+      "tapped": true
+     },
+     "T1": {
+      "attached_to": "C057",
+      "controller": "A",
+      "token": {
+       "colors": [],
+       "keywords": [
+        "enchant creature"
+       ],
+       "name": "Monster",
+       "subtypes": [
+        "Aura",
+        "Role"
+       ],
+       "text": "Enchanted creature gets +1/+1 and has trample.",
+       "types": [
+        "enchantment"
+       ]
+      },
+      "zone": "battlefield"
+     }
+    },
+    "players": {
+     "A": {
+      "life": 16
+     }
+    }
+   },
+   "do": {
+    "card": "C055",
+    "kind": "cast",
+    "pay": {
+     "abilities": [
+      {
+       "ability": {
+        "face": 0,
+        "paragraph": 2
+       },
+       "adding": [
+        "R"
+       ],
+       "source": "C058"
+      }
+     ]
+    },
+    "targets": [
+     [
+      "C057"
+     ]
+    ]
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C054": {
+      "cast": {
+       "additional": {
+        "paid": [
+         "bargain"
+        ]
+       }
+      },
+      "targets": [
+       [
+        "C114"
+       ]
+      ],
+      "zone": "stack"
+     },
+     "C057": {
+      "keywords": [
+       "haste",
+       "prowess"
+      ],
+      "power": 4,
+      "toughness": 3
+     },
+     "C060": {
+      "tapped": true
+     },
+     "T1": null
+    },
+    "pending": {
+     "about": {
+      "abilities": [
+       {
+        "ability": {
+         "face": 0,
+         "paragraph": 2
+        },
+        "source": "C057"
+       },
+       {
+        "ability": {
+         "face": 0,
+         "paragraph": 2
+        },
+        "source": "C056"
+       }
+      ]
+     },
+     "kind": "order_triggers",
+     "seat": "A"
+    },
+    "players": {
+     "A": {
+      "life": 15
+     }
+    }
+   },
+   "do": {
+    "additional": {
+     "paid": [
+      "bargain"
+     ]
+    },
+    "card": "C054",
+    "kind": "cast",
+    "pay": {
+     "abilities": [
+      {
+       "ability": {
+        "face": 0,
+        "paragraph": 2
+       },
+       "adding": [
+        "R"
+       ],
+       "source": "C060"
+      }
+     ],
+     "objects": [
+      [
+       "T1"
+      ]
+     ]
+    },
+    "targets": [
+     [
+      "C114"
+     ]
+    ]
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "S1": {
+      "ability": {
+       "face": 0,
+       "paragraph": 2
+      },
+      "controller": "A",
+      "kind": "ability",
+      "source": "C057",
+      "zone": "stack"
+     },
+     "S2": {
+      "ability": {
+       "face": 0,
+       "paragraph": 2
+      },
+      "controller": "A",
+      "kind": "ability",
+      "source": "C056",
+      "zone": "stack"
+     },
+     "T2": {
+      "controller": "A",
+      "token": {
+       "colors": [
+        "white"
+       ],
+       "keywords": [
+        "prowess"
+       ],
+       "name": "Monk Token",
+       "power": 1,
+       "subtypes": [
+        "Monk"
+       ],
+       "toughness": 1,
+       "types": [
+        "creature"
+       ],
+       "text": "Prowess"
+      },
+      "zone": "battlefield"
+     }
+    },
+    "pending": {
+     "about": {
+      "object": "S2"
+     },
+     "kind": "optional",
+     "seat": "A"
+    }
+   },
+   "do": {
+    "kind": "order_triggers",
+    "order": [
+     {
+      "ability": {
+       "face": 0,
+       "paragraph": 2
+      },
+      "source": "C057"
+     },
+     {
+      "ability": {
+       "face": 0,
+       "paragraph": 2
+      },
+      "source": "C056"
+     }
+    ]
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C056": {
+      "attached_to": "T2"
+     },
+     "C057": {
+      "power": 5,
+      "toughness": 4
+     },
+     "C114": {
+      "damage": 3
+     },
+     "S1": null,
+     "S2": null,
+     "T2": {
+      "keywords": [
+       "haste",
+       "prowess",
+       "trample"
+      ],
+      "power": 2,
+      "toughness": 2
+     }
+    },
+    "pending": {
+     "about": {
+      "cards": [
+       "C051"
+      ],
+      "object": "C054"
+     },
+     "kind": "arrange",
+     "seat": "A"
+    }
+   },
+   "do": {
+    "kind": "optional",
+    "yes": true
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C054": {
+      "zone": "A.graveyard"
+     },
+     "C114": {
+      "zone": "exile"
+     }
+    },
+    "pending": {
+     "kind": "declare_attackers",
+     "seat": "A"
+    },
+    "turn": {
+     "active": "A",
+     "number": 5,
+     "step": "declare_attackers"
+    },
+    "zones": {
+     "A.library": {
+      "bottom": [
+       "C051"
+      ]
+     }
+    }
+   },
+   "do": {
+    "away": [
+     "C051"
+    ],
+    "kind": "arrange",
+    "top": []
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C057": {
+      "power": 1,
+      "tapped": true,
+      "toughness": 2
+     },
+     "C110": {
+      "zone": "B.hand"
+     },
+     "C113": {
+      "tapped": false
+     },
+     "C119": {
+      "tapped": false
+     },
+     "T2": {
+      "tapped": true
+     }
+    },
+    "pending": {
+     "kind": "priority",
+     "seat": "B"
+    },
+    "players": {
+     "B": {
+      "life": 8
+     }
+    },
+    "turn": {
+     "active": "B",
+     "number": 6,
+     "step": "precombat_main"
+    }
+   },
+   "do": {
+    "attacks": [
+     [
+      "C057",
+      "B"
+     ],
+     [
+      "T2",
+      "B"
+     ]
+    ],
+    "kind": "declare_attackers"
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C111": {
+      "tapped": true,
+      "zone": "battlefield"
+     }
+    }
+   },
+   "do": {
+    "card": "C111",
+    "kind": "play_land"
+   },
+   "seat": "B"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C057": {
+      "zone": "A.graveyard"
+     },
+     "C113": {
+      "tapped": true
+     },
+     "C118": {
+      "zone": "B.graveyard"
+     }
+    }
+   },
+   "do": {
+    "card": "C118",
+    "kind": "cast",
+    "pay": {
+     "abilities": [
+      {
+       "ability": {
+        "rule": "305.6"
+       },
+       "adding": [
+        "R"
+       ],
+       "source": "C113"
+      }
+     ]
+    },
+    "targets": [
+     [
+      "C057"
+     ]
+    ]
+   },
+   "seat": "B"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C050": {
+      "zone": "A.hand"
+     },
+     "C056": {
+      "attached_to": null
+     },
+     "C058": {
+      "tapped": false
+     },
+     "C060": {
+      "tapped": false
+     },
+     "C112": {
+      "zone": "B.graveyard"
+     },
+     "C119": {
+      "tapped": true
+     },
+     "T2": null
+    },
+    "pending": {
+     "kind": "priority",
+     "seat": "A"
+    },
+    "turn": {
+     "active": "A",
+     "number": 7,
+     "step": "precombat_main"
+    }
+   },
+   "do": {
+    "card": "C112",
+    "kind": "cast",
+    "pay": {
+     "abilities": [
+      {
+       "ability": {
+        "face": 0,
+        "paragraph": 2
+       },
+       "adding": [
+        "R"
+       ],
+       "source": "C119"
+      }
+     ]
+    },
+    "targets": [
+     [
+      "T2"
+     ]
+    ]
+   },
+   "seat": "B"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C053": {
+      "zone": "battlefield"
+     },
+     "C058": {
+      "tapped": true
+     }
+    },
+    "players": {
+     "A": {
+      "life": 14
+     }
+    }
+   },
+   "do": {
+    "card": "C053",
+    "kind": "cast",
+    "pay": {
+     "abilities": [
+      {
+       "ability": {
+        "face": 0,
+        "paragraph": 2
+       },
+       "adding": [
+        "R"
+       ],
+       "source": "C058"
+      }
+     ]
+    }
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C050": {
+      "zone": "stack"
+     },
+     "C059": {
+      "tapped": true
+     },
+     "C060": {
+      "tapped": true
+     }
+    },
+    "pending": {
+     "about": {
+      "abilities": [
+       {
+        "ability": {
+         "face": 0,
+         "paragraph": 2
+        },
+        "source": "C056"
+       },
+       {
+        "ability": {
+         "face": 0,
+         "paragraph": 2
+        },
+        "source": "C053"
+       }
+      ]
+     },
+     "kind": "order_triggers",
+     "seat": "A"
+    },
+    "players": {
+     "A": {
+      "life": 13
+     }
+    }
+   },
+   "do": {
+    "card": "C050",
+    "kind": "cast",
+    "pay": {
+     "abilities": [
+      {
+       "ability": {
+        "face": 0,
+        "paragraph": 2
+       },
+       "adding": [
+        "R"
+       ],
+       "source": "C060"
+      },
+      {
+       "ability": {
+        "rule": "305.6"
+       },
+       "adding": [
+        "U"
+       ],
+       "source": "C059"
+      }
+     ]
+    }
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C053": {
+      "power": 2,
+      "toughness": 3
+     },
+     "S3": {
+      "ability": {
+       "face": 0,
+       "paragraph": 2
+      },
+      "controller": "A",
+      "kind": "ability",
+      "source": "C056",
+      "zone": "stack"
+     },
+     "T3": {
+      "controller": "A",
+      "token": {
+       "colors": [
+        "white"
+       ],
+       "keywords": [
+        "prowess"
+       ],
+       "name": "Monk Token",
+       "power": 1,
+       "subtypes": [
+        "Monk"
+       ],
+       "toughness": 1,
+       "types": [
+        "creature"
+       ],
+       "text": "Prowess"
+      },
+      "zone": "battlefield"
+     }
+    },
+    "pending": {
+     "about": {
+      "object": "S3"
+     },
+     "kind": "optional",
+     "seat": "A"
+    }
+   },
+   "do": {
+    "kind": "order_triggers",
+    "order": [
+     {
+      "ability": {
+       "face": 0,
+       "paragraph": 2
+      },
+      "source": "C056"
+     },
+     {
+      "ability": {
+       "face": 0,
+       "paragraph": 2
+      },
+      "source": "C053"
+     }
+    ]
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C050": {
+      "zone": "battlefield"
+     },
+     "C056": {
+      "attached_to": "T3"
+     },
+     "S3": null,
+     "T3": {
+      "keywords": [
+       "haste",
+       "prowess",
+       "trample"
+      ],
+      "power": 2,
+      "toughness": 2
+     }
+    },
+    "pending": {
+     "kind": "declare_attackers",
+     "seat": "A"
+    },
+    "turn": {
+     "active": "A",
+     "number": 7,
+     "step": "declare_attackers"
+    }
+   },
+   "do": {
+    "kind": "optional",
+    "yes": true
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C053": {
+      "power": 1,
+      "tapped": true,
+      "toughness": 2
+     },
+     "C109": {
+      "zone": "B.hand"
+     },
+     "C111": {
+      "tapped": false
+     },
+     "C113": {
+      "tapped": false
+     },
+     "C119": {
+      "tapped": false
+     },
+     "T3": {
+      "tapped": true
+     }
+    },
+    "pending": {
+     "kind": "priority",
+     "seat": "B"
+    },
+    "players": {
+     "B": {
+      "life": 4
+     }
+    },
+    "turn": {
+     "active": "B",
+     "number": 8,
+     "step": "precombat_main"
+    }
+   },
+   "do": {
+    "attacks": [
+     [
+      "C053",
+      "B"
+     ],
+     [
+      "T3",
+      "B"
+     ]
+    ],
+    "kind": "declare_attackers"
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C115": {
+      "zone": "battlefield"
+     }
+    }
+   },
+   "do": {
+    "card": "C115",
+    "kind": "play_land"
+   },
+   "seat": "B"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C056": {
+      "attached_to": null
+     },
+     "C116": {
+      "zone": "B.graveyard"
+     },
+     "C119": {
+      "tapped": true
+     },
+     "T3": null
+    }
+   },
+   "do": {
+    "card": "C116",
+    "kind": "cast",
+    "pay": {
+     "abilities": [
+      {
+       "ability": {
+        "face": 0,
+        "paragraph": 2
+       },
+       "adding": [
+        "U"
+       ],
+       "source": "C119"
+      }
+     ]
+    },
+    "targets": [
+     [
+      "T3"
+     ]
+    ]
+   },
+   "seat": "B"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C049": {
+      "zone": "A.hand"
+     },
+     "C053": {
+      "zone": "A.hand"
+     },
+     "C058": {
+      "tapped": false
+     },
+     "C059": {
+      "tapped": false
+     },
+     "C060": {
+      "tapped": false
+     },
+     "C115": {
+      "tapped": true
+     },
+     "C120": {
+      "zone": "B.graveyard"
+     }
+    },
+    "pending": {
+     "kind": "priority",
+     "seat": "A"
+    },
+    "turn": {
+     "active": "A",
+     "number": 9,
+     "step": "precombat_main"
+    }
+   },
+   "do": {
+    "card": "C120",
+    "kind": "cast",
+    "pay": {
+     "abilities": [
+      {
+       "ability": {
+        "face": 0,
+        "paragraph": 2
+       },
+       "adding": [
+        "U"
+       ],
+       "source": "C115"
+      }
+     ]
+    },
+    "targets": [
+     [
+      "C053"
+     ]
+    ]
+   },
+   "seat": "B"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C049": {
+      "zone": "battlefield"
+     }
+    }
+   },
+   "do": {
+    "card": "C049",
+    "kind": "play_land"
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C053": {
+      "zone": "battlefield"
+     },
+     "C058": {
+      "tapped": true
+     }
+    },
+    "players": {
+     "A": {
+      "life": 12
+     }
+    }
+   },
+   "do": {
+    "card": "C053",
+    "kind": "cast",
+    "pay": {
+     "abilities": [
+      {
+       "ability": {
+        "face": 0,
+        "paragraph": 2
+       },
+       "adding": [
+        "R"
+       ],
+       "source": "C058"
+      }
+     ]
+    }
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C053": {
+      "keywords": [
+       "haste",
+       "prowess",
+       "trample"
+      ],
+      "power": 2,
+      "toughness": 3
+     },
+     "C056": {
+      "attached_to": "C053"
+     },
+     "C059": {
+      "tapped": true
+     },
+     "C060": {
+      "tapped": true
+     }
+    },
+    "pending": {
+     "kind": "declare_attackers",
+     "seat": "A"
+    },
+    "players": {
+     "A": {
+      "life": 11
+     }
+    },
+    "turn": {
+     "active": "A",
+     "number": 9,
+     "step": "declare_attackers"
+    }
+   },
+   "do": {
+    "ability": {
+     "face": 0,
+     "paragraph": 3
+    },
+    "kind": "activate",
+    "pay": {
+     "abilities": [
+      {
+       "ability": {
+        "face": 0,
+        "paragraph": 2
+       },
+       "adding": [
+        "R"
+       ],
+       "source": "C060"
+      },
+      {
+       "ability": {
+        "rule": "305.6"
+       },
+       "adding": [
+        "U"
+       ],
+       "source": "C059"
+      }
+     ]
+    },
+    "source": "C056",
+    "targets": [
+     [
+      "C053"
+     ]
+    ]
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C053": {
+      "tapped": true
+     },
+     "C108": {
+      "zone": "B.hand"
+     },
+     "C115": {
+      "tapped": false
+     },
+     "C119": {
+      "tapped": false
+     }
+    },
+    "pending": {
+     "kind": "priority",
+     "seat": "B"
+    },
+    "players": {
+     "B": {
+      "life": 2
+     }
+    },
+    "turn": {
+     "active": "B",
+     "number": 10,
+     "step": "precombat_main"
+    }
+   },
+   "do": {
+    "attacks": [
+     [
+      "C053",
+      "B"
+     ]
+    ],
+    "kind": "declare_attackers"
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C048": {
+      "zone": "A.hand"
+     },
+     "C053": {
+      "tapped": false
+     },
+     "C058": {
+      "tapped": false
+     },
+     "C059": {
+      "tapped": false
+     },
+     "C060": {
+      "tapped": false
+     },
+     "C110": {
+      "zone": "battlefield"
+     }
+    },
+    "pending": {
+     "kind": "priority",
+     "seat": "A"
+    },
+    "turn": {
+     "active": "A",
+     "number": 11,
+     "step": "precombat_main"
+    }
+   },
+   "do": {
+    "card": "C110",
+    "kind": "play_land"
+   },
+   "seat": "B"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C048": {
+      "zone": "battlefield"
+     }
+    },
+    "pending": {
+     "kind": "declare_attackers",
+     "seat": "A"
+    },
+    "turn": {
+     "active": "A",
+     "number": 11,
+     "step": "declare_attackers"
+    }
+   },
+   "do": {
+    "card": "C048",
+    "kind": "play_land"
+   },
+   "seat": "A"
+  },
+  {
+   "delta": {
+    "objects": {
+     "C053": {
+      "attacking": "B",
+      "tapped": true
+     }
+    },
+    "pending": null,
+    "players": {
+     "B": {
+      "life": 0
+     }
+    },
+    "result": {
+     "cause": "life",
+     "kind": "win",
+     "winner": "A"
+    },
+    "turn": {
+     "active": "A",
+     "number": 11,
+     "step": "combat_damage"
+    }
+   },
+   "do": {
+    "attacks": [
+     [
+      "C053",
+      "B"
+     ]
+    ],
+    "kind": "declare_attackers"
+   },
+   "seat": "A"
+  }
+ ],
+ "x-not-projected": [
+  "game.initiative",
+  "game.day_night",
+  "players.*.designations",
+  "players.*.mana_restricted",
+  "objects.*.flipped",
+  "objects.*.phased_out",
+  "objects.*.in_combat",
+  "objects.*.cast.convoke",
+  "objects.*.cast.delve"
+ ],
+ "x-source": {
+  "first": "A",
+  "pregame": [
+   "A: keep",
+   "B: keep"
+  ],
+  "record": "tests/fixtures/mgn/torch-portable/record.json",
+  "record_identity": "sha256:514be8392932d80893a0250f55abe72d3b68ca33079777dd17d5377909901635",
+  "seed": 531,
+  "tape": "tests/fixtures/player-tapes/torch-bargain-izzet-prowess-seed531",
+  "tape_files": {
+   "commands.jsonl": "40d7f1d59692d8ca192c5ccc36188a3b5491a98ddf4be09a6077d2fef9083140",
+   "metadata.json": "9f9367939b489112ed0fe2c3db8afa9d683916dfc616d725a8de95c8384b0018"
+  }
+ },
+ "x-correction": {
+  "source": "tests/fixtures/mgn/torch-decks/record.json",
+  "changed": [
+   [
+    17,
+    "T2"
+   ],
+   [
+    26,
+    "T3"
+   ]
+  ],
+  "rules": [
+   "113.2c",
+   "702.108"
+  ],
+  "basis": "Cori-Steel Cutter creates a Monk with prowess; preserve its keyword paragraph as rules text."
+ }
+}

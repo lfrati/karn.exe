@@ -1,0 +1,357 @@
+{
+  "mgn": "1",
+  "tier": 2,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "MGN copy-definition worker",
+    "provider": "OpenAI",
+    "model": "gpt-6.1-sol"
+  },
+  "note": "Independently authored from pinned CR 117.3b/c/d, 117.4, 601.2, 608.2m, 707.2/2b/10 and full Oracle text. Narset\u2019s Reversal copies Divination and returns its donor within one resolution. No targets can be changed for Divination. B casts Shock at the next genuine decision while the copy remains on the stack. This is a short custom-format scenario, not a complete game or native execution claim.",
+  "cards": {
+    "divination": {
+      "owner": "A",
+      "oracle": "273b339c-964b-4a18-8eb5-ceb8abcdfd9e",
+      "name": "Divination",
+      "faces": [
+        "0ad39c9d35c45e09e1d9311ced2c0b92c05171ef4183d56404e940306dd18c15"
+      ]
+    },
+    "reversal": {
+      "owner": "A",
+      "oracle": "d55f6c70-321f-4fb4-bd33-0850ae1a7c36",
+      "name": "Narset's Reversal",
+      "faces": [
+        "4398ca3bcd9a92a4064b8d2298ec1414867b1a3157e024f6ac3f39dff887145a"
+      ]
+    },
+    "shock": {
+      "owner": "B",
+      "oracle": "a9d288b8-cdc1-4e55-a0c9-d6edfc95e65d",
+      "name": "Shock",
+      "faces": [
+        "5292996ecb3d150f088f9f913a2118f7e137a7eb67ee2ce03a0e119848914417"
+      ]
+    },
+    "mountain": {
+      "owner": "B",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain",
+      "faces": [
+        "e8d7ace3e741297a789003d6898ced6a5069cbf969835830fb1bb8ccc6a1144d"
+      ]
+    },
+    "island1": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island",
+      "faces": [
+        "7cf7af410d8aabcb0ca7a4a8c53022eb127d477b90dc960ee1c4178b8e824deb"
+      ]
+    },
+    "island2": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island",
+      "faces": [
+        "7cf7af410d8aabcb0ca7a4a8c53022eb127d477b90dc960ee1c4178b8e824deb"
+      ]
+    },
+    "island3": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island",
+      "faces": [
+        "7cf7af410d8aabcb0ca7a4a8c53022eb127d477b90dc960ee1c4178b8e824deb"
+      ]
+    },
+    "island4": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island",
+      "faces": [
+        "7cf7af410d8aabcb0ca7a4a8c53022eb127d477b90dc960ee1c4178b8e824deb"
+      ]
+    },
+    "island5": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island",
+      "faces": [
+        "7cf7af410d8aabcb0ca7a4a8c53022eb127d477b90dc960ee1c4178b8e824deb"
+      ]
+    },
+    "draw1": {
+      "owner": "A",
+      "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0",
+      "name": "Grizzly Bears",
+      "faces": [
+        "cccd0e7dbad8c134809da483e9f1e8d68a94e749ac7fb1809007c7533b8979d4"
+      ]
+    },
+    "draw2": {
+      "owner": "A",
+      "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0",
+      "name": "Grizzly Bears",
+      "faces": [
+        "cccd0e7dbad8c134809da483e9f1e8d68a94e749ac7fb1809007c7533b8979d4"
+      ]
+    },
+    "draw3": {
+      "owner": "A",
+      "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0",
+      "name": "Grizzly Bears",
+      "faces": [
+        "cccd0e7dbad8c134809da483e9f1e8d68a94e749ac7fb1809007c7533b8979d4"
+      ]
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 3,
+        "step": "precombat_main",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [
+          "draw1",
+          "draw2",
+          "draw3"
+        ],
+        "A.hand": [
+          "divination",
+          "reversal"
+        ],
+        "A.graveyard": [],
+        "B.library": [],
+        "B.hand": [
+          "shock"
+        ],
+        "B.graveyard": [],
+        "battlefield": [
+          "island1",
+          "island2",
+          "island3",
+          "island4",
+          "island5",
+          "mountain"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      },
+      "objects": {}
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "divination",
+        "pay": {
+          "abilities": [
+            {
+              "source": "island1",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            },
+            {
+              "source": "island2",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            },
+            {
+              "source": "island3",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "objects": {
+          "divination": {
+            "zone": "stack"
+          },
+          "island1": {
+            "tapped": true
+          },
+          "island2": {
+            "tapped": true
+          },
+          "island3": {
+            "tapped": true
+          }
+        }
+      },
+      "note": "Divination costs 2U. A retains priority (117.3c), then casts Reversal."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "reversal",
+        "targets": [
+          [
+            "divination"
+          ]
+        ],
+        "pay": {
+          "abilities": [
+            {
+              "source": "island4",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            },
+            {
+              "source": "island5",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "pending": {
+          "seat": "B",
+          "kind": "priority"
+        },
+        "objects": {
+          "divination": {
+            "zone": "A.hand"
+          },
+          "reversal": {
+            "zone": "A.graveyard"
+          },
+          "S1": {
+            "zone": "stack",
+            "kind": "copy",
+            "copy_of": "divination",
+            "copy_definition": {
+              "oracle": "273b339c-964b-4a18-8eb5-ceb8abcdfd9e",
+              "face": 0
+            },
+            "controller": "A"
+          },
+          "island4": {
+            "tapped": true
+          },
+          "island5": {
+            "tapped": true
+          }
+        }
+      },
+      "note": "Both players pass; Reversal resolves, copying Divination then returning the original to A\u2019s hand. Reversal goes to A\u2019s graveyard. The copy is not cast. Active A gets priority and passes; B receives priority with S1 still on the stack (117.3b/d)."
+    },
+    {
+      "seat": "B",
+      "do": {
+        "kind": "cast",
+        "card": "shock",
+        "targets": [
+          [
+            "A"
+          ]
+        ],
+        "pay": {
+          "abilities": [
+            {
+              "source": "mountain",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "R"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "players": {
+          "A": {
+            "life": 18
+          }
+        },
+        "objects": {
+          "mountain": {
+            "tapped": true
+          },
+          "shock": {
+            "zone": "B.graveyard"
+          },
+          "S1": null,
+          "draw1": {
+            "zone": "A.hand"
+          },
+          "draw2": {
+            "zone": "A.hand"
+          }
+        }
+      },
+      "note": "After passes Shock resolves first for 2 damage to A; after another round of passes S1 draws draw1 and draw2 and ceases. A\u2019s library retains draw3; original Divination is still in A\u2019s hand. Stop with active A holding priority."
+    }
+  ]
+}

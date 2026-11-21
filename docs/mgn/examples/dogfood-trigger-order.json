@@ -1,0 +1,321 @@
+{
+  "mgn": "1",
+  "tier": 2,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "standard",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "dogfood author",
+    "provider": "Anthropic",
+    "model": "claude-opus-5-5"
+  },
+  "note": "Tier 2. Skeleton Archer enters under A's control while A controls Hinterland Sanctifier, so two triggered abilities A controls trigger on the same event (603.2): the Archer's enters ability (targets) and the Sanctifier's life gain. A orders them (603.3b), putting the life gain on the stack first so the damage resolves first; the Archer's target is chosen as it is put on the stack (603.3d, 601.2c). The damage stays marked on Swab Goblin (120.6) and A gains 1 life (119.1).",
+  "cards": {
+    "archer": {
+      "owner": "A",
+      "oracle": "3792763c-7aa0-4055-b8a1-3257e0443ef1",
+      "name": "Skeleton Archer"
+    },
+    "sanctifier": {
+      "owner": "A",
+      "oracle": "d812fc6d-b96d-4986-b171-9f3feee603dc",
+      "name": "Hinterland Sanctifier"
+    },
+    "swamp1": {
+      "owner": "A",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp"
+    },
+    "swamp2": {
+      "owner": "A",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp"
+    },
+    "swamp3": {
+      "owner": "A",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp"
+    },
+    "plains1": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    },
+    "plains2": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    },
+    "goblin": {
+      "owner": "B",
+      "oracle": "343ecf2f-0bbc-4840-8fb3-f5f61b26e76f",
+      "name": "Swab Goblin"
+    },
+    "mountain1": {
+      "owner": "B",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain"
+    },
+    "mountain2": {
+      "owner": "B",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain"
+    },
+    "mountain3": {
+      "owner": "B",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 7,
+        "step": "precombat_main",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [
+          "plains2"
+        ],
+        "A.hand": [
+          "archer"
+        ],
+        "A.graveyard": [],
+        "B.library": [
+          "mountain3"
+        ],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [
+          "sanctifier",
+          "swamp1",
+          "swamp2",
+          "swamp3",
+          "plains1",
+          "goblin",
+          "mountain1",
+          "mountain2"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      }
+    },
+    "assumptions": {
+      "land_played": {
+        "A": 1,
+        "B": 0
+      }
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "archer",
+        "pay": {
+          "abilities": [
+            {
+              "source": "swamp1",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "B"
+              ]
+            },
+            {
+              "source": "swamp2",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "B"
+              ]
+            },
+            {
+              "source": "swamp3",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "B"
+              ]
+            },
+            {
+              "source": "plains1",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "W"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "order_triggers",
+          "about": {
+            "abilities": [
+              {
+                "source": "archer",
+                "ability": {
+                  "face": 0,
+                  "paragraph": 1
+                }
+              },
+              {
+                "source": "sanctifier",
+                "ability": {
+                  "face": 0,
+                  "paragraph": 1
+                }
+              }
+            ]
+          }
+        },
+        "objects": {
+          "archer": {
+            "zone": "battlefield"
+          },
+          "plains1": {
+            "tapped": true
+          },
+          "swamp1": {
+            "tapped": true
+          },
+          "swamp2": {
+            "tapped": true
+          },
+          "swamp3": {
+            "tapped": true
+          }
+        }
+      },
+      "note": "601.2: Skeleton Archer ({3}{B}) is cast; one Swamp's {B} pays {B} and the other three mana pay the generic {3} (601.2g, 601.2h). The pool is empty again. The caster receives priority (117.3c); both pass (implied) and the creature spell resolves (117.4, 608.3): Skeleton Archer enters. Its own enters ability and Hinterland Sanctifier's 'another creature you control enters' ability trigger on the same event (603.2). Before A would receive priority, triggered abilities are put on the stack (117.5); both are controlled by A (603.3a), so A puts them on the stack in any order A chooses (603.3b). No ability is on the stack yet."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "order_triggers",
+        "order": [
+          {
+            "source": "sanctifier",
+            "ability": {
+              "face": 0,
+              "paragraph": 1
+            }
+          },
+          {
+            "source": "archer",
+            "ability": {
+              "face": 0,
+              "paragraph": 1
+            }
+          }
+        ]
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "choose_targets",
+          "about": {
+            "object": "S2"
+          }
+        },
+        "objects": {
+          "S1": {
+            "zone": "stack",
+            "kind": "ability",
+            "source": "sanctifier",
+            "ability": {
+              "face": 0,
+              "paragraph": 1
+            },
+            "controller": "A"
+          },
+          "S2": {
+            "zone": "stack",
+            "kind": "ability",
+            "source": "archer",
+            "ability": {
+              "face": 0,
+              "paragraph": 1
+            },
+            "controller": "A"
+          }
+        }
+      },
+      "note": "603.3b: A puts the life gain on the stack first (S1, bottom) and the damage ability second (S2, top), so the damage resolves first. Stack ids are numbered in creation order. The Sanctifier ability has no targets; S2 says 'any target', so as it is put on the stack A chooses its target (603.3d, 601.2c, 115.4)."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "choose_targets",
+        "targets": [
+          [
+            "goblin"
+          ]
+        ]
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "players": {
+          "A": {
+            "life": 21
+          }
+        },
+        "objects": {
+          "S1": null,
+          "S2": null,
+          "goblin": {
+            "damage": 1
+          }
+        }
+      },
+      "note": "601.2c via 603.3d: Swab Goblin, a creature, is a legal 'any target' (115.4). With both abilities on the stack and no further triggers, the active player receives priority (117.3b, 117.5). 117.4: S2 resolves; the source (Skeleton Archer) deals 1 damage to Swab Goblin, marked on it (120.3e, 120.6). The ability is removed from the stack and ceases to exist (608.2n). A 2/2 with 1 damage is not destroyed (704.5g). The active player receives priority (117.3b). 117.4: S1 resolves and A gains 1 life (119.1, 119.3). The ability ceases to exist (608.2n). The stack is empty; A receives priority in the precombat main phase (117.3b)."
+    }
+  ]
+}

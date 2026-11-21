@@ -1,0 +1,178 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "Independent external MGN author, final round",
+    "provider": "OpenAI",
+    "model": "GPT-6"
+  },
+  "note": "CR 514.1, 514.2, 514.3. A has eight cards and maximum hand size seven; discard one. No trigger/SBA follows, so nobody receives cleanup priority; advance to B upkeep.",
+  "cards": {
+    "f0": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    },
+    "f1": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    },
+    "f2": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    },
+    "f3": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    },
+    "f4": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    },
+    "f5": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    },
+    "f6": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    },
+    "f7": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 3,
+        "step": "cleanup",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "discard",
+        "about": {
+          "count": 1
+        }
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [],
+        "A.hand": [
+          "f0",
+          "f1",
+          "f2",
+          "f3",
+          "f4",
+          "f5",
+          "f6",
+          "f7"
+        ],
+        "A.graveyard": [],
+        "B.library": [],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [],
+        "exile": [],
+        "command": [],
+        "stack": []
+      },
+      "objects": {}
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "discard",
+        "cards": [
+          "f7"
+        ]
+      },
+      "delta": {
+        "turn": {
+          "number": 4,
+          "step": "upkeep",
+          "active": "B"
+        },
+        "pending": {
+          "seat": "B",
+          "kind": "priority"
+        },
+        "objects": {
+          "f7": {
+            "zone": "A.graveyard"
+          }
+        }
+      }
+    }
+  ],
+  "x-external-scope": {
+    "baseline": "1f8d5ea6",
+    "premise": "Short independently authored position, not a complete game or engine-certified evidence."
+  }
+}

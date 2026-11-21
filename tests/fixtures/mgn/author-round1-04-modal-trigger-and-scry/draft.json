@@ -1,0 +1,220 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "standard",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "Independent round-one author",
+    "provider": "OpenAI",
+    "model": "GPT-6.1 Sol"
+  },
+  "note": "",
+  "cards": {
+    "prince": {
+      "owner": "A",
+      "oracle": "c48d844c-3976-4fa5-8e0d-3f0e535e7619",
+      "name": "Charming Prince"
+    },
+    "top1": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "top2": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    },
+    "pay4": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    },
+    "pay5": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 1,
+        "step": "precombat_main",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [
+          "top1",
+          "top2"
+        ],
+        "A.hand": [
+          "prince"
+        ],
+        "A.graveyard": [],
+        "B.library": [],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [
+          "pay4",
+          "pay5"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      },
+      "objects": {}
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "prince",
+        "pay": {
+          "abilities": [
+            {
+              "source": "pay4",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "W"
+              ]
+            },
+            {
+              "source": "pay5",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "W"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "objects": {
+          "prince": {
+            "zone": "battlefield"
+          },
+          "S1": {
+            "zone": "stack",
+            "kind": "ability",
+            "source": "prince",
+            "ability": {
+              "face": 0,
+              "paragraph": 1
+            },
+            "controller": "A"
+          }
+        },
+        "pending": {
+          "seat": "A",
+          "kind": "choose_modes",
+          "about": {
+            "object": "S1"
+          }
+        }
+      },
+      "note": "CR 601.2, 117.4, 608.2: pay the announced cost; all pass to the stated mandatory choice."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "choose_modes",
+        "modes": [
+          1
+        ]
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "arrange",
+          "about": {
+            "object": "S1",
+            "cards": [
+              "top1",
+              "top2"
+            ]
+          }
+        },
+        "objects": {
+          "S1": {
+            "modes": [
+              1
+            ]
+          }
+        }
+      },
+      "note": "CR 603.3c, 700.2, 117.4: choose scry mode; ability resolves to scry 2."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "arrange",
+        "top": [
+          "top2"
+        ],
+        "away": [
+          "top1"
+        ]
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "objects": {
+          "S1": null
+        },
+        "zones": {
+          "A.library": {
+            "order": [
+              "top2",
+              "top1"
+            ]
+          }
+        }
+      },
+      "note": "CR 701.22a: put Forest bottom and Island top; ability finishes (608.2n)."
+    }
+  ]
+}

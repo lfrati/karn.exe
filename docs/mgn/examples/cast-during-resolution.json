@@ -1,0 +1,116 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": ["A", "B"]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "step-4 author",
+    "provider": "Anthropic",
+    "model": "claude-opus-5-5"
+  },
+  "note": "Tier 1. Scry (701.22a) as an arrange answer, then cast_during_resolution (608.2g) without paying the mana cost (118.9): A activates Planetarium of Wan Shi Tong's \"{1}, {T}: Scry 2.\", keeps Lightning Bolt on top and puts a Forest on the bottom; the Planetarium's scry trigger lets A cast the top card, the Bolt, for free at B. The position is stipulated (spec 2.4), not reached by ordinary play.",
+  "cards": {
+    "planetarium": {"owner": "A", "oracle": "f89d093d-c815-4df7-a348-2005aa227586", "name": "Planetarium of Wan Shi Tong"},
+    "amountain": {"owner": "A", "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685", "name": "Mountain"},
+    "bolt": {"owner": "A", "oracle": "4457ed35-7c10-48c8-9776-456485fdf070", "name": "Lightning Bolt"},
+    "forest1": {"owner": "A", "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6", "name": "Forest"},
+    "forest2": {"owner": "A", "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6", "name": "Forest"},
+    "bmountain": {"owner": "B", "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685", "name": "Mountain"}
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {"number": 3, "step": "precombat_main", "active": "A"},
+      "pending": {"seat": "A", "kind": "priority"},
+      "result": {"kind": "unfinished"},
+      "players": {"A": {"life": 20}, "B": {"life": 20}},
+      "zones": {
+        "A.library": ["bolt", "forest1", "forest2"],
+        "A.hand": [],
+        "A.graveyard": [],
+        "B.library": ["bmountain"],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": ["planetarium", "amountain"],
+        "stack": [],
+        "exile": [],
+        "command": []
+      }
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "activate",
+        "source": "planetarium",
+        "ability": {"face": 0, "paragraph": 1},
+        "pay": {
+          "abilities": [
+            {"source": "amountain", "ability": {"rule": "305.6"}, "adding": ["R"]}
+          ]
+        }
+      },
+      "delta": {
+        "pending": {"seat": "A", "kind": "arrange", "about": {"object": "S1", "cards": ["bolt", "forest1"]}},
+        "objects": {
+          "S1": {"zone": "stack", "kind": "ability", "source": "planetarium", "ability": {"face": 0, "paragraph": 1}, "controller": "A"}
+        }
+      },
+      "note": "Planetarium of Wan Shi Tong's first paragraph \"{1}, {T}: Scry 2.\" is an activated ability (602.1) with no timing restriction; the Planetarium has been controlled since the turn began, though 302.6 concerns only creatures. 602.2a: the ability is created on the stack as S1, controlled by A (405.4), the first stack object that is not a card; it has no targets. 602.2b, 601.2g, 601.2h: the Mountain adds {R} (305.6), which pays {1}, and the Planetarium is tapped (a tier-2 fact, not stated). 117.3c: A receives priority and passes, B passes, and S1 resolves (117.4). 701.22a: A looks at the top two cards of A's library, Lightning Bolt and Forest; where to put them is the arrange question, asked with S1 still on the stack (spec 4.2)."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "arrange",
+        "top": ["bolt"],
+        "away": ["forest1"]
+      },
+      "delta": {
+        "pending": {"seat": "A", "kind": "cast_during_resolution", "about": {"object": "S2"}},
+        "zones": {
+          "A.library": {"bottom": ["forest1"]}
+        },
+        "objects": {
+          "S1": null,
+          "S2": {"zone": "stack", "kind": "ability", "source": "planetarium", "ability": {"face": 0, "paragraph": 2}, "controller": "A"}
+        }
+      },
+      "note": "701.22a: A puts the Forest on the bottom of A's library and the Bolt back on top; A's library is now, top first, Lightning Bolt, the second Forest, the first Forest. The reorder stays inside one zone, so it is written as zones.A.library.bottom (spec 4.1: top and bottom 'reorder without moving between zones (scry ...)'), not with 'at', which spec 4.1 reserves for a move into a library. 608.2n: S1 has finished resolving and ceases to exist. 701.22d, 603.2: the Planetarium's second paragraph \"Whenever you scry or surveil, ...\" triggers once the scry is complete; 603.3, 603.3a: A puts it on the stack the next time a player would receive priority, after S1 has left, as S2 (it has no targets or modes, and a single trigger needs no ordering, 603.3b). 117.3b: A receives priority; A and B pass (117.4) and S2 resolves: A looks at the top card of A's library, Lightning Bolt, and may cast it without paying its mana cost (608.2g, 118.9); 'You may' allows rather than instructs, so this question has a null answer (decline), but A is about to cast. S2 is still on the stack (spec 4.2)."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast_during_resolution",
+        "card": "bolt",
+        "targets": [["B"]],
+        "cost": {"kind": "alternative", "effect": "without_paying"}
+      },
+      "delta": {
+        "pending": {"seat": "A", "kind": "priority"},
+        "players": {"B": {"life": 17}},
+        "objects": {
+          "S2": null,
+          "bolt": {"zone": "A.graveyard"}
+        }
+      },
+      "note": "608.2g: A casts Lightning Bolt from the top of A's library following 601.2a-i: it moves to the stack, above S2 (601.2a); 601.2b, 118.9: A announces the alternative cost 'without paying its mana cost' that S2 offers, so nothing is paid (118.9a: only this alternative cost applies); 601.2c: its target is B. 608.2g: no player receives priority after it is cast; S2 continues to resolve and, as its final part, ceases to exist (608.2n); the Bolt stays on the stack. 'Do this only once each turn' has now been used for this turn. 117.3b: the active player A receives priority; A and B pass (117.4) and the Bolt resolves: 608.2b, B is a legal target; 3 damage to B (120.3a): 17 life. 608.2n: the Bolt is put into A's graveyard. 704.3: no state-based action applies. 117.3b: A receives priority; the record ends there. A's library is now the second Forest above the first. The Bolt's cast fact ({cost: alternative, without_paying}) is not in the end state: the Bolt resolved within this stretch and is a new object in the graveyard (400.7, spec 4.1)."
+    }
+  ]
+}

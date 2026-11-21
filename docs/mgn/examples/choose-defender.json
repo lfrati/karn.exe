@@ -1,0 +1,84 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": ["A", "B"]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "step-4 author",
+    "provider": "Anthropic",
+    "model": "claude-opus-5-5"
+  },
+  "note": "Tier 1, the choose_defender question (508.4). Nightblade Brigade attacks B; its mobilize 1 trigger (702.181a) creates a 1/1 red Warrior creature token that enters tapped and attacking, so A chooses what it attacks as it enters, although B is the only possible defender (spec section 5). B controls no creature, so no block declaration is asked (509.1a; spec 5.3); both attackers are unblocked and deal 2 combat damage to B. The record ends in A's postcombat main phase, before the delayed sacrifice trigger of the end step. The position is stipulated (spec 2.4), not reached by ordinary play.",
+  "cards": {
+    "brigade": {"owner": "A", "oracle": "36d04190-7ce3-431a-b18e-3a1895ec6fc7", "name": "Nightblade Brigade"},
+    "aswamp": {"owner": "A", "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68", "name": "Swamp"},
+    "bforest": {"owner": "B", "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6", "name": "Forest"}
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {"number": 3, "step": "declare_attackers", "active": "A"},
+      "pending": {"seat": "A", "kind": "declare_attackers"},
+      "result": {"kind": "unfinished"},
+      "players": {"A": {"life": 20}, "B": {"life": 20}},
+      "zones": {
+        "A.library": ["aswamp"],
+        "A.hand": [],
+        "A.graveyard": [],
+        "B.library": ["bforest"],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": ["brigade"],
+        "stack": [],
+        "exile": [],
+        "command": []
+      },
+      "objects": {}
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {"kind": "declare_attackers", "attacks": [["brigade", "B"]]},
+      "delta": {
+        "pending": {"seat": "A", "kind": "choose_defender", "about": {"object": "S1"}},
+        "objects": {
+          "brigade": {"attacking": "B"},
+          "S1": {"zone": "stack", "kind": "ability", "source": "brigade", "ability": {"face": 0, "paragraph": 2}, "controller": "A"}
+        }
+      },
+      "note": "508.1a: A controls the Brigade, untapped and controlled since the turn began (the start assumes nothing is summoning sick, 302.6), and declares it attacking B; it becomes tapped (508.1f; tier 2, not written). 508.3a, 603.2: the mobilize ability (paragraph 2, \"Mobilize 1\", meaning \"Whenever this creature attacks, create 1 1/1 red Warrior creature token. That token enters tapped and attacking. Sacrifice it at the beginning of the next end step.\", 702.181a) triggers and is put on the stack before A receives priority (508.2, 603.3), controlled by A (603.3a); a single trigger needs no ordering (603.3b) and it has no targets or modes, so no question is asked: it is S1. Both pass (implied, 117.4) and S1 resolves (608.2c): the token is created entering tapped and attacking, and the effect does not say what it attacks, so A chooses as it enters (508.4). That choice is the boundary: S1 is still on the stack and the token does not exist yet (spec 5.4, about is the resolving object)."
+    },
+    {
+      "seat": "A",
+      "do": {"kind": "choose_defender", "defender": "B"},
+      "delta": {
+        "turn": {"number": 3, "step": "postcombat_main", "active": "A"},
+        "pending": {"seat": "A", "kind": "priority"},
+        "players": {"B": {"life": 18}},
+        "objects": {
+          "T1": {"zone": "battlefield", "controller": "A", "token": {"name": "Warrior Token", "types": ["creature"], "subtypes": ["Warrior"], "colors": ["red"], "power": 1, "toughness": 1}},
+          "S1": null,
+          "brigade": {"attacking": null}
+        }
+      },
+      "note": "508.4: A chooses B, the only defending player. The token is created under A's control and owned by A (111.2), tapped (tier 2, not written) and attacking B; it is attacking but never \"attacked\" (508.4), so nothing triggers. Its definition is what the creating text sets (111.1, 111.4): a 1/1 red Warrior creature with no name given, so it is named \"Warrior Token\" (its subtype plus Token); it has no abilities: the sacrifice is a delayed triggered ability created by S1's resolution (603.7a), outside the projection, not text of the token. 608.2n: S1 ceases to exist. 117.3b: A receives priority in the declare attackers step; both pass and the step ends (500.2). Declare blockers step: B controls no creature, so B has no blockers to declare and no declaration is asked (509.1a; spec 5.3 asks it only when the seat controls a creature); both attackers become unblocked (509.1h; blocked stays false). 509.2: both pass. No attacker has first strike or double strike, so there is no first-strike damage step (510.4). Combat damage step: the Brigade (1/3) and the token (1/1) each assign their damage to B (510.1a) and it is dealt simultaneously (510.2): B goes from 20 to 18 (120.3a). No state-based action applies (704.5a: B has 18 life). 510.3: both pass. End of combat step (511.1): both pass; as it ends all creatures are removed from combat (511.3), so the Brigade and the token, which entered attacking B during this transition, are no longer attacking at the boundary (attacking back to null; the token's attacking B is not a fact of any recorded state). The postcombat main phase begins (505.1) and A receives priority (117.3a). The token's sacrifice waits for the end step (513.1, 603.7); the record ends here."
+    }
+  ]
+}

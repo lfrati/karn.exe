@@ -1,0 +1,167 @@
+{
+  "mgn": "1",
+  "tier": 2,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "external4 independent author",
+    "provider": "openai",
+    "model": "selectedSol6.1medium"
+  },
+  "note": "CR 725.2-3, 117.3b, 608.2n. Initial position is A end step: A was monarch as this step began, its inherent draw is already on stack under A control, and A has passed once. B casts Thorn using Leyline. Thorn enters and its ETB makes B monarch before the lower draw resolves. A still draws A-owned Island. The inherent ability has neither source nor owner. Author draft; not independently semantically vetted. Stop at the stated priority boundary, before any later passes.",
+  "cards": {
+    "island": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island",
+      "faces": [
+        "7cf7af410d8aabcb0ca7a4a8c53022eb127d477b90dc960ee1c4178b8e824deb"
+      ]
+    },
+    "thorn": {
+      "owner": "B",
+      "oracle": "a7894a81-8c0a-4015-8bc1-2698cf5306d1",
+      "name": "Thorn of the Black Rose",
+      "faces": [
+        "92c16b570068fe459171e3adba56d3850e12712bbf015805e125f32edc5ccf29"
+      ]
+    },
+    "leyline": {
+      "owner": "B",
+      "oracle": "9dc65ffe-17fc-4280-b4bd-78073ac7e12b",
+      "name": "Leyline of Anticipation",
+      "faces": [
+        "b564d067525db91d52e40f6b11c3b46cbe023a1bb225add1f8bf7c9cd80573fd"
+      ]
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 3,
+        "step": "end",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "B",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20,
+          "mana": {
+            "C": 3,
+            "B": 1
+          }
+        }
+      },
+      "zones": {
+        "A.library": [
+          "island"
+        ],
+        "A.hand": [],
+        "A.graveyard": [],
+        "B.library": [],
+        "B.hand": [
+          "thorn"
+        ],
+        "B.graveyard": [],
+        "battlefield": [
+          "leyline"
+        ],
+        "stack": [
+          "S1"
+        ],
+        "exile": [],
+        "command": []
+      },
+      "objects": {
+        "S1": {
+          "kind": "ability",
+          "ability": {
+            "rule": "725.2",
+            "sub": 1
+          },
+          "controller": "A"
+        }
+      },
+      "game": {
+        "monarch": "A"
+      }
+    },
+    "assumptions": {
+      "consecutive_passes": 1
+    }
+  },
+  "transitions": [
+    {
+      "seat": "B",
+      "do": {
+        "kind": "cast",
+        "card": "thorn",
+        "permission": {
+          "source": "leyline",
+          "ability": {
+            "face": 0,
+            "paragraph": 2
+          }
+        },
+        "pay": {
+          "pool": {
+            "C": 3,
+            "B": 1
+          }
+        }
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "players": {
+          "B": {
+            "mana": {}
+          }
+        },
+        "game": {
+          "monarch": "B"
+        },
+        "objects": {
+          "thorn": {
+            "zone": "battlefield"
+          },
+          "island": {
+            "zone": "A.hand"
+          },
+          "S1": null
+        }
+      }
+    }
+  ]
+}

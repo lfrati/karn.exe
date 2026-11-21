@@ -1,0 +1,121 @@
+{
+  "mgn": "1",
+  "tier": 2,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": ["A", "B"]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "step-4 author",
+    "provider": "Anthropic",
+    "model": "claude-opus-5-5"
+  },
+  "note": "Tier 2, the attach question (303.4f). A casts Rescue Skiff, an artifact Spacecraft that is not a creature until it has 10 or more charge counters (721.2b), so it has no power or toughness on the stack (721.2c) or on the battlefield (208.3). Its enters trigger returns Rancor from A's graveyard to the battlefield; the effect does not say what the Aura enchants, so A chooses as it enters (303.4f) and attaches it to A's Grizzly Bears, which become 4/2 with trample (613.1, 613.4c). The position is stipulated (spec 2.4), not reached by ordinary play.",
+  "cards": {
+    "skiff": {"owner": "A", "oracle": "112aaaf0-3301-4f79-9640-d36c75a0fb30", "name": "Rescue Skiff"},
+    "rancor": {"owner": "A", "oracle": "9d2d6479-531c-4ce1-b52b-00e36fa63b64", "name": "Rancor"},
+    "bears": {"owner": "A", "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0", "name": "Grizzly Bears"},
+    "plains1": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains2": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains3": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains4": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains5": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains6": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains7": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "bbears": {"owner": "B", "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0", "name": "Grizzly Bears"},
+    "bforest": {"owner": "B", "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6", "name": "Forest"}
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {"number": 3, "step": "precombat_main", "active": "A"},
+      "pending": {"seat": "A", "kind": "priority"},
+      "result": {"kind": "unfinished"},
+      "players": {"A": {"life": 20}, "B": {"life": 20}},
+      "zones": {
+        "A.library": ["plains7"],
+        "A.hand": ["skiff"],
+        "A.graveyard": ["rancor"],
+        "B.library": ["bforest"],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": ["plains1", "plains2", "plains3", "plains4", "plains5", "plains6", "bears", "bbears"],
+        "stack": [],
+        "exile": [],
+        "command": []
+      },
+      "objects": {}
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "skiff",
+        "pay": {
+          "abilities": [
+            {"source": "plains1", "ability": {"rule": "305.6"}, "adding": ["W"]},
+            {"source": "plains2", "ability": {"rule": "305.6"}, "adding": ["W"]},
+            {"source": "plains3", "ability": {"rule": "305.6"}, "adding": ["W"]},
+            {"source": "plains4", "ability": {"rule": "305.6"}, "adding": ["W"]},
+            {"source": "plains5", "ability": {"rule": "305.6"}, "adding": ["W"]},
+            {"source": "plains6", "ability": {"rule": "305.6"}, "adding": ["W"]}
+          ]
+        }
+      },
+      "delta": {
+        "pending": {"seat": "A", "kind": "choose_targets", "about": {"object": "S1"}},
+        "objects": {
+          "plains1": {"tapped": true},
+          "plains2": {"tapped": true},
+          "plains3": {"tapped": true},
+          "plains4": {"tapped": true},
+          "plains5": {"tapped": true},
+          "plains6": {"tapped": true},
+          "skiff": {"zone": "battlefield", "power": null, "toughness": null},
+          "S1": {"zone": "stack", "kind": "ability", "source": "skiff", "ability": {"face": 0, "paragraph": 1}, "controller": "A", "targets": []}
+        }
+      },
+      "note": "Rescue Skiff ({5}{W}, Artifact - Spacecraft) is cast in A's main phase with an empty stack (301.1, 117.1a; 601.2a). 601.2g, 601.2h: six Plains each add {W} (305.6, 106.4) and pay {5}{W}; the pool is empty again. 117.3c: A receives priority; both pass (implied, 117.3d, 117.4) and the permanent spell resolves: it has no target, so it enters under A's control (608.3a), untapped (110.5b). It has no charge counters, so its 10+ striation does not apply (721.2a, 721.2b): it is not a creature and has no power or toughness (208.3; on the stack too, 721.2c), so the printed 5/6 is stated as null; its keyword is station only (702.184a), flying being part of the 10+ static ability. 603.2: its enters ability (paragraph 1) triggers; before A would receive priority it is put on the stack (603.3), controlled by A (603.3a), and its target is chosen as it is put there (603.3d, 601.2c): S1 exists with empty targets and A is asked for them (spec 4.1). A has a legal target (Rancor, an enchantment card in A's graveyard), so the ability is not removed (603.3d)."
+    },
+    {
+      "seat": "A",
+      "do": {"kind": "choose_targets", "targets": [["rancor"]]},
+      "delta": {
+        "pending": {"seat": "A", "kind": "attach", "about": {"object": "rancor"}},
+        "objects": {
+          "S1": {"targets": [["rancor"]]}
+        }
+      },
+      "note": "601.2c via 603.3d: the one target is Rancor, an enchantment card in A's graveyard (\"target creature or enchantment card from your graveyard\"). The Skiff has finished resolving, so A, the active player, receives priority with the trigger on the stack (117.3b, 603.3); both pass (implied) and S1 resolves (117.4). 608.2b: Rancor is still in A's graveyard, so the target is legal. 608.2c: Rancor is to be put onto the battlefield; it is an Aura entering by a means other than resolving as an Aura spell, and the effect does not specify what it enchants, so A chooses as it enters (303.4f). That choice is the boundary: S1 is still on the stack and Rancor is still in A's graveyard (spec 4.2). A legal object exists (two creatures on the battlefield, enchant creature, 702.5a), so 303.4g does not leave it in the graveyard."
+    },
+    {
+      "seat": "A",
+      "do": {"kind": "attach", "to": "bears"},
+      "delta": {
+        "pending": {"seat": "A", "kind": "priority"},
+        "objects": {
+          "rancor": {"zone": "battlefield", "attached_to": "bears"},
+          "bears": {"power": 4, "keywords": ["trample"]},
+          "S1": null
+        }
+      },
+      "note": "303.4f: A chooses A's Grizzly Bears, a legal object for enchant creature (702.5a); Rancor enters attached to it (303.4b) under A's control, untapped (110.5b). Its static ability \"Enchanted creature gets +2/+0 and has trample\" applies: layer 6 adds trample and layer 7c adds +2/+0 (613.1f, 613.4c), so the Bears' final values are 4/2 with trample (toughness unchanged). Rancor's own trigger concerns leaving the battlefield and does not trigger. 608.2n: S1 finishes resolving and ceases to exist. 704.3: no state-based action applies (Rancor is attached to a legal creature, 704.5m). 117.3b: the active player receives priority; the record ends here."
+    }
+  ]
+}

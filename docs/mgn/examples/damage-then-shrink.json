@@ -1,0 +1,268 @@
+{
+  "mgn": "1",
+  "tier": 2,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "worked example",
+    "provider": "Anthropic",
+    "model": "claude-fable-5-1"
+  },
+  "note": "Tier 2. B shocks A's Fire Elemental (damage marked, 120.6), then shrinks it with Last Gasp; the -3/-3 makes the marked damage lethal and the creature is destroyed as a state-based action (704.5g) before anyone receives priority. Ends with a land drop and an illegal second land drop (305.2).",
+  "cards": {
+    "elemental": {
+      "owner": "A",
+      "oracle": "3912d21e-1ebc-4a81-9dc9-f404248d564a",
+      "name": "Fire Elemental"
+    },
+    "lions": {
+      "owner": "A",
+      "oracle": "60ba93eb-39e6-4af2-9c66-cd38f72daff2",
+      "name": "Savannah Lions"
+    },
+    "plains1": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    },
+    "plains2": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    },
+    "mountain1": {
+      "owner": "B",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain"
+    },
+    "mountain2": {
+      "owner": "B",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain"
+    },
+    "mountain3": {
+      "owner": "B",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain"
+    },
+    "swamp1": {
+      "owner": "B",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp"
+    },
+    "swamp2": {
+      "owner": "B",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp"
+    },
+    "swamp3": {
+      "owner": "B",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp"
+    },
+    "shock": {
+      "owner": "B",
+      "oracle": "a9d288b8-cdc1-4e55-a0c9-d6edfc95e65d",
+      "name": "Shock"
+    },
+    "gasp": {
+      "owner": "B",
+      "oracle": "a82c3860-4dd6-4ffd-aa8f-ab8df687db6c",
+      "name": "Last Gasp"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 4,
+        "step": "precombat_main",
+        "active": "B"
+      },
+      "pending": {
+        "seat": "B",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [
+          "plains2"
+        ],
+        "A.hand": [
+          "lions"
+        ],
+        "A.graveyard": [],
+        "B.library": [],
+        "B.hand": [
+          "shock",
+          "gasp",
+          "swamp3",
+          "mountain3"
+        ],
+        "B.graveyard": [],
+        "battlefield": [
+          "elemental",
+          "plains1",
+          "mountain1",
+          "mountain2",
+          "swamp1",
+          "swamp2"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      }
+    },
+    "assumptions": {
+      "land_played": {
+        "A": 0,
+        "B": 0
+      }
+    }
+  },
+  "transitions": [
+    {
+      "seat": "B",
+      "do": {
+        "kind": "cast",
+        "card": "shock",
+        "targets": [
+          [
+            "elemental"
+          ]
+        ],
+        "pay": {
+          "abilities": [
+            {
+              "source": "mountain1",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "R"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "objects": {
+          "elemental": {
+            "damage": 2
+          },
+          "mountain1": {
+            "tapped": true
+          },
+          "shock": {
+            "zone": "B.graveyard"
+          }
+        }
+      },
+      "note": "601.2c: Shock's one target is announced; the Mountain is tapped for {R} (305.6, 601.2g). B keeps priority (117.3c); both pass (implied) and Shock resolves (117.4), dealing 2 damage to Fire Elemental (120.6: the damage stays marked); an instant spell goes to its owner's graveyard as it finishes resolving (608.2n). The active player receives priority (117.3b). 5/4 with 2 damage is not lethal (704.5g)."
+    },
+    {
+      "seat": "B",
+      "do": {
+        "kind": "cast",
+        "card": "gasp",
+        "targets": [
+          [
+            "elemental"
+          ]
+        ],
+        "pay": {
+          "abilities": [
+            {
+              "source": "swamp1",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "B"
+              ]
+            },
+            {
+              "source": "mountain2",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "R"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "objects": {
+          "elemental": {
+            "zone": "A.graveyard"
+          },
+          "gasp": {
+            "zone": "B.graveyard"
+          },
+          "mountain2": {
+            "tapped": true
+          },
+          "swamp1": {
+            "tapped": true
+          }
+        }
+      },
+      "note": "Last Gasp costs {1}{B}: the Swamp pays {B} and the Mountain's {R} pays the generic {1}. Both pass (implied) and Last Gasp resolves: Fire Elemental becomes 2/1 until end of turn (613.4c, layer 7c). Before B would receive priority the game checks state-based actions (704.3): a creature with toughness greater than 0 and damage marked on it at least equal to its toughness is destroyed (704.5g). The record shows only the zone change; the intermediate 2/1 was never a recorded state. B receives priority (117.3b)."
+    },
+    {
+      "seat": "B",
+      "do": {
+        "kind": "play_land",
+        "card": "swamp3"
+      },
+      "delta": {
+        "objects": {
+          "swamp3": {
+            "zone": "battlefield"
+          }
+        }
+      },
+      "note": "305.1, 305.2: B's first land this turn (the start assumed none played)."
+    },
+    {
+      "seat": "B",
+      "attempt": {
+        "kind": "play_land",
+        "card": "mountain3"
+      },
+      "illegal": true,
+      "note": "A second land in the same turn is refused (305.2); the state is unchanged. No rule reference is compared, only the refusal. The record ends here, with B still holding priority; had B then passed, this attempt would carry that stretch (section 4.2)."
+    }
+  ]
+}

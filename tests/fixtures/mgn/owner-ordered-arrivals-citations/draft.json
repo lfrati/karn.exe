@@ -1,0 +1,411 @@
+{
+  "mgn": "1",
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "tier": 1,
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "Owner-ordering rule-derived author",
+    "provider": "OpenAI",
+    "model": "GPT-6.1 Sol"
+  },
+  "note": "New independently authored incomplete interaction, not a historical ordering repair. CR404.3: choose Stoke Genius discard arrivals; CR401.4: choose Hallowed Burial library arrivals; CR121.2/608.2c: Reach Through Mists draws the selected first card. Every payment and permutation is authored. The original Stoke Genius source omitted its choice and remains unchanged.",
+  "cards": {
+    "adventure": {
+      "owner": "A",
+      "oracle": "f01cf0c5-0ac6-4ad3-8642-dd21c8e8563e",
+      "name": "Hearth Elemental // Stoke Genius"
+    },
+    "discard_bear": {
+      "owner": "A",
+      "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0",
+      "name": "Grizzly Bears"
+    },
+    "discard_elf": {
+      "owner": "A",
+      "oracle": "68954295-54e3-4303-a6bc-fc4547a4e3a3",
+      "name": "Llanowar Elves"
+    },
+    "burial": {
+      "owner": "A",
+      "oracle": "dcaaddee-00b1-495c-9161-40c91c900aac",
+      "name": "Hallowed Burial"
+    },
+    "draw": {
+      "owner": "A",
+      "oracle": "c81ca8ff-92f3-481e-82f7-0673b6c74ea0",
+      "name": "Reach Through Mists"
+    },
+    "field_bear": {
+      "owner": "A",
+      "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0",
+      "name": "Grizzly Bears"
+    },
+    "field_elf": {
+      "owner": "A",
+      "oracle": "68954295-54e3-4303-a6bc-fc4547a4e3a3",
+      "name": "Llanowar Elves"
+    },
+    "red1": {
+      "owner": "A",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain"
+    },
+    "red2": {
+      "owner": "A",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain"
+    },
+    "blue": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    },
+    "white1": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    },
+    "white2": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    },
+    "white3": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    },
+    "white4": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    },
+    "white5": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "active": "A",
+        "number": 1,
+        "step": "precombat_main"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [
+          "burial",
+          "draw"
+        ],
+        "A.hand": [
+          "adventure",
+          "discard_bear",
+          "discard_elf"
+        ],
+        "A.graveyard": [],
+        "B.library": [],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [
+          "field_bear",
+          "field_elf",
+          "red1",
+          "red2",
+          "white1",
+          "white2",
+          "white3",
+          "white4",
+          "white5",
+          "blue"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      },
+      "objects": {}
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "adventure",
+        "face": 1,
+        "pay": {
+          "abilities": [
+            {
+              "source": "red1",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "R"
+              ]
+            },
+            {
+              "source": "red2",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "R"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "objects": {
+          "adventure": {
+            "zone": "stack",
+            "face": 1
+          }
+        },
+        "pending": {
+          "seat": "A",
+          "kind": "order_cards",
+          "about": {
+            "cards": [
+              "discard_bear",
+              "discard_elf"
+            ],
+            "zone": "A.graveyard"
+          }
+        }
+      },
+      "note": "CR715.3a-b,601.2h: cast Stoke Genius with RR for1R. CR404.3/608.2c: both discarded creatures still wait in hand until their owner chooses the incoming order; neither draw has occurred."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "order_cards",
+        "order": [
+          "discard_bear",
+          "discard_elf"
+        ]
+      },
+      "delta": {
+        "objects": {
+          "discard_bear": {
+            "zone": "A.graveyard"
+          },
+          "discard_elf": {
+            "zone": "A.graveyard"
+          },
+          "burial": {
+            "zone": "A.hand"
+          },
+          "draw": {
+            "zone": "A.hand"
+          },
+          "adventure": {
+            "zone": "exile",
+            "face": 0
+          }
+        },
+        "zones": {
+          "A.graveyard": {
+            "top": [
+              "discard_bear",
+              "discard_elf"
+            ]
+          }
+        },
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        }
+      },
+      "note": "CR404.3: top-first Bear,Elf means oldest-first Elf,Bear. CR608.2c/121.2: draw both remaining library cards once after discarding. CR715.3d: the resolved Adventure is exiled, with its main face restored."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "burial",
+        "pay": {
+          "abilities": [
+            {
+              "source": "white1",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "W"
+              ]
+            },
+            {
+              "source": "white2",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "W"
+              ]
+            },
+            {
+              "source": "white3",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "W"
+              ]
+            },
+            {
+              "source": "white4",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "W"
+              ]
+            },
+            {
+              "source": "white5",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "W"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "objects": {
+          "burial": {
+            "zone": "stack"
+          }
+        },
+        "pending": {
+          "seat": "A",
+          "kind": "order_cards",
+          "about": {
+            "cards": [
+              "field_bear",
+              "field_elf"
+            ],
+            "zone": "A.library",
+            "placement": "bottom"
+          }
+        }
+      },
+      "note": "CR601.2h: WWWWW pays3WW. CR401.4: the two battlefield creatures wait for their owner-selected library block order before either moves."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "order_cards",
+        "order": [
+          "field_elf",
+          "field_bear"
+        ]
+      },
+      "delta": {
+        "objects": {
+          "field_bear": {
+            "zone": "A.library",
+            "at": "bottom"
+          },
+          "field_elf": {
+            "zone": "A.library",
+            "at": "bottom"
+          },
+          "burial": {
+            "zone": "A.graveyard"
+          }
+        },
+        "zones": {
+          "A.library": {
+            "bottom": [
+              "field_elf",
+              "field_bear"
+            ]
+          }
+        },
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        }
+      },
+      "note": "CR401.4: in the empty library, bottom placement leaves Elf on top of Bear. CR608.2n: Burial then goes to the graveyard, above the retained discarded block."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "draw",
+        "pay": {
+          "abilities": [
+            {
+              "source": "blue",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "objects": {
+          "draw": {
+            "zone": "A.graveyard"
+          },
+          "field_elf": {
+            "zone": "A.hand"
+          }
+        },
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        }
+      },
+      "note": "CR121.2/401.2: Reach Through Mists draws Elf, the top card chosen in transition4. Reversing that order would draw Bear instead; the later visible hand distinguishes the authored choice."
+    }
+  ],
+  "lineage": {
+    "supersedes": "sha256:faa86bf479347257b56e968bbd37a335ee34910f272c645835981603cafaa377"
+  }
+}

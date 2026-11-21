@@ -1,0 +1,242 @@
+{
+  "mgn": "1",
+  "tier": 2,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "worked example",
+    "provider": "Anthropic",
+    "model": "claude-fable-5-1"
+  },
+  "note": "Tier 2. They Went This Way: a resolution-time search question (701.23a), a land put onto the battlefield tapped, a shuffle whose outcome is written out (701.24a; the found card has already left the library when it is shuffled), and a Clue token from investigate (701.16a).",
+  "cards": {
+    "way": {
+      "owner": "A",
+      "oracle": "47951720-9584-4ca3-a73d-3d259102b2f8",
+      "name": "They Went This Way"
+    },
+    "forest1": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forest2": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forest3": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forest4": {
+      "owner": "A",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "plains1": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    },
+    "island1": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island"
+    },
+    "swamp1": {
+      "owner": "B",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp"
+    },
+    "swamp2": {
+      "owner": "B",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 5,
+        "step": "precombat_main",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [
+          "plains1",
+          "forest4",
+          "island1"
+        ],
+        "A.hand": [
+          "way"
+        ],
+        "A.graveyard": [],
+        "B.library": [
+          "swamp2"
+        ],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [
+          "forest1",
+          "forest2",
+          "forest3",
+          "swamp1"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      }
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "way",
+        "pay": {
+          "abilities": [
+            {
+              "source": "forest1",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            },
+            {
+              "source": "forest2",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            },
+            {
+              "source": "forest3",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "G"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "search",
+          "about": {
+            "object": "way"
+          }
+        },
+        "objects": {
+          "forest1": {
+            "tapped": true
+          },
+          "forest2": {
+            "tapped": true
+          },
+          "forest3": {
+            "tapped": true
+          },
+          "way": {
+            "zone": "stack"
+          }
+        }
+      },
+      "note": "601.2: the sorcery moves to the stack, paid with three Forests. The caster receives priority (117.3c) and passes, B passes (both implied), and the sorcery begins to resolve (117.4): it asks its controller to search (701.23a), a decision inside the resolution. The library is ordered and hidden, but the record is full-knowledge, so the searcher's view is the library as listed."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "search",
+        "found": [
+          "forest4"
+        ]
+      },
+      "random": [
+        {
+          "kind": "shuffle",
+          "seat": "A",
+          "order": [
+            "island1",
+            "plains1"
+          ]
+        }
+      ],
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "objects": {
+          "T1": {
+            "zone": "battlefield",
+            "controller": "A",
+            "token": {
+              "name": "Clue Token",
+              "types": [
+                "artifact"
+              ],
+              "subtypes": [
+                "Clue"
+              ],
+              "colors": [],
+              "text": "{2}, Sacrifice this token: Draw a card."
+            }
+          },
+          "forest4": {
+            "zone": "battlefield",
+            "tapped": true
+          },
+          "way": {
+            "zone": "A.graveyard"
+          }
+        }
+      },
+      "note": "The found Forest is put onto the battlefield tapped, then the library is shuffled (the card's own order of instructions, so 701.24b does not apply) and the outcome lists the two remaining cards in their new order; investigate creates a Clue token (701.16a), named Clue Token under 111.4 since 111.10f gives it no name. The resolved sorcery goes to the graveyard (608.2n) and the active player receives priority (117.3b); the record ends there."
+    }
+  ]
+}

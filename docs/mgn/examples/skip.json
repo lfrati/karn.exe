@@ -1,0 +1,109 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {"effective": "2026-09-25", "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"},
+    "oracle": {"source": "scryfall-oracle-cards", "updated_at": "2026-10-11T09:01:56.463+00:00", "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"}
+  },
+  "game": {"format": "custom", "life": 20, "hand_size": 7, "seats": ["A", "B"]},
+  "author": {"kind": "agent", "name": "step-4 author", "provider": "Anthropic", "model": "claude-opus-5-5"},
+  "note": "Tier 1. A skip question (616.1 with 614.10): Stonehorn Dignitary's trigger (\"target opponent skips their next combat phase\") and Moment of Silence (\"Target player skips their next combat phase this turn.\") both create skip effects, replacement effects under 614.10, that would replace B's turn-4 combat phase. B, the affected and active player, chooses which applies; B chooses the Dignitary's, which is satisfied, and the Moment's effect waits for a later combat phase this turn that never comes (614.10a). The position is stipulated (spec 2.4), not reached by ordinary play.",
+  "cards": {
+    "dignitary": {"owner": "A", "oracle": "65368569-68bf-4498-9979-d2935942ca49", "name": "Stonehorn Dignitary"},
+    "moment": {"owner": "A", "oracle": "43af5041-a4bd-4b61-b1a1-bdea916afc59", "name": "Moment of Silence"},
+    "plains1": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains2": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains3": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains4": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains5": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains6": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "bears": {"owner": "B", "oracle": "14c8f55d-d177-4c25-a931-ebeb9e6062a0", "name": "Grizzly Bears"},
+    "bforest": {"owner": "B", "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6", "name": "Forest"}
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {"number": 3, "step": "precombat_main", "active": "A"},
+      "pending": {"seat": "A", "kind": "priority"},
+      "result": {"kind": "unfinished"},
+      "players": {"A": {"life": 20}, "B": {"life": 20}},
+      "zones": {
+        "A.library": ["plains6"],
+        "A.hand": ["dignitary", "moment"],
+        "A.graveyard": [],
+        "B.library": ["bforest"],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": ["plains1", "plains2", "plains3", "plains4", "plains5", "bears"],
+        "stack": [],
+        "exile": [],
+        "command": []
+      }
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "dignitary",
+        "pay": {
+          "abilities": [
+            {"source": "plains1", "ability": {"rule": "305.6"}, "adding": ["W"]},
+            {"source": "plains2", "ability": {"rule": "305.6"}, "adding": ["W"]},
+            {"source": "plains3", "ability": {"rule": "305.6"}, "adding": ["W"]},
+            {"source": "plains4", "ability": {"rule": "305.6"}, "adding": ["W"]}
+          ]
+        }
+      },
+      "delta": {
+        "pending": {"seat": "A", "kind": "choose_targets", "about": {"object": "S1"}},
+        "objects": {
+          "dignitary": {"zone": "battlefield"},
+          "S1": {"zone": "stack", "kind": "ability", "source": "dignitary", "ability": {"face": 0, "paragraph": 1}, "controller": "A", "targets": []}
+        }
+      },
+      "note": "601.2a: Stonehorn Dignitary ({3}{W}, creature) is cast in A's main phase with an empty stack (117.1a, the timing of a noninstant spell). 601.2g, 601.2h: four Plains each add {W} (305.6) and pay the cost. 117.3c: A receives priority; A then B pass (117.3d, implied) and the spell resolves (117.4): it enters under A's control (608.3a). 603.6a: its enters ability triggers; it is put on the stack the next time a player would receive priority (603.3), controlled by A (603.3a), and its target is chosen as it is put there (603.3d, 601.2c). It is the first stack object a recorded state shows, so S1; it exists with empty targets while A is asked (spec 4.1). \"Target opponent\" has exactly one legal choice, B, but the question is asked all the same (spec 5) and has no null answer (a target is required, 601.2c)."
+    },
+    {
+      "seat": "A",
+      "do": {"kind": "choose_targets", "targets": [["B"]]},
+      "delta": {
+        "turn": {"number": 4, "step": "precombat_main", "active": "B"},
+        "pending": {"seat": "A", "kind": "priority"},
+        "objects": {
+          "S1": null,
+          "bforest": {"zone": "B.hand"}
+        }
+      },
+      "note": "601.2c via 603.3d: S1 targets B, A's only opponent. 117.3b, 117.4: A receives priority, A then B pass (implied) and S1 resolves: B is to skip B's next combat phase, a replacement effect (614.1b, 614.10) that waits for that phase; no tier-1 fact shows it (spec 3.2: continuous effects are outside the projection). 608.2n: S1 is removed from the stack and ceases to exist. A's turn goes on: A receives priority, both pass with an empty stack and the main phase ends (500.2). A's own combat phase is not affected (the effect concerns B's): beginning of combat, both pass; declare attackers: A controls a creature, so the declaration is asked (508.1a); A declares none, the null answer (the Dignitary could not attack anyway, 302.6), so the declare blockers and combat damage steps are skipped (508.8, 506.1); end of combat, postcombat main and end step, both pass each time (500.2). Cleanup: A's hand holds one card, nothing is discarded (514.1), nothing gives priority (514.3a). Turn 4, B active: untap (502.3; no priority, 502.4), upkeep (503.1, both pass), draw: B draws B's only library card, a Forest (504.1); both pass. B's precombat main phase begins: no skip effect concerns a main phase; B receives priority (117.3a), passes (117.3d), and A receives priority."
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "moment",
+        "targets": [["B"]],
+        "pay": {
+          "abilities": [
+            {"source": "plains5", "ability": {"rule": "305.6"}, "adding": ["W"]}
+          ]
+        }
+      },
+      "delta": {
+        "pending": {"seat": "B", "kind": "skip"},
+        "objects": {"moment": {"zone": "A.graveyard"}}
+      },
+      "note": "Moment of Silence is an instant, so A may cast it with priority in B's turn (117.1a: an instant may be cast any time its caster has priority). 601.2c: its target is B; 601.2g, 601.2h: the fifth Plains, still untapped (A's Plains tapped on turn 3 do not untap in B's untap step, 502.3), adds {W} (305.6). 117.3c: A receives priority after casting and passes; B, next in turn order, receives priority and passes (117.3d). A's cast was an action taken in between, so B's earlier pass does not count: the succession is A's pass then B's (117.4), and the spell resolves: B is to skip B's next combat phase this turn (614.10). 608.2n: Moment of Silence goes to A's graveyard. 117.3b: B, the active player, receives priority; B then A pass with an empty stack and the precombat main phase ends (500.2). B's combat phase would begin next; once it had begun it could no longer be skipped (614.10), so the skip effects apply as it is about to begin: two replacement effects would modify the same event, so the affected player, B (616.1), who is also the active seat (spec 5.4), chooses one to apply; neither is a self-replacement effect (616.1a, 614.15) and 616.1b-d concern entering the battlefield, so 616.1e leaves B free. Nothing of the combat phase has begun, so the turn fact still reads precombat main (no other spelling exists for the moment between two phases)."
+    },
+    {
+      "seat": "B",
+      "do": {"kind": "skip", "effect": {"source": "dignitary", "ability": {"face": 0, "paragraph": 1}}},
+      "delta": {
+        "turn": {"number": 4, "step": "postcombat_main", "active": "B"},
+        "pending": {"seat": "B", "kind": "priority"}
+      },
+      "note": "B applies the skip effect the Dignitary's enters ability created (616.1, 616.1e), named by its source and paragraph (spec 3.3, 614.10). 614.10, 500.11: the combat phase is replaced with nothing and the game proceeds past it as though it didn't exist, so none of its steps begins and the Bears does not attack. 616.1f: the replaced event no longer happens, so the Moment's effect has nothing left to apply to; 614.10a: it remains, waiting for B's next combat phase this turn, which never comes, so it never applies. Had B chosen the Moment's effect, the Dignitary's would have remained for B's next combat phase in a later turn (614.10a; the Dignitary's ruling of 2021-03-19). 505.1a: the main phase after a skipped combat phase is a postcombat main phase. 117.3a: B, the active player, receives priority; the record ends there."
+    }
+  ]
+}

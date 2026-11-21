@@ -1,0 +1,214 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "Independent external MGN author, final round",
+    "provider": "OpenAI",
+    "model": "GPT-6"
+  },
+  "note": "CR 722.3a-c, 707.2. Adventurous Eater enters prepared, creating a copy of Have a Bite in exile. Cast that same copy, targeting Eater. Both entries end before its resolution; designation facts are outside tier 1.",
+  "cards": {
+    "eater": {
+      "owner": "A",
+      "oracle": "02125db4-4507-467a-ac0c-406de2c7d533",
+      "name": "Adventurous Eater // Have a Bite",
+      "faces": [
+        "eb13288183acbb6578c0e3e4fff6aa911aaab03da3ebfa0ac5cf95a5909d3b0d",
+        "4c130d9ff56534686fa00535a8de8f3c9611686750a522f3764b7f7336d3c487"
+      ]
+    },
+    "sw0": {
+      "owner": "A",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp",
+      "faces": [
+        "9cf0f2aa10a037a126c31ceac05291aa40a4f3dfe011af89a688a7a107916d52"
+      ]
+    },
+    "sw1": {
+      "owner": "A",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp",
+      "faces": [
+        "9cf0f2aa10a037a126c31ceac05291aa40a4f3dfe011af89a688a7a107916d52"
+      ]
+    },
+    "sw2": {
+      "owner": "A",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp",
+      "faces": [
+        "9cf0f2aa10a037a126c31ceac05291aa40a4f3dfe011af89a688a7a107916d52"
+      ]
+    },
+    "sw3": {
+      "owner": "A",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp",
+      "faces": [
+        "9cf0f2aa10a037a126c31ceac05291aa40a4f3dfe011af89a688a7a107916d52"
+      ]
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 3,
+        "step": "precombat_main",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [],
+        "A.hand": [
+          "eater"
+        ],
+        "A.graveyard": [],
+        "B.library": [],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [
+          "sw0",
+          "sw1",
+          "sw2",
+          "sw3"
+        ],
+        "exile": [],
+        "command": [],
+        "stack": []
+      },
+      "objects": {}
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "eater",
+        "pay": {
+          "abilities": [
+            {
+              "source": "sw0",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "B"
+              ]
+            },
+            {
+              "source": "sw1",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "B"
+              ]
+            },
+            {
+              "source": "sw2",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "B"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "objects": {
+          "eater": {
+            "zone": "battlefield"
+          },
+          "S1": {
+            "zone": "exile",
+            "kind": "copy",
+            "copy_of": "eater",
+            "copy_face": 1,
+            "controller": "A"
+          }
+        }
+      }
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "S1",
+        "targets": [
+          [
+            "eater"
+          ]
+        ],
+        "pay": {
+          "abilities": [
+            {
+              "source": "sw3",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "B"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "objects": {
+          "S1": {
+            "zone": "stack",
+            "targets": [
+              [
+                "eater"
+              ]
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "x-external-scope": {
+    "baseline": "1f8d5ea6",
+    "premise": "Short independently authored position, not a complete game or engine-certified evidence."
+  }
+}

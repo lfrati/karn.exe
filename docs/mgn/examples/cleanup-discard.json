@@ -1,0 +1,51 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {"effective": "2026-09-25", "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"},
+    "oracle": {"source": "scryfall-oracle-cards", "updated_at": "2026-10-11T09:01:56.463+00:00", "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"}
+  },
+  "game": {"format": "custom", "life": 20, "hand_size": 7, "seats": ["A", "B"]},
+  "author": {"kind": "agent", "name": "worked example", "provider": "Anthropic", "model": "claude-fable-5-1"},
+  "note": "Tier 1. The cleanup discard (514.1) is a question without a null answer, asked with its count; two cards put into a graveyard at once need their order stated (404.3). The record starts in the cleanup step, the state in which its only decision is made: the passes that ended the end step are not entries.",
+  "cards": {
+    "plains1": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains2": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains3": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains4": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "plains5": {"owner": "A", "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99", "name": "Plains"},
+    "lions1": {"owner": "A", "oracle": "60ba93eb-39e6-4af2-9c66-cd38f72daff2", "name": "Savannah Lions"},
+    "lions2": {"owner": "A", "oracle": "60ba93eb-39e6-4af2-9c66-cd38f72daff2", "name": "Savannah Lions"},
+    "hunter1": {"owner": "A", "oracle": "c0864adb-e9aa-40b6-91ff-a0646193e887", "name": "Helpful Hunter"},
+    "hunter2": {"owner": "A", "oracle": "c0864adb-e9aa-40b6-91ff-a0646193e887", "name": "Helpful Hunter"},
+    "hunter3": {"owner": "A", "oracle": "c0864adb-e9aa-40b6-91ff-a0646193e887", "name": "Helpful Hunter"},
+    "forest1": {"owner": "B", "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6", "name": "Forest"},
+    "forest2": {"owner": "B", "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6", "name": "Forest"}
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {"number": 3, "step": "cleanup", "active": "A"},
+      "pending": {"seat": "A", "kind": "discard", "about": {"count": 2}},
+      "result": {"kind": "unfinished"},
+      "players": {"A": {"life": 20}, "B": {"life": 20}},
+      "zones": {
+        "A.library": ["plains5"],
+        "A.hand": ["plains1", "plains2", "plains3", "plains4", "lions1", "lions2", "hunter1", "hunter2", "hunter3"],
+        "A.graveyard": [],
+        "B.library": ["forest2"],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": ["forest1"],
+        "stack": [],
+        "exile": [],
+        "command": []
+      }
+    }
+  },
+  "transitions": [
+    {"seat": "A", "do": {"kind": "discard", "cards": ["hunter3", "lions2"]},
+     "delta": {"objects": {"hunter3": {"zone": "A.graveyard"}, "lions2": {"zone": "A.graveyard"}}, "zones": {"A.graveyard": {"top": ["lions2", "hunter3"]}}, "turn": {"number": 4, "step": "upkeep", "active": "B"}, "pending": {"seat": "B", "kind": "priority"}},
+     "note": "514.1: A holds nine cards against a maximum hand size of seven and must discard two; the question carries the count. 701.9a: the discarded cards move to the graveyard; two cards put there at once are arranged by their owner (404.3), so the delta states which is on top. Nothing is marked and no effect ends (514.2); no state-based action would be performed and nothing triggers, so no player receives priority (514.3a); turn 4 begins and B receives priority in the upkeep (502.4, 503.1)."}
+  ]
+}

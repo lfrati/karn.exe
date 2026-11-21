@@ -1,0 +1,277 @@
+{
+  "mgn": "1",
+  "tier": 2,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "MGN repair lead; authored before execution",
+    "provider": "OpenAI",
+    "model": "GPT-6"
+  },
+  "note": "Authored from full pinned Second Sight text and CR 601.2b-c, 608.2c-d, 701.20e, 401.2. A casts the first mode targeting B, then A privately looks at and reverses the top five cards of B’s library. A is the instructed arranger although B owns the cards. No entwine or extra owner-order choice. Stop after resolution with A holding priority; all five cards remain in B’s library. Full-knowledge MGN records their order; native seat-view tests separately verify privacy.",
+  "cards": {
+    "sight": {
+      "owner": "A",
+      "oracle": "1a4e948a-5a5e-4811-a6af-7ea93a051746",
+      "name": "Second Sight",
+      "faces": [
+        "3c9ca119645a79c7dcf11b70a64daa26f39cfb8476b8357984e16f84a92e80ae"
+      ]
+    },
+    "island1": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island",
+      "faces": [
+        "7cf7af410d8aabcb0ca7a4a8c53022eb127d477b90dc960ee1c4178b8e824deb"
+      ]
+    },
+    "island2": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island",
+      "faces": [
+        "7cf7af410d8aabcb0ca7a4a8c53022eb127d477b90dc960ee1c4178b8e824deb"
+      ]
+    },
+    "island3": {
+      "owner": "A",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island",
+      "faces": [
+        "7cf7af410d8aabcb0ca7a4a8c53022eb127d477b90dc960ee1c4178b8e824deb"
+      ]
+    },
+    "b1": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "faces": [
+        "27724bb516b58b8eef95389c5a2800861a987fa820f46c6f5873d811c4fa3917"
+      ]
+    },
+    "b2": {
+      "owner": "B",
+      "oracle": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island",
+      "faces": [
+        "7cf7af410d8aabcb0ca7a4a8c53022eb127d477b90dc960ee1c4178b8e824deb"
+      ]
+    },
+    "b3": {
+      "owner": "B",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain",
+      "faces": [
+        "e8d7ace3e741297a789003d6898ced6a5069cbf969835830fb1bb8ccc6a1144d"
+      ]
+    },
+    "b4": {
+      "owner": "B",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains",
+      "faces": [
+        "6fd9c850346837d0b38307cdd7d50b7b327653b6a148bb1e19e168dbe62ccbe0"
+      ]
+    },
+    "b5": {
+      "owner": "B",
+      "oracle": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp",
+      "faces": [
+        "9cf0f2aa10a037a126c31ceac05291aa40a4f3dfe011af89a688a7a107916d52"
+      ]
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 3,
+        "step": "precombat_main",
+        "active": "A"
+      },
+      "pending": {
+        "seat": "A",
+        "kind": "priority"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [],
+        "A.hand": [
+          "sight"
+        ],
+        "A.graveyard": [],
+        "B.library": [
+          "b1",
+          "b2",
+          "b3",
+          "b4",
+          "b5"
+        ],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [
+          "island1",
+          "island2",
+          "island3"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      },
+      "objects": {}
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "sight",
+        "modes": [
+          1
+        ],
+        "targets": [
+          [
+            "B"
+          ]
+        ],
+        "pay": {
+          "abilities": [
+            {
+              "source": "island1",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            },
+            {
+              "source": "island2",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            },
+            {
+              "source": "island3",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "U"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "arrange",
+          "about": {
+            "object": "sight",
+            "cards": [
+              "b1",
+              "b2",
+              "b3",
+              "b4",
+              "b5"
+            ]
+          }
+        },
+        "objects": {
+          "sight": {
+            "zone": "stack",
+            "modes": [
+              1
+            ],
+            "targets": [
+              [
+                "B"
+              ]
+            ]
+          },
+          "island1": {
+            "tapped": true
+          },
+          "island2": {
+            "tapped": true
+          },
+          "island3": {
+            "tapped": true
+          }
+        }
+      }
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "arrange",
+        "top": [
+          "b5",
+          "b4",
+          "b3",
+          "b2",
+          "b1"
+        ],
+        "away": []
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "objects": {
+          "sight": {
+            "zone": "A.graveyard"
+          }
+        },
+        "zones": {
+          "B.library": {
+            "top": [
+              "b5",
+              "b4",
+              "b3",
+              "b2",
+              "b1"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

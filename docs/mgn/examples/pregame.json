@@ -1,0 +1,281 @@
+{
+  "mgn": "1",
+  "tier": 1,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "updated_at": "2026-10-11T09:01:56.463+00:00",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "agent",
+    "name": "worked example",
+    "provider": "Anthropic",
+    "model": "claude-fable-5-1"
+  },
+  "note": "Tier 1, from the decks. A coin decides who chooses the starting player (103.1), the decks are shuffled (103.3) and hands drawn (103.5), A keeps (the null answer, implied), B mulligans once and puts one card on the bottom (103.5), and the first turn begins at A's upkeep (502.4, 503.1). Eight-card decks keep the example short; the format is custom.",
+  "cards": {
+    "plainsA1": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    },
+    "plainsA2": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    },
+    "plainsA3": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    },
+    "plainsA4": {
+      "owner": "A",
+      "oracle": "bc71ebf6-2056-41f7-be35-b2e5c34afa99",
+      "name": "Plains"
+    },
+    "lionsA1": {
+      "owner": "A",
+      "oracle": "60ba93eb-39e6-4af2-9c66-cd38f72daff2",
+      "name": "Savannah Lions"
+    },
+    "lionsA2": {
+      "owner": "A",
+      "oracle": "60ba93eb-39e6-4af2-9c66-cd38f72daff2",
+      "name": "Savannah Lions"
+    },
+    "hunterA1": {
+      "owner": "A",
+      "oracle": "c0864adb-e9aa-40b6-91ff-a0646193e887",
+      "name": "Helpful Hunter"
+    },
+    "hunterA2": {
+      "owner": "A",
+      "oracle": "c0864adb-e9aa-40b6-91ff-a0646193e887",
+      "name": "Helpful Hunter"
+    },
+    "forestB1": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forestB2": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forestB3": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "forestB4": {
+      "owner": "B",
+      "oracle": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest"
+    },
+    "elvesB1": {
+      "owner": "B",
+      "oracle": "68954295-54e3-4303-a6bc-fc4547a4e3a3",
+      "name": "Llanowar Elves"
+    },
+    "elvesB2": {
+      "owner": "B",
+      "oracle": "68954295-54e3-4303-a6bc-fc4547a4e3a3",
+      "name": "Llanowar Elves"
+    },
+    "goblinB1": {
+      "owner": "B",
+      "oracle": "343ecf2f-0bbc-4840-8fb3-f5f61b26e76f",
+      "name": "Swab Goblin"
+    },
+    "goblinB2": {
+      "owner": "B",
+      "oracle": "343ecf2f-0bbc-4840-8fb3-f5f61b26e76f",
+      "name": "Swab Goblin"
+    }
+  },
+  "start": {
+    "kind": "decks",
+    "random": [
+      {
+        "kind": "starting_player",
+        "method": "coin",
+        "result": "A"
+      }
+    ]
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "choose_first",
+        "first": "A"
+      },
+      "random": [
+        {
+          "kind": "shuffle",
+          "seat": "A",
+          "order": [
+            "plainsA1",
+            "lionsA1",
+            "plainsA2",
+            "hunterA1",
+            "plainsA3",
+            "lionsA2",
+            "plainsA4",
+            "hunterA2"
+          ]
+        },
+        {
+          "kind": "shuffle",
+          "seat": "B",
+          "order": [
+            "forestB1",
+            "elvesB1",
+            "forestB2",
+            "goblinB1",
+            "forestB3",
+            "elvesB2",
+            "goblinB2",
+            "forestB4"
+          ]
+        }
+      ],
+      "delta": {
+        "pending": {
+          "seat": "B",
+          "kind": "mulligan"
+        },
+        "objects": {
+          "elvesB1": {
+            "zone": "B.hand"
+          },
+          "elvesB2": {
+            "zone": "B.hand"
+          },
+          "forestB1": {
+            "zone": "B.hand"
+          },
+          "forestB2": {
+            "zone": "B.hand"
+          },
+          "forestB3": {
+            "zone": "B.hand"
+          },
+          "goblinB1": {
+            "zone": "B.hand"
+          },
+          "goblinB2": {
+            "zone": "B.hand"
+          },
+          "hunterA1": {
+            "zone": "A.hand"
+          },
+          "lionsA1": {
+            "zone": "A.hand"
+          },
+          "lionsA2": {
+            "zone": "A.hand"
+          },
+          "plainsA1": {
+            "zone": "A.hand"
+          },
+          "plainsA2": {
+            "zone": "A.hand"
+          },
+          "plainsA3": {
+            "zone": "A.hand"
+          },
+          "plainsA4": {
+            "zone": "A.hand"
+          }
+        }
+      },
+      "note": "A won the coin and chooses to play first (103.1). Each deck is shuffled (103.3); each player draws seven (103.5): the top seven of each shuffle order. The starting player declares first whether to mulligan: A keeps, the null answer, which the next entry implies (section 5.6). 103.5: then each other player in turn order declares, so B is asked."
+    },
+    {
+      "seat": "B",
+      "do": {
+        "kind": "mulligan",
+        "keep": false
+      },
+      "random": [
+        {
+          "kind": "shuffle",
+          "seat": "B",
+          "order": [
+            "goblinB2",
+            "forestB1",
+            "forestB2",
+            "elvesB1",
+            "forestB3",
+            "forestB4",
+            "elvesB2",
+            "goblinB1"
+          ]
+        }
+      ],
+      "delta": {
+        "pending": {
+          "seat": "B",
+          "kind": "bottom",
+          "about": {
+            "count": 1
+          }
+        },
+        "objects": {
+          "forestB4": {
+            "zone": "B.hand"
+          },
+          "goblinB1": {
+            "zone": "B.library"
+          }
+        }
+      },
+      "note": "All declarations are made, so B takes the mulligan now (103.5): the hand is shuffled into the library (the outcome lists all eight cards), seven are drawn again, and B must put one card on the bottom. Only the two cards whose zone changed on balance are listed; the others left the hand and came back."
+    },
+    {
+      "seat": "B",
+      "do": {
+        "kind": "bottom",
+        "cards": [
+          "elvesB2"
+        ]
+      },
+      "delta": {
+        "turn": {
+          "number": 1,
+          "step": "upkeep",
+          "active": "A"
+        },
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "objects": {
+          "elvesB2": {
+            "zone": "B.library",
+            "at": "bottom"
+          }
+        }
+      },
+      "note": "103.5: the process repeats until no player takes a mulligan; A has kept and may not mulligan again, so only B declares, and keeps: the null answer, implied. No card allows an opening-hand action (103.6), so the starting player takes the first turn (103.8). No player receives priority in the untap step (502.4); A receives priority in the upkeep (503.1). A will skip the draw step of this first turn (103.8a)."
+    }
+  ]
+}
