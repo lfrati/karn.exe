@@ -3280,6 +3280,7 @@ fn ends_nested(p: &Post) -> bool {
         matches!(s.quant, Quant::Definite(Ref::Anaphor(Anaphor::It | Anaphor::Them | Anaphor::They) | Ref::This)) && s.set == ObjectSet::of(s.set.domain.clone())
     };
     match p {
+        Post::With(Filter::Not(b)) if matches!(&**b, Filter::Atom(Atom::Among(s)) if closed(s)) => false,
         Post::With(Filter::Atom(Atom::Shares { with, .. })) if closed(with) => false,
         Post::With(Filter::Atom(Atom::DealtDamageBy { by, .. })) if closed(by) => false,
         Post::With(Filter::Atom(Atom::DealtDamageBy { .. })) => true,

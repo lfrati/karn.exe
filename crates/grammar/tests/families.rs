@@ -819,3 +819,29 @@ fn r608_2i_passive_participants_keep_actor_unbound() {
     assert_eq!(counted, ir::amount::Role::Object);
     assert_eq!(pattern.subjects, vec![ir::Selector::you()]);
 }
+
+/// CR 608.2c: a closed excluded reference cannot take the outer object's zone qualifier.
+#[test]
+fn r608_2c_closed_exclusions_before_zone_qualifiers() {
+    read("At the beginning of your upkeep, if ~ is in your graveyard, you may exile a black creature card other than ~ from your graveyard. If you do, return ~ to the battlefield.");
+    let (late, _) = read("Exile a black creature card other than ~ from your graveyard.");
+    let (early, _) = read("Exile a black creature card from your graveyard other than ~.");
+    assert_eq!(late, early);
+    let rule = &grammar::selector::selectors().selector_from;
+    let text = "a black creature card other than it from your graveyard";
+    let Outcome::Accepted { value, .. } = rule.parse_all(&tokenize(text)) else { panic!("{text}") };
+    assert_eq!(value.set.zone.as_ref().unwrap().zone(), Some(ir::Zone::Graveyard));
+    let ir::Filter::All(filters) = &value.set.filter else { panic!() };
+    let excluded = filters.iter().find_map(|filter| match filter {
+        ir::Filter::Not(inner) => match &**inner { ir::Filter::Atom(ir::Atom::Among(s)) => Some(s), _ => None },
+        _ => None,
+    }).unwrap();
+    assert_eq!(excluded.quant, ir::Quant::Definite(ir::Ref::Anaphor(ir::Anaphor::It)));
+    assert!(excluded.set.zone.is_none());
+    read("Destroy target creature other than ~ you control.");
+    // A complete noun can take its own following zone; preserve right association.
+    let Outcome::Accepted { value, .. } = rule.parse_all(&tokenize("a creature card other than a creature card in your graveyard")) else { panic!() };
+    assert!(value.set.zone.is_none());
+    declines("Exile a black creature card other than ~ from.");
+    declines("Destroy target player other than ~.");
+}
