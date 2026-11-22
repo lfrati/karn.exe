@@ -256,7 +256,7 @@ pub enum Instr {
     Place { objects: Vec<action::Operand>, position: ir::Position, chooser: Option<action::Operand>, order: Option<Order>, attempt: Option<Attempt>, by: Option<Who>, before_shuffle: bool },
     /// "You may pay {B}" (118.12): ask the payer, then run the payment as a child procedure.
     /// `paid`: the supplied payment completed. Impossibility predicates are refused.
-    Pay { payer: action::Operand, cost: crate::cost::Plan, paid: Slot },
+    Pay { payer: action::Operand, cost: crate::cost::Plan, each: Option<expr::Amount>, paid: Slot },
     /// "You may play it this turn", "until the end of your next turn, you may play those
     /// cards": the permission is the effect; nothing is asked now. `play`: a land may be
     /// played that way too, not only a spell cast. `until`: when it ends (611.2a).
@@ -684,8 +684,8 @@ impl Program {
                         make(&mut kinds, attempt.paid, Kind::Consent)?; make(&mut kinds, attempt.possible, Kind::Consent)?;
                     }
                 }
-                Instr::Pay { payer, paid, .. } => {
-                    for scalar in payer.scalars() { if let Scalar::Local { slot, kind } = scalar { need(&kinds, slot, kind)?; } }
+                Instr::Pay { payer, each, paid, .. } => {
+                    for scalar in payer.scalars().into_iter().chain(each.iter().flat_map(expr::Amount::scalars)) { if let Scalar::Local { slot, kind } = scalar { need(&kinds, slot, kind)?; } }
                     make(&mut kinds, *paid, Kind::Consent)?;
                 }
                 Instr::Permit { player, cards, .. } => {
@@ -953,7 +953,7 @@ impl fmt::Display for Instr {
             Instr::Explore { objects } => write!(f,"{objects:?} explore"),
             Instr::Arrange { players, verb, amount, .. } => write!(f, "{players:?} {verb:?} {amount:?}"),
             Instr::Place { objects, position, order, .. } => write!(f, "place {objects:?} {position:?} {order:?}"),
-            Instr::Pay { payer, cost, paid } => write!(f, "s{paid} = {payer:?} may pay {cost:?}"),
+            Instr::Pay { payer, cost, each, paid } => write!(f, "s{paid} = {payer:?} may pay {cost:?} each {each:?}"),
             Instr::Permit { player, cards, play, until } => write!(f, "{player:?} may {} {cards:?} until {until:?}", if *play { "play" } else { "cast" }),
             Instr::Cast { player, cards, offered, costs, cast, possible, from, rider, .. } => write!(f, "#{offered}, s{cast}, s{possible} = {player:?} casts of {cards:?} from {from:?} now, for {costs:?}, carrying {rider:?}, or declines"),
             Instr::ChangeTargets { object, policy } => write!(f, "change {object:?} targets: {policy:?}"),
@@ -1975,7 +1975,7 @@ fn choose_protection_color(e: &mut Emit, binder: &mut Binder, action: &Action) -
 /// What "[do this] unless [a player does that]" asks of the player (118.12a): a cost of mana
 /// and life, paid as a whole, or one action of objects that player chooses, done or not.
 enum Unless {
-    Cost(ir::Cost),
+    Cost { said: ir::Cost, each: Option<Amount> },
     Objects(Action),
 }
 
@@ -1994,7 +1994,7 @@ impl Unless {
             Action::PayLife(_) | Action::Waterbend(_) => Ok(ir::CostPart::Action(a.clone())),
             _ => unsupported("unless: a payment other than mana, life or a waterbend cost"),
         }).collect::<Res<Vec<_>>>()?;
-        Ok(Unless::Cost(ir::Cost(parts)))
+        Ok(Unless::Cost { said: ir::Cost(parts), each: None })
     }
 }
 
@@ -2619,11 +2619,13 @@ impl Emit {
         }
         let (paid, possible) = (self.slot(), self.slot());
         match said {
-            Unless::Cost(said) => {
+            Unless::Cost { said, each } => {
                 let cost = crate::cost::Plan::compile(&said, support)?;
                 if cost.x() > 0 && !support.x_available() { return unsupported("unless payment has no bound X"); }
                 if !cost.phyrexian().is_empty() { return unsupported("unless payment of Phyrexian mana"); }
-                self.instrs.push(Instr::Pay { payer, cost, paid });
+                let each = each.as_ref().map(|n| quantity(n, support, binder)).transpose()?;
+                if each.is_some() { cost.clone().repeated_generic(1)?; }
+                self.instrs.push(Instr::Pay { payer, cost, each, paid });
             }
             Unless::Objects(action) => {
                 let instruction = match &action {
@@ -4670,10 +4672,16 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 ir::effect::Modifier::WhereX(n) if x.is_none() => x = Some(n),
                 // "investigate twice": the keyword action done that many times (701.16a)
                 ir::effect::Modifier::Times(Amount::Const(_)) if matches!(act.action, Action::Keyword(ir::KeywordAction::Investigate | ir::KeywordAction::ManifestDread)) => {},
-                ir::effect::Modifier::ForEach(n) if each.is_none() && (lasting || matches!(act.action, Action::AddMana(_) | Action::AddAdditionalMana(_) | Action::Draw(_) | Action::Mill(_) | Action::GainLife(_) | Action::LoseLife(_) | Action::DealDamage(_) | Action::PutCounters(_) | Action::GetCounters { .. } | Action::Create(_))) => each = Some(n),
+                ir::effect::Modifier::ForEach(n) if each.is_none() && (lasting || matches!(act.action, Action::Counter(_) | Action::AddMana(_) | Action::AddAdditionalMana(_) | Action::Draw(_) | Action::Mill(_) | Action::GainLife(_) | Action::LoseLife(_) | Action::DealDamage(_) | Action::PutCounters(_) | Action::GetCounters { .. } | Action::Create(_))) => each = Some(n),
                 // a modifier the engine does not follow is refused with the act it is said of
                 _ => return unsupported(format!("modifier: {} of {}", crate::select::name(modifier), crate::select::name(&act.action))),
             }
+        }
+        if matches!(act.action, Action::Counter(_)) && let Some(n) = each.take() {
+            let Some((_, Unless::Cost { each, .. })) = &mut unless else {
+                return unsupported("for-each counter: a generic unless-payment required");
+            };
+            *each = Some(n.clone());
         }
         e.unless_said = unless;
         // Counts needed during announcement use the same declared expression, before costs.
@@ -5091,7 +5099,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             // Only Did/Didnt are admitted for mana payments; both read `paid`.
             // Couldnt is refused above rather than fabricating a feasibility result.
             binder.outcome = Some((payer.clone(), paid, paid, e.instrs.len()));
-            e.instrs.push(Instr::Pay { payer, cost, paid });
+            e.instrs.push(Instr::Pay { payer, cost, each: None, paid });
             e.end_act(false, optional_branch);
             continue;
         }
@@ -7356,7 +7364,7 @@ fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt> {
             for card in all { game.revoke(player, card); }
             f.cast_origins.retain(|(slot, _, _)| slot != offered);
         }
-        Instr::Pay { payer, cost, paid } => {
+        Instr::Pay { payer, cost, each, paid } => {
             let outcome = |f: &mut Frame, made: bool| {
                 f.slots[*paid] = Some(Value::Consent(made));
             };
@@ -7371,6 +7379,7 @@ fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt> {
             let Some(player) = action::players(game, f, payer).first().copied() else { outcome(f, false); return Ok(()) };
             let source = f.ctx.object_source();
             let cost = if cost.x()>0 { cost.clone().announced(f.ctx.x).map_err(crate::Unsupported)? } else { cost.clone() };
+            let cost = match each { Some(n) => cost.repeated_generic(n.checked(game, &f.ctx, f)?)?, None => cost };
             let mana = cost.mana();
             // life is paid only by a player whose life total is at least that (119.4)
             let Some(life) = cost.life(game, &f.ctx).filter(|life| game.can_pay_life(player, *life)) else { outcome(f, false); return Ok(()) };

@@ -600,6 +600,23 @@ impl Plan {
     pub(crate) fn mana(&self) -> ManaCost {
         ManaCost(self.parts.iter().flat_map(|p| if let Part::Mana(mana) = p { mana.0.clone() } else { Vec::new() }).collect())
     }
+    /// A plain generic-mana payment repeated by an effect's evaluated count. This
+    /// changes the locked payment, without assigning a value to the spell's X.
+    pub(crate) fn repeated_generic(mut self, count: u32) -> Res<Self> {
+        if !self.choices.is_empty() || self.parts.iter().any(|part|
+            !matches!(part, Part::Mana(mana) if mana.0.iter().all(|s| matches!(s, ManaSymbol::Generic(_))))) {
+            return unsupported("repeated payment: only fixed generic mana is implemented");
+        }
+        for part in &mut self.parts {
+            if let Part::Mana(mana) = part {
+                for symbol in &mut mana.0 {
+                    let ManaSymbol::Generic(n) = symbol else { unreachable!("validated generic payment") };
+                    *n = n.checked_mul(count).ok_or_else(|| crate::Unsupported("repeated payment exceeds the engine integer representation".into()))?;
+                }
+            }
+        }
+        Ok(self)
+    }
     /// The life the cost has its payer pay (119.4), as the game now is; `None` past what the
     /// engine counts in, which is more than any life total it holds, never wrapped or clamped.
     pub(crate) fn life(&self, game: &Game, ctx: &Ctx) -> Option<u32> {
