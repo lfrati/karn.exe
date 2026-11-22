@@ -25,9 +25,12 @@ pub(crate) fn spell_instructions(a: &Ability) -> bool {
 
 pub(crate) fn stack_static(a: &Ability) -> bool {
     let Some(s) = crate::statement::read(a) else { return false };
-    matches!(s.subject, ir::Subject::Selector(selector) if selector.quant == Quant::Definite(Ref::This))
-        && !s.acts.is_empty()
-        && s.acts.iter().all(|(action, _, scale)| {
+    if !matches!(s.subject, ir::Subject::Selector(selector) if selector.quant == Quant::Definite(Ref::This))
+        || s.acts.is_empty() { return false; }
+    // A self-grant of a casting modifier functions only on the stack (113.6e).
+    s.acts.iter().any(|(action, _, _)| matches!(action, Action::Gains(granted)
+        if granted.iter().any(|g| matches!(g, ir::action::Granted::Keyword(k) if k.keyword.name() == "Flash"))))
+        || s.acts.iter().all(|(action, _, scale)| {
             *scale == crate::statement::Scale::Once
                 && matches!(action, Action::Cant(items) if !items.is_empty() && items.iter().all(|item|
                     item.within.is_none() && matches!(&item.event, ir::EventAction::Deed(d)

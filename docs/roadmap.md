@@ -55,11 +55,13 @@ including token entry and expired copies. Eight focused rules regressions and th
 regressions cover the repair. Copy exceptions use a separate rebuilding path whose Room
 halves defect is tracked in [#33](https://github.com/lfrati/karn.exe/issues/33).
 
-**Next: fix [#5, conditional self-flash](https://github.com/lfrati/karn.exe/issues/5).**
-The remaining core correctness queue then proceeds through:
+[#5, conditional self-flash](https://github.com/lfrati/karn.exe/issues/5), is implemented:
+casting reads the lowered self-grant condition before payment, while its granting ability
+functions only on the stack. The #4/#5 batch passes the full repository check; all 32,872
+admission rows are unchanged.
 
-1. [#6: Adventure replacement choice and permission](https://github.com/lfrati/karn.exe/issues/6).
-2. [#7: cost-reveal lifetime](https://github.com/lfrati/karn.exe/issues/7).
+**Next: fix [#6, Adventure replacement choice and permission](https://github.com/lfrati/karn.exe/issues/6),**
+then [#7, cost-reveal lifetime](https://github.com/lfrati/karn.exe/issues/7).
 
 Fix these shared mechanisms or explicitly refuse the unsupported behavior before adding
 coverage.

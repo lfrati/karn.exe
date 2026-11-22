@@ -1760,7 +1760,14 @@ impl Game {
         if sneak && !self.sneak_timing(player) {
             return Err("a sneak cost is paid only during your declare blockers step (702.190a)".into());
         }
-        if !offered && !sneak && !(def.is(CardType::Instant) && !def.is(CardType::Sorcery)) && !crate::keyword::of(def).any(|k| k.name() == "Flash") && !self.casting_as_though_flash(player, card, cast_as, x) && !self.sorcery_timing(player) {
+        // 601.3d checks a conditional self-grant before costs or mana abilities;
+        // the granting static itself still functions only on the stack (113.6e).
+        let self_flash = || {
+            let ctx = Ctx { casting: Some((card, cast_as)), x, ..Ctx::for_spell(player, card) };
+            def.characteristics.iter().any(|row| row.result.as_ref().is_ok_and(|statement|
+                statement.self_flash(self, &ctx.clone().with_ability(row.ability))))
+        };
+        if !offered && !sneak && !(def.is(CardType::Instant) && !def.is(CardType::Sorcery)) && !crate::keyword::of(def).any(|k| k.name() == "Flash") && !self.sorcery_timing(player) && !self.casting_as_though_flash(player, card, cast_as, x) && !self_flash() {
             return Err("that is cast in a main phase of your own turn with the stack empty (117.1a)".into());
         }
         // a legendary instant or sorcery is cast only by a player who controls a legendary

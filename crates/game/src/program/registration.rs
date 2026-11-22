@@ -437,6 +437,14 @@ impl Characteristic {
         })())
     }
 
+    /// Whether this object's own statement grants it flash as casting begins (601.3d).
+    /// This tests the lowered condition without making the ability function in hand.
+    pub(crate) fn self_flash(&self, game: &Game, ctx: &Ctx) -> bool {
+        self.subject == Subject::Source && self.acts.iter().any(|(when, _, changes)|
+            changes.iter().any(|change| matches!(change, Change::Fixed(crate::layers::Change::Gains(keywords))
+                if keywords.iter().any(|held| held.keyword.name() == "Flash"))) && when.holds(game, ctx))
+    }
+
     /// Colors stated by a characteristic-defining ability, including outside games (903.4).
     pub(crate) fn defined_colors(&self) -> impl Iterator<Item = ir::Color> + '_ {
         self.acts.iter().flat_map(|(_, _, changes)| changes).flat_map(|change| match change {
