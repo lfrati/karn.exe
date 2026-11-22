@@ -247,3 +247,11 @@ fn r700_2_choice_header_is_not_object_ellipsis() {
     read("An opponent chooses one —");
     declines("You choose one —");
 }
+
+/// CR 602.2b: source-qualified activation cost rules use one static representation.
+#[test]
+fn r602_2b_activation_cost_source_alias() {
+    let (of, _) = read("Activated abilities of creatures you control cost {2} less to activate.");
+    let (from, _) = read("Activated abilities from creatures you control cost {2} less to activate.");
+    assert_eq!(of, from);
+}

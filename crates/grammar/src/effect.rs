@@ -834,13 +834,16 @@ fn build() -> Effects {
         |b: &Body| except_last(b).then(|| (b.first.clone(), b.rest.clone())),
     );
     let c = conditions();
-    let wrap = |p: P<Body>, mk: fn(Body) -> Sentence, un: fn(&Sentence) -> Option<&Body>| {
-        p.map(move |b| Some(mk(b)), move |x| un(x).cloned())
-    };
-    let plain = wrap(body.clone(), Sentence::Do, |x| match x {
-        Sentence::Do(b) => Some(b),
-        _ => None,
-    });
+    let plain = body.map(
+        |body| Some(match crate::statics::ability_cost_sentence(&body) {
+            Some(rule) => Sentence::Static(Box::new(rule)),
+            None => Sentence::Do(body),
+        }),
+        |s| match s {
+            Sentence::Do(body) if crate::statics::ability_cost_sentence(body).is_none() => Some(body.clone()),
+            _ => None,
+        },
+    );
 
     let restrictions = lit("activate").then_keep(&c.restrictions).map(
         |r| Some(Sentence::Restrictions(r)),

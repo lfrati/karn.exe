@@ -875,6 +875,28 @@ pub fn static_act(form: Form) -> P<Action> {
     )
 }
 
+/// Source-qualified activation costs have one representation, whether the source is said
+/// with "of" or "from" (602.2b). Other subject/action compositions stay ordinary bodies.
+pub(crate) fn ability_cost_sentence(body: &Body) -> Option<Static> {
+    let c = &body.first;
+    if c.may || c.also || !c.rest.is_empty() || !body.rest.is_empty()
+        || c.first.may || !c.first.mods.is_empty() { return None; }
+    let Some(ir::Subject::Set(set)) = &c.subject else { return None };
+    let (Some(kind), source) = crate::selector::ability_source(set)? else { return None };
+    let kind = match kind {
+        ir::selector::AbilityKind::Activated => AbilityKind::Activated,
+        ir::selector::AbilityKind::Triggered => AbilityKind::Triggered,
+        ir::selector::AbilityKind::Loyalty => AbilityKind::Loyalty,
+        ir::selector::AbilityKind::Mana => return None,
+    };
+    let Action::Static(action) = &c.first.action else { return None };
+    let StaticAct::CostChange { more, by, of: CostOf::Activate } = action.as_ref() else { return None };
+    Some(Static::ActivatedAbilities {
+        of: AbilitiesOf::Of { kind, of: ir::Coord::one(Who::Set(source.clone())) },
+        rule: AbilityRule::CostChange { more: *more, by: by.clone() }, this_turn: false,
+    })
+}
+
 /// Static sentences around a body (the effect grammar's, passed in).
 pub fn sentence(body: &P<Body>) -> P<Static> {
     let c = conditions();

@@ -1505,6 +1505,19 @@ fn player_measures(n: Number, sel: &P<Selector>) -> P<Filter> {
     )
 }
 
+/// The ability class and source of an otherwise unqualified ability description (113.7a).
+pub(crate) fn ability_source(set: &ObjectSet) -> Option<(Option<ir::selector::AbilityKind>, &ObjectSet)> {
+    if *set != (ObjectSet { filter: set.filter.clone(), ..ObjectSet::of(Domain::Ability) }) { return None; }
+    match &set.filter {
+        Filter::All(parts) => match parts.as_slice() {
+            [Filter::Atom(Atom::Source(source))] => Some((None, source)),
+            [Filter::Atom(Atom::AbilityKind(kind)), Filter::Atom(Atom::Source(source))] => Some((Some(*kind), source)),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
 /// "from an artifact", "from artifact sources", "from a noncreature source": the source of an
 /// ability (CR 113.7a), one object or all of a kind by the ability's number. "Activated
 /// abilities of artifacts" is the possessor's own construction (statics, effects), not this.

@@ -20,7 +20,7 @@ use ir::event::{Arg, CounterNth, Deed, During, Quantity, Tense, Time, ZoneArg};
 use ir::lexicon::{Inflection, Role, Verb};
 use ir::selector::{Anaphor, Status};
 use ir::{
-    Condition, Domain, ObjectSet, Predicate, Ref, Atom, Filter, Amount, Count, DamageKind, EventAction, EventCause, EventPattern, Quant, Selector, Step, StepOwner, Trigger, TriggerWord, Zone,
+    Condition, Domain, ObjectSet, Predicate, Ref, Amount, Count, DamageKind, EventAction, EventCause, EventPattern, Quant, Selector, Step, StepOwner, Trigger, TriggerWord, Zone,
     ZoneSpec,
 };
 
@@ -334,24 +334,13 @@ fn only_object(a: &EventAction) -> Option<(Verb, &Selector)> {
 
 /// Both ways of naming one source's ability share the existing activation-event value (602.2).
 fn deed_with_object(verb: Verb, what: Selector) -> EventAction {
-    if verb == Verb::Activate
-        && what.quant == Quant::Indefinite(Count::Exactly(Amount::Const(1)))
+    if verb == Verb::Activate && what.quant == Quant::Indefinite(Count::Exactly(Amount::Const(1)))
         && what.chooser.is_none() && what.random.is_none()
-        && what.set == (ObjectSet { filter: what.set.filter.clone(), ..ObjectSet::of(Domain::Ability) })
+        && let Some((kind @ (None | Some(ir::selector::AbilityKind::Loyalty)), source)) = crate::selector::ability_source(&what.set)
     {
-        let source = match &what.set.filter {
-            Filter::All(parts) => match parts.as_slice() {
-                [Filter::Atom(Atom::Source(source))] => Some((false, source)),
-                [Filter::Atom(Atom::AbilityKind(ir::selector::AbilityKind::Loyalty)), Filter::Atom(Atom::Source(source))] => Some((true, source)),
-                _ => None,
-            },
-            _ => None,
+        return EventAction::ActivatesAbilityOf {
+            loyalty: kind.is_some(), of: Box::new(Selector::new(what.quant, source.clone())),
         };
-        if let Some((loyalty, source)) = source {
-            return EventAction::ActivatesAbilityOf {
-                loyalty, of: Box::new(Selector::new(what.quant, (**source).clone())),
-            };
-        }
     }
     EventAction::does(verb, what)
 }
