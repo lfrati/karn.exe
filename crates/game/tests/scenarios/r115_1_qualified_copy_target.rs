@@ -25,8 +25,8 @@ fn r115_1c_daretti_copies_one_artifact_from_either_zone_without_copying_state() 
         let activate = |target| Move::Activate {
             source: daretti, ability: 2, targets: vec![vec![Target::Object(target)]], paying: vec![],
         };
-        let bad = g.act(0, activate(nonartifact));
-        cite!(["115.1c", "602.2b"]; case: format!("{zone:?}"); assert!(bad.is_err(), "{bad:?}"));
+        cite!(["115.1c", "602.2b"]; case: format!("{zone:?}");
+            refused("an illegal target, Grizzly Bears:"): g.act(0, activate(nonartifact)));
         assert_eq!(g.obj(daretti).counters.get("loyalty"), Some(&7));
         g.act(0, activate(artifact)).unwrap();
         cite!(["606.4"]; case: format!("{zone:?}"); assert_eq!(g.obj(daretti).counters.get("loyalty"), Some(&1)));
