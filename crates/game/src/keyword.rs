@@ -434,6 +434,7 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if let Some(ability) = affinity(item) { return Some(ability); }
     if let Some(ability) = cumulative_upkeep(item) { return Some(ability); }
     if let Some(ability) = bloodthirst(item) { return Some(ability); }
+    if let Some(ability) = fabricate(item) { return Some(ability); }
     if let Some(ability) = bushido(item) { return Some(ability); }
     if let Some(ability) = soulshift(item) { return Some(ability); }
     if let Some(ability) = renown(item) { return Some(ability); }
@@ -699,6 +700,16 @@ fn vanishing(item: &ir::token::KeywordInstance) -> Option<Vec<Ability>> {
         abilities.insert(0, entry);
     }
     Some(abilities)
+}
+
+/// 702.123a: the choice is made on resolution. The ordinary optional action
+/// falls through to Servos when counters cannot be put on the source.
+fn fabricate(item: &ir::token::KeywordInstance) -> Option<Ability> {
+    if item.keyword.name() != "Fabricate" { return None; }
+    let KeywordParam::Number(ir::Amount::Const(n)) = item.param else { return None };
+    let (number, plural) = if n == 1 { ("a".to_owned(), "") } else { (n.to_string(), "s") };
+    let text = format!("When this permanent enters, you may put {number} +1/+1 counter{plural} on this permanent. If you don't, create {number} 1/1 colorless Servo artifact creature token{plural}.");
+    CardDef::new("Fabricate rule", "", "Creature", &text, None).ok()?.abilities.into_iter().next()
 }
 
 /// 702.43a: transfer the actual last-known counters, independently of printed N.

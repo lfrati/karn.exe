@@ -6840,7 +6840,7 @@ pub fn compile(effect: &Effect, game: &Game, ctx: &Ctx) -> Res<Program> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Request { Action(crate::perform::Action), Place(Vec<ObjId>) }
 impl Request {
-    fn possible(&self, game: &Game) -> bool { match self { Self::Action(a) => a.possible(game), Self::Place(cards) => !cards.is_empty() } }
+    fn possible(&self, game: &Game, payment: bool) -> bool { match self { Self::Action(a) => a.possible(game, payment), Self::Place(cards) => !cards.is_empty() } }
     fn retain_players(&mut self, accepted: &[PlayerId]) { if let Self::Action(a) = self { a.retain_players(accepted); } }
     fn draw_count(&mut self, player: PlayerId, count: u32) {
         let Self::Action(crate::perform::Action::Players { kind: crate::perform::PlayerAction::Draw, players }) = self else { unreachable!("numeric attempt owns a draw request") };
@@ -7224,7 +7224,7 @@ fn offer(game: &Game, f: &mut Frame, attempt: Option<&Attempt>, created: Option<
         _ => unreachable!("ordinary action resumes its own decision"),
     };
     if let Some(attempt) = attempt {
-        let possible = request.possible(game);
+        let possible = request.possible(game, attempt.payment || attempt.cost);
         if possible && attempt.optional {
             while cursor < players.len() {
                 match answer.take() {

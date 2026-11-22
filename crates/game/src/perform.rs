@@ -80,14 +80,20 @@ impl Action {
     }
     /// Can this evaluated action be chosen as an optional instruction/payment? (608.2d,
     /// 118.12). Drawing from an empty library is explicitly possible (121.3).
-    pub(crate) fn possible(&self, game: &Game) -> bool {
+    pub(crate) fn possible(&self, game: &Game, payment: bool) -> bool {
         match self {
             // no more cards can be milled than the library has (701.17b)
             Self::Players { kind: PlayerAction::Mill, players } => !players.is_empty()
                 && players.iter().all(|(p, count)| game.players[*p].library.len() >= *count as usize),
             Self::Players { players, .. } => !players.is_empty(),
             Self::Create(_) => true,
-            Self::PutCounters(batch) => !batch.is_empty(),
+            Self::PutCounters(batch) => {
+                // Referenced payments require the full action (118.3/118.12);
+                // standalone optional effects may happen in part (609.3).
+                let legal = |p: &Placement| game.holds_counters(p.on)
+                    && (p.count == 0 || game.may_place(p.on, &p.kind, p.by));
+                !batch.is_empty() && if payment { batch.iter().all(legal) } else { batch.iter().any(legal) }
+            },
             // Optional removal cannot choose an impossible full removal (608.2d/118.12).
             // Mandatory effects still use run()'s partial-removal rule (609.3).
             Self::RemoveCounters { from, counters } => !from.is_empty() && from.iter().all(|holder|
