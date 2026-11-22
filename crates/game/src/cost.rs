@@ -79,6 +79,8 @@ enum Objects { Source(Option<Candidates>), Choose { selection: Selection, among:
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Selection {
     Exact(usize),
+    /// Any subset up to the stated maximum; zero remains a valid choice.
+    UpTo(usize),
     /// Any number of candidates whose union contains at least this many card types.
     CardTypesAtLeast { minimum: u32, types: Vec<(ObjId, u16)> },
     /// Any number of candidates with total power this or greater (702.122a), each candidate's
@@ -96,6 +98,7 @@ impl Selection {
     pub fn accepts(&self, cards: &[ObjId]) -> bool {
         match self {
             Self::Exact(n) => cards.len() == *n,
+            Self::UpTo(n) => cards.len() <= *n,
             Self::CardTypesAtLeast { minimum, types } =>
                 types.iter().filter(|(o,_)| cards.contains(o)).fold(0u16, |mask,(_,bits)| mask | bits).count_ones() >= *minimum,
             Self::PowerAtLeast { minimum, powers } =>
@@ -108,6 +111,7 @@ impl Selection {
     pub(crate) fn evaluated(&self, game: &Game, ctx: &Ctx, among: &[ObjId]) -> Self {
         match self {
             Self::Exact(n) => Self::Exact(*n),
+            Self::UpTo(n) => Self::UpTo(*n),
             Self::CardTypesAtLeast { minimum, .. } => Self::CardTypesAtLeast { minimum: *minimum,
                 types: among.iter().map(|o| (*o, expr::card_type_mask(game, ctx, *o))).collect() },
             Self::PowerAtLeast { minimum, .. } => {
@@ -853,6 +857,7 @@ impl Plan {
                                     if returns_attacker(game, ctx, *verb) { return Err(returned_count(game, selected.len())); }
                                     return Err(match evaluated {
                                         Selection::Exact(n) => format!("that selection does not satisfy the cost, which asks for exactly {n} {}: {} chosen (601.2h, {rule})", if !legal.is_empty() && legal.iter().all(|o| game.obj(*o).zone == crate::Zone::Battlefield) { "permanent(s)" } else { "card(s)" }, selected.len()),
+                                        Selection::UpTo(n) => format!("that selection exceeds the maximum of {n}: {} chosen (601.2h)", selected.len()),
                                         Selection::CardTypesAtLeast { minimum, .. } => format!("that selection does not satisfy the cost: the chosen cards have fewer than {minimum} card types among them (601.2h, {rule})"),
                                         Selection::PowerAtLeast { minimum, .. } => format!("that selection does not satisfy the cost: the chosen creatures have total power less than {minimum} (601.2h)"),
                                         Selection::ManaValueAtLeast { minimum, .. } => format!("that selection does not satisfy the cost: the chosen cards have total mana value less than {minimum} (601.2h, 701.59a)"),

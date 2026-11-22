@@ -20,6 +20,7 @@ use ir::event::{Arg, DamageKind, EventAction, EventPattern, Step, StepOwner, Tri
 use ir::effect::Modifier;
 use ir::{Ability, Amount, CardType, Condition, Count, Lead, Part, Quant, Ref, Role, Selector, Sentence, SubjectIs, Verb};
 
+
 /// One thing that happened, or that would happen, in the lexicon's terms: the action, who
 /// did it, and what filled its roles. `was`: an object that left the battlefield in it, to be
 /// described as it last was. What a trigger watches for and what a prohibition forbids
@@ -917,7 +918,21 @@ enum Watch {
     Chapter(Vec<u32>),
 }
 
+#[derive(Clone, Copy)]
+enum Interest { Event(Verb), Step, State }
+
 impl Watch {
+    /// Reject unrelated subscriptions before constructing occurrence contexts or
+    /// querying the source's controller. This reads only the compiled pattern.
+    fn interested(&self, interest: Interest) -> bool {
+        match (self, interest) {
+            (Self::Any(watches), kind) => watches.iter().any(|watch| watch.interested(kind)),
+            (Self::Event(pattern), Interest::Event(verb)) => pattern.actions.iter().any(|action| action.verb == verb),
+            (Self::Chapter(_), Interest::Event(Verb::PutCounters)) => true,
+            (Self::Step { .. }, Interest::Step) | (Self::State { .. }, Interest::State) => true,
+            _ => false,
+        }
+    }
     fn self_connive(&self)->bool {match self {
         Self::Event(p)=>p.subjects==[Noun::This], Self::Any(w)=>w.iter().any(Self::self_connive), _=>false
     }}
@@ -1296,11 +1311,7 @@ impl Game {
     /// The triggered abilities this object has that the engine watches for, each with its
     /// key: those of its own definition, and those effects give it now or had given it as
     /// it last existed (603.10a), each giving its own instance.
-    fn watching(&self, source: ObjId, membership_changed: bool) -> Vec<(AbilityKey, &Template)> {
-        self.watching_before(source, membership_changed, None)
-    }
-
-    fn watching_before(&self, source: ObjId, membership_changed: bool, before: Option<&crate::layers::Working>) -> Vec<(AbilityKey, &Template)> {
+    fn watching_before(&self, source: ObjId, membership_changed: bool, before: Option<&crate::layers::Working>, interest: Interest) -> Vec<(AbilityKey, &Template)> {
         #[cfg(feature = "profile")]
         let _profile = crate::profile::span(crate::profile::Scope::Watchers);
         #[cfg(feature = "profile")]
@@ -1310,7 +1321,8 @@ impl Game {
             None => self.origins(source, View::Effective { membership_changed }),
         };
         origins.into_iter()
-            .flat_map(|(origin, def)| watched(def).map(move |(index, t)| (AbilityKey { origin: origin.clone(), index }, t)))
+            .flat_map(|(origin, def)| watched(def).filter(move |(_, t)| t.watch.interested(interest))
+                .map(move |(index, t)| (AbilityKey { origin: origin.clone(), index }, t)))
             .collect()
     }
 
@@ -1509,11 +1521,13 @@ impl Game {
                 .filter(|o| self.obj(*o).arrived.is_none_or(|from| from < at)).collect();
             if let Event::Began { part } = e {
                 for source in self.battlefield.iter().chain(&emblems).chain(&graveyards).copied().collect::<Vec<_>>() {
+                    let watching = self.watching_before(source, membership_changed, None, Interest::Step);
+                    if watching.is_empty() { continue; }
                     let controller = self.controller(source);
                     let ctx = Ctx::new(controller, source);
-                    for (key, template) in self.watching(source, membership_changed) {
+                    for (key, template) in &watching {
                         let (ctx, AbilityKey { origin, index }) = (ctx.clone().with_key(key.clone()), key.clone());
-                        if self.functions_as(source, key) && template.watch.begins(self, &ctx, *part) && template.holds(self, &ctx) && template.take(self, &ctx, &mut uses) {
+                        if self.functions_as(source, key.clone()) && template.watch.begins(self, &ctx, *part) && template.holds(self, &ctx) && template.take(self, &ctx, &mut uses) {
                             // the step is the active player's: "that player"
                             let mut bound = Bound::default();
                             bound.inputs.push((crate::program::input::Input::Subject, vec![Target::Player(self.active)]));
@@ -1558,11 +1572,13 @@ impl Game {
                 // what connived or explored and left: its own "whenever this …" sees it (701.44c)
                 if let Event::Connived{object,..} | Event::Explored{object,..}=e && self.obj(*object).zone==Zone::Gone {sources.push(*object);}
                 for source in sources {
+                    let watching = self.watching_before(source, membership_changed, before, Interest::Event(fact.verb));
+                    if watching.is_empty() { continue; }
                     let controller = before.and_then(|view| view.get(source))
                         .map_or_else(|| self.controller(source), |seen| seen.controller);
                     let occurrence = Ctx::new(controller, source);
                     let ctx = Ctx { view: before, ..occurrence.clone() };
-                    for (key, template) in self.watching_before(source, membership_changed, before) {
+                    for (key, template) in &watching {
                         let (ctx, AbilityKey { origin, index }) = (ctx.clone().with_key(key.clone()), key.clone());
                         let departed_conniver=matches!(e,Event::Connived{object,..} | Event::Explored{object,..} if *object==source && self.obj(source).zone==Zone::Gone);
                         if (!departed_conniver || template.watch.self_connive()) && self.functions_as(source, key.clone())
@@ -1575,13 +1591,13 @@ impl Game {
                                 // what the phrase said tells batches apart; of what it left
                                 // unsaid ("dealt damage" by whichever sources) each is kept
                                 let said = (matched.action, matched.participants[..matched.said].to_vec());
-                                if let Some((_, _, _, _, index)) = grouped.iter().find(|(o, k, b, others, _)| *o == source && *k == key && *b == batch && *others == said) {
+                                if let Some((_, _, _, _, index)) = grouped.iter().find(|(o, k, b, others, _)| *o == source && k == key && *b == batch && *others == said) {
                                     join_batch(&mut found[index.clone()], &matched, &fact, &bound);
                                     continue;
                                 }
                                 grouped.push((source, key.clone(), batch, (matched.action, matched.participants[..matched.said].to_vec()), found.len()..found.len()));
                             }
-                            let trigger = Triggered { source: Some(source), controller, origin, index, bound, delayed: None, captured: Some(crate::program::capture(self, occurrence.clone().with_key(key))) };
+                            let trigger = Triggered { source: Some(source), controller, origin, index, bound, delayed: None, captured: Some(crate::program::capture(self, occurrence.clone().with_key(key.clone()))) };
                             if !template.take(self, &ctx, &mut uses) {
                                 if template.watch.grouped() { grouped.pop(); }
                                 if let Some(limit) = template.limit && let Some(used) = crate::ability_limit::Use::of(&ctx, limit) {
@@ -1658,9 +1674,11 @@ impl Game {
         // State triggers (603.8): each triggers as soon as the game is as it says, and not
         // again while it waits to be put on the stack or is there.
         for source in self.battlefield.iter().chain(&graveyards).copied().collect::<Vec<_>>() {
+            let watching = self.watching_before(source, membership_changed, None, Interest::State);
+            if watching.is_empty() { continue; }
             let controller = self.controller(source);
             let ctx = Ctx::new(controller, source);
-            for (key, template) in self.watching(source, membership_changed) {
+            for (key, template) in &watching {
                 let (ctx, AbilityKey { origin, index }) = (ctx.clone().with_key(key.clone()), key.clone());
                 if !self.functions_as(source, key.clone()) || !template.holds(self, &ctx) { continue; }
                 let Some(of) = template.watch.is_so(self, &ctx) else { continue };

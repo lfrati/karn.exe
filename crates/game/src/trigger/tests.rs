@@ -15,6 +15,18 @@ fn template(def: &CardDef) -> &Template {
     registered.result.as_ref().expect("lowered")
 }
 
+#[test]
+fn event_kind_filter_keeps_alternatives_once_in_declaration_order() {
+    let def = creature("Witness", "Whenever this creature attacks or blocks, you gain 1 life.\nWhenever this creature attacks, you gain 2 life.\nAt the beginning of your upkeep, you gain 1 life.");
+    let mut game = Game::new(vec![def], 2, 20);
+    let source = game.put(0, 0, Zone::Battlefield);
+    let rows = |interest| game.watching_before(source, false, None, interest).iter().map(|(key, _)| key.index).collect::<Vec<_>>();
+    assert_eq!(rows(Interest::Event(Verb::Attack)), [0, 1]);
+    assert_eq!(rows(Interest::Event(Verb::Block)), [0]);
+    assert_eq!(rows(Interest::Step), [2]);
+    assert!(rows(Interest::State).is_empty());
+}
+
 /// This permanent entering, under the control of the player who controls it.
 fn enters(game: &Game, object: ObjId) -> Fact {
     Fact::new(Verb::Enter, None, vec![(Role::What, Target::Object(object)), (Role::Under, Target::Player(game.controller(object)))])

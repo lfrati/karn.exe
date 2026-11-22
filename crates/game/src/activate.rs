@@ -440,6 +440,9 @@ impl Game {
                 cost_index += 1;
             }
         }
+        if payments.iter().any(|p| matches!(p, Payment::RemoveCounters { on: Target::Object(on), .. } if *on == ctx.object_source())) {
+            bound.inputs.push((crate::program::input::Input::CostSource, vec![Target::Object(ctx.object_source())]));
+        }
         // Record the actual payment, including colored/colorless restricted mana.
         let paid = crate::state::PaidMana::between(&self.players[player].pool, &left, &spent);
         // Spend mana once; the retained commitment owns the remaining parts (601.2h).

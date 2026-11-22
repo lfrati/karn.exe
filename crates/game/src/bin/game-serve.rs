@@ -408,6 +408,7 @@ fn read_mana(v: &Value) -> Result<Vec<ManaSymbol>, String> {
 fn cost_selection((among, selection): &(Vec<ObjId>, game::legal::Selection)) -> Value {
     match selection {
         game::legal::Selection::Exact(count) => json!({"among":ids(among),"count":count}),
+        game::legal::Selection::UpTo(maximum) => json!({"among":ids(among),"min":0,"max":(*maximum).min(among.len())}),
         game::legal::Selection::CardTypesAtLeast { minimum, types } => json!({"among":ids(among),"min":0,"max":among.len(),
             "card_types_at_least":minimum,"type_masks":types.iter().map(|(o,mask)|(key(*o),*mask)).collect::<std::collections::BTreeMap<_,_>>()}),
         // "with total power N or greater" (702.122a): each candidate's power now

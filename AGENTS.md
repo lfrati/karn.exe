@@ -22,6 +22,9 @@ Everything else is ordinary engineering judgment.
 
 - **Build a mechanism once, where it belongs** ([architecture map](docs/architecture-map.md)).
   A genuinely unique card may use a narrow, visible handler, held to the same tests.
+- **Keep the architecture small and coherent.** Other engines are references for mechanisms
+  and edge cases, not templates for our structure. Adapt insights into the existing owners;
+  uphold Karn's code quality even when the reference implementation does not.
 - **A grammar rule covers a family of phrasing, never one card's sentence**
   ([grammar](docs/grammar.md)).
 - **The engine evaluates one fully specified move at a time.** It never searches, lists moves,
@@ -36,6 +39,9 @@ Everything else is ordinary engineering judgment.
   Builds and tests never fetch.
 - Never copy code from another engine, and never take an expected result from one. Forge is
   GPL-3.0; this repository is MIT.
+- For card batches, trace a specific blocker's grammar, reference binding, lowering and
+  runtime in the reference engine. Identify the missing Karn mechanism, derive assertions
+  from pinned sources, implement it in its owner, then rescan and report compilation gains.
 
 ## Checks
 

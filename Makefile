@@ -56,8 +56,8 @@ PROFILE_ARGS ?=
 .PHONY: profile
 profile:
 	cargo build --release --target-dir target/profile -p game --bin game-serve --features profile
-	$(PYTHON) scripts/perf_replay.py $(PROFILE_TRACE) --engine target/profile/release/game-serve \
-		--profile-dir .cache/performance/profile --output .cache/performance/profile/report.json $(PROFILE_ARGS)
+	$(PYTHON) scripts/perf_core.py --trace $(PROFILE_TRACE) --engine target/profile/release/game-serve \
+		--build-profile release+profile --output .cache/performance/profile/report.json $(PROFILE_ARGS)
 
 # Engine-only supplied-action throughput and typed observations; discovery diagnostics are skipped.
 # All recorded complete-game workloads by default; no player, JSON or pipe time in the loop.
@@ -66,5 +66,12 @@ CORE_ARGS ?=
 perf-core:
 	cargo build --release -p game --bin game-serve
 	$(PYTHON) scripts/perf_core.py $(CORE_ARGS)
+
+# Four-player clone/first-write, cold/warm layers and event-subscription scaling.
+SCALE_ARGS ?=
+.PHONY: perf-scale
+perf-scale:
+	cargo build --locked --release -p game --bin game-scale
+	$(PYTHON) scripts/perf_scale.py $(SCALE_ARGS)
 
 

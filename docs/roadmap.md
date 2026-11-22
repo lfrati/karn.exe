@@ -32,7 +32,76 @@ are fixed as they are found.
 
 ## The order of work
 
-Two streams, both ordered by published decks.
+### Current execution plan
+
+The [execution tracker](https://github.com/lfrati/karn.exe/issues/18) carries task status.
+The first engine/benchmark pass is implemented and validated in the current checkout:
+shared object slots, early trigger filtering, four-player scaling and typed replay
+profiling. Bounded choices and cost-source references are implemented too. These changes
+remain uncommitted; the tracker distinguishes local implementation from shipped work.
+
+**Next: fix [#1, “other” binding](https://github.com/lfrati/karn.exe/issues/1).**
+The core correctness queue then proceeds through:
+
+1. [#3: hidden optional-choice disclosure](https://github.com/lfrati/karn.exe/issues/3).
+2. [#4: Room copiable values and doors](https://github.com/lfrati/karn.exe/issues/4).
+3. [#5: conditional self-flash](https://github.com/lfrati/karn.exe/issues/5).
+4. [#6: Adventure replacement choice and permission](https://github.com/lfrati/karn.exe/issues/6).
+5. [#7: cost-reveal lifetime](https://github.com/lfrati/karn.exe/issues/7).
+
+Fix these shared mechanisms or explicitly refuse the unsupported behavior before adding
+coverage. The local bounded-choice work does not resolve #3.
+
+The next coverage candidates are:
+
+1. [#27: retained historical predicates](https://github.com/lfrati/karn.exe/issues/27),
+   with Scavenging Ooze as a witness.
+2. [#28: counter results and destination self-replacements](https://github.com/lfrati/karn.exe/issues/28),
+   with Remand and Memory Lapse. Reuse the departure work from #6 where appropriate without
+   conflating their different replacement rules.
+3. [#29: granted alternative costs](https://github.com/lfrati/karn.exe/issues/29),
+   with Snapcaster Mage.
+4. [#30: typed coin results](https://github.com/lfrati/karn.exe/issues/30),
+   with Mana Crypt.
+
+Re-rank coverage candidates against fresh blockers when the evidence justifies it. Trace
+the specific reference grammar, binding, lowering and runtime; identify Karn's missing
+producer, consumer or operation; derive assertions from pinned Oracle, rulings and CR;
+implement once in the existing owner; rescan. Broad blocker labels are not promised card
+unlocks, and another engine's structure is not a template for Karn.
+
+A batch needs full-card regressions, relevant client/visibility/suspension checks, required
+repository checks and a fresh admission report. Hot-path changes need matched before/after
+measurements. Report actual whole-card/deck compilation changes and remaining refusals,
+including any reductions needed to stop claiming unsupported cards.
+
+Supporting work is separate from that sequence: accurate ability text
+([#2](https://github.com/lfrati/karn.exe/issues/2)), native refusal integrity
+([#13](https://github.com/lfrati/karn.exe/issues/13)), MGN adapter repairs
+([#14](https://github.com/lfrati/karn.exe/issues/14)), benchmark defaults
+([#15](https://github.com/lfrati/karn.exe/issues/15)), hosting reliability
+([#20](https://github.com/lfrati/karn.exe/issues/20)) and rules-selection cache invalidation
+([#25](https://github.com/lfrati/karn.exe/issues/25)). Take them when they help the current
+batch or repair the affected interface; they are not one serial prerequisite chain.
+
+The [two effects ambiguities](https://github.com/lfrati/karn.exe/issues/16) remain a real
+grammar defect. That gate is red, so the full progress workflow is not clean. A passing
+`make check` does not establish otherwise; the ambiguities do not outrank unrelated
+demonstrated wrong play.
+
+For Commander, [#17](https://github.com/lfrati/karn.exe/issues/17) starts with a small
+representative corpus we author or can include, counting commander(s) too. A bulk archive
+is not a prerequisite, and the tournament roster and synthetic four-player benchmarks do
+not measure Commander deck coverage.
+
+Further performance work is [one profiling investigation](https://github.com/lfrati/karn.exe/issues/31).
+Selective characteristic reuse and long-turn history cost are hypotheses; implement another
+cache or index only if Karn's measurements justify a sound, small change. A measured no-go
+is a valid result.
+
+### Standing priorities
+
+Two coverage streams, ordered by the target decks. The correctness queue above comes first.
 
 ### Engine: run what is read
 
@@ -43,8 +112,8 @@ taken widest first.
 
 ### Grammar: read every card
 
-This stream goes first: a roster main deck that holds an unread card cannot run whatever the
-engine does.
+Resolve an unread phrasing family before downstream engine work for the same target cards.
+A roster main deck that holds an unread card cannot compile in full.
 
 The word where reading stops is not the unit of work. One word is the stop of many different
 phrases, and a rule written for one card's sentence is a patch. The unit is a **family**: one

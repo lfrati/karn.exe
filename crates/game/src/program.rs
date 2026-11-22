@@ -48,10 +48,11 @@ impl From<crate::Unsupported> for Halt {
 /// A typed register of a frame.
 pub type Slot = usize;
 
-/// The stable identity of a compiled program, shared by every game that runs it: a 64-bit
-/// FNV-1a digest of its canonical form ([`Program::canonical`]). The same compiled content
-/// has the same identity in every process and in every build of the same source, whatever
-/// order definitions are compiled in; changing what was compiled changes it.
+/// A diagnostic identity: the 64-bit FNV-1a digest of [`Program::canonical`]. Equal canonical
+/// text has the same identity regardless of process or compilation order. Referenced
+/// templates contribute syntax and predefined tokens their kind; this is not a transitive
+/// fingerprint of their compiled definitions or the runtime. Compiled-instance identity
+/// is [`same_instance`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ProgramId(u64);
 impl ProgramId {
@@ -2508,7 +2509,7 @@ impl Emit {
                         _ => false,
                     };
                     let max = match &selector.quant {
-                        Quant::Indefinite(Count::Exactly(Amount::Const(n))) if one_player => *n,
+                        Quant::Indefinite(Count::Exactly(Amount::Const(n)) | Count::UpTo(Amount::Const(n))) if one_player => *n,
                         _ => u32::MAX,
                     };
                     let out = self.slot();
@@ -2517,6 +2518,8 @@ impl Emit {
                 }
                 let count = match &selector.quant {
                     Quant::Indefinite(Count::Exactly(n)) => choice::Count::Exactly(quantity(n, support, binder)?),
+                    Quant::Indefinite(Count::UpTo(n)) => choice::Count::UpTo(quantity(n, support, binder)?),
+                    Quant::Indefinite(Count::AnyNumber) => choice::Count::UpTo(expr::Amount::constant(u32::MAX)),
                     Quant::All | Quant::Each => choice::Count::All,
                     _ => return unsupported("choice: cardinality not lowered"),
                 };

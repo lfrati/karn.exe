@@ -16,6 +16,9 @@ pub enum Input {
     /// producer whichever of the pattern's actions happened, whatever role it fills in each.
     Argument(usize),
     Cost(usize),
+    /// The explicitly named source of a nonmoving payment, such as removing
+    /// counters from this creature. Kept independently of selected cost groups.
+    CostSource,
     /// Defender attacked immediately before this cost was paid (702.49c).
     CostDefender(usize),
     /// The opponent chosen for a spell's gift as it was cast, an additional cost (702.174a):
@@ -162,6 +165,15 @@ fn schema(support: &Support<'_>) -> Vec<Producer> {
                 result.push(Producer { input: Input::Cost(result.len()), paid_by: Some(verb), players: false, max, standing: standing(&objects.items), said: true,
                     described: objects.items.iter().map(|s| s.set.clone()).collect() });
             }
+            let source = support.costs().into_iter().flat_map(|cost| &cost.0).find_map(|part| match part {
+                CostPart::Action(ir::Action::RemoveCounters { from: Some(from), .. })
+                    if from.quant == Quant::Definite(Ref::This) => Some(from),
+                _ => None,
+            });
+            if let Some(source) = source {
+                result.push(Producer { input: Input::CostSource, paid_by: Some(ir::Verb::RemoveCounters), players: false, max: 1,
+                    standing: Standing::Own, said: true, described: vec![source.set.clone()] });
+            }
             // a spell's gift: "you may choose an opponent" (702.174a)
             if matches!(support.ability(), Some(Ability::Text(_))) && support.has_gift() {
                 result.push(Producer { input: Input::Gift, paid_by: Some(ir::Verb::Choose), players: true, max: 1, standing: Standing::Introduced, said: true,
@@ -280,7 +292,7 @@ impl super::expr::Binding for Binding<'_, '_> {
     }
     fn subject(&mut self, s: &Selector) -> Res<super::expr::Subject> {
         let input = resolve(self.0,s)?;
-        if matches!(input,Input::Cost(_) | Input::Gift) { return unsupported("target query: a cost result is not available during announcement"); }
+        if matches!(input,Input::Cost(_) | Input::CostSource | Input::Gift) { return unsupported("target query: a cost result is not available during announcement"); }
         Ok(super::expr::Subject::Input(input))
     }
 }

@@ -30,6 +30,10 @@ its pending decision and delivers its completed result to its immediate parent. 
 instructions are not replayed to reconstruct progress. Replacement procedures retain proposals
 and choices before commitment; triggers consume resulting events at the relevant boundary.
 
+Rollback branches share immutable object slots and copy a slot on its first write. Trigger
+delivery filters compiled subscriptions by event kind before querying occurrence context,
+using the same current or historical battlefield view as the full match.
+
 Zone changes create new object incarnations. References must distinguish current objects,
 last-known information and captured results. Continuous effects query effective characteristics
 through layers rather than overwriting printed definitions. Ordinary, partial-layer,

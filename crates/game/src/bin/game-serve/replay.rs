@@ -14,6 +14,8 @@ pub(super) enum Command {
 pub(super) struct Step { pub(super) command: Command, pub(super) viewer: Option<usize> }
 
 pub(super) fn execute(sim: &mut Simulation, command: &Command) -> Result<(), String> {
+    #[cfg(feature = "profile")]
+    let _profile = matches!(command, Command::Act { .. }).then(|| game::profile::span(game::profile::Scope::Respond));
     match command {
         Command::Act { id, player, action, random } => match random {
             Some((orders, keep_unused)) => sim.respond_with_random(*id, *player, action.clone(), orders.clone(), *keep_unused).map(|_| ()),
@@ -24,6 +26,8 @@ pub(super) fn execute(sim: &mut Simulation, command: &Command) -> Result<(), Str
     Ok(())
 }
 pub(super) fn observe(sim: &mut Simulation, viewer: Option<usize>) -> Result<(), String> {
+    #[cfg(feature = "profile")]
+    let _profile = game::profile::span(game::profile::Scope::Projection);
     black_box(sim.request().map_err(|e| e.to_string())?);
     black_box(sim.snapshot(viewer).map_err(|e| e.to_string())?);
     if let Some(seat) = viewer { black_box(sim.take_observations(seat).map_err(|e| e.to_string())?); }
@@ -126,8 +130,12 @@ pub(super) fn run(catalog: &Catalog, path: &str, runs: usize) -> Result<Value, S
     let mut seconds = Vec::new();
     let mut command_ms: BTreeMap<&str, Vec<f64>> = BTreeMap::new();
     for kind in ["act", "state"] { command_ms.insert(kind, Vec::with_capacity(steps.len() * runs)); }
+    #[cfg(feature = "profile")]
+    let mut profiles = Vec::new();
     for _ in 0..runs {
         let mut sim = initial.clone();
+        #[cfg(feature = "profile")]
+        game::profile::reset();
         let began = Instant::now();
         for step in steps.iter() {
             let command_began = Instant::now();
@@ -137,6 +145,8 @@ pub(super) fn run(catalog: &Catalog, path: &str, runs: usize) -> Result<Value, S
             command_ms.get_mut(kind).unwrap().push(command_began.elapsed().as_secs_f64() * 1000.0);
         }
         seconds.push(began.elapsed().as_secs_f64());
+        #[cfg(feature = "profile")]
+        profiles.push(game::profile::take());
         let actual = sim.snapshot(None).map_err(|e| e.to_string())?;
         if actual != expected { return Err("typed replay final snapshot changed".into()); }
     }
@@ -146,13 +156,16 @@ pub(super) fn run(catalog: &Catalog, path: &str, runs: usize) -> Result<Value, S
         samples.sort_by(f64::total_cmp);
         (kind, json!({"median_ms":samples[samples.len()/2], "p99_ms":samples[((samples.len() as f64 * 0.99).ceil() as usize - 1).min(samples.len()-1)], "max_ms":samples.last()}))
     }).collect();
-    Ok(json!({
+    let report = json!({
         "trace":path, "actions":decisions, "scope":"explicit-actions", "skipped_discovery_queries":skipped_discovery, "commands":steps.len(), "runs_seconds":seconds,
         "median_seconds":median, "command_with_observation_latency":latency, "decisions_per_second":decisions as f64/median,
         "cold_setup_seconds":cold_setup, "shared_catalog_setup_seconds":shared_setup,
         "preparation_seconds":preparation_seconds,
         "timing":"One single-threaded game: validated responses, requests, typed viewer snapshots and disclosure delivery. Predecoded actions are copied on submission. Excludes player time, JSON, pipes, compilation, setup and cloning the initial fixture. Includes recorded repeated state requests; excludes privileged audit export. Final typed snapshots agree; use perf_replay.py for full response-hash checks."
-    }))
+    });
+    #[cfg(feature = "profile")]
+    let report = { let mut report = report; report["internal_profiles"] = json!(profiles); report };
+    Ok(report)
 }
 
 #[cfg(test)]

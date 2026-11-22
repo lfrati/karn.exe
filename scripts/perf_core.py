@@ -43,6 +43,9 @@ def main():
         result = subprocess.run([str(engine), "--bench-replay", str(trace), "--runs", str(args.runs)],
                                 cwd=ROOT, check=True, capture_output=True, text=True)
         sample = json.loads(result.stdout)
+        if "internal_profiles" in sample:
+            report["instrumented"] = True
+            print("Instrumented build: timings are diagnostic; do not compare with normal builds.", flush=True)
         sample["trace_sha256"] = hashlib.sha256(trace.read_bytes()).hexdigest()
         report["workloads"].append(sample)
         latency = sample["command_with_observation_latency"].get("act", {}).get("p99_ms", 0)

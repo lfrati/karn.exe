@@ -1144,6 +1144,8 @@ impl Game {
                 (Choice::Pay { .. }, _) => return Err("submit explicit payment instructions or decline (118.12)".into()),
                 (Choice::ConstrainedObjects { among, selection, .. }, Answer::Objects(chosen))
                     if chosen.iter().enumerate().all(|(i,o)| among.contains(o) && !chosen[..i].contains(o)) && selection.accepts(chosen) => {},
+                (Choice::ConstrainedObjects { selection: crate::cost::Selection::UpTo(maximum), .. }, _) =>
+                    return Err(format!("choose up to {maximum} distinct offered objects (608.2d)").into()),
                 (Choice::ConstrainedObjects { .. }, _) => return Err("choose distinct offered cards satisfying the whole selection (701.59a)".into()),
                 (Choice::OrderCards { cards, .. }, Answer::Objects(ordered))
                     if ordered.len() == cards.len() && ordered.iter().enumerate().all(|(i, card)| cards.contains(card) && !ordered[..i].contains(card)) => {},

@@ -80,6 +80,7 @@ pub enum Of {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Count {
     Exactly(expr::Amount),
+    UpTo(expr::Amount),
     All,
     ManaValueAtLeast(expr::Amount),
 }
@@ -210,7 +211,7 @@ impl Action {
             Of::Named(objects) => objects.iter().flat_map(Operand::scalars).collect(),
         };
         let count = match &self.count {
-            Count::Exactly(n) | Count::ManaValueAtLeast(n) => n.scalars(),
+            Count::Exactly(n) | Count::UpTo(n) | Count::ManaValueAtLeast(n) => n.scalars(),
             Count::All => Vec::new(),
         };
         self.players.scalars().into_iter().chain(of).chain(count).collect()
@@ -238,7 +239,12 @@ impl Part {
     }
 
     fn short(&self) -> bool {
-        self.selection.as_ref().map_or_else(|| self.count.is_some_and(|n| self.among.len() < n), |s| !s.accepts(&self.among))
+        match &self.selection {
+            // Zero objects always satisfies an upper bound, even with a larger pool.
+            Some(crate::cost::Selection::UpTo(_)) => false,
+            Some(selection) => !selection.accepts(&self.among),
+            None => self.count.is_some_and(|n| self.among.len() < n),
+        }
     }
 }
 
@@ -301,7 +307,7 @@ impl Pending {
         let ctx = &f.ctx;
         let mut count = match &action.count {
             Count::Exactly(n) => Some(n.evaluate(game, ctx, f) as usize),
-            Count::All | Count::ManaValueAtLeast(_) => None,
+            Count::All | Count::UpTo(_) | Count::ManaValueAtLeast(_) => None,
         };
         // what the text names is what it now is (400.7e/j), where it still is that; every
         // one named is asked for, so that one departed makes the whole impossible (118.3)
@@ -344,6 +350,8 @@ impl Pending {
             };
             let selection = if let Count::ManaValueAtLeast(n) = &action.count {
                 Some(crate::cost::Selection::ManaValueAtLeast { minimum: n.evaluate(game, ctx, f), values: Vec::new() }.evaluated(game, ctx, &among))
+            } else if let Count::UpTo(n) = &action.count {
+                Some(crate::cost::Selection::UpTo((n.evaluate(game, ctx, f) as usize).min(among.len())))
             } else { None };
             Part { player, verb: action.verb, selection, chooser, among, count, chosen: None, consent: None }
         }).collect();

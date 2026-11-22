@@ -72,8 +72,9 @@ class MakeChecks(unittest.TestCase):
         result = self.run_make("profile", f"PYTHON={self.bin / 'python-check'}")
         self.assertEqual(result.returncode, 0, result.stderr)
         commands = self.log.read_text()
-        self.assertIn("perf_replay.py tests/fixtures/performance/bant-ordered-mgn.jsonl", commands)
+        self.assertIn("perf_core.py --trace tests/fixtures/performance/bant-ordered-mgn.jsonl", commands)
         self.assertIn("--engine target/profile/release/game-serve", commands)
+        self.assertIn("--build-profile release+profile", commands)
 
     def test_rust_failure_stops_before_tooling(self):
         self.env["CARGO_STATUS"] = "7"
