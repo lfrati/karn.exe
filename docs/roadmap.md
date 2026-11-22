@@ -37,17 +37,20 @@ are fixed as they are found.
 The [execution tracker](https://github.com/lfrati/karn.exe/issues/18) carries task status.
 The first engine/benchmark pass is implemented and validated in the current checkout:
 shared object slots, early trigger filtering, four-player scaling and typed replay
-profiling. Bounded choices and cost-source references are implemented too. These changes
-remain uncommitted; the tracker distinguishes local implementation from shipped work.
+profiling. Bounded choices and cost-source references are implemented too. This foundation
+pass landed in [6e28b7b](https://github.com/lfrati/karn.exe/commit/6e28b7b).
 
-**Next: fix [#1, “other” binding](https://github.com/lfrati/karn.exe/issues/1).**
+[#1, “other” binding](https://github.com/lfrati/karn.exe/issues/1), landed in
+[95ffdc3](https://github.com/lfrati/karn.exe/commit/95ffdc3), retaining created groups,
+preceding quantified sets and occurrence-specific public-zone successors.
+
+**Next: fix [#3, hidden optional-choice disclosure](https://github.com/lfrati/karn.exe/issues/3).**
 The core correctness queue then proceeds through:
 
-1. [#3: hidden optional-choice disclosure](https://github.com/lfrati/karn.exe/issues/3).
-2. [#4: Room copiable values and doors](https://github.com/lfrati/karn.exe/issues/4).
-3. [#5: conditional self-flash](https://github.com/lfrati/karn.exe/issues/5).
-4. [#6: Adventure replacement choice and permission](https://github.com/lfrati/karn.exe/issues/6).
-5. [#7: cost-reveal lifetime](https://github.com/lfrati/karn.exe/issues/7).
+1. [#4: Room copiable values and doors](https://github.com/lfrati/karn.exe/issues/4).
+2. [#5: conditional self-flash](https://github.com/lfrati/karn.exe/issues/5).
+3. [#6: Adventure replacement choice and permission](https://github.com/lfrati/karn.exe/issues/6).
+4. [#7: cost-reveal lifetime](https://github.com/lfrati/karn.exe/issues/7).
 
 Fix these shared mechanisms or explicitly refuse the unsupported behavior before adding
 coverage. The local bounded-choice work does not resolve #3.
