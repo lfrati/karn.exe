@@ -334,3 +334,14 @@ fn r107_1a_even_damage_division() {
     declines("~ deals X damage divided evenly, rounded down, among target spell.");
     declines("~ deals X damage divided evenly, rounded down, among any number of target.");
 }
+
+/// CR 110.2: passive controller modifiers describe current control, not past control.
+#[test]
+fn r110_2_passive_controller_relation() {
+    let (active, _) = read("Destroy target creature target player controls.");
+    let (passive, _) = read("Destroy target creature controlled by target player.");
+    let (past, _) = read("Destroy target creature target player controlled.");
+    assert_eq!(active, passive);
+    assert_ne!(passive, past);
+    read("At the beginning of your end step, gain control of target nonland permanent controlled by a player who was dealt combat damage by three or more Pirates this turn.");
+}
