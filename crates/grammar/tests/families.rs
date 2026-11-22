@@ -69,3 +69,13 @@ fn r606_3_scoped_activation_timing() {
         declines(text);
     }
 }
+
+/// CR 107.4b: generic mana is a cost component, not a color or type of produced mana.
+#[test]
+fn r107_4b_generic_mana_spending() {
+    let (value, _) = read("{T}: Add {W}{U}{B}{R}{G}. This mana can't be spent to pay generic mana costs.");
+    assert!(serde_json::to_string(&value).unwrap().contains("Generic"));
+    for text in ["This mana can't be spent to pay generic mana creatures.", "This mana can't be spent to cast generic mana costs."] {
+        declines(text);
+    }
+}

@@ -312,6 +312,7 @@ pub fn spend_on() -> P<SpendOn> {
     alt(
         "spend on",
         vec![
+            lit("pay generic mana costs").to(SpendOn::Generic),
             lit("cast").then_keep(&spells).map(
                 |w| Some(SpendOn::Cast(w)),
                 |u| match u {

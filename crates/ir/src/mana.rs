@@ -199,6 +199,8 @@ pub enum SpendOn {
     ActivateAnAbility(Option<crate::selector::Selector>),
     /// "on X": the part of a cost that is X (107.3).
     X,
+    /// The generic portion of a mana cost, independent of the spell or ability (107.4b).
+    Generic,
 }
 
 /// Mana in a player's mana pool (CR 106.4): what an effect that keeps or takes it away is about.
