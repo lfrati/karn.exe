@@ -34,3 +34,17 @@ fn r702_40a_the_first_spell_of_a_turn_produces_no_copies() {
     resolve(&mut g);
     cite!(["702.40a"]; assert_eq!(g.players[0].life, 23));
 }
+
+#[test]
+fn fixed_cast_count_outside_its_cast_trigger_is_refused() {
+    // Uncited (admission): other capture moments need retained values across incarnations,
+    // turns and copied spells; the ordered cast receipt alone proves the own cast trigger.
+    for (types, text) in [
+        ("Creature", "When this creature enters, you gain 1 life for each spell cast this turn as you cast Cast marker."),
+        ("Instant", "You gain 1 life for each spell cast this turn as you cast Cast marker."),
+    ] {
+        let pt = (types == "Creature").then_some((2, 2));
+        let def = game::CardDef::new("Cast marker", "{0}", types, text, pt).unwrap();
+        crate::support::refused(game::play::check(&def).map_err(|e| e.0), "fixed-at-cast spell count requires its own cast-trigger context");
+    }
+}

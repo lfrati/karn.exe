@@ -2227,7 +2227,12 @@ impl Number {
             ir::Amount::Speed(who) => Number::Speed(Subject::compile(who, bind)?),
             // an ability that asks whether its object was kicked is linked to that object's
             // kicker ability and refers to nothing else (702.33e): "it" is its source
-            ir::Amount::AsOf { amount, moment: ir::amount::Moment::Casting } if all_casts_this_turn(amount) => Number::EarlierCasts(Subject::Source),
+            ir::Amount::AsOf { amount, moment: ir::amount::Moment::Casting } if all_casts_this_turn(amount) => {
+                let own_cast = support.ability().is_some_and(|ability| matches!(ability, ir::Ability::Triggered { .. })
+                    && matches!(crate::functions::scope(ability, &[]), Ok(crate::functions::Scope::In(Zone::Stack))));
+                if !own_cast { return unsupported("fixed-at-cast spell count requires its own cast-trigger context"); }
+                Number::EarlierCasts(Subject::Source)
+            },
             ir::Amount::Times { what, fact: ir::amount::Occurrence::Replicated } if matches!(what.quant, Quant::Definite(Ref::This)) => Number::Replicated(Subject::Source),
             ir::Amount::Times { what, fact: ir::amount::Occurrence::Kicked } if matches!(what.quant, Quant::Definite(Ref::This | Ref::Anaphor(_))) => Number::Kicked(Subject::Source),
             ir::Amount::Aggregate { agg, stat, among } => {
