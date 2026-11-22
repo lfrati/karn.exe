@@ -27,6 +27,7 @@ pub(crate) mod initial;
 pub mod arrange;
 pub mod piles;
 mod value_iteration;
+mod rounding;
 pub mod search;
 pub(crate) mod registration;
 pub(crate) mod footprint;
@@ -3750,6 +3751,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             _ => false,
         }
     }
+    if expanded.0.iter().any(|s| matches!(s, Sentence::RoundEach { .. })) { rounding::apply(expanded.to_mut())?; }
     if expanded.0.iter().any(needs_quantity_lead) { quantity_leads(expanded.to_mut())?; }
     if expanded.0.iter().any(says_again) { restated(expanded.to_mut()); }
     if expanded.0.iter().flat_map(sentence_acts).any(|a| matches!(&a.action,

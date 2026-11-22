@@ -2017,6 +2017,8 @@ pub(crate) enum Number {
     /// X in an enters-the-battlefield ability of a permanent: the X of the spell it was as
     /// that spell resolved, or 0 when it was no such spell (107.3m).
     SpellX,
+    /// X announced for the source spell whose own cast caused this trigger (107.3e).
+    CastX,
 }
 
 /// The finite card-type vocabulary represented once for counts and collective costs.
@@ -2059,7 +2061,7 @@ impl Number {
             Number::Aggregate(_,stat,among) => *stat != Stat::ManaValue || set(among),
             Number::Colors(among) | Number::CardTypes(among) | Number::Count(among) | Number::CountersAmong(among,_) => set(among),
             Number::CountZone(zone) => filter(&zone.cards.filter),
-            Number::Const(_) | Number::X | Number::SpellX | Number::EventAmount | Number::ManaColorsSpent | Number::LifeLost(_) | Number::Damage { .. } | Number::ResultCount(_) | Number::RemovedCount { .. }
+            Number::Const(_) | Number::X | Number::SpellX | Number::CastX | Number::EventAmount | Number::ManaColorsSpent | Number::LifeLost(_) | Number::Damage { .. } | Number::ResultCount(_) | Number::RemovedCount { .. }
                 | Number::Counters(_,_) | Number::PlayerCounters(_,_) | Number::Life(_) | Number::Speed(_) | Number::Kicked(_) | Number::Replicated(_) | Number::EarlierCasts(_) => false,
         }
     }
@@ -2075,7 +2077,7 @@ impl Number {
             Number::Product(a,b) | Number::Sum(a,b) | Number::Difference(a,b) => a.reads() | b.reads(),
             Number::Aggregate(_,_,among) | Number::Colors(among) | Number::CardTypes(among) | Number::Count(among) | Number::CountersAmong(among,_) => among.reads(),
             Number::CountZone(zone) => zone.cards.reads(),
-            Number::Const(_) | Number::X | Number::SpellX | Number::EventAmount | Number::LifeLost(_) | Number::Damage { .. } | Number::ResultCount(_) | Number::RemovedCount { .. } | Number::Stat(_,_)
+            Number::Const(_) | Number::X | Number::SpellX | Number::CastX | Number::EventAmount | Number::LifeLost(_) | Number::Damage { .. } | Number::ResultCount(_) | Number::RemovedCount { .. } | Number::Stat(_,_)
                 | Number::Counters(_,_) | Number::PlayerCounters(_,_) | Number::Life(_) | Number::Speed(_) | Number::Kicked(_) | Number::Replicated(_) => Reads::NONE,
         }
     }
@@ -2170,6 +2172,7 @@ impl Number {
             ir::Amount::LifeChange { player: None, gained: false, when: ir::amount::When::ThisWay } => Number::LifeLost(bind.life_lost()?),
             ir::Amount::X if bind.x() || support.x_available() => Number::X,
             ir::Amount::X if support.spell_x() => Number::SpellX,
+            ir::Amount::X if support.cast_x() => Number::CastX,
             // "for each target" names the announced targets, not all objects/players
             // that could be targets. It needs a bound occurrence (601.2c), which this
             // unqualified set does not carry.
@@ -2307,6 +2310,7 @@ impl Number {
             Number::LifeLost(slot) => match locals.local(*slot) { Some(Value::Number(n)) => i64::from(*n), _ => unreachable!("compiled numeric producer is defined") },
             Number::X => i64::from(ctx.x.expect("X is known wherever an amount compiled with X is evaluated (107.3)")),
             Number::SpellX => ctx.source.and_then(|o| game.obj(o).spell_x).map_or(0, i64::from),
+            Number::CastX => ctx.source.and_then(|o| game.obj(o).x).map_or(0, i64::from),
             Number::CountZone(count) => i64::from(count.owned(game, ctx, locals)),
             Number::Colors(set) => {
                 let mut colors = std::collections::HashSet::new();
@@ -2357,7 +2361,7 @@ impl Number {
             Number::RemovedCount { slot, .. } => out.push(Scalar::Local { slot: *slot, kind: Kind::Removals }),
             Number::Damage { slot, to, .. } => { out.push(Scalar::Local { slot: *slot, kind: Kind::Damage }); if let Some(to) = to { to.scalars(out); } },
             Number::LifeLost(slot) => out.push(Scalar::Local { slot: *slot, kind: Kind::Number }),
-            Number::Const(_) | Number::X | Number::SpellX | Number::EventAmount | Number::ManaColorsSpent => {}
+            Number::Const(_) | Number::X | Number::SpellX | Number::CastX | Number::EventAmount | Number::ManaColorsSpent => {}
         }
     }
 }
@@ -2377,7 +2381,7 @@ impl Amount {
     pub(crate) fn announcement_only(&self) -> bool {
         fn known(n: &Number) -> bool {
             match n {
-                Number::Const(_) | Number::X | Number::SpellX => true,
+                Number::Const(_) | Number::X | Number::SpellX | Number::CastX => true,
                 Number::Product(a, b) | Number::Sum(a, b) | Number::Difference(a, b) => known(a) && known(b),
                 Number::Half { of, .. } => known(of),
                 _ => false,

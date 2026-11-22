@@ -236,6 +236,20 @@ fn own_entry(trigger: &ir::Trigger) -> bool {
         && pattern.nth_each_turn.is_none() && pattern.during.is_none() && pattern.cause.is_none() && pattern.except_nth_in_step.is_none()
 }
 
+/// A trigger of this exact spell being cast, with no other event source (107.3e).
+fn own_cast(trigger: &ir::Trigger) -> bool {
+    let ir::Trigger::Event { pattern, .. } = trigger else { return false };
+    matches!(pattern.subjects.as_slice(), [player] if is_you(player))
+        && matches!(pattern.actions.as_slice(), [ir::event::EventAction::Deed(d)]
+            if d.verb == ir::Verb::Cast && !d.passive
+            && matches!(d.args.as_slice(), [(ir::Role::What, ir::event::Arg::Noun(source))]
+                if source.quant == Quant::Definite(Ref::This) && source.chooser.is_none() && source.random.is_none()
+                    && matches!(source.set.domain, ir::Domain::Permanent | ir::Domain::Spell)
+                    && source.set == ObjectSet::of(source.set.domain.clone())))
+        && pattern.nth_each_turn.is_none() && pattern.during.is_none() && pattern.cause.is_none()
+        && pattern.condition.is_none() && pattern.except_nth_in_step.is_none()
+}
+
 impl<'a> Support<'a> {
     pub(crate) fn definition(def: &'a crate::card::CardDef, ability: Option<crate::binding::AbilityKey>) -> Self {
         // An announced X is read by the text it was announced for: an instant's or sorcery's
@@ -412,6 +426,15 @@ impl<'a> Support<'a> {
     pub(crate) fn with_spell_x(mut self) -> Self {
         self.spell_x = self.def.is_some_and(|def| def.permanent_x());
         self
+    }
+
+    /// X of the retained spell whose own cast caused this triggered occurrence (107.3e).
+    pub(crate) fn cast_x(&self) -> bool {
+        let (Some(def), Some(key)) = (self.def, self.ability.as_ref()) else { return false };
+        if matches!(&key.origin, crate::binding::Origin::Given { .. } | crate::binding::Origin::Rule(_)) { return false; }
+        def.cost().is_some_and(|cost| cost.0.contains(&crate::cost::X))
+            && matches!(def.abilities.iter().chain(def.keyword_abilities.iter().map(|(_, a)| a)).nth(key.index),
+                Some(ir::Ability::Triggered { trigger, .. }) if own_cast(trigger))
     }
 
     /// Whether X here is that of the spell the permanent was (107.3m).

@@ -84,3 +84,28 @@ class SourcePermissionsClientTests(unittest.TestCase):
         self.assertEqual([unit['mana'] for unit in p['players'][0]['pool']['restricted']], ['W', 'U', 'B', 'R'])
         self.clear_stack()
         self.assertEqual(len(self.named(me.prompt(), 'Grizzly Bears', zone='battlefield')), 1)
+
+    def test_hydroid_cast_trigger_keeps_its_announced_x_after_the_spell_is_countered(self):
+        # Pinned Hydroid ruling; CR 107.1a, 107.3e, 113.7a: half five is two
+        # for each quantity, and countering the spell leaves its cast trigger.
+        me, them = self.new({'hand': ['Hydroid Krasis'],
+                             'battlefield': ['Forest'] * 6 + ['Island'],
+                             'library': ['Forest'] * 4},
+                            {'hand': ['Counterspell'], 'battlefield': ['Island'] * 2})
+        p = me.prompt()
+        lands = self.named(p, 'Forest', zone='battlefield') + self.named(p, 'Island', controller='p0', zone='battlefield')
+        me.answer({'kind': 'cast', 'card': self.named(p, 'Hydroid Krasis')[0], 'x': 5,
+                   'plan': [{'ability': f'{o}.a0'} for o in lands], 'mana': {'G': 6, 'U': 1}})
+        me.answer({'kind': 'pass'})
+        p = them.prompt()
+        spell = p['stack'][0]
+        self.assertEqual(p['objects'][spell]['occurrence']['kind'], 'spell')
+        them.answer({'kind': 'cast', 'card': self.named(p, 'Counterspell')[0], 'targets': [[spell]],
+                     'plan': [{'ability': f'{o}.a0'} for o in self.named(p, 'Island', controller='p1', zone='battlefield')],
+                     'mana': {'U': 2}})
+        self.clear_stack()
+        p = me.prompt()
+        self.assertEqual(p['players'][0]['life'], 22)
+        self.assertEqual(len(self.named(p, 'Forest', zone='hand')), 2)
+        self.assertEqual(len(self.named(p, 'Hydroid Krasis', zone='graveyard')), 1)
+        self.assertEqual(p['stack'], [])

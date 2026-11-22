@@ -112,7 +112,7 @@ impl Number {
             Self::EarlierCasts(of) => of.inputs() | I::at(D::Context, P::HISTORY | P::TURN),
             Self::Kicked(of) | Self::Replicated(of) => of.inputs() | I::at(D::Objects, P::BINDINGS),
             // the X kept on the source permanent from the spell it was (107.3m)
-            Self::SpellX | Self::ManaColorsSpent => context(P::BINDINGS) | I::at(D::Objects, P::BINDINGS),
+            Self::SpellX | Self::CastX | Self::ManaColorsSpent => context(P::BINDINGS) | I::at(D::Objects, P::BINDINGS),
         }
     }
 }
