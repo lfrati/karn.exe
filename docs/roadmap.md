@@ -141,7 +141,16 @@ and Nightbound need larger machinery and can wait.
 Some tests use today's refusals as examples: `crates/game/tests/engine/admission_blockers.rs`
 expects `keyword: Fear`. When a keyword lands, point them at one that is still refused.
 
-*Skipped:* Echo: both the direct rule expansion and a control-history condition stop at the missing since-last-upkeep history window; turn-only control duration is insufficient for repeated upkeeps.
+*Skipped:*
+
+- Echo: direct rule expansion and a control-history condition need a since-last-upkeep history window; turn-only control duration is insufficient for repeated upkeeps.
+- Unearth: the graveyard activation, haste and delayed exile lower, but the full rule and replacement adaptation still need an all-departure exile replacement.
+- Cascade: full-rule and simplified scan expansions stop at exile-until lowering; the continuation must also check the resulting spell's mana value and randomly return the uncast cards.
+- Suspend: special-action and exile-trigger expansions need a hand action, suspended-card counter scope and a last-counter trigger.
+- Overload: rewriting a target-free effect lowers, but the full rule needs announcement-time text substitution and selection of that executable before targets are chosen.
+- Miracle: reveal-as-drawn and reveal-trigger expansions need draw-time suspension and a linked cost permission with the reveal's bounded visibility.
+
+Cumulative upkeep currently supports fixed generic mana only; colored, life and choice-bearing repeated costs remain refused.
 
 #### Lane 2: deck closers (worktree `closers`)
 
