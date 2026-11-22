@@ -207,9 +207,8 @@ fn unmodeled_private_mixed_and_linked_card_donor_domains_remain_refused() {
     for zone in ["your hand", "your library", "your hand or graveyard", "exile"] {
         let text = format!("This creature has all activated abilities of all Elf cards in {zone}.");
         let def = CardDef::new("Unmodeled Donors", "{0}", "Creature", &text, Some((1, 1))).unwrap();
-        let reason=if zone=="exile" {"noun phrase: an unsupported zone or zone owner"}
-            else {"inherited card abilities: donor domain must be a fixed graveyard"};
-        crate::support::refused(game::play::check(&def).map_err(|e|e.0),reason);
+        crate::support::refused(game::play::check(&def).map_err(|e|e.0),
+            "inherited card abilities: donor domain must be a fixed graveyard");
     }
     let def = CardDef::new("Unmodeled Removal", "{0}", "Enchantment", "All cards in graveyards lose all abilities.", None).unwrap();
     // Reading cards does not newly model all-zone ability removal.
