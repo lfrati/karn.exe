@@ -35,38 +35,27 @@ are fixed as they are found.
 ### Current execution plan
 
 The [execution tracker](https://github.com/lfrati/karn.exe/issues/18) carries task status.
-The first engine/benchmark pass is implemented and validated in the current checkout:
+The first engine/benchmark pass is implemented and validated:
 shared object slots, early trigger filtering, four-player scaling and typed replay
 profiling. Bounded choices and cost-source references are implemented too. This foundation
 pass landed in [6e28b7b](https://github.com/lfrati/karn.exe/commit/6e28b7b).
 
-[#1, “other” binding](https://github.com/lfrati/karn.exe/issues/1), landed in
-[95ffdc3](https://github.com/lfrati/karn.exe/commit/95ffdc3), retaining created groups,
-preceding quantified sets and occurrence-specific public-zone successors.
+The initial core correctness queue is complete:
+[#1, “other” binding](https://github.com/lfrati/karn.exe/issues/1),
+[#3, private optional choices](https://github.com/lfrati/karn.exe/issues/3),
+[#4, Room copies](https://github.com/lfrati/karn.exe/issues/4),
+[#5, conditional self-flash](https://github.com/lfrati/karn.exe/issues/5),
+[#6, Adventure replacement choice](https://github.com/lfrati/karn.exe/issues/6), and
+[#7, cost-reveal lifetime](https://github.com/lfrati/karn.exe/issues/7).
+The #6/#7 batch passes the full repository check: 4,757 rules tests and 1,113 tooling
+tests. Matched release replays show no material regression. All 32,872 admission rows,
+including refusals, remain unchanged; these repairs add no compilation coverage.
 
-[#3, hidden optional-choice disclosure](https://github.com/lfrati/karn.exe/issues/3), is
-implemented: concealed qualification no longer suppresses optional prompts, and impossible
-affirmative answers are refused. Six paired full-card client regressions and the full
-repository check pass.
+An independent Room copy-exception rebuilding defect is tracked separately in
+[#33](https://github.com/lfrati/karn.exe/issues/33), outside the initial queue.
 
-[#4, Room copies](https://github.com/lfrati/karn.exe/issues/4), is implemented: unlock costs
-and characteristics use the copied definition and the permanent's own designations,
-including token entry and expired copies. Eight focused rules regressions and three client
-regressions cover the repair. Copy exceptions use a separate rebuilding path whose Room
-halves defect is tracked in [#33](https://github.com/lfrati/karn.exe/issues/33).
-
-[#5, conditional self-flash](https://github.com/lfrati/karn.exe/issues/5), is implemented:
-casting reads the lowered self-grant condition before payment, while its granting ability
-functions only on the stack. The #4/#5 batch passes the full repository check; all 32,872
-admission rows are unchanged.
-
-**Next: fix [#6, Adventure replacement choice and permission](https://github.com/lfrati/karn.exe/issues/6),**
-then [#7, cost-reveal lifetime](https://github.com/lfrati/karn.exe/issues/7).
-
-Fix these shared mechanisms or explicitly refuse the unsupported behavior before adding
-coverage.
-
-The next coverage candidates are:
+**Next: implement [#27, retained historical predicates](https://github.com/lfrati/karn.exe/issues/27),
+with Scavenging Ooze as the first full-card witness.** The coverage sequence is:
 
 1. [#27: retained historical predicates](https://github.com/lfrati/karn.exe/issues/27),
    with Scavenging Ooze as a witness.

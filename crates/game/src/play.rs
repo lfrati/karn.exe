@@ -910,6 +910,7 @@ impl Game {
         let dividing = matches!(mv, Move::Divide(_));
         #[cfg(debug_assertions)]
         self.note_assignment_began(dividing);
+        let completed_before = self.completed_choices.len();
         let before = self.clone();
         if audit { self.begin_payment_audit(); }
         // a refusal deferred to the move's end makes it unsupported, restored below (613.7m)
@@ -917,6 +918,10 @@ impl Game {
         if audit { self.payment_audit = None; }
         match &result {
             Ok(()) => {
+                // A refused move preserves the previous public output. On success,
+                // retain only answers produced by this move, including one that
+                // finished its resolution before a viewer could observe it.
+                if completed_before > 0 { self.completed_choices_mut().drain(..completed_before); }
                 #[cfg(debug_assertions)]
                 self.note_assignment_interrupted(dividing);
             }
@@ -2336,6 +2341,7 @@ impl Game {
                     self.procedures.insert(parent, crate::procedure::Procedure::Resolution(at));
                     return Ok((0, false));
                 }
+                if !at.public_choices.is_empty() { self.completed_choices_mut().append(&mut at.public_choices); }
                 self.priority_from(self.active);
                 return Ok((0, false));
             }
@@ -2386,15 +2392,6 @@ impl Game {
                         if let Some((Some(card), index)) = self.obj(top).ability
                             && let Some(now) = at.execution.as_ref().and_then(|e| e.moved(card)) {
                             self.madness_resolved(card, index, now);
-                        }
-                        // Only successful resolution grants the Adventure permission (715.3d).
-                        // Fizzling/countering uses ordinary stack departure instead.
-                        if self.obj(top).zone == Zone::Stack && self.obj(top).ability.is_none()
-                            && self.obj(top).cast_as == CastAs::Adventure {
-                            let player = self.controller(top);
-                            if let Some(exiled) = self.exile_result(top) {
-                                if self.obj(exiled).zone == Zone::Exile { self.permit_adventure(player, exiled); }
-                            }
                         }
                         if self.obj(top).ability.is_some() || self.obj(top).zone != Zone::Stack {
                             self.leave_stack(top);

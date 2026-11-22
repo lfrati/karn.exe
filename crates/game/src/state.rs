@@ -399,15 +399,15 @@ pub enum ActionOptionBody {
 
 /// The bounded successful-completion replacement roles, scoped by the resolving spell.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DestinationEffect { Buyback, Rebound, CastRider, Omen, Flashback, GraveyardReplacement(usize) }
+pub enum DestinationEffect { Buyback, Rebound, CastRider, Omen, Adventure, Flashback, GraveyardReplacement(usize) }
 impl DestinationEffect {
     pub fn name(self) -> String {
         match self { Self::Buyback=>"buyback".into(), Self::Rebound=>"rebound".into(), Self::CastRider=>"cast_rider".into(),
-            Self::Omen=>"omen".into(), Self::Flashback=>"flashback".into(), Self::GraveyardReplacement(i)=>format!("graveyard:{i}") }
+            Self::Omen=>"omen".into(), Self::Adventure=>"adventure".into(), Self::Flashback=>"flashback".into(), Self::GraveyardReplacement(i)=>format!("graveyard:{i}") }
     }
     pub fn from_name(name: &str) -> Option<Self> {
         match name { "buyback"=>Some(Self::Buyback), "rebound"=>Some(Self::Rebound), "cast_rider"=>Some(Self::CastRider),
-            "omen"=>Some(Self::Omen), "flashback"=>Some(Self::Flashback),
+            "omen"=>Some(Self::Omen), "adventure"=>Some(Self::Adventure), "flashback"=>Some(Self::Flashback),
             _=>name.strip_prefix("graveyard:").and_then(|i|i.parse().ok()).map(Self::GraveyardReplacement) }
     }
 }
@@ -879,6 +879,9 @@ pub struct GameState {
     pub log: crate::event::Log,
     /// What each seat was shown and has not taken yet ([`crate::observation`]).
     pub(crate) observations: crate::observation::Waiting,
+    /// Public answers from completed resolutions in the latest accepted move.
+    /// Retained for every viewer until another move succeeds, never a growing history.
+    pub(crate) completed_choices: Vec<PublicChoice>,
     /// How much of the log has been checked for triggers.
     pub(crate) seen: crate::event::Seq,
     /// Abilities that have triggered and are not on the stack yet.
@@ -987,6 +990,10 @@ impl Game {
     pub(crate) fn observation_waiting_mut(&mut self) -> &mut crate::observation::Waiting {
         self.changed(crate::program::footprint::Properties::NONE);
         &mut self.state_data.observations
+    }
+    pub(crate) fn completed_choices_mut(&mut self) -> &mut Vec<PublicChoice> {
+        self.changed(crate::program::footprint::Properties::NONE);
+        &mut self.state_data.completed_choices
     }
     pub(crate) fn event_log_mut(&mut self) -> &mut crate::event::Log {
         use crate::program::footprint::Properties as P;
@@ -1147,6 +1154,7 @@ impl Game {
                 passes: 0,
                 log: crate::event::Log::default(),
                 observations: Default::default(),
+                completed_choices: Vec::new(),
                 seen: crate::event::Seq::default(),
                 triggered: Vec::new(),
                 delayed: Vec::new(),

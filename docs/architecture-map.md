@@ -53,6 +53,12 @@ stale) from the game's `ActionError`/`ResponseError` to the wire, where it is `c
 fault is no refusal. Detailed wire commands are documented beside their implementation in
 `game-serve.rs`.
 
+A snapshot retains a completed spell-destination answer through the response that finishes
+resolution and subsequent snapshots for every seat. A refusal preserves that output; the
+next accepted move replaces it. Referenced payloads survive for that bounded lifetime.
+Cards revealed for casting or activation costs use independent grants owned by their stack
+objects, so removing one spell or ability ends only its own grant.
+
 The engine validates supplied actions and executes their rules consequences. Callers choose
 spells, abilities, targets, modes, payment resources and answers. Pending questions expose
 required choice domains and constraints; they do not propose a plan or select an answer.

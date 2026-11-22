@@ -339,11 +339,13 @@ fn r701_4a_kindle_the_inner_flame_beholds_three_elementals_of_the_hand_and_the_b
     t.g.act(0, kindle_flashback(card, vec![fire, kindred, air], air)).unwrap();
     for seat in 0..2 {
         cite!(["701.4a", "701.20a", "308.2"]; case: format!("seat {seat}"); assert_eq!(sorted(revealed(&t, seat)), sorted(vec![fire, kindred])));
+        cite!(["701.20a"]; assert!(t.g.sees(seat, fire) && t.g.sees(seat, kindred), "cost reveals remain public while the spell is on the stack"));
     }
     cite!(["701.4a"]; assert_eq!(beheld(&t), vec![(0, vec![air])]));
     cite!(["701.20b"]; assert!(t.g.obj(fire).zone == Zone::Hand && t.g.obj(kindred).zone == Zone::Hand));
     let mark = t.mark();
     t.pass_all();
+    cite!(["701.20a"]; assert!(!t.g.sees(1, fire) && !t.g.sees(1, kindred), "this cost's grant ends when its spell leaves the stack"));
     let [token] = t.created_since(mark)[..] else { panic!("one token: {:?}", t.created_since(mark)) };
     cite!(["707.2", "707.9b"]; assert!(t.g.obj(token).chars.name == "Air Elemental" && t.g.has(token, "Flying") && t.g.has(token, "Haste")));
     cite!(["702.34a"]; assert!(t.g.exile.iter().any(|o| t.g.obj(*o).chars.name == KINDLE && t.g.obj(*o).owner == 0)));

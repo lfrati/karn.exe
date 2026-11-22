@@ -55,9 +55,10 @@ impl Game {
     }
 
     /// Public answers made while collecting simultaneous choices (101.4b), including a
-    /// one-shot return that interrupted resolution. No hidden search/order answers appear.
+    /// one-shot return that interrupted resolution and the latest completed resolution.
+    /// Completed answers remain until another move succeeds. No hidden search/order answers appear.
     pub fn public_choices(&self) -> impl Iterator<Item = &crate::state::PublicChoice> {
-        self.resolving().into_iter().flat_map(|r| r.public_choices.iter())
+        self.completed_choices.iter().chain(self.resolving().into_iter().flat_map(|r| r.public_choices.iter()))
             .chain(self.resolving().into_iter().filter_map(|r| r.program_frame()).flat_map(|f| f.choices.iter()))
             .chain(self.operations().flat_map(|op| op.public_choices()))
             .chain(self.procedures.iter().filter_map(|p| match p {

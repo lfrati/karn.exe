@@ -433,6 +433,14 @@ impl Game {
         let mut cost_index = 0;
         for p in &payments {
             if let Payment::Objects { objects, .. } = p {
+                // Costs that reveal hand cards grant visibility until the announced
+                // spell or ability leaves the stack, just like revealing its source
+                // (701.20a). Beholding a battlefield permanent reveals nothing.
+                if matches!(p, Payment::Objects { verb: ir::Verb::Reveal | ir::Verb::Behold, .. }) {
+                    for &card in objects {
+                        if self.obj(card).zone == Zone::Hand && !bound.revealed.contains(&card) { bound.revealed.push(card); }
+                    }
+                }
                 let things: Vec<_> = objects.iter().copied().map(Target::Object).collect();
                 bound.inputs.push((crate::program::input::Input::Cost(cost_index), things.clone()));
                 let defenders = objects.iter().filter_map(|o| self.combat.attackers.iter().find(|(a,_)| a == o).map(|(_,t)| *t)).collect();

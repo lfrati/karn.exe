@@ -17,11 +17,15 @@ impl Destination {
         let mut among = Vec::new();
         // Flashback replaces every departure, so all orders end in exile (702.34a).
         let flashback = object.flashback.is_some_and(|(scope, _)| scope.contains(object.zone));
-        let omen = object.cast_as == crate::card::CastAs::Omen;
-        if omen && object.zone == Zone::Stack && object.ability.is_none() {
-            among.push(DestinationEffect::Omen);
-            // Both orders exile, but Omen-first still shuffles the owner's library
-            // (701.24c). The affected controller chooses the first replacement (616.1e).
+        let completion = match object.cast_as {
+            crate::card::CastAs::Omen => Some(DestinationEffect::Omen),
+            crate::card::CastAs::Adventure => Some(DestinationEffect::Adventure),
+            _ => None,
+        };
+        if let Some(effect) = completion && object.zone == Zone::Stack && object.ability.is_none() {
+            among.push(effect);
+            // Flashback can still change the Omen's shuffle or Adventure's permission.
+            // The affected controller chooses the first replacement (616.1e).
             if flashback { among.push(DestinationEffect::Flashback); }
         }
         if !flashback && object.zone == Zone::Stack && object.ability.is_none() {
@@ -63,6 +67,11 @@ impl Destination {
         }
         if game.obj(self.spell).zone != Zone::Stack { return None; }
         match chosen {
+            Some(DestinationEffect::Adventure) => {
+                if let Some(card) = game.exile_result(self.spell) && game.obj(card).zone == Zone::Exile {
+                    game.permit_adventure(self.controller, card);
+                }
+            }
             Some(DestinationEffect::Omen) => {
                 let owner = game.obj(self.spell).owner;
                 self.depart(game, Zone::Library);
@@ -97,7 +106,7 @@ pub enum DestinationSource {
     Ability { source: Option<ObjId>, ability: Option<crate::binding::AbilityKey> },
     /// A replacement effect redirecting it from the graveyard, as replacements are named.
     Replacement(crate::operation::ReplacementId),
-    /// A rule's: an omen is shuffled into its owner's library (720.3d).
+    /// A rule's: an Omen's shuffle (720.3d) or Adventure's exile (715.3d).
     Rule(&'static str),
 }
 
@@ -113,6 +122,7 @@ impl Game {
     pub fn spell_destination_source(&self, spell: ObjId, effect: DestinationEffect) -> DestinationSource {
         let own = |keyword: &str| DestinationSource::Ability { source: Some(spell), ability: self.keyword_row(spell, keyword) };
         match effect {
+            DestinationEffect::Adventure => DestinationSource::Rule("715.3d"),
             DestinationEffect::Omen => DestinationSource::Rule("720.3d"),
             DestinationEffect::Buyback => own("Buyback"),
             DestinationEffect::Rebound => own("Rebound"),

@@ -127,6 +127,18 @@ impl Payment {
         };
         if self.committing.is_none() {
             self.committing = Some(game.prepare_cost(self.ctx.clone(), &self.cost, &self.paying, self.with.as_ref(), on)?);
+            // A replacement question can interrupt cost commitment. Keep the validated
+            // announcement's reveal grants visible through that pause as well (701.20a).
+            let announced = match self.finish {
+                Finish::Spell => Some(self.source),
+                Finish::Ability { on_stack, .. } => on_stack,
+                _ => None,
+            };
+            if let Some(announced) = announced {
+                for &card in &self.committing.as_ref().unwrap().bound.revealed {
+                    if !game.obj(announced).bound.revealed.contains(&card) { game.obj_mut(announced).bound.revealed.push(card); }
+                }
+            }
         }
         Ok(())
     }

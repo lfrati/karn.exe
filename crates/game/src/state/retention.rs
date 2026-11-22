@@ -71,7 +71,7 @@ impl Game {
         // Keep this inventory exhaustive: a new retained field needs an explicit ownership
         // decision here. Procedures/prospective state are guarded before this function.
         let super::GameState { objects, players, battlefield, exile, command, stack, until, combat, lasting, log,
-            triggered, delayed, decision, this_turn, lookbacks,
+            triggered, delayed, decision, this_turn, lookbacks, completed_choices,
             defs: _, active: _, turn_schedule: _, starting_life: _, part: _, turn: _, monarch: _, another_cleanup: _, parts_begun: _,
             // the turn plan names phases and players, never objects; a skip effect keeps the
             // object whose effect it is, by which it is named (614.10, 616.1)
@@ -99,6 +99,7 @@ impl Game {
         triggered.trace(visit);
         delayed.trace(visit);
         decision.trace(visit);
+        completed_choices.trace(visit);
         this_turn.trace(visit);
         for skip in skips { if let Some(source) = skip.source { visit(source); } }
         for (_, _, before) in lookbacks {
@@ -244,6 +245,22 @@ impl Trace for Choice {
             Choice::Alternative { among, .. } => { for option in among { match &option.body { super::ActionOptionBody::Objects { among, .. } => among.trace(visit), super::ActionOptionBody::Counters { on,.. } => on.trace(visit), _ => {} } } },
             Choice::LibraryDestination { cards, .. } => cards.trace(visit),
             Choice::May { .. } | Choice::Mana { .. } | Choice::Value(_) | Choice::Name(_) | Choice::Number { .. } | Choice::Player { .. } | Choice::Skip { .. } => {},
+        }
+    }
+}
+impl Trace for PublicChoice {
+    fn trace(&self, visit: &mut dyn FnMut(ObjId)) {
+        match self {
+            Self::OrderCards { cards, .. } | Self::LibraryDestination { cards, .. } => cards.trace(visit),
+            Self::Objects { objects, .. } => objects.trace(visit),
+            Self::Alternative { source, .. } => source.trace(visit),
+            Self::Value { source, value, .. } => { source.trace(visit); value.trace(visit); },
+            Self::SpellDestination { on, .. } => on.trace(visit),
+            Self::Entry { card, answer, .. } => { card.trace(visit); answer.trace(visit); },
+            Self::DamageOrder { on, offer, .. } => { on.trace(visit); offer.trace(visit); },
+            Self::Prevention { on, shield, .. } => { on.trace(visit); shield.source.trace(visit); },
+            Self::DamageReplacement { on, offer, .. } => { on.trace(visit); offer.effect.source.trace(visit); offer.source.trace(visit); },
+            Self::Replacement { on, effect, .. } => { on.trace(visit); effect.source.trace(visit); },
         }
     }
 }
