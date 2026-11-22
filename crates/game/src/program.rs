@@ -3498,6 +3498,36 @@ fn quantity_leads(effect: &mut Effect) -> Res<()> {
     Ok(())
 }
 
+/// Token anaphors describe the creating instruction's template (111.3), not the
+/// characteristics or existence of a token previously created. Bind only one explicit
+/// earlier template; conditional counts therefore reuse it without a runtime search.
+fn token_references(effect: &mut Effect) -> Res<()> {
+    fn visit(said: &mut Sentence, earlier: &mut Vec<ir::token::TokenKind>) -> Res<()> {
+        match said {
+            Sentence::Led { rest, .. } => visit(rest, earlier)?,
+            Sentence::Do(body) => for act in acts_mut(body) {
+                if let Action::Create(tokens) = &mut act.action {
+                    for token in &mut tokens.items {
+                        if token.kind == ir::token::TokenKind::Those {
+                            let [kind] = earlier.as_slice() else {
+                                return unsupported("token reference: absent or ambiguous earlier token template");
+                            };
+                            token.kind = kind.clone();
+                        } else if !earlier.contains(&token.kind) {
+                            earlier.push(token.kind.clone());
+                        }
+                    }
+                }
+            },
+            _ => {},
+        }
+        Ok(())
+    }
+    let mut earlier = Vec::new();
+    for said in &mut effect.0 { visit(said, &mut earlier)?; }
+    Ok(())
+}
+
 /// "If this land isn't a creature, it becomes a 2/4 Wizard creature": opening the text, the
 /// condition names the ability's own object and nothing else was said before, so "it" is
 /// that object. The sentence with "it" said as the object it is.
@@ -3659,6 +3689,10 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
     }
     if expanded.0.iter().any(needs_quantity_lead) { quantity_leads(expanded.to_mut())?; }
     if expanded.0.iter().any(says_again) { restated(expanded.to_mut()); }
+    if expanded.0.iter().flat_map(sentence_acts).any(|a| matches!(&a.action,
+        Action::Create(tokens) if tokens.items.iter().any(|t| t.kind == ir::token::TokenKind::Those))) {
+        token_references(expanded.to_mut())?;
+    }
     if expanded.0.len() == effect.0.len() { binder.paragraphs = support.paragraph_starts().into_iter().map(|start| binder.sentences + start).collect(); }
     if let Some(first) = expanded.0.first() && let Some(own) = conditioned_self(first) { expanded.to_mut().0[0] = own; }
     let effect: &Effect = &expanded;
