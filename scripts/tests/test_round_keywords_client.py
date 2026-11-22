@@ -62,9 +62,10 @@ class RoundKeywordsClientTests(unittest.TestCase):
 
     def test_dash_existing_alternative_choice_grants_haste_and_delayed_return(self):
         # 702.109a: the spell creates the return independently of enters triggers.
-        self.new([{"hand": ["Mardu Scout"], "battlefield": ["Mountain", "Mountain", "Torpor Orb"]}, {}])
+        self.new([{"hand": ["Mardu Scout"], "battlefield": ["Mountain", "Mountain"]}, {}])
         self.cast("Mardu Scout", mana=self.ids("Mountain", controller=0), spend={"R": 2}, cost={"alternative": 0})
         self.pass_round()
+        self.assertFalse(self.engine.state["stack"], "dash schedules a delayed ability rather than triggering on entry")
         scout, = self.ids("Mardu Scout", zone="battlefield")
         self.assertIn("haste", self.object(scout)["keywords"])
         self.advance(lambda s: s["asked"]["kind"] == "attackers")
@@ -91,7 +92,8 @@ class RoundKeywordsClientTests(unittest.TestCase):
         self.pass_round()
         self.cast("Weather the Storm", mana=own[2:], spend={"G": 2})
         prompt = play.Seat(self.engine, 0).prompt()
-        trigger = prompt["objects"][prompt["stack"][-1]]["occurrence"]
+        trigger, = [prompt["objects"][o]["occurrence"] for o in prompt["stack"]
+                    if prompt["objects"][o]["occurrence"]["kind"] == "triggered"]
         self.assertIn("copy", trigger["text"].lower())
         self.engine.act({"kind": "pass"})
         self.cast("Nourish", mana=other[2:], spend={"G": 2})

@@ -1316,6 +1316,17 @@ impl expr::Binding for Scoped<'_, '_> {
             other => other,
         })
     }
+    fn comparison_subject(&mut self, s: &Selector) -> Res<expr::Subject> {
+        self.binder.check_alternative_reference(s)?;
+        match self.binder.referent(s, self.support, false)? {
+            Referent::Local(slots) => match slots.as_slice() {
+                [slot] => Ok(expr::Subject::Local(self.binder.object(*slot))),
+                _ => unsupported("reference: several named things where one is read"),
+            },
+            Referent::Input(input) => Ok(expr::Subject::Input(input)),
+            Referent::Source => Ok(expr::Subject::Source),
+        }
+    }
     fn amount_subject(&mut self, s: &Selector) -> Res<expr::Subject> {
         self.binder.check_alternative_reference(s)?;
         // The singular member of the player group whose quantity is being evaluated.

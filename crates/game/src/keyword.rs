@@ -602,8 +602,18 @@ fn cumulative_upkeep(item: &ir::token::KeywordInstance) -> Option<Ability> {
 fn bloodthirst(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if item.keyword.name() != "Bloodthirst" { return None; }
     let KeywordParam::Number(ir::Amount::Const(n)) = item.param else { return None; };
-    let text = format!("If an opponent was dealt damage this turn, this permanent enters with {n} +1/+1 counter{} on it.", if n == 1 { "" } else { "s" });
-    CardDef::new("Bloodthirst rule", "", "Creature", &text, None).ok()?.abilities.into_iter().next()
+    static RULE: OnceLock<Ability> = OnceLock::new();
+    let mut ability = crate::token::init(&RULE, || CardDef::new("Bloodthirst rule", "", "Creature",
+        "If an opponent was dealt damage this turn, this permanent enters with a +1/+1 counter on it.", None)
+        .expect("the grammar reads rule 702.54a").abilities[0].clone()).clone();
+    let Ability::Text(ir::Effect(sentences)) = &mut ability else { unreachable!("bloodthirst is static") };
+    let ir::Sentence::Led { rest, .. } = &mut sentences[0] else { unreachable!("conditional entry") };
+    let ir::Sentence::Do(body) = rest.as_mut() else { unreachable!("entry statement") };
+    let ir::Action::Static(action) = &mut body.first.first.action else { unreachable!("entry statement") };
+    let ir::statics::StaticAct::Enters(arrivals) = action.as_mut() else { unreachable!("entry counters") };
+    let [ir::statics::Arrival::Counters(on)] = arrivals.as_mut_slice() else { unreachable!("one kind") };
+    on.counters.count = ir::Amount::Const(n);
+    Some(ability)
 }
 
 /// 702.45a: becoming blocked is one event regardless of the number of blockers.
@@ -1142,7 +1152,7 @@ pub(crate) fn replicate(def: &CardDef) -> Option<&ir::mana::ManaCost> { of_items
 pub(crate) fn replicate_count(def: &CardDef) -> usize { contributions(def).filter(|(_, g)| matches!(g, Gives::Additional { then: Paid::Replicated, .. })).count() }
 fn replicate_trigger() -> Ability {
     let source = ir::Selector::new(ir::Quant::Definite(ir::Ref::This), ir::ObjectSet::of(ir::Domain::Spell));
-    spell_copy_trigger(ir::Amount::Times { what: Box::new(source), fact: ir::amount::Occurrence::Replicated })
+    spell_copy_trigger(ir::Amount::Times { what: Box::new(source), fact: ir::amount::Occurrence::Replicated }, true)
 }
 /// 702.40a: every player's earlier casts count, and later casts do not.
 fn storm_trigger() -> Ability {
@@ -1151,9 +1161,9 @@ fn storm_trigger() -> Ability {
         pattern: Box::new(ir::EventPattern::new(vec![one(ir::Domain::Player)], vec![ir::EventAction::does(ir::Verb::Cast, one(ir::Domain::Spell))])),
         counted: ir::amount::Role::Object, when: ir::amount::When::ThisTurn,
     };
-    spell_copy_trigger(ir::Amount::AsOf { amount: Box::new(amount), moment: ir::amount::Moment::Casting })
+    spell_copy_trigger(ir::Amount::AsOf { amount: Box::new(amount), moment: ir::amount::Moment::Casting }, false)
 }
-fn spell_copy_trigger(amount: ir::Amount) -> Ability {
+fn spell_copy_trigger(amount: ir::Amount, requires_payment: bool) -> Ability {
     use ir::{Action, Amount, Condition, Effect, Lead, Modifier, ObjectSet, Quant, Ref, Selector, Sentence};
     use ir::effect::{Act, Body, Clause};
     use ir::event::{Arg, Deed, EventPattern, TriggerWord};
@@ -1171,8 +1181,11 @@ fn spell_copy_trigger(amount: ir::Amount) -> Ability {
             })], nth_each_turn: None, during: None, except_nth_in_step: None, condition: None, cause: None,
         }},
         effect: Effect(vec![
-            Sentence::Led { lead: Lead::Modifier(Modifier::If(Condition::Compare { left: amount.clone(), cmp: ir::Cmp::Ge, right: Amount::Const(1) })),
-                rest: Box::new(sentence(Action::Copy(ir::Objects { items: vec![source], conj: ir::Conj::And }), vec![Modifier::ForEach(amount)], false)) },
+            {
+                let copying = sentence(Action::Copy(ir::Objects { items: vec![source], conj: ir::Conj::And }), vec![Modifier::ForEach(amount.clone())], false);
+                if requires_payment { Sentence::Led { lead: Lead::Modifier(Modifier::If(Condition::Compare { left: amount, cmp: ir::Cmp::Ge, right: Amount::Const(1) })), rest: Box::new(copying) } }
+                else { copying }
+            },
             sentence(Action::ChooseNewTargets { for_: ir::Objects { items: vec![copies], conj: ir::Conj::And }, one: false }, Vec::new(), true),
         ]),
     }

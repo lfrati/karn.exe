@@ -6,15 +6,15 @@ use game::{Game, Move, ObjId, Target, Zone};
 use ir::Part;
 
 fn fixture(dash: bool) -> (Game, ObjId) {
-    let mut g = Game::new(vec![oracle("Mardu Scout"), oracle("Mountain"), oracle("Torpor Orb")], 2, 20);
+    let mut g = Game::new(vec![oracle("Mardu Scout"), oracle("Mountain")], 2, 20);
     for player in 0..2 { for _ in 0..12 { g.put(player, 1, Zone::Library); } }
-    g.put(0, 2, Zone::Battlefield);
     let scout = g.put(0, 0, Zone::Hand);
     g.players[0].pool = mana_pool("RR");
     let cast = Move::Cast { card: scout, targets: vec![] };
     let cast = if dash { Move::CastFor(CastCost::Alternative(0), Box::new(cast)) } else { cast };
     g.act(0, paid("RR", cast)).unwrap();
     for _ in 0..2 { g.act(g.priority, Move::Pass).unwrap(); }
+    cite!(["702.109a"]; assert!(g.stack.is_empty(), "the return is delayed, not an entry trigger"));
     let scout = *g.battlefield.iter().find(|o| g.obj(**o).card == Some(0)).unwrap();
     (g, scout)
 }

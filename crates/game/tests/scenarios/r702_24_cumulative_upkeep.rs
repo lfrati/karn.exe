@@ -1,11 +1,11 @@
 //! Generic cumulative upkeep uses one atomic payment after the age counter is placed.
 use crate::support::{cite, mana_pool, oracle, oracle_read};
 use game::state::{Answer, Choice, Decision};
-use game::{Game, Move, ObjId, Zone};
+use game::{CardDef, Game, Move, ObjId, Zone};
 use ir::Part;
 
 fn fixture() -> (Game, ObjId) {
-    let mut g = Game::new(vec![oracle("Mystic Remora"), oracle("Island"), oracle("Solemnity")], 2, 20);
+    let mut g = Game::new(vec![oracle("Mystic Remora"), oracle("Island"), CardDef::new("Counter ban", "{0}", "Enchantment", "Enchantments can't have counters put on them.", None).unwrap()], 2, 20);
     for p in 0..2 { for _ in 0..20 { g.put(p, 1, Zone::Library); } }
     let remora = g.put(0, 0, Zone::Battlefield);
     (g, remora)

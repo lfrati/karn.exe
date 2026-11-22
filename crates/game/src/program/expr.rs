@@ -98,6 +98,9 @@ pub trait Binding {
     /// (608.2h). Other predicates/actions may name its completed public-zone successor.
     fn amount_subject(&mut self, s: &ir::Selector) -> Res<Subject> { self.subject(s) }
 
+    /// A comparison names its antecedent, not the current clause's implicit possessor.
+    fn comparison_subject(&mut self, s: &ir::Selector) -> Res<Subject> { self.subject(s) }
+
     /// The retained input of the immediately preceding movement, before its zone change
     /// (608.2h/i). An ordinary reference alone does not prove that earlier time.
     fn past_subject(&mut self, _: &ir::Selector) -> Res<Subject> {
@@ -256,6 +259,10 @@ impl Subject {
     /// everything else is the binder's to say.
     pub(crate) fn compile(s: &ir::Selector, bind: Bind<'_>) -> Res<Subject> { Self::compile_read(s, bind, false) }
     fn compile_amount(s: &ir::Selector, bind: Bind<'_>) -> Res<Subject> { Self::compile_read(s, bind, true) }
+    fn comparison(s: &ir::Selector, bind: Bind<'_>) -> Res<Subject> {
+        if matches!(s.quant, Quant::Definite(Ref::Anaphor(_))) { bind.comparison_subject(s) }
+        else { Self::compile(s, bind) }
+    }
     fn compile_read(s: &ir::Selector, bind: Bind<'_>, amount: bool) -> Res<Subject> {
         if s.quant==Quant::The && s.set.domain==ir::Domain::Card && s.set.zone.is_none() && s.set.controller.is_none() && s.set.caster.is_none() && !s.set.other
             && s.set.filter==ir::Filter::All(vec![ir::Filter::Atom(ir::Atom::Status(ir::selector::Status::Commander))])
@@ -561,9 +568,9 @@ impl Filter {
                 else { Filter::Any(names) }
             }
             ir::Filter::Atom(a) => Filter::Atom(match a {
-                ir::Atom::Shares { what: ir::amount::Characteristic::CreatureType, with } => Atom::SharesCreatureType(Subject::compile(with, bind)?),
-                ir::Atom::Shares { what: ir::amount::Characteristic::Color, with } => Atom::SharesColor(Subject::compile(with, bind)?),
-                ir::Atom::Shares { what: ir::amount::Characteristic::Name, with } => Atom::SameName(Subject::compile(with, bind)?),
+                ir::Atom::Shares { what: ir::amount::Characteristic::CreatureType, with } => Atom::SharesCreatureType(Subject::comparison(with, bind)?),
+                ir::Atom::Shares { what: ir::amount::Characteristic::Color, with } => Atom::SharesColor(Subject::comparison(with, bind)?),
+                ir::Atom::Shares { what: ir::amount::Characteristic::Name, with } => Atom::SameName(Subject::comparison(with, bind)?),
                 ir::Atom::DealtDamageBy { by, this_turn: true } => Atom::DealtDamageBy(Subject::compile(by, bind)?),
                 ir::Atom::Type(t) => Atom::Type(*t),
                 ir::Atom::PermanentType => Atom::PermanentType,
