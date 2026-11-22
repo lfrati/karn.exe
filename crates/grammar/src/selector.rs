@@ -3116,8 +3116,10 @@ fn fold_posts(set: &mut ObjectSet, posts: Vec<Post>) -> Option<(Option<Box<Selec
             Post::With(f) if events.iter().all(|e| unevent_filter(e).is_some_and(|(_, when, _)| when == When::ThisWay)) => withs.push(f),
             // "that died this turn" after objects, "who lost life this turn" after players
             Post::Event { who, filter } if who == (set.domain == Domain::Player) => events.push(filter),
-            // one relative clause, before any "with"
-            Post::Relative { negated, complement } if relatives.is_empty() && withs.is_empty() => {
+            // One relative clause. Independent adjective predicates may follow other
+            // postmodifiers; nested-source attachment is already checked above.
+            Post::Relative { negated, complement }
+                if relatives.is_empty() && (withs.is_empty() || matches!(complement, Complement::Adjectives(_))) => {
                 relatives = relative_items(set.domain.clone(), negated, complement)?;
             }
             Post::Chooser(s) if chooser.is_none() => chooser = Some(Box::new(s)),

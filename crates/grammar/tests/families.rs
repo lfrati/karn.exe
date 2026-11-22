@@ -438,3 +438,15 @@ fn r702_72c_championed_with_source() {
     declines("When a player is championed with ~, draw a card.");
     declines("When a creature is championed with target spell, draw a card.");
 }
+
+/// CR 105.2c and 608.2c: adjective predicates still qualify the noun after numeric modifiers.
+#[test]
+fn r105_2c_adjective_relative_after_modifiers() {
+    let (late, _) = read("−X: Exile each permanent with mana value X or less that's one or more colors.");
+    let (early, _) = read("−X: Exile each permanent that's one or more colors with mana value X or less.");
+    assert_eq!(late, early);
+    let (late, _) = read("Destroy target creature with power 3 that's black.");
+    let (early, _) = read("Destroy target creature that's black with power 3.");
+    assert_eq!(late, early);
+    declines("Destroy target player with power 3 that's black.");
+}
