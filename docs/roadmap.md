@@ -38,6 +38,9 @@ This part is written for the agent doing the work. You were given a lane, the re
 the whole round. A round is one builder per lane working in parallel, then one review pass.
 The record is the commit log and the README counts; nothing else needs writing up.
 
+Integrate and publish ready committed work within 30 minutes, using one grouped make check,
+without waiting for newer unfinished work.
+
 ### If you are a builder
 
 Work in your lane's worktree (`keywords`, `closers`, `grammar` or `mechanisms`). Make it if it is missing:
