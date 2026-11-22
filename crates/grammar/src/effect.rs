@@ -598,7 +598,7 @@ fn act(form: Form) -> P<Act> {
 /// Acts in order: the first, then each with its join.
 type Chain = (Act, Vec<(Join, Act)>);
 
-fn predicate(form: Form) -> P<(bool, Chain)> {
+fn predicate(form: Form, prefix: &P<()>) -> P<(bool, Chain)> {
     // a later act may have its own "may" ("you may copy ~ and may choose new targets for it")
     let may_act = lit("may").then_keep(&act(Form::Base)).map(
         |a| Some(Act { may: true, ..a }),
@@ -608,8 +608,8 @@ fn predicate(form: Form) -> P<(bool, Chain)> {
     alt(
         "predicate",
         vec![
-            chain(&act(form)).map(|c| Some((false, c)), |(may, c)| (!may).then(|| c.clone())),
-            lit("may").then_keep(&chain(&act(Form::Base))).map(|c| Some((true, c)), |(may, c)| may.then(|| c.clone())),
+            prefix.then_keep(&chain(&act(form))).map(|c| Some((false, c)), |(may, c)| (!may).then(|| c.clone())),
+            lit("may").then_keep(prefix).then_keep(&chain(&act(Form::Base))).map(|c| Some((true, c)), |(may, c)| may.then(|| c.clone())),
         ],
     )
 }
@@ -638,7 +638,11 @@ fn or_after_cant(c: &Clause) -> bool {
 }
 
 fn clause(subject: &P<Option<Subject>>, form: Form) -> P<Clause> {
-    subject.then(&lit("also").opt()).then(&predicate(form)).map(
+    clause_prefixed(subject, form, &empty())
+}
+
+fn clause_prefixed(subject: &P<Option<Subject>>, form: Form, prefix: &P<()>) -> P<Clause> {
+    subject.then(&lit("also").opt()).then(&predicate(form, prefix)).map(
         |((subject, also), (may, (first, rest)))| {
             let c = Clause { subject, may, also: also.is_some(), first, rest };
             (subject_fits(&c) && !or_after_cant(&c) && !or_after_unless(&c)).then_some(c)
@@ -850,6 +854,21 @@ fn build() -> Effects {
             _ => None,
         },
     );
+
+    // A predicate prefix scopes one complete clause, not later clauses with other actors.
+    // The ordinary leading form prints the same scope without duplicating clause grammar.
+    let simultaneous = alt("simultaneous clause", all.iter().map(|(subject, form)| {
+        clause_prefixed(subject, *form, &lit("simultaneously")).map(
+            |first| {
+                if first.rest.iter().any(|(join, _)| matches!(join, Join::CommaThen | Join::Or)) { return None; }
+                let body = Body { first, rest: Vec::new() };
+                (except_last(&body) && crate::statics::ability_cost_sentence(&body).is_none()).then_some(
+                    Sentence::Led { lead: Lead::Simultaneously, rest: Box::new(Sentence::Do(body)) },
+                )
+            },
+            |_: &Sentence| None,
+        )
+    }).collect()).alias();
 
     // A repeated procedure names new classes, not a quantity of objects to act on yet.
     let same_way = alt("procedure application", all.iter().map(|(subject, form)| {
@@ -1256,6 +1275,7 @@ fn build() -> Effects {
             lit("when you do").to(Lead::WhenYouDo),
             lit("when you pay this cost one or more times").to(Lead::WhenPaidTimes),
             lit("otherwise").to(Lead::Otherwise),
+            lit("simultaneously").to(Lead::Simultaneously),
             next_opponent,
             starting_with,
             lit("once each turn").to(Lead::Once { yours: false }),
@@ -1298,7 +1318,7 @@ fn build() -> Effects {
     // (restrictions, riders, additional costs) take none
     any_sentence.define(alt(
         "sentence after a lead",
-        vec![plain.clone(), same_way.clone(), led.clone(), choose_modes.clone(), statics.clone()],
+        vec![plain.clone(), simultaneous.clone(), same_way.clone(), led.clone(), choose_modes.clone(), statics.clone()],
     ));
     // "X is the number of creatures you control."
     let x_is = lit("X is").then_keep(&amounts().amount).map(
@@ -1315,7 +1335,7 @@ fn build() -> Effects {
         );
     let sentence = alt(
         "sentence",
-        vec![plain, same_way, led, restrictions, cast_restrictions, same_is_true, rider, choose_modes, additional, statics, x_is, round_each],
+        vec![plain, simultaneous, same_way, led, restrictions, cast_restrictions, same_is_true, rider, choose_modes, additional, statics, x_is, round_each],
     )
     .sentence();
     Effects { sentence, body }

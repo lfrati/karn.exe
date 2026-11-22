@@ -548,3 +548,29 @@ fn r115_1_qualified_target_alternatives() {
     read("Counter target spell that targets a permanent or suspended card.");
     declines("Put two time counters on target permanent with a time counter on it or suspended card or.");
 }
+
+/// CR 608.2f: a simultaneous prefix retains the entire actor's action group.
+#[test]
+fn r608_2f_simultaneous_predicates() {
+    let (value, _) = read("That player simultaneously sacrifices the artifact and returns the artifact card to the battlefield.");
+    let (leading, _) = read("Simultaneously, that player sacrifices the artifact and returns the artifact card to the battlefield.");
+    assert_eq!(value, leading);
+    let ir::Ability::Text(effect) = value else { panic!() };
+    let ir::Sentence::Led { lead: ir::Lead::Simultaneously, rest } = &effect.0[0] else { panic!() };
+    let ir::Sentence::Do(body) = &**rest else { panic!() };
+    assert!(body.rest.is_empty());
+    assert!(body.first.subject.is_some());
+    assert_eq!(body.first.rest.len(), 1);
+    assert_eq!(body.first.rest[0].0, ir::Join::And);
+    let (optional, _) = read("You may simultaneously sacrifice an artifact and return an artifact card from your graveyard to your hand.");
+    let ir::Ability::Text(effect) = optional else { panic!() };
+    let ir::Sentence::Led { rest, .. } = &effect.0[0] else { panic!() };
+    let ir::Sentence::Do(body) = &**rest else { panic!() };
+    assert!(body.first.may);
+    for text in [
+        "At the beginning of each player's upkeep, that player simultaneously untaps each tapped artifact, creature, and land they control and taps each untapped artifact, creature, and land they control.",
+        "Simultaneously untap all tapped creatures and tap all untapped creatures.",
+    ] { read(text); }
+    declines("That player simultaneously sacrifices an artifact, then draws a card.");
+    declines("Target creature simultaneously draws a card and discards a card.");
+}

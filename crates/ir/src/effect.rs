@@ -86,6 +86,9 @@ pub enum Lead {
     AsPermanentsUntap { who: Selector, next: bool },
     /// "As ~ enters or is turned face up,": at either of the two (614.1c, 708.11).
     AsEntersOrTurnedFaceUp(Selector),
+    /// The following instructions happen together, with their affected sets determined before
+    /// any of them changes the game state (608.2f).
+    Simultaneously,
     /// "Then": after the previous sentence is done (608.2c).
     Then,
     /// "Otherwise,": the else branch of the previous "If".
