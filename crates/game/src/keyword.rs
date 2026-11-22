@@ -533,8 +533,18 @@ fn triggered(item: &ir::token::KeywordInstance) -> Option<&'static Ability> {
         "Evolve" => Some(evolve()),
         "Mentor" => Some(mentor()),
         "Dethrone" => Some(dethrone()),
+        "Training" => Some(training()),
         _ => None,
     }
+}
+
+/// 702.149a: another greater-power attacker is required at the attack event.
+/// Consumers of a successful "trains" event remain explicitly unsupported.
+fn training() -> &'static Ability {
+    static RULE: OnceLock<Ability> = OnceLock::new();
+    crate::token::init(&RULE, || CardDef::new("Training rule", "", "Creature",
+        "Whenever this creature attacks while you control another attacking creature with power greater than this creature's power, put a +1/+1 counter on this creature.", None)
+        .expect("the grammar reads rule 702.149a").abilities[0].clone())
 }
 
 /// 702.105a: the defender's life rank is checked by the attack event, not
