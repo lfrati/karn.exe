@@ -1,7 +1,7 @@
 """Composition/retention checks using the actual Python/JSON engine client."""
 import unittest
-
 from client_support import ClientTestCase
+
 
 
 class MultiplayerOutcomeClientTests(ClientTestCase):

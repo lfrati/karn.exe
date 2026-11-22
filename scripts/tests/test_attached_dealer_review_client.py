@@ -1,8 +1,8 @@
 """Pain for All through the real audited client.
-from client_support import ClientTestCase
 - Its enters trigger can't target the enchanted creature ("any other target").
 - Its damage is the enchanted creature's power at resolution, with responses that pump the
   creature or destroy it. Each case checks exact damage records and both viewers."""
+from client_support import ClientTestCase
 
 
 class AttachedDealerReviewClientTests(ClientTestCase):

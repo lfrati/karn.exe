@@ -1,7 +1,7 @@
 """Foretell checks through the actual Python/JSON client: Demon Bolt is
-from client_support import ClientTestCase
 foretold during its player's turn with a spell on the stack (116.2h, 702.143a), only that player
 is shown it (406.3), and on the next turn it is cast for its foretell cost {R} (702.143a)."""
+from client_support import ClientTestCase
 
 
 class ForetellClientTests(ClientTestCase):

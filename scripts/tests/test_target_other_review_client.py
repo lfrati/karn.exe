@@ -1,7 +1,7 @@
 """A spell's "each other creature that player controls" is other than
-from client_support import ClientTestCase
 the earlier target, not the spell (608.2c), for full Flames of the Raze-Boar and Public
 Execution through the real audited JSON client."""
+from client_support import ClientTestCase
 
 
 class TargetOtherReviewClientTests(ClientTestCase):

@@ -1,7 +1,7 @@
 """Full pinned Terastodon and Mogg Infestation through
-from client_support import ClientTestCase
 the real audited client. Tokens go to each destroyed permanent's former controller (608.2h),
 only for actual battlefield-to-graveyard results (Terastodon ruling 6aeb7aa39fd324bf)."""
+from client_support import ClientTestCase
 
 
 class ResultCreationReviewClientTests(ClientTestCase):

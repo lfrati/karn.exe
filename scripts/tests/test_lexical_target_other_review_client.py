@@ -1,7 +1,7 @@
 """A root "other" without a comparison or controller
-from client_support import ClientTestCase
 reference excludes the earlier target (608.2c), while "you control another …" stays relative to
 the source. Full pinned cards through the real audited JSON client, both viewers."""
+from client_support import ClientTestCase
 
 
 class LexicalTargetOtherReviewClientTests(ClientTestCase):

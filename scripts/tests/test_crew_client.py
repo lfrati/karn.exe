@@ -1,8 +1,8 @@
 """Crew checks through the actual Python/JSON client: Smuggler's Copter's
-from client_support import ClientTestCase
 crew 1 is offered as a choice of untapped other creatures with each one's power (702.122a), a
 selection short of the total power is refused, and the crewed Copter is a 3/3 artifact
 creature (301.7b) that both seats see crewed (702.122b, e)."""
+from client_support import ClientTestCase
 
 
 class CrewClientTests(ClientTestCase):

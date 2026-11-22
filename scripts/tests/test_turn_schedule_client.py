@@ -1,7 +1,7 @@
 """Turn schedule checks through the actual Python/JSON client: a skipped draw
-from client_support import ClientTestCase
 step (614.10), an additional combat and main phase (500.8), and the active player's choice
 between skip effects that last differently (616.1)."""
+from client_support import ClientTestCase
 
 
 class TurnScheduleClientTests(ClientTestCase):

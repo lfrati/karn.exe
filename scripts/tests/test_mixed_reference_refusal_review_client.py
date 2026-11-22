@@ -1,8 +1,8 @@
 """The non-recipient mixed-target refusal changes no
-from client_support import ClientTestCase
 admitted program, so these are the pinned cards nearest the boundary. A named source, the
 source's replacement "it", a token's own body and a clause possessor keep their referent through
 the real audited client, with exact damage records and both viewers."""
+from client_support import ClientTestCase
 
 
 class MixedReferenceRefusalReviewClientTests(ClientTestCase):

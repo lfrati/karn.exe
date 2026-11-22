@@ -1,6 +1,6 @@
 """Each member of a distributive damage source deals its own
-from client_support import ClientTestCase
 power (608.2c, 120.3), for full Alpha Brawl and Band Together through the real audited client."""
+from client_support import ClientTestCase
 
 
 class DistributiveDamageReviewClientTests(ClientTestCase):

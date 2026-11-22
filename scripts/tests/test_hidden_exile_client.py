@@ -1,7 +1,7 @@
 """Face-down exile checks through the actual Python/JSON client: Watcher for
-from client_support import ClientTestCase
 Tomorrow's hideaway hides a card only its player may look at (406.3, 702.75a), with no name or
 types for anyone (406.3a), and returns it to its owner's hand when Watcher leaves."""
+from client_support import ClientTestCase
 
 
 class HiddenExileClientTests(ClientTestCase):
