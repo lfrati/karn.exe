@@ -105,3 +105,43 @@ class PilesCardTypesClientTests(unittest.TestCase):
         self.assertEqual(p['stack'], [])
         self.assertEqual(p['decision']['kind'], 'priority')
         self.assertNotIn('Forest', [o['name'] for o in them.prompt()['objects'].values() if o['zone'] == 'library'])
+
+    def test_intuition_keeps_the_search_private_then_the_reveal_public_for_the_opponent(self):
+        # CR 701.23a/d, 701.20a, 608.2d/f, 404.3: search, opponent choice and
+        # owner ordering are distinct suspended steps before simultaneous destinations.
+        me, them = self.new({'hand': ['Intuition'], 'battlefield': ['Island'] * 3,
+                             'library': ['Forest', 'Lightning Bolt', 'Island', 'Swamp']},
+                            {'battlefield': ['Grizzly Bears']})
+        p = me.prompt()
+        me.answer({'kind': 'cast', 'card': self.named(p, 'Intuition')[0], 'targets': [['p1']],
+                   'plan': [{'ability': f'{o}.a0'} for o in self.named(p, 'Island', zone='battlefield')],
+                   'mana': {'U': 3}})
+        self.assertIs(self.choice('search'), me)
+        self.assertEqual((me.last['decision']['min'], me.last['decision']['max']), (3, 3))
+        self.assertFalse([o for o in them.prompt()['objects'].values() if o['zone'] == 'library'])
+        p = me.prompt()
+        found = [self.named(p, name, zone='library')[0] for name in ['Forest', 'Lightning Bolt', 'Island']]
+        self.assertIn('choose between 3 and 3', self.refused(me, {'cmd': 'answer', 'answer': {'kind': 'choose', 'answer': {'objects': []}}}))
+        me.answer({'kind': 'choose', 'answer': {'objects': found}})
+        p = them.prompt()
+        self.assertEqual(p['decision']['kind'], 'objects')
+        self.assertEqual(p['decision']['count'], 1)
+        self.assertEqual(sorted(p['objects'][o]['name'] for o in p['decision']['among']), ['Forest', 'Island', 'Lightning Bolt'])
+        self.assertFalse(self.named(p, 'Swamp'))
+        self.assertIsNone(me.prompt()['decision'])
+        forest = self.named(p, 'Forest', zone='library')[0]
+        outsider = self.named(p, 'Grizzly Bears')[0]
+        self.assertIn('not among', self.refused(them, {'cmd': 'answer', 'answer': {'kind': 'choose', 'answer': {'objects': [outsider]}}}))
+        them.answer({'kind': 'choose', 'answer': {'objects': [forest]}})
+        p = me.prompt()
+        self.assertEqual(p['decision']['kind'], 'order_cards')
+        self.assertEqual(p['players'][0]['hand'], [])
+        self.assertEqual(len(self.named(p, 'Forest', zone='library')), 1)
+        me.answer({'kind': 'choose', 'answer': {'objects': list(reversed(p['decision']['cards']))}})
+        p = me.prompt()
+        self.assertEqual(len(self.named(p, 'Forest', zone='hand')), 1)
+        for name in ['Intuition', 'Island', 'Lightning Bolt']:
+            self.assertEqual(len(self.named(p, name, zone='graveyard')), 1)
+        self.assertEqual(p['players'][0]['library'], 1)
+        self.assertEqual(p['stack'], [])
+        self.assertFalse([o for o in them.prompt()['objects'].values() if o['zone'] == 'library'])

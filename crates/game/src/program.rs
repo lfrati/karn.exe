@@ -3048,6 +3048,23 @@ impl Emit {
             _ => unsupported(format!("selection not lowered: {:?}", s.quant)),
         }
     }
+    /// A singular explicit choice retains its own card slot and source-zone proof.
+    /// Ordinary targets and arbitrary earlier subjects cannot supply this partition input.
+    fn retained_selection(&mut self, selector: &Selector, support: &Support<'_>, binder: &mut Binder) -> Res<Option<(Slot, Zone)>> {
+        if !matches!(selector.quant, Quant::Definite(Ref::Anaphor(ir::Anaphor::That | ir::Anaphor::It)))
+            || selector.set != ObjectSet::of(Domain::Card) || selector.chooser.is_some() || selector.random.is_some() { return Ok(None); }
+        let Some((subjects, _, max)) = &binder.result else { return Ok(None) };
+        let subjects = *subjects;
+        if *max > 1 || !binder.subjects.iter().any(|n| n.slot == subjects && n.explicit_choice) { return Ok(None); }
+        if self.operand(selector, support, binder)? != action::Operand::Reference(subjects) { return Ok(None); }
+        let Some(cards) = self.instrs.iter().find_map(|i| match i {
+            Instr::Subjects { cards, out, .. } if *out == subjects => Some(*cards), _ => None,
+        }) else { return Ok(None) };
+        let zones: Vec<_> = binder.groups.iter().filter(|g| g.taken.contains(&cards)).map(|g| g.zone).collect();
+        let [zone] = zones.as_slice() else { return unsupported("selected movement: no unique retained group source"); };
+        Ok(Some((cards, *zone)))
+    }
+
     /// Origin contract of the exact card producer, independent of casting cost (608.2g).
     /// Card copies inherit their originals' zone (707.12); spell copies are not cast.
     fn cast_origin(&self, operand: &action::Operand) -> Option<CastOrigin> {
@@ -5465,7 +5482,13 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 binder.resolve(&mention.reference)?.taken.push(selected);
                 vec![operand]
             } else { e.objects(objects, support, &mut binder)? };
-            let zone = match operands.as_slice() { [action::Operand::Zone(zone)] => Some(zone.zone()), _ => None };
+            let zone = match operands.as_slice() {
+                [action::Operand::Zone(zone)] => Some(zone.zone()),
+                // A search result is retained in its one source zone until a later
+                // movement. Revealing those exact subjects supplies a public group.
+                [action::Operand::Reference(slot)] if binder.searched == Some(*slot) && binder.found_waiting => binder.searched_zone,
+                _ => None,
+            };
             let out = e.slot();
             let looking = matches!(act.action, Action::LookAt(_));
             if looking {
@@ -6419,7 +6442,11 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
         // their hand.", 608.2d)
         let doer = if controller_only(clause.subject.as_ref()) { binder.actor.map_or(Who::Controller, Who::Of) } else {
             let optional = (clause.may && optional_groups == 0) || act.may;
-            if optional || binder.actor.is_some() || binder.each.is_some() || !single_actor(clause.subject.as_ref()) || matches!(act.action, Action::Choose(_)) {
+            let retained_choice = matches!(&act.action, Action::Choose(ir::action::Choice::Objects(objects))
+                if matches!(objects.items.as_slice(), [selector] if mention(selector).is_some_and(|m|
+                    m.taking == Taking::Exactly(1) && m.set == ObjectSet::of(Domain::Card))));
+            if optional || binder.actor.is_some() || binder.each.is_some() || !single_actor(clause.subject.as_ref())
+                || matches!(act.action, Action::Choose(_)) && !retained_choice {
                 return unsupported("program: instruction subject not lowered");
             }
             e.actor(clause, support, &mut binder)?
@@ -6465,6 +6492,9 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 let set = binder.selection(&mention.set, support)?;
                 e.unite(&mention.reference, &mut binder);
                 let group = binder.resolve(&mention.reference)?;
+                if !controller_only(clause.subject.as_ref()) && group.by != Verb::Reveal {
+                    return unsupported("retained choice by another player: a public reveal producer required");
+                }
                 let (from, zone) = (group.slot, group.zone);
                 let (pick, max) = match mention.taking {
                     Taking::Exactly(n) => (Pick::Exactly(n), n as u32),
@@ -6475,7 +6505,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                     Taking::Remainder => return unsupported("choice: a remainder is not a selection"),
                 };
                 let out = e.slot();
-                e.instrs.push(Instr::Select { from, set: set.into(), pick, chooser: Who::Controller, gate: None, still_in: zone, out });
+                e.instrs.push(Instr::Select { from, set: set.into(), pick, chooser: doer, gate: None, still_in: zone, out });
                 binder.resolve(&mention.reference)?.taken.push(out);
                 let subjects = e.slot();
                 e.instrs.push(Instr::Subjects { cards: out, out: subjects, still_in: None });
@@ -6586,6 +6616,16 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 let mut partition_entries = Vec::new();
                 for (objects, to) in parts {
                     let [selector] = objects.items.as_slice() else { return unsupported("program: multiple moved groups not lowered"); };
+                    if mention(selector).is_none() && !optional && parts.len() > 1
+                        && let Some((cards, zone)) = e.retained_selection(selector, support, &mut binder)? {
+                        let selected = e.slot();
+                        e.instrs.push(Instr::Remainder { of: cards, minus: Vec::new(), still_in: zone, out: selected });
+                        let to = destination(to, zone, support, &binder)?;
+                        let into = match to { Dest::Hand => Zone::Hand, Dest::Graveyard => Zone::Graveyard, Dest::Library { .. } => Zone::Library, Dest::Battlefield(_) => unreachable!("entry is refused by destination") };
+                        binder.produced.push(Produced { slot: selected, verb: Verb::Move, shape: expr::Shape::Cards, yours: doer == Who::Controller, into: Some(into) });
+                        together.push((selected, to));
+                        continue;
+                    }
                     let mention = mention(selector).ok_or_else(|| crate::Unsupported("program: non-result movement not lowered".into()))?;
                     let set = binder.selection(&mention.set, support)?;
                     e.unite(&mention.reference, &mut binder);
