@@ -28,7 +28,7 @@ gates=("$@")
 # one, so a changed input, a failed or partial generation, or a missing file regenerates,
 # without rewriting the committed research report.
 dumps=(noun_phrases amounts conditions triggers)
-inputs=(resources/oracle/cards.jsonl resources/rules/MagicCompRules-*.txt scripts/inventory.py scripts/corpus_structure.py)
+inputs=(resources/manifest.json resources/oracle/cards.jsonl resources/rules/MagicCompRules-*.txt scripts/pinned.py scripts/inventory.py scripts/corpus_structure.py)
 stamp=.cache/oracle/dumps.sha256
 want=$(cat "${inputs[@]}" | sha256sum | cut -d' ' -f1)
 why=""

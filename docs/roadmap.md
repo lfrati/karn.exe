@@ -90,10 +90,10 @@ capability assertion. Matched release replay medians are 1.0–2.8% lower than t
 the raw results remain evidence for #31. Optional/conditional producers, grouped/repeated
 flips, face-only card instructions and coin replacements remain refused.
 
-**The initial four coverage mechanisms are implemented. Next is the bounded grammar and
-pinning work: [#25](https://github.com/lfrati/karn.exe/issues/25) and
-[#16](https://github.com/lfrati/karn.exe/issues/16).** The remaining supporting issues,
-Commander corpus and profiling investigation still belong to the initial execution queue.
+**The initial four coverage mechanisms and the grammar/pinning batch are implemented.
+Next are native refusal boundaries [#13](https://github.com/lfrati/karn.exe/issues/13) and
+hosting reliability [#20](https://github.com/lfrati/karn.exe/issues/20).** Ability text, MGN
+repairs, the Commander corpus and profiling remain in the initial execution queue.
 
 Re-rank coverage candidates against fresh blockers when the evidence justifies it. Trace
 the specific reference grammar, binding, lowering and runtime; identify Karn's missing
@@ -110,18 +110,21 @@ Supporting work is separate from that sequence: accurate ability text
 ([#2](https://github.com/lfrati/karn.exe/issues/2)), native refusal integrity
 ([#13](https://github.com/lfrati/karn.exe/issues/13)), MGN adapter repairs
 ([#14](https://github.com/lfrati/karn.exe/issues/14)), hosting reliability
-([#20](https://github.com/lfrati/karn.exe/issues/20)) and rules-selection cache invalidation
-([#25](https://github.com/lfrati/karn.exe/issues/25)). Take them when they help the current
+([#20](https://github.com/lfrati/karn.exe/issues/20)). Take them when they help the current
 batch or repair the affected interface; they are not one serial prerequisite chain.
 
 The [benchmark default matrix fix](https://github.com/lfrati/karn.exe/issues/15) is complete:
 implicit worker counts fit the physical cores available under affinity, while explicit
 oversized requests still refuse unless the requested SMT sharing is possible.
 
-The [two effects ambiguities](https://github.com/lfrati/karn.exe/issues/16) remain a real
-grammar defect. That gate is red, so the full progress workflow is not clean. A passing
-`make check` does not establish otherwise; the ambiguities do not outrank unrelated
-demonstrated wrong play.
+The [rules-selection cache fix](https://github.com/lfrati/karn.exe/issues/25) now invalidates
+grammar dumps when the manifest or pinning reader changes. The
+[two effects ambiguities](https://github.com/lfrati/karn.exe/issues/16) now select canonical
+free-card cast and next-turn player-control forms, with family and round-trip regressions.
+`make progress` passes all 5,505 Rust workspace tests (4,802 rules tests), 1,127 tooling
+tests and all seven grammar gates. The admission rows, including refusals, are unchanged.
+The snapshot receipt-path reporting defect found during that run is tracked separately;
+its missing attribution does not mean the passing tests did not run.
 
 For Commander, [#17](https://github.com/lfrati/karn.exe/issues/17) starts with a small
 representative corpus we author or can include, counting commander(s) too. A bulk archive

@@ -1,5 +1,6 @@
 """scripts/gates.sh keeps the gates' generated corpus dumps valid for the inputs they came from."""
 import os
+import json
 from pathlib import Path
 import shutil
 import stat
@@ -7,14 +8,16 @@ import subprocess
 import tempfile
 import unittest
 
-from pinned import RULES_NAME
+from pinned import RULES_EDITION, RULES_NAME
 
 ROOT = Path(__file__).resolve().parents[2]
 
 # stands in for corpus_structure.py: writes the four dumps (or what GENERATE says), counts its runs
 GENERATOR = '''import os, sys
 from pathlib import Path
+from pinned import RULES
 Path("generator.runs").open("a").write("run\\n")
+Path("generator.rules").write_text(RULES.read_text())
 mode = os.environ.get("GENERATE", "all")
 if mode == "fail":
     sys.exit("extraction broke")
@@ -34,10 +37,13 @@ class GatesTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         (self.root / "scripts").mkdir()
         shutil.copy(ROOT / "scripts" / "gates.sh", self.root / "scripts" / "gates.sh")
+        shutil.copy(ROOT / "scripts" / "pinned.py", self.root / "scripts" / "pinned.py")
         (self.root / "scripts" / "corpus_structure.py").write_text(GENERATOR)
         (self.root / "scripts" / "inventory.py").write_text("# classification\n")
         (self.root / "resources" / "oracle").mkdir(parents=True)
         (self.root / "resources" / "rules").mkdir()
+        self.manifest = self.root / "resources" / "manifest.json"
+        self.manifest.write_text(json.dumps({"sources": {"rules": {"edition": RULES_EDITION}}}))
         (self.root / "resources" / "oracle" / "cards.jsonl").write_text('{"name": "Island"}\n')
         (self.root / "resources" / "rules" / RULES_NAME).write_text("100.1 These are the rules.\n")
         self.bin = self.root / "bin"
@@ -81,7 +87,7 @@ class GatesTests(unittest.TestCase):
 
     def test_a_changed_input_regenerates_the_dumps(self):
         self.gates("all", "selectors")
-        for change in ("scripts/corpus_structure.py", "scripts/inventory.py", "resources/oracle/cards.jsonl",
+        for change in ("scripts/corpus_structure.py", "scripts/inventory.py", "scripts/pinned.py", "resources/oracle/cards.jsonl",
                        f"resources/rules/{RULES_NAME}"):
             with self.subTest(change=change):
                 before = self.runs()
@@ -91,6 +97,26 @@ class GatesTests(unittest.TestCase):
                 self.assertEqual(code, 0, out)
                 self.assertIn("(inputs changed since they were generated)", out)
                 self.assertEqual(self.runs(), before + 1)
+
+    def test_manifest_switch_between_existing_rules_files_regenerates_and_unchanged_inputs_reuse(self):
+        other = "20260717" if RULES_EDITION != "20260717" else "20260925"
+        selected = self.root / "resources" / "rules" / f"MagicCompRules-{other}.txt"
+        selected.write_text("100.1 The other existing rules edition.\n")
+        code, out = self.gates("all", "selectors")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.runs(), 1)
+        self.assertEqual((self.root / "generator.rules").read_text(), "100.1 These are the rules.\n")
+        first_stamp = self.stamp.read_text()
+        # Both rule files already exist. Only the manifest's selection changes.
+        self.manifest.write_text(json.dumps({"sources": {"rules": {"edition": other}}}))
+        code, out = self.gates("all", "selectors")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.runs(), 2)
+        self.assertNotEqual(self.stamp.read_text(), first_stamp)
+        self.assertEqual((self.root / "generator.rules").read_text(), selected.read_text())
+        code, out = self.gates("all", "selectors")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.runs(), 2, "unchanged selected inputs reuse the stamp")
 
     def test_a_failed_or_partial_generation_fails_the_gates_and_is_not_trusted_next_time(self):
         code, out = self.gates("fail", "selectors")

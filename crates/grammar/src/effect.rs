@@ -503,6 +503,23 @@ fn act(form: Form) -> P<Act> {
         if unpaid && !(play(true) || play(false)) {
             return false;
         }
+        // A free cast of card selectors has its own action form. The static spelling
+        // remains for spell classes and for permissions specifying payment by a cost.
+        if unpaid && !by && matches!(&a.action, ir::Action::Static(rule)
+            if matches!(rule.as_ref(), ir::StaticAct::PlayFrom {what,from:None}
+                if matches!(what.as_slice(), [one] if one.what.domain == ir::Domain::Card))) {
+            return false;
+        }
+        // The controlled player's next turn is carried by the control action itself.
+        // Other players' turns and shorter windows keep their explicit duration.
+        if matches!(&a.action, ir::Action::Static(rule)
+            if matches!(rule.as_ref(), ir::StaticAct::Controls(who) if who.set.domain == ir::Domain::Player))
+            && a.mods.iter().any(|m| matches!(m, Modifier::During(ir::event::During::Step(ir::Step::Turn,
+                ir::StepOwner::Player {who,next:true})) if matches!(who.as_ref(), Selector {
+                    quant:ir::Quant::Definite(ir::Ref::Anaphor(ir::Anaphor::That | ir::Anaphor::They)),set,chooser:None,random:None
+                } if *set == ir::ObjectSet::of(ir::Domain::Player)))) {
+            return false;
+        }
         // "cast noncreature spells from among those cards without paying their mana costs" is
         // that permission, not a free cast of some spells
         if some_spells && matches!(a.action, ir::Action::Cast { free: true, .. }) {
@@ -1951,6 +1968,67 @@ mod tests {
             assert!(!matches!(s.parse_all(&tokenize(text)), Outcome::Accepted { .. }), "{text} must not read");
         }
     }
+    #[test]
+    fn free_card_casts_and_spell_class_permissions_have_one_reading() {
+        let grammar = &effects().sentence;
+        fn act(sentence: &Sentence) -> &Act {
+            match sentence { Sentence::Led {rest,..} => act(rest), Sentence::Do(body) => &body.first.first,
+                _ => panic!("an instruction") }
+        }
+        for text in [
+            "Until end of turn, you may cast cards exiled this way without paying their mana costs",
+            "Until your next turn, you may cast cards exiled this way without paying their mana costs",
+            "You may cast cards exiled this way without paying their mana costs this turn",
+            "If you control a creature, you may cast cards exiled this way without paying their mana costs",
+        ] {
+            let Outcome::Accepted {value,..} = grammar.parse_all(&tokenize(text)) else {panic!("{text} must have one reading")};
+            assert!(matches!(act(&value).action, ir::Action::Cast {free:true,..}), "{value:?}");
+            let printed = grammar.print_text(&value,true).expect("a canonical spelling");
+            let Outcome::Accepted {value: again,..} = grammar.parse_all(&tokenize(&printed)) else {panic!("{printed} must have one reading")};
+            assert_eq!(again,value);
+        }
+        // A class of spells, rather than card selectors, keeps its permission form.
+        let text = "Until end of turn, you may cast noncreature spells from among those cards without paying their mana costs";
+        let Outcome::Accepted {value,..} = grammar.parse_all(&tokenize(text)) else {panic!("{text}")};
+        assert!(matches!(&act(&value).action, ir::Action::Static(rule) if matches!(rule.as_ref(),ir::StaticAct::PlayFrom {..})));
+        let printed = grammar.print_text(&value,true).unwrap();
+        let Outcome::Accepted {value: again,..} = grammar.parse_all(&tokenize(&printed)) else {panic!("{printed}")};
+        assert_eq!(again,value);
+    }
+
+    #[test]
+    fn next_turn_player_control_is_canonical_without_losing_other_control_windows() {
+        let grammar = &effects().sentence;
+        fn act(sentence: &Sentence) -> &Act {
+            match sentence { Sentence::Led {rest,..} => act(rest), Sentence::Do(body) => &body.first.first,
+                _ => panic!("an instruction") }
+        }
+        for text in [
+            "You control that player during their next turn",
+            "You control that player during that player's next turn",
+            // Oracle normalization represents the card's self-reference with ~.
+            "If ~'s additional cost was paid, you control that player during their next turn instead",
+            "If you control a creature, you control that opponent during their next turn instead",
+        ] {
+            let Outcome::Accepted {value,..} = grammar.parse_all(&tokenize(text)) else {panic!("{text} must have one reading")};
+            assert!(matches!(act(&value).action,ir::Action::ControlPlayerNextTurn(_)), "{value:?}");
+            let printed = grammar.print_text(&value,true).unwrap();
+            assert!(printed.contains("during that player's next turn"));
+            let Outcome::Accepted {value: again,..} = grammar.parse_all(&tokenize(&printed)) else {panic!("{printed}")};
+            assert_eq!(again,value);
+        }
+        for text in ["You control that player during combat", "You control that player during your next turn"] {
+            let Outcome::Accepted {value,..} = grammar.parse_all(&tokenize(text)) else {panic!("{text}")};
+            assert!(matches!(&act(&value).action,ir::Action::Static(rule) if matches!(rule.as_ref(),ir::StaticAct::Controls(_))));
+            let printed = grammar.print_text(&value,true).unwrap();
+            let Outcome::Accepted {value: again,..} = grammar.parse_all(&tokenize(&printed)) else {panic!("{printed}")};
+            assert_eq!(again,value);
+        }
+        // Next-combat ownership is a separate phrasing gap, already declined before
+        // this ambiguity repair; do not silently reinterpret it as a whole next turn.
+        assert!(matches!(grammar.parse_all(&tokenize("You control that player during their next combat phase")),Outcome::Declined {..}));
+    }
+
     #[test]
     fn r723_next_turn_control_and_anchored_extra_turns_have_distinct_temporal_scope() {
         let grammar=&effects().sentence;
