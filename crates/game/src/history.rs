@@ -214,6 +214,11 @@ pub(crate) struct ThisTurn {
 }
 
 impl ThisTurn {
+    /// A declared position omits earlier draws; this is distinct from observing none.
+    pub(crate) fn is_initial_position_history(&self) -> bool {
+        self == &Self { draws_unknown: true, ..Self::default() }
+    }
+
     fn of(&self, turn: Turn) -> &[Fact] {
         match turn { Turn::This => &self.now, Turn::Last => &self.last }
     }

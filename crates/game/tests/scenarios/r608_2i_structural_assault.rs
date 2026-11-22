@@ -1,6 +1,8 @@
 //! A historical graveyard count is neither current graveyard contents nor attempted destruction.
-use crate::support::{Board, cite, mana_pool, on};
+use crate::support::{Board, Boundary, cite, mana_pool, on};
 use game::Zone;
+use game::legal::Asked;
+use game::state::Answer;
 
 #[test]
 fn r608_2i_structural_assault_counts_actual_moves_including_prior_incarnations() {
@@ -17,13 +19,18 @@ fn r608_2i_structural_assault_counts_actual_moves_including_prior_incarnations()
         .named(1, Zone::Battlefield, "mastodon", "Siege Mastodon")
         .named(0, Zone::Graveyard, "old ring", "Sol Ring")
         .build();
-    cite!(["601.2h"]; ok: t.mana(0, "{1}{R}").cast(0, "break", vec!["flier".into()], mana_pool("1R")));
+    cite!(["601.2h"]; ok: t.mana(0, "{1}{R}").cast(0, "break", vec!["flier".into()], mana_pool("CR")));
     t.resolve();
     cite!(["601.2h"]; ok: t.mana(0, "{B}").cast(0, "return", vec![on(0, Zone::Graveyard, "Ornithopter")], mana_pool("B")));
     t.resolve();
     cite!(["601.2h"]; ok: t.cast(0, "Ornithopter", vec![], mana_pool("")));
     t.resolve();
-    cite!(["601.2h"]; ok: t.mana(0, "{3}{R}{R}").cast(0, "assault", vec![], mana_pool("3RR")));
+    let flier = t.find_in_battlefield("Ornithopter");
+    let ring = t.id("ring");
+    cite!(["601.2h"]; ok: t.mana(0, "{3}{R}{R}").cast(0, "assault", vec![], mana_pool("CCCRR")));
+    let Boundary::Question(0, Asked::OrderCards { cards, .. }) = t.settle() else { panic!("graveyard order required") };
+    cite!(["404.3"]; assert!(cards.len() == 2 && cards.contains(&ring) && cards.contains(&flier)));
+    cite!(["404.3"]; ok: t.answer(0, Answer::Objects(vec![ring, flier])));
     t.resolve();
     // Uncited (Oracle): one earlier Ornithopter plus three artifacts destroyed now makes four.
     let mastodon = t.id("mastodon");
@@ -48,7 +55,7 @@ fn r614_6_structural_assault_excludes_replaced_graveyard_moves() {
         .named(0, Zone::Battlefield, "bear", "Grizzly Bears")
         .named(1, Zone::Battlefield, "mastodon", "Siege Mastodon")
         .build();
-    cite!(["601.2h"]; ok: t.mana(0, "{3}{R}{R}").cast(0, "assault", vec![], mana_pool("3RR")));
+    cite!(["601.2h"]; ok: t.mana(0, "{3}{R}{R}").cast(0, "assault", vec![], mana_pool("CCCRR")));
     t.resolve();
     let bear = t.id("bear");
     let mastodon = t.id("mastodon");

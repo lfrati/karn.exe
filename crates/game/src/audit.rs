@@ -589,7 +589,7 @@ impl Game {
         if self.players.len()!=2 || self.turn==0 || self.active>=2
             || !self.ordinary_turn_suffix() || self.plan!=crate::turn::TurnPlan::at(self.turn,self.part,0)
             || self.active!=(self.turn as usize-1)%2
-            || self.this_turn!=crate::history::ThisTurn::default()
+            || !self.this_turn.is_initial_position_history()
             || self.log.start()!=self.log.end()
             || !self.activation_started.is_empty() || !self.ability_uses.is_empty()
             || !self.until.is_empty() || !self.lasting.is_empty() || !self.skips.is_empty() || !self.shields.is_empty()
@@ -1363,6 +1363,10 @@ mod turn_bookkeeping_tests {
             assert_eq!(actual["consecutive_passes"],1);
             assert_eq!(actual["land_plays_this_turn"],json!({"A":1,"B":0}));
             assert_eq!(game.audit_initial_history().unwrap()["land_plays_this_turn"],json!({"A":1,"B":0}));
+            let mut drawn=game.clone();
+            drawn.note_draw(holder);
+            assert_eq!(drawn.audit_initial_history(),Err("initial causal history no longer representable".into()),
+                "actual completed draws do not fit the declared position's unknown draw history");
             game.act(holder,Move::Pass).unwrap();
             assert_eq!(game.part,Part::BeginningOfCombat);
             assert_eq!(game.audit_turn_bookkeeping()["consecutive_passes"],0);
