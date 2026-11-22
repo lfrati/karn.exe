@@ -19,7 +19,7 @@ class ToxicReviewClientTests(ClientTestCase):
     def new(self, seats):
         """Each view lists what happened since that viewer was last asked, so player 0's
         views together list every event once."""
-        HELPERS["new"](self, seats)
+        ClientTestCase.new(self, seats)
         self.seen = []
         ask = self.engine.ask
         def recording(request):
