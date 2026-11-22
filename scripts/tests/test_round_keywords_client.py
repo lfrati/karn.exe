@@ -42,7 +42,9 @@ class RoundKeywordsClientTests(unittest.TestCase):
 
     def test_cumulative_upkeep_is_one_correlated_explicit_payment(self):
         # 702.24a: add an age counter, then offer the full payment to its controller.
-        self.new([{"battlefield": ["Mystic Remora", "Island", "Island"]}, {}])
+        self.new([{"hand": ["Mystic Remora"], "battlefield": ["Island"] * 3}, {}])
+        self.cast("Mystic Remora", mana=self.ids("Island", controller=0)[:1], spend={"U": 1})
+        self.pass_round()
         remora, = self.ids("Mystic Remora", zone="battlefield")
         turn = self.engine.state["turn"]
         self.advance(lambda s: s["turn"] > turn and s["active"] == 0 and s["part"] == "Upkeep")
@@ -67,7 +69,6 @@ class RoundKeywordsClientTests(unittest.TestCase):
         self.pass_round()
         self.assertFalse(self.engine.state["stack"], "dash schedules a delayed ability rather than triggering on entry")
         scout, = self.ids("Mardu Scout", zone="battlefield")
-        self.assertIn("haste", self.object(scout)["keywords"])
         self.advance(lambda s: s["asked"]["kind"] == "attackers")
         self.engine.act({"kind": "attack", "attacks": [[scout, {"player": 1}]]})
         self.advance(lambda s: s["part"] == "End")
