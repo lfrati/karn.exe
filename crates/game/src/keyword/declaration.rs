@@ -282,6 +282,7 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
             let Some((cost, filter)) = cycling_cost(item) else { return refused(item) };
             generated(cycling(cost, filter), true, vec![Context::PrintedOnly])
         }
+        "Transmute" => generated(ability(item)?, true, vec![Context::PrintedOnly]),
         "Soulshift" => generated(ability(item)?, true, vec![Context::PermanentsOnly]),
         "Madness" => {
             let Some(cost) = madness_cost(item) else { return refused(item) };

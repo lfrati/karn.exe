@@ -36,6 +36,22 @@ class RoundKeywordsClientTests(unittest.TestCase):
         self.choose("yes")
         self.assertTrue(any(self.object(o)["name"] == "Crib Swap" for o in self.hand(0)))
 
+    def test_transmute_discards_then_searches_through_the_native_boundary(self):
+        # 702.53a: generated hand activation uses the existing explicit mana and search choices.
+        self.new([{"hand": ["Muddle the Mixture"], "battlefield": ["Island"] * 3,
+                   "library": ["Grizzly Bears"] + ["Forest"] * 8}, {}])
+        card, = [o for o in self.hand(0) if self.object(o)["name"] == "Muddle the Mixture"]
+        self.engine.act({"kind": "activate", "source": card, "ability": 2, "targets": [],
+                         "plan": [{"source": o, "ability": 0} for o in self.ids("Island", controller=0)], "mana": {"U": 3}})
+        self.assertTrue(any(self.object(o)["name"] == "Muddle the Mixture" for o in self.engine.state["players"][0]["graveyard"]))
+        self.pass_round()
+        self.assertEqual(self.engine.state["asked"]["kind"], "search")
+        bear, = self.engine.state["asked"]["among"]
+        self.assertEqual(self.object(bear)["name"], "Grizzly Bears")
+        self.reject(1, {"kind": "choose", "answer": {"objects": [bear]}})
+        self.choose({"objects": [bear]})
+        self.assertTrue(any(self.object(o)["name"] == "Grizzly Bears" for o in self.hand(0)))
+
     def test_bloodthirst_enters_with_counters_after_real_player_damage(self):
         # 702.54a: damage to an opponent enables the entry replacement.
         self.new([{"hand": ["Lightning Bolt", "Bloodscale Prowler"], "battlefield": ["Mountain"] * 4}, {}])

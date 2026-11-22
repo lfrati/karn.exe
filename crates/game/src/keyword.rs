@@ -424,8 +424,10 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     static EQUIP: OnceLock<Ability> = OnceLock::new();
     static LEVEL_UP: OnceLock<Ability> = OnceLock::new();
     static NINJUTSU: OnceLock<Ability> = OnceLock::new();
+    static TRANSMUTE: OnceLock<Ability> = OnceLock::new();
     let (kept, type_line, rule, number) = match item.keyword.name() {
         "Ninjutsu" => (&NINJUTSU, "Creature", "{0}, Reveal this card from your hand, Return an unblocked attacking creature you control to its owner's hand: Put this card from your hand onto the battlefield tapped attacking the same player, planeswalker, or battle as that creature.", "702.49a-c"),
+        "Transmute" => (&TRANSMUTE, "Artifact", "{0}, Discard this card: Search your library for a card with mana value equal to this card's mana value, reveal it, put it into your hand, then shuffle. Activate only as a sorcery.", "702.53a"),
         "Equip" => (&EQUIP, "Artifact — Equipment", "{0}: Attach this permanent to target creature you control. Activate only as a sorcery.", "702.6a"),
         // "Level up [cost]" means "[Cost]: Put a level counter on this permanent. Activate
         // only as a sorcery." (702.87a)
