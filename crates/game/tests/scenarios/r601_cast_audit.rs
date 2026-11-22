@@ -16,7 +16,7 @@ fn r601_2b_audit_retains_announced_flashback_route_and_copy_is_not_a_payment() {
     let mut g=Game::new(vec![card("Recall","{1}","Instant","You gain 1 life.\nFlashback {0}"),
         card("Mirror","{0}","Instant","Copy target spell.")],2,20);
     let source=g.put(0,0,Zone::Graveyard);g.act(0,Move::CastVia(CastRoute::Flashback,Box::new(cast(source)))).unwrap();let spell=g.stack[0];
-    cite!(["601.2b","702.34a"]; assert_eq!(audit(&g,spell),json!({"route":{"kind":"flashback"},"permission":null,"completed":true,"payment":{"convoke":[],"delve":[]}})));
+    cite!(["601.2b","702.34a"]; assert_eq!(audit(&g,spell),json!({"route":{"kind":"flashback"},"permission":null,"completed":true,"payment":{"convoke":[],"delve":[],"improvise":[]}})));
     let mirror=g.put(0,1,Zone::Hand);g.act(0,Move::Cast{card:mirror,targets:vec![vec![Target::Object(spell)]]}).unwrap();resolve(&mut g);
     let copy=*g.stack.last().unwrap();assert_ne!(copy,spell);
     cite!(["707.10"]; assert_eq!(audit(&g,copy),json!({"route":{"kind":"flashback"},"permission":null,"completed":false,"payment":null})));
@@ -34,14 +34,14 @@ fn r702_51_audit_retains_each_accepted_creature_and_generic_or_colored_allocatio
     g.act(0,action(vec![vec![a],vec![b]])).unwrap();
     assert!(g.obj(a).tapped && g.obj(b).tapped);
     assert_eq!(g.players[0].pool.total(),0);
-    cite!(["702.51a","702.51b"]; assert_eq!(audit(&g,g.stack[0])["payment"],json!({"convoke":[{"object":a.0,"color":"B"},{"object":b.0,"color":null}],"delve":[]})));
+    cite!(["702.51a","702.51b"]; assert_eq!(audit(&g,g.stack[0])["payment"],json!({"convoke":[{"object":a.0,"color":"B"},{"object":b.0,"color":null}],"delve":[],"improvise":[]})));
 }
 #[test]
 fn r702_66_audit_delve_group_is_distinct_from_a_discard_additional_cost() {
     let mut g=Game::new(vec![card("Spell","{1}","Instant","Delve\nAs an additional cost to cast this spell, discard a card.\nYou gain 1 life."),card("Bear","{0}","Creature","")],2,20);
     let spell=g.put(0,0,Zone::Hand);let discard=g.put(0,1,Zone::Hand);let delve=g.put(0,1,Zone::Graveyard);
     g.act(0,Move::WithDelve(1,Box::new(Move::WithCosts(vec![vec![discard],vec![delve]],Box::new(cast(spell)))))).unwrap();
-    cite!(["702.66a","702.66b","601.2h"]; assert_eq!(audit(&g,g.stack[0])["payment"],json!({"convoke":[],"delve":[delve.0]})));
+    cite!(["702.66a","702.66b","601.2h"]; assert_eq!(audit(&g,g.stack[0])["payment"],json!({"convoke":[],"delve":[delve.0],"improvise":[]})));
 }
 #[test]
 fn r702_180_audit_harmonize_distinguishes_optional_tap_and_normal_cast() {
