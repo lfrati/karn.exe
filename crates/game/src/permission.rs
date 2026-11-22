@@ -36,7 +36,7 @@ pub(crate) struct Permission {
     /// "If an instant or sorcery spell cast this way would be put into your graveyard, exile it
     /// instead": what a spell cast under this offer carries (614.1a).
     pub(crate) rider: Option<Rider>,
-    /// Resulting spell mana-value ceiling of this retained free-cast offer (701.57a).
+    /// Inclusive resulting-spell mana-value ceiling of this offer (701.57a, 702.85a).
     pub(crate) ceiling: Option<u32>,
     /// When an effect's permission ends (611.2a): the adventure and plot permissions have no
     /// stated deadline and say [`Until::EndOfTurn`] without being ended by it.
@@ -245,7 +245,7 @@ impl Game {
         }
         if self.permissions_of(player, card).next().is_some() && self.cast_permissions(player, card, choice).next().is_none() {
             if self.permissions_of(player, card).any(|p| p.ceiling.is_some()) {
-                return "the resulting spell's mana value exceeds the discover value (701.57a)".into();
+                return "the resulting spell's mana value exceeds the effect's bound (701.57a, 702.85a)".into();
             }
             return "it was exiled on an adventure: it may be cast as its creature or other main card, not as its Adventure (715.3d)".into();
         }

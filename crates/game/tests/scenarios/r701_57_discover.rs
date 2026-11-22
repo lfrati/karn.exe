@@ -95,7 +95,7 @@ fn r701_57a_adventure_resulting_spell_bound_and_ordinary_free_cast_choices() {
     let mut g=setup("Discover 4.");
     let mut defs=g.defs.to_vec();defs.push(adventure);
     g=Game::new(defs,2,20);g.put(0,6,Zone::Library);start(&mut g);let hit=cast_offer(&g);
-    cite!(["701.57a","715.3a"];refused("discover value"):g.act(0,Move::CastAs(CastAs::Adventure,Box::new(Move::Cast{card:hit,targets:vec![]}))));
+    cite!(["701.57a","715.3a"];refused("effect's bound"):g.act(0,Move::CastAs(CastAs::Adventure,Box::new(Move::Cast{card:hit,targets:vec![]}))));
     cite!(["400.7","733.1"];assert_eq!(g.obj(hit).zone,Zone::Exile));
     cite!(["701.57a"];ok:g.act(0,Move::Cast{card:hit,targets:vec![]}));
     cite!(["701.57a","608.2g"];assert_eq!(g.obj(g.stack[0]).chars.name,"Giant"));
@@ -110,7 +110,7 @@ fn r701_57a_omen_uses_normal_card_value_for_scan_and_its_own_spell_value_for_cas
         let mut g=setup(&format!("Discover {bound}."));let mut defs=g.defs.to_vec();defs.push(physical.clone());g=Game::new(defs,2,20);
         g.put(0,6,Zone::Library);start(&mut g);let hit=cast_offer(&g);
         let cast=Move::CastAs(CastAs::Omen,Box::new(Move::Cast{card:hit,targets:vec![]}));
-        if bound==2 {cite!(["701.57a","720.3a"];refused("discover value"):g.act(0,cast));g.act(0,Move::Choose(Answer::No)).unwrap();}
+        if bound==2 {cite!(["701.57a","720.3a"];refused("effect's bound"):g.act(0,cast));g.act(0,Move::Choose(Answer::No)).unwrap();}
         else {cite!(["701.57a","720.3a"];ok:g.act(0,cast));cite!(["608.2g"];assert_eq!(g.obj(g.stack[0]).chars.mana_value,4));pass(&mut g);cite!(["720.3d"];assert_eq!(g.players[0].life,21));cite!(["720.3d"];assert_eq!(g.players[0].library.len(),1));}
     }
 }

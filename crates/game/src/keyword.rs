@@ -406,6 +406,16 @@ fn bargain_cost_text() -> &'static ir::Cost {
     })
 }
 
+/// 702.85a: the resulting-spell restriction is carried by the compiled cast offer.
+/// The final move uses the actual remaining exile incarnations, so a cast card is
+/// excluded and a declined hit is returned along with the other exiled cards.
+fn cascade() -> &'static Ability {
+    static RULE: OnceLock<Ability> = OnceLock::new();
+    crate::token::init(&RULE, || CardDef::new("Cascade rule", "", "Creature",
+        "When you cast this spell, exile cards from the top of your library until you exile a nonland card with mana value less than this spell's mana value. You may cast that card without paying its mana cost. Put all cards exiled this way on the bottom of your library in a random order.", None)
+        .expect("the grammar reads Cascade's scan, cast and return (702.85a)").abilities[0].clone())
+}
+
 /// A keyword's executable meaning, read from its rule sentence. For equip (702.6a),
 /// the parsed cost replaces the template cost; triggered meanings use the same definitions.
 pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {

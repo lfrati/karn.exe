@@ -20,7 +20,7 @@ pub mod action;
 pub mod choice;
 mod connive;
 mod explore;
-mod discover;
+mod library_scan;
 mod endure;
 mod purpose;
 pub(crate) mod initial;
@@ -310,8 +310,9 @@ pub enum Instr {
     FlipCoin { out: Slot },
     /// The top `n` cards of the library of `whose`, as many as there are. Changes nothing.
     TakeTop { n: expr::Amount, whose: action::Operand, out: Slot },
-    /// 701.57a: sequential actual exiles, with separate nonland hit and final-card designation.
-    Discover { by: Who, amount: expr::Amount, all: Slot, hit: Slot, designated: Slot, bound: Slot },
+    /// Sequential actual exiles, with a nonland hit and final-card designation (701.57a, 702.85a).
+    /// `bound` is the inclusive resulting-spell ceiling, usable only when a hit exists.
+    LibraryScan { by: Who, amount: expr::Amount, limit: ScanLimit, all: Slot, hit: Slot, designated: Slot, bound: Slot },
     /// 701.57b: emitted only after cast/hand and random-bottom continuations complete.
     Discovered { by: Who, bound: Slot },
     /// Read a library prefix through its first matching card; no mutation or disclosure.
@@ -437,6 +438,20 @@ fn close_branch(instrs: &mut [Instr], at: usize, inner: &Binder, outer: &mut Bin
 /// it triggered for, held in `member` as it is queued.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReflexiveEach { members: expr::Number, member: Slot }
+
+/// The stopping comparison of a sequential library exile (701.57a, 702.85a).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScanLimit { LessThan, AtMost }
+impl ScanLimit {
+    fn allows(self, value: u32, bound: u32) -> bool {
+        match self { Self::LessThan => value < bound, Self::AtMost => value <= bound }
+    }
+    /// An inclusive ceiling for the resulting spell. LessThan(0) has no hit and
+    /// therefore no cast offer; zero is never used to manufacture a candidate.
+    fn ceiling(self, bound: u32) -> u32 {
+        bound.saturating_sub(u32::from(self == Self::LessThan))
+    }
+}
 
 /// A resolution-time optional action or cost (118.12). Its result describes starting
 /// payment, independently of what replacement effects ultimately do.
@@ -832,7 +847,7 @@ impl Program {
                     make(&mut kinds, *out, kind.kind)?;
                 }
                 Instr::FlipCoin { out } => make(&mut kinds, *out, Kind::Coin)?,
-                Instr::Discover { by, amount, all, hit, designated, bound } => {
+                Instr::LibraryScan { by, amount, limit: _, all, hit, designated, bound } => {
                     who(&kinds, *by)?;
                     for scalar in amount.scalars() { if let Scalar::Local { slot, kind } = scalar { need(&kinds, slot, kind)?; } }
                     for slot in [all, hit, designated] { make(&mut kinds, *slot, Kind::Cards)?; }
@@ -983,7 +998,7 @@ impl fmt::Display for Instr {
             Instr::SkipUnless { consent, count } => write!(f, "unless s{consent}, skip {count}"),
             Instr::Choose { kind, who, out } => write!(f, "s{out} = choose {kind:?} by {who:?}"),
             Instr::FlipCoin { out } => write!(f, "s{out} = called coin flip by controller"),
-            Instr::Discover { by, amount, all, hit, designated, bound } => write!(f, "s{all}, s{hit}, s{designated}, s{bound} = {by:?} discovers {amount:?}"),
+            Instr::LibraryScan { by, amount, limit, all, hit, designated, bound } => write!(f, "s{all}, s{hit}, s{designated}, s{bound} = {by:?} scans {limit:?} {amount:?}"),
             Instr::Discovered { by, bound } => write!(f, "{by:?} completed discover s{bound}"),
             Instr::TakeUntil { set, whose, out, matched } => write!(f, "s{out}, s{matched} = take_until {set:?} of {whose:?}"),
             Instr::TakeTop { n, whose, out } => write!(f, "s{out} = take_top {n:?} of {whose:?}"),
@@ -3131,6 +3146,7 @@ impl Emit {
                     Instr::Select { out, still_in, .. } | Instr::Remainder { out, still_in, .. } if out == slot => Some(Some(CastOrigin::Fixed(*still_in))),
                     Instr::TakeTop { out, .. } if out == slot => Some(Some(CastOrigin::Fixed(Zone::Library))),
                     Instr::TakeUntil { out, matched, .. } if out == slot || matched == slot => Some(Some(CastOrigin::Fixed(Zone::Library))),
+                    Instr::LibraryScan { all, hit, .. } if all == slot || hit == slot => Some(Some(CastOrigin::Fixed(Zone::Exile))),
                     Instr::Exile { out, .. } if out == slot => Some(Some(CastOrigin::Produced(*out))),
                     Instr::Action { created: Some(out), .. } if out == slot =>
                         Some(instruction.cast_result().map(|(out, _)| CastOrigin::Produced(out))),
@@ -4671,7 +4687,17 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 let (offered, cast, possible) = (e.slot(), e.slot(), e.slot());
                 // "If you don't, …": whether a cast was made (601.2h)
                 binder.outcome = Some((player.clone(), cast, possible, e.instrs.len()));
-                e.instrs.push(Instr::Cast { player, cards, offered, costs, cast, possible, from, rider: None, haste: support.suspend_offer(), one: false, ceiling: None });
+                let ceiling = if support.generated_by("Cascade") {
+                    let scan = e.instrs.iter().rev().find_map(|instruction| match instruction {
+                        Instr::LibraryScan { hit, bound, .. } => Some((*hit, *bound)), _ => None,
+                    }).ok_or_else(|| crate::Unsupported("cascade: a retained scan must precede its cast offer".into()))?;
+                    let supplied_hit = cards.iter().all(|card| matches!(card, action::Operand::Reference(subjects)
+                        if e.instrs.iter().any(|instruction| matches!(instruction,
+                            Instr::Subjects { cards, out, .. } if *cards == scan.0 && out == subjects))));
+                    if !supplied_hit { return unsupported("cascade: only its exact scan hit is offered"); }
+                    Some(scan.1)
+                } else { None };
+                e.instrs.push(Instr::Cast { player, cards, offered, costs, cast, possible, from, rider: None, haste: support.suspend_offer(), one: false, ceiling });
                 e.end_act(false, None);
                 continue;
             }
@@ -5114,7 +5140,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             let by = Who::Of(actor);
             let (all, hit, designated, bound, subjects, offered, cast, possible, rest, designated_subjects) =
                 (e.slot(), e.slot(), e.slot(), e.slot(), e.slot(), e.slot(), e.slot(), e.slot(), e.slot(), e.slot());
-            e.instrs.push(Instr::Discover { by, amount, all, hit, designated, bound });
+            e.instrs.push(Instr::LibraryScan { by, amount, limit: ScanLimit::AtMost, all, hit, designated, bound });
             e.instrs.push(Instr::Subjects { cards: hit, out: subjects, still_in: Some(Zone::Exile) });
             e.instrs.push(Instr::Subjects { cards: designated, out: designated_subjects, still_in: None });
             e.instrs.push(Instr::Cast { player, cards: vec![action::Operand::Reference(subjects)],
@@ -5480,6 +5506,33 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             e.instrs.push(Instr::Place { objects: vec![action::Operand::Reference(cards)], position: ir::Position::One(ir::action::LibraryPosition::Top), chooser: None,
                 order: None, attempt: None, by: None, before_shuffle: true });
             e.instrs.push(Instr::Shuffle { players: action::Operand::Reference(owners), found: None });
+            e.end_act(true, optional_branch);
+            continue;
+        }
+        if let Action::Until { verb: ir::action::UntilVerb::Exile, until } = &act.action {
+            if optional || !act.mods.is_empty() || !controller_only(clause.subject.as_ref()) || binder.each.is_some()
+                || until.quant != Quant::Indefinite(Count::Exactly(Amount::Const(1)))
+                || until.chooser.is_some() || until.random.is_some()
+                || until.set != (ObjectSet { filter: until.set.filter.clone(), ..ObjectSet::of(Domain::Card) }) {
+                return unsupported("exile until: one nonland card below a mana-value bound in the controller's library required");
+            }
+            let ir::Filter::All(parts) = &until.set.filter else { return unsupported("exile until: a nonland mana-value bound required"); };
+            let nonland = ir::Filter::Not(Box::new(ir::Filter::Atom(Atom::Type(ir::CardType::Land))));
+            let bounds = parts.iter().filter_map(|part| match part {
+                ir::Filter::Atom(Atom::Stat { stat: ir::Stat::ManaValue, cmp: ir::amount::Cmp::Lt, value }) => Some((value, ScanLimit::LessThan)),
+                ir::Filter::Atom(Atom::Stat { stat: ir::Stat::ManaValue, cmp: ir::amount::Cmp::Le, value }) => Some((value, ScanLimit::AtMost)),
+                _ => None,
+            }).collect::<Vec<_>>();
+            let [(value, limit)] = bounds.as_slice() else { return unsupported("exile until: one mana-value bound required"); };
+            if parts.len() != 2 || !parts.contains(&nonland) { return unsupported("exile until: additional stopping constraints not implemented"); }
+            let (value, limit) = ((*value).clone(), *limit);
+            let amount = quantity(&value, support, &binder)?;
+            let (all, hit, designated, bound, subjects) = (e.slot(), e.slot(), e.slot(), e.slot(), e.slot());
+            e.instrs.push(Instr::LibraryScan { by: Who::Controller, amount, limit, all, hit, designated, bound });
+            e.instrs.push(Instr::Subjects { cards: hit, out: subjects, still_in: Some(Zone::Exile) });
+            binder.groups.push(Group { slot: all, paragraph: binder.paragraph(), by: Verb::Exile, zone: Zone::Exile, taken: Vec::new() });
+            binder.result = Some((subjects, until.set.clone(), 1));
+            binder.name(subjects, until.set.clone(), (0, 1), false);
             e.end_act(true, optional_branch);
             continue;
         }
@@ -6804,7 +6857,7 @@ enum Pending {
     Arrange(arrange::Pending),
     Connive(connive::Pending),
     Explore(explore::Pending),
-    Discover(discover::Pending),
+    LibraryScan(library_scan::Pending),
     Endure(endure::Pending),
     Search(search::Pending),
     Piles(piles::Pending),
@@ -6926,7 +6979,7 @@ impl Frame {
             },
             Some(Pending::Mana(procedure)) => procedure.answer(answer),
             Some(Pending::Copies(procedure)) => procedure.answer(answer),
-            Some(Pending::Operation { .. }) | Some(Pending::Discover(_)) => unreachable!("the operation owns this answer"),
+            Some(Pending::Operation { .. }) | Some(Pending::LibraryScan(_)) => unreachable!("the operation owns this answer"),
             Some(Pending::Payment { .. }) => unreachable!("the payment owns this answer"),
             Some(Pending::Answer { answer: slot, .. }) => *slot = Some(answer),
             None => panic!("a frame accepts an answer only while awaiting a decision"),
@@ -7704,28 +7757,28 @@ fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt> {
                 Err(decision)=>{ f.pending=Some(Pending::Operation{result:None,created:None});return Err(Halt::Ask(decision)); }
             }
         }
-        Instr::Discover { by, amount, all, hit, designated, bound } => {
+        Instr::LibraryScan { by, amount, limit, all, hit, designated, bound } => {
             let mut pending = match f.pending.take() {
-                Some(Pending::Discover(pending)) => pending,
+                Some(Pending::LibraryScan(pending)) => pending,
                 None => {
                     let value = amount.evaluate(game, &f.ctx, f);
                     let Some(player) = f.actor(*by) else {
                         for slot in [all, hit, designated] { f.slots[*slot] = Some(Value::Cards(Vec::new())); }
-                        f.slots[*bound] = Some(Value::Number(value));
+                        f.slots[*bound] = Some(Value::Number(limit.ceiling(value)));
                         return Ok(());
                     };
-                    discover::Pending::new(player, value, &f.ctx)
+                    library_scan::Pending::new(player, value, *limit, &f.ctx)
                 },
-                _ => unreachable!("discover resumes its own pending scan"),
+                _ => unreachable!("a library scan resumes its own retained continuation"),
             };
             if let Some(decision) = pending.advance(game)? {
-                f.pending = Some(Pending::Discover(pending));
+                f.pending = Some(Pending::LibraryScan(pending));
                 return Err(Halt::Ask(decision));
             }
             f.slots[*all] = Some(Value::Cards(pending.exiled));
             f.slots[*hit] = Some(Value::Cards(pending.hit.into_iter().collect()));
             f.slots[*designated] = Some(Value::Cards(pending.designated.into_iter().collect()));
-            f.slots[*bound] = Some(Value::Number(pending.bound));
+            f.slots[*bound] = Some(Value::Number(pending.limit.ceiling(pending.bound)));
         }
         Instr::Discovered { by, bound } => {
             let Some(Value::Number(value)) = f.slots[*bound] else { unreachable!("typed discover value") };
@@ -8743,7 +8796,7 @@ impl Resolution {
                 Some(Pending::Objects { procedure, .. }) => procedure.operation_complete(result),
                 Some(Pending::Connive(procedure)) => procedure.operation_complete(result),
                 Some(Pending::Explore(procedure)) => procedure.operation_complete(result),
-                Some(Pending::Discover(procedure)) => procedure.operation_complete(result),
+                Some(Pending::LibraryScan(procedure)) => procedure.operation_complete(result),
                 Some(Pending::Arrange(procedure)) => procedure.operation_complete(result),
                 _ => unreachable!("the program is awaiting its child operation"),
             },

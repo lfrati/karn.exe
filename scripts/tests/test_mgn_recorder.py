@@ -231,6 +231,23 @@ class OpeningHandReplayTests(unittest.TestCase):
 
 @unittest.skipUnless(ENGINE.is_file(), "build target/fast/game-serve to record MGN games on Karn")
 class RecorderTests(unittest.TestCase):
+    def test_cascade_decline_records_the_supplied_random_return_order(self):
+        # 702.85a: the authored driver supplies the order, rather than an engine seed.
+        driver = ROOT / "tests/fixtures/mgn-drafts/cascade.json"
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "cascade"
+            from_driver(driver, out, ENGINE, ORACLE, tier=2)
+            self.assertEqual((out / "draft.json").read_bytes(), driver.read_bytes())
+            transition = record(out / "record.json")["transitions"][0]
+            self.assertEqual(transition["random"], record(driver)["transitions"][0]["random"])
+            self.assertEqual(transition["delta"]["objects"]["agent"]["zone"], "battlefield")
+            saved = record(out / "record.json")
+            problems = []
+            state = State.from_record(saved, problems)
+            state.apply(transition["delta"], transition["random"], "transitions.0.delta", problems)
+            self.assertEqual(problems, [])
+            self.assertEqual(state.zones["A.library"], ["untouched", "bear", "land", "giant"])
+
     def test_suspend_special_action_records_its_public_time_counter(self):
         # 116.2f/702.62a/b: this authored driver states the complete special action's effects.
         driver = ROOT / "tests/fixtures/mgn-drafts/suspend.json"

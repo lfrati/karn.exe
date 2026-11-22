@@ -73,6 +73,12 @@ are object snapshot facts. Native JSON and MGN use the existing payment and coun
 MGN setup of positions with counters outside the battlefield remains explicitly refused.
 Variable suspend announcements and granted suspend remain refused.
 
+Cascade and Discover share the retained sequential library-exile scan. Their strict and
+inclusive bounds stay distinct, including Cascade with mana value zero. Each scan owns its
+actual exile identities; its optional cast uses the ordinary permission and resulting-spell
+ceiling, then the existing library placement owner returns the remainder in a captured random
+order. Printed Cascade supports repeated instances; grants remain refused.
+
 Ninjutsu retains the returned attacker's defender. Its rules text includes battles under
 702.49c; execution supports players and planeswalkers. Battle combat and protectors (310.8)
 remain unsupported.

@@ -1894,7 +1894,7 @@ impl Game {
             },
         };
         if ceiling.is_some_and(|bound| def.spell_mana_value(x) > bound) {
-            return Err("the resulting spell's mana value exceeds the discover value (701.57a)".into());
+            return Err("the resulting spell's mana value exceeds the effect's bound (701.57a, 702.85a)".into());
         }
         // the creature chosen for harmonize, tapped as the cost is paid (702.180b)
         let cost = match route { CastRoute::Harmonize { tapped: Some(creature) } => cost.tapping(creature), _ => cost };

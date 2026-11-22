@@ -351,6 +351,7 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
             for ability in abilities { gives.push((crate::functions::scope(&ability, &[])?, Gives::Ability(ability))); }
             Ok(Declared::new(gives, vec![Context::PermanentsOnly, Context::PrintedOnly]))
         }
+        "Cascade" if plain => generated(cascade().clone(), false, vec![Context::PrintedOnly]),
         "Suspend" => crate::suspend::declare(item),
         "Plot" => {
             let Some(cost) = crate::plot::cost(item) else { return refused(item) };
