@@ -1536,7 +1536,10 @@ fn source(n: Number, sel: &P<Selector>) -> P<Filter> {
         ir::Sort::Permanent, ir::Sort::Card, ir::Sort::Spell, ir::Sort::Ability,
     ]);
     let set = set.map(move |set| objects_only(&set).then_some(set), move |set| objects_only(set).then(|| set.clone()));
-    alt("ability source", vec![lit("from"), lit("of").alias()]).then_keep(&set).map(
+    // Singular stack abilities can name their source with "of" (113.7a). The plural
+    // "abilities of creatures" describes owned ability families, in the static grammar.
+    let prep = if n == Number::Sg { alt("ability source", vec![lit("from"), lit("of").alias()]) } else { lit("from") };
+    prep.then_keep(&set).map(
         |set| Some(Filter::Atom(Atom::Source(Box::new(set)))),
         |f| match f {
             Filter::Atom(Atom::Source(set)) => Some((**set).clone()),
