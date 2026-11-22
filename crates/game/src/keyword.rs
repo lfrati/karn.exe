@@ -500,6 +500,7 @@ fn triggered(item: &ir::token::KeywordInstance) -> Option<&'static Ability> {
         "Exalted" => Some(exalted()),
         "Flanking" => Some(flanking()),
         "Evolve" => Some(evolve()),
+        "Mentor" => Some(mentor()),
         _ => None,
     }
 }
@@ -530,6 +531,14 @@ fn evolve() -> &'static Ability {
         *condition = ir::Condition::And(vec![creature(ir::Ref::This), creature(ir::Ref::Anaphor(ir::Anaphor::That)), condition.clone()]);
         ability
     })
+}
+
+/// 702.134a: the dynamic target comparison uses ordinary announcement and resolution checks.
+fn mentor() -> &'static Ability {
+    static MENTOR: OnceLock<Ability> = OnceLock::new();
+    crate::token::init(&MENTOR, || CardDef::new("Mentor rule", "", "Creature",
+        "Whenever this creature attacks, put a +1/+1 counter on target attacking creature with power less than this creature's power.", None)
+        .expect("the grammar reads rule 702.134a").abilities[0].clone())
 }
 
 /// 702.108a-b: every printed instance is an ordinary independent cast trigger.

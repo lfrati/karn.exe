@@ -30,6 +30,19 @@ class RoundKeywordsClientTests(unittest.TestCase):
         self.pass_round()
         self.assertEqual(self.object(source)["counters"], {"+1/+1": 1})
 
+    def test_mentor_uses_the_existing_explicit_trigger_target_choice(self):
+        # 702.134a: attacking creatures of equal power cannot be chosen for mentor.
+        self.new([{"battlefield": ["Sunhome Stalwart", "Memnite"]}, {}])
+        source, = self.ids("Sunhome Stalwart", zone="battlefield")
+        small, = self.ids("Memnite", zone="battlefield")
+        self.advance(lambda state: state["asked"]["kind"] == "attackers")
+        self.engine.act({"kind": "attack", "attacks": [[source, {"player": 1}], [small, {"player": 1}]]})
+        self.assertEqual(self.engine.state["asked"]["kind"], "targets")
+        self.reject(0, {"kind": "targets", "targets": [[{"object": source}]]})
+        self.engine.act({"kind": "targets", "targets": [[{"object": small}]]})
+        self.pass_round()
+        self.assertEqual(self.object(small)["counters"], {"+1/+1": 1})
+
     def test_soulshift_chooses_its_target_before_the_optional_return(self):
         # 702.46a: a Kindred instant with changeling is a Spirit card, not a creature.
         self.new([{"hand": ["Murder"], "battlefield": ["Venerable Kumo"] + ["Swamp"] * 3,
