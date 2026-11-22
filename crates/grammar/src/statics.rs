@@ -1162,6 +1162,7 @@ pub fn sentence(body: &P<Body>) -> P<Static> {
             no_more,
             pt(),
             alternative_cost(),
+            alternative_keyword_cost(),
             replacement(body),
             redirect,
             x_limit(),
@@ -1408,6 +1409,21 @@ fn alternative_cost() -> P<Static> {
         },
     );
     alt("alternative cost", vec![plain, trailing])
+}
+
+/// A replacement payment names a keyword's cost rather than a spell's mana cost (118.9).
+fn alternative_keyword_cost() -> P<Static> {
+    let keyword = crate::selector::keyword_name().map(
+        |k| k.has_cost().then_some(k), |k| k.has_cost().then_some(*k),
+    );
+    lit("you may").then_keep(&crate::action::actions(Form::Base))
+        .skip(&lit("rather than pay")).then(&possessor()).then(&keyword).skip(&lit("cost")).map(
+            |((cost, of), keyword)| (of.set.domain != Domain::Player).then_some(Static::AlternativeKeywordCost { cost, of, keyword }),
+            |s| match s {
+                Static::AlternativeKeywordCost { cost, of, keyword } => Some(((cost.clone(), of.clone()), *keyword)),
+                _ => None,
+            },
+        )
 }
 
 /// "by discarding a card in addition to paying its other costs", "by paying {1} rather than paying

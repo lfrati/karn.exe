@@ -43,6 +43,8 @@ pub enum Static {
     /// "You may exert ~ as it attacks": an optional cost to attack (701.43d, 508.1g); a "When you
     /// do" ability after it is linked to it (607.2h).
     ExertAsItAttacks,
+    /// Substitute payment for a named keyword ability cost (118.9, 702).
+    AlternativeKeywordCost { cost: crate::action::Coord<Action>, of: Selector, keyword: Keyword },
     /// "If a triggered ability of an Ally you control triggers, that ability triggers an
     /// additional time", "If a creature dying causes a triggered ability of a permanent you
     /// control to trigger, it triggers an additional time" (`it`: the pronoun) (603.2d).
