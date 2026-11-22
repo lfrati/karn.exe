@@ -602,3 +602,31 @@ fn r608_2b_existing_targets_remain_legal() {
         "If all targets are still legal as target spell resolves, draw a card.",
     ] { declines(text); }
 }
+
+/// CR 115.1c and 701.65a: one quantified target includes permanent and spell alternatives.
+#[test]
+fn r115_1c_bare_type_and_untyped_target_heads() {
+    read("When ~ enters, airbend up to one other target creature or spell.");
+    read("Waterbend {8}: Transform ~.");
+    for text in [
+        "Exile up to one other target artifact or card.",
+        "Exile target spell or creature.",
+        "Exile another target land or spell.",
+    ] { read(text); }
+    let rule = &grammar::selector::selectors().selector;
+    let Outcome::Accepted { value, .. } = rule.parse_all(&tokenize("up to one other target creature or spell")) else { panic!() };
+    assert_eq!(value.quant, ir::Quant::Target(ir::Count::UpTo(ir::Amount::Const(1))));
+    assert!(value.set.other);
+    let ir::Domain::Union(arms) = value.set.domain else { panic!() };
+    assert_eq!(arms.len(), 2);
+    assert_eq!(arms[0].domain, ir::Domain::Permanent);
+    assert_eq!(arms[0].filter, ir::Filter::All(vec![ir::Filter::Atom(ir::Atom::Type(ir::CardType::Creature))]));
+    assert_eq!(arms[1], ir::ObjectSet::of(ir::Domain::Spell));
+    // A shared typed head remains shared: neither alternative names a permanent.
+    for text in ["target instant or sorcery spell", "target creature or artifact card"] {
+        let Outcome::Accepted { value, .. } = rule.parse_all(&tokenize(text)) else { panic!("{text}") };
+        assert!(matches!(value.set.domain, ir::Domain::Spell | ir::Domain::Card));
+    }
+    declines("Airbend up to one other target creature or player.");
+    declines("Sacrifice target creature or spell.");
+}
