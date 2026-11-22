@@ -30,7 +30,7 @@ impl Asks {
             Self::Is { what, is, past, .. } => {
                 let of = match what { Thing::Source => I::at(D::Source,P::IDENTITY), Thing::Controller => I::at(D::Context,P::CONTROL), Thing::Named(s) => s.inputs() };
                 // Lift candidate reads broadly: the reference may denote several objects.
-                let reads = match is { Is::Adjective(f) => f.inputs().over_objects(), Is::Card(f) => f.inputs().over_objects() | I::at(D::Objects,P::ZONE | P::IDENTITY | P::CATALOG | P::ABILITIES), Is::A(s) => s.inputs(), Is::Designated(_) => I::at(D::Objects,P::ZONE | P::DESIGNATIONS) };
+                let reads = match is { Is::Adjective(f) => f.inputs().over_objects(), Is::Card(f) => f.inputs().over_objects() | I::at(D::Objects,P::ZONE | P::IDENTITY | P::CATALOG | P::ABILITIES), Is::A(s) => s.inputs(), Is::Zone(_) => I::at(D::Objects,P::ZONE), Is::Designated(_) => I::at(D::Objects,P::ZONE | P::DESIGNATIONS) };
                 of | reads | if *past { I::at(D::Context,P::HISTORY) } else { I::NONE }
             },
             Self::Turn { .. } | Self::NthTurn { .. } => I::at(D::Context,P::TURN | P::CONTROL),

@@ -411,6 +411,7 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if let Some(cost) = ward_cost(item) { return Some(ward_trigger(&cost)); }
     if let Some(ability) = crew(item) { return Some(ability); }
     if let Some(ability) = saddle(item) { return Some(ability); }
+    if let Some(ability) = cumulative_upkeep(item) { return Some(ability); }
     if let Some(ability) = bloodthirst(item) { return Some(ability); }
     if let Some(ability) = bushido(item) { return Some(ability); }
     if let Some(ability) = renown(item) { return Some(ability); }
@@ -565,6 +566,18 @@ fn saddle(item: &ir::token::KeywordInstance) -> Option<Ability> {
     let text = format!("Tap any number of other untapped creatures you control with total power {n} or greater: This permanent becomes saddled until end of turn. Activate only as a sorcery.");
     let def = CardDef::new("Saddle rule", "", "Creature — Mount", &text, Some((0, 0))).expect("the grammar reads rule 702.171a");
     Some(def.abilities[0].clone())
+}
+
+/// 702.24a: put the age counter before computing one atomic generic-mana payment.
+/// Other costs remain refused until repeated payment choices have their own lowering.
+fn cumulative_upkeep(item: &ir::token::KeywordInstance) -> Option<Ability> {
+    if item.keyword.name() != "Cumulative Upkeep" { return None; }
+    let KeywordParam::Mana(mana) = &item.param else { return None; };
+    let generic = mana.0.iter().try_fold(0u32, |total, symbol| match symbol {
+        ir::mana::ManaSymbol::Generic(n) => total.checked_add(*n), _ => None,
+    })?;
+    let text = format!("At the beginning of your upkeep, if this permanent is on the battlefield, put an age counter on this permanent. You may pay {{{generic}}} for each age counter on this permanent. If you don't, sacrifice this permanent.");
+    CardDef::new("Cumulative upkeep rule", "", "Enchantment", &text, None).ok()?.abilities.into_iter().next()
 }
 
 /// 702.54a: the ordinary prospective-entry replacement checks damage history.

@@ -188,6 +188,8 @@ enum Thing {
 enum Is {
     Adjective(expr::Filter),
     A(expr::Set),
+    /// Current zone, independent of departure characteristics or a historical view.
+    Zone(crate::Zone),
     /// "a land card": a card (108.1; not a token or an ability, 111.6), as described,
     /// wherever it is or last was.
     Card(expr::Filter),
@@ -601,6 +603,7 @@ impl Asks {
                         Is::Card(filter)
                     }
                     Predicate::A(set) => Is::A(expr::Set::compile(set, support, bind)?),
+                    Predicate::In(zone) if zone.zones.items.as_slice() == [ir::Zone::Battlefield] && zone.owner.is_none() && zone.slice.is_none() => Is::Zone(crate::Zone::Battlefield),
                     Predicate::Designated(d @ (ir::condition::ObjectDesignation::Solved | ir::condition::ObjectDesignation::Monstrous | ir::condition::ObjectDesignation::Renowned | ir::condition::ObjectDesignation::Prepared)) => Is::Designated(*d),
                     other => return unsupported(format!("condition: is {}", name(other))),
                 };
@@ -856,6 +859,7 @@ impl Asks {
                     match is {
                         Is::Adjective(f) => f.matches(game, ctx, locals, thing),
                         Is::A(set) => set.contains(game, ctx, locals, thing),
+                        Is::Zone(zone) => matches!(thing, Target::Object(o) if game.obj(o).zone == *zone),
                         Is::Designated(d) => matches!(thing, Target::Object(o) if {
                             let o = game.obj(o);
                             o.zone == crate::Zone::Battlefield && match d {
@@ -978,7 +982,7 @@ impl Asks {
             }
             Asks::Is { what, is, .. } => {
                 if let Thing::Named(subject) = what { subject.scalars(out); }
-                match is { Is::Adjective(f) | Is::Card(f) => f.scalars(out), Is::A(set) => out.extend(set.scalars()), Is::Designated(_) => {} }
+                match is { Is::Adjective(f) | Is::Card(f) => f.scalars(out), Is::A(set) => out.extend(set.scalars()), Is::Designated(_) | Is::Zone(_) => {} }
             }
             Asks::HadCounters { count, .. } => count.scalars(out),
             Asks::Controlled { players, what, .. } => {
@@ -1040,7 +1044,7 @@ impl Asks {
             Asks::Exists { what, count } => what.reads() | quantity(count),
             Asks::Is { is: Is::Adjective(f) | Is::Card(f), .. } => f.reads(),
             Asks::Is { is: Is::A(set), .. } => set.reads(),
-            Asks::Is { is: Is::Designated(_), .. } => Reads::NONE,
+            Asks::Is { is: Is::Designated(_) | Is::Zone(_), .. } => Reads::NONE,
             Asks::HadCounters { count, .. } => quantity(count),
             Asks::Controlled { players: who, .. } => players(who),
             Asks::Compare { left, right, .. } => values(left) | values(right),
