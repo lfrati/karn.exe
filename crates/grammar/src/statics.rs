@@ -1177,7 +1177,7 @@ fn instant_activations() -> P<Static> {
         lit("activated").to(AbilityKind::Activated),
     ]);
     let explicit = kind.skip(&lit("abilities of")).then(&party());
-    let it = Selector::new(Quant::Definite(Ref::Anaphor(Anaphor::It)), ObjectSet::of(Domain::Permanent));
+    let it = Selector::new(Quant::Definite(Ref::Anaphor(Anaphor::It)), ObjectSet::of(Domain::Object));
     let pronoun = alt("possessive pronoun", vec![lit("its"), lit("her").alias(), lit("his").alias()]);
     let possessed = pronoun.then_keep(&kind).skip(&lit("abilities")).map(
         move |kind| Some((kind, ir::Coord::one(Who::One(it.clone())))),

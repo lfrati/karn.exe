@@ -92,3 +92,19 @@ fn r500_1_turn_begin_replacements() {
     }
     declines("If target creature would begin a turn, draw a card.");
 }
+
+/// CR 608.2d: an omitted noun still selects an object from the previously named group.
+#[test]
+fn r608_2d_choice_ellipsis() {
+    for text in [
+        "Search your library for three cards and reveal them. Target opponent chooses one. Put that card into your hand and the rest into your graveyard. Then shuffle.",
+        "Reveal three cards. You choose one.",
+        "Target player chooses one.",
+    ] {
+        let (value, _) = read(text);
+        assert!(serde_json::to_string(&value).unwrap().contains("One"));
+    }
+    for text in ["Target opponent chooses two.", "Target creature chooses one.", "Choose one card player."] {
+        declines(text);
+    }
+}
