@@ -4051,6 +4051,31 @@ fn split_noun_phrases(s: &Selector) -> Option<Vec<Selector>> {
     (join_noun_phrases(values.clone()).as_ref() == Some(s)).then_some(values)
 }
 
+/// One shared target over complete, differently typed alternatives. A retained
+/// postmodifier marks the first arm's boundary; plain shared-head unions stay in core.
+/// Controllers, owners, zones and predicates remain local to their arms.
+fn qualified_target_union(set: &P<ObjectSet>) -> P<Selector> {
+    fn arm_ok(set: &ObjectSet) -> bool { !matches!(set.domain, Domain::Union(_)) && !set.other }
+    fn qualified(set: &ObjectSet) -> bool {
+        unfold_posts(set, &None, None).is_some_and(|(_, posts)| !posts.is_empty() && !posts.iter().any(ends_nested))
+    }
+    fn target(det: &Det) -> bool { matches!(det.0, Quant::Target(_)) && !det.1 }
+    let arm = set.map(|s| arm_ok(&s).then_some(s), |s| arm_ok(s).then(|| s.clone()));
+    let first = arm.map(|s| qualified(&s).then_some(s), |s| qualified(s).then(|| s.clone()));
+    determiner(Number::Sg).map(|d| target(&d).then_some(d), |d| target(d).then(|| d.clone()))
+        .then(&first.skip(&lit("or")).then(&arm)).map(
+            |((quant, _), (first, second))| (first.domain != second.domain).then(||
+                Selector::new(quant, ObjectSet::of(Domain::Union(vec![first, second])))),
+            |s: &Selector| {
+                let Domain::Union(arms) = &s.set.domain else { return None };
+                let [first, second] = arms.as_slice() else { return None };
+                (first.domain != second.domain && s.chooser.is_none() && s.random.is_none()
+                    && s.set == ObjectSet::of(Domain::Union(arms.clone())))
+                    .then(|| ((s.quant.clone(), false), (first.clone(), second.clone())))
+            },
+        )
+}
+
 fn build() -> Selectors {
     let sg_in = forward::<Selector>("selector");
     let any_sel = forward::<Selector>("any selector");
@@ -4168,7 +4193,9 @@ fn build() -> Selectors {
         ],
     );
     let (part_sg, part_pl) = (partitive(Number::Sg, &any_sel.rule()), partitive(Number::Pl, &any_sel.rule()));
-    let sg = alt("selector", vec![branch(Number::Sg, ZonePrep::In), slices.clone(), part_sg.clone()]);
+    let (set_sg, set_pl, set_each) = set(ZonePrep::In);
+    let (set_sg_from, set_pl_from, _) = set(ZonePrep::From);
+    let sg = alt("selector", vec![branch(Number::Sg, ZonePrep::In), qualified_target_union(&set_sg), slices.clone(), part_sg.clone()]);
     // "your opponents" is how Oracle says all opponents; listed first so it prints that way
     let your_opponents = lit("your opponents").to(your_opponents());
     let pl = alt("plural selector", vec![your_opponents.clone(), branch(Number::Pl, ZonePrep::In), part_pl.clone()]);
@@ -4210,6 +4237,7 @@ fn build() -> Selectors {
         vec![
             battlefield_and_graveyards(),
             branch(Number::Sg, ZonePrep::From),
+            qualified_target_union(&set_sg_from),
             slices,
             part_sg,
             part_pl,
@@ -4220,8 +4248,6 @@ fn build() -> Selectors {
             zones,
         ],
     );
-    let (set_sg, set_pl, set_each) = set(ZonePrep::In);
-    let (_, set_pl_from, _) = set(ZonePrep::From);
     Selectors {
         possessive: zone_owner(&player_sg_any),
         singular,

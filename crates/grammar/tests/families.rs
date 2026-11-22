@@ -508,3 +508,43 @@ fn r608_2c_shared_condition_subject() {
     declines("If target player controls an artifact and discarded a card this turn, draw a card.");
     declines("If you control a Squirrel or died this turn, draw a card.");
 }
+
+/// CR 115.1 and 702.62: one target ranges over independently qualified object descriptions.
+#[test]
+fn r115_1_qualified_target_alternatives() {
+    read("When ~ enters, choose one —");
+    read("Suspend 4—{R}");
+    for text in [
+        "• Remove two time counters from target permanent or suspended card.",
+        "• Put two time counters on target permanent with a time counter on it or suspended card.",
+    ] {
+        let mode = &abilities().mode;
+        let Outcome::Accepted { value, .. } = mode.parse_all(&tokenize(text)) else { panic!("{text}") };
+        let printed = mode.print_text(&value, true).unwrap();
+        let Outcome::Accepted { value: again, .. } = mode.parse_all(&tokenize(&printed)) else { panic!("{printed}") };
+        assert_eq!(value, again);
+    }
+    for text in [
+        "Put X time counters on target permanent with a time counter on it or suspended card.",
+        "Put two charge counters on target permanent with two charge counters on it or suspended card.",
+        "{T}: Choose target permanent you control or suspended card you own.",
+    ] { read(text); }
+    let rule = &grammar::selector::selectors().selector;
+    let Outcome::Accepted { value: counter_target, .. } = rule.parse_all(&tokenize("target permanent with a time counter on it or suspended card")) else { panic!() };
+    assert_eq!(counter_target.set.filter, ir::Filter::All(Vec::new()));
+    let ir::Domain::Union(counter_arms) = counter_target.set.domain else { panic!() };
+    assert_eq!(counter_arms[0].filter, ir::Filter::All(vec![ir::Filter::Atom(ir::Atom::Counters {
+        kind: Some(ir::CounterKind("time".into())), count: ir::Count::AtLeast(ir::Amount::Const(1)),
+    })]));
+    assert!(matches!(&counter_arms[1].filter, ir::Filter::All(items) if items.contains(&ir::Filter::Atom(ir::Atom::Status(ir::Status::Suspended)))));
+    let Outcome::Accepted { value, .. } = rule.parse_all(&tokenize("target permanent you control or suspended card you own")) else { panic!() };
+    assert_eq!(value.quant, ir::Quant::Target(ir::Count::Exactly(ir::Amount::Const(1))));
+    let ir::Domain::Union(arms) = value.set.domain else { panic!() };
+    assert_eq!(arms.len(), 2);
+    assert_eq!(arms[0].domain, ir::Domain::Permanent);
+    assert_eq!(arms[1].domain, ir::Domain::Card);
+    assert!(arms[0].controller.is_some() && arms[0].owner.is_none());
+    assert!(arms[1].owner.is_some() && arms[1].controller.is_none());
+    read("Counter target spell that targets a permanent or suspended card.");
+    declines("Put two time counters on target permanent with a time counter on it or suspended card or.");
+}
