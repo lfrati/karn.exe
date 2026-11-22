@@ -46,6 +46,7 @@ pub struct CardDef {
     pub(crate) opening: Vec<usize>,
     pub(crate) admission: crate::Res<()>,
     pub(crate) costs: crate::cost::Definitions,
+    pub(crate) suspend: Option<crate::Res<crate::suspend::Suspension>>,
     pub(crate) plot: Option<crate::Res<crate::cost::Plan>>,
     /// A split card is one card with two castable halves (709.2). This definition holds the
     /// combined characteristics used outside the stack; the halves keep their own text.
@@ -194,13 +195,14 @@ impl CardDef {
         let keyword_declarations = crate::keyword::declarations(&abilities);
         let keyword_abilities = crate::keyword::executable_in(&keyword_declarations);
         let opening = crate::start::compile(&abilities);
-        let mut def = CardDef { activation_timing: Vec::new(), activation_modifiers: Vec::new(), unused_permissions: Vec::new(), declaration_abilities, activation_keywords, companion: None, cast_permissions: Vec::new(), library_permissions: Vec::new(), opening, back: None, modal: false, alternative_spell: None, prepare_spell: None, is_prepare_spell: false, front_mana_value: None, admission: Ok(()), costs: Default::default(), plot: None, keyword_declarations, keyword_abilities, keywords: Vec::new(), halves, name, cost, supertypes, types, subtypes, colors, text_colors, pt, loyalty, abilities, modes, programs: Vec::new(), links: crate::binding::Links::default(), functioning: Default::default(), cost_changes: Vec::new(), restrictions: Vec::new(), characteristics: Vec::new(), triggers: Vec::new(), trigger_modifiers: Vec::new(), replacements: Vec::new(), enchant: Ok(None), forms: Forms::default(), room: None, door: None };
+        let mut def = CardDef { activation_timing: Vec::new(), activation_modifiers: Vec::new(), unused_permissions: Vec::new(), declaration_abilities, activation_keywords, companion: None, cast_permissions: Vec::new(), library_permissions: Vec::new(), opening, back: None, modal: false, alternative_spell: None, prepare_spell: None, is_prepare_spell: false, front_mana_value: None, admission: Ok(()), costs: Default::default(), plot: None, suspend: None, keyword_declarations, keyword_abilities, keywords: Vec::new(), halves, name, cost, supertypes, types, subtypes, colors, text_colors, pt, loyalty, abilities, modes, programs: Vec::new(), links: crate::binding::Links::default(), functioning: Default::default(), cost_changes: Vec::new(), restrictions: Vec::new(), characteristics: Vec::new(), triggers: Vec::new(), trigger_modifiers: Vec::new(), replacements: Vec::new(), enchant: Ok(None), forms: Forms::default(), room: None, door: None };
         def.functioning = crate::functions::Functioning::compile(&def);
         def.links = crate::binding::compile(&def);
         def.keywords = crate::keyword::held(&def);
         def.enchant = crate::attach::compile(&def);
         def.costs = crate::cost::Definitions::compile(&def);
         def.plot = crate::plot::compile(&def);
+        def.suspend = crate::suspend::compile(&def);
         def.cast_permissions = crate::cast_permission::registrations(&def);
         def.library_permissions = crate::library_top::registrations(&def);
         def.companion = crate::companion::compile(&def);

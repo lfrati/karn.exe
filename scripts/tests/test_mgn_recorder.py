@@ -231,6 +231,19 @@ class OpeningHandReplayTests(unittest.TestCase):
 
 @unittest.skipUnless(ENGINE.is_file(), "build target/fast/game-serve to record MGN games on Karn")
 class RecorderTests(unittest.TestCase):
+    def test_suspend_special_action_records_its_public_time_counter(self):
+        # 116.2f/702.62a/b: this authored driver states the complete special action's effects.
+        driver = ROOT / "tests/fixtures/mgn-drafts/suspend.json"
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "suspend"
+            summary = from_driver(driver, out, ENGINE, ORACLE, tier=2)
+            self.assertEqual(summary["supplied"], [])
+            self.assertEqual((out / "draft.json").read_bytes(), driver.read_bytes())
+            transition = record(out / "record.json")["transitions"][0]
+            self.assertEqual(transition["do"]["action"], "suspend")
+            self.assertEqual(transition["delta"]["objects"]["bolt"],
+                             {"zone": "exile", "counters": {"time": 1}})
+
     def test_foretell_tier_one_draft_records_new_sparse_tier_two_facts(self):
         # 702.143a: the special action exiles the card face down, foretold;
         # 305.6: both Forest mana abilities tap their sources to pay {2}.

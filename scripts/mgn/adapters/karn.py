@@ -1398,7 +1398,7 @@ class KarnAdapter:
             return move
         if kind == "special_action":
             action = do.get("action")
-            if action in ("plot", "foretell"):
+            if action in ("plot", "foretell", "suspend"):
                 move = {"kind": action, "card": self._engine_id(do["object"])}
             elif action == "unlock":
                 move = {"kind": "unlock", "room": self._engine_id(do["object"]), "half": do.get("half", 0)}
@@ -2632,6 +2632,8 @@ class KarnAdapter:
                         self.unsupported_paths.append(f"objects.{record_id}.chosen")
                 if chosen:
                     facts["chosen"] = chosen
+        if self.tier == 2 and props.get("counters"):
+            facts["counters"] = dict(props["counters"])
         if self.tier == 2 and (permanent or on_stack):
             if seen.get("face_down"):
                 facts["face_down"] = True
@@ -2654,8 +2656,6 @@ class KarnAdapter:
                         self.unsupported_paths.append(f"objects.{record_id}.designations")
                 if designations:
                     facts["designations"] = sorted(designations)
-            if props.get("counters"):
-                facts["counters"] = dict(props["counters"])
             types = {t.lower() for t in props.get("types", [])}
             for key in ("power", "toughness"):
                 if props.get(key) is None:

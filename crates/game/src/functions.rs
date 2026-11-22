@@ -189,6 +189,38 @@ fn actions(effect: &Effect) -> Vec<&Action> {
     out
 }
 
+/// A positive condition that explicitly confines this source to exile (113.6b/k).
+/// Other subjects and disjunctions without that same constraint prove no source zone.
+fn requires_source_exiled(condition: &ir::Condition) -> bool {
+    match condition {
+        ir::Condition::Is { what, pred, negated: false } if what.quant == Quant::Definite(Ref::This) => match pred {
+            ir::condition::Predicate::Designated(ir::condition::ObjectDesignation::Suspended) => true,
+            ir::condition::Predicate::In(zone) => zone.zones.items == [ir::Zone::Exile] && zone.owner.is_none() && zone.slice.is_none(),
+            _ => false,
+        },
+        ir::Condition::And(conditions) => conditions.iter().any(requires_source_exiled),
+        ir::Condition::Or(conditions) => !conditions.is_empty() && conditions.iter().all(requires_source_exiled),
+        _ => false,
+    }
+}
+fn exile_only(ability: &Ability) -> bool {
+    fn event_condition(trigger: &ir::Trigger) -> bool {
+        match trigger {
+            ir::Trigger::Event { pattern, .. } => pattern.condition.as_deref().is_some_and(requires_source_exiled),
+            ir::Trigger::Any(triggers) => !triggers.is_empty() && triggers.iter().all(event_condition),
+            _ => false,
+        }
+    }
+    match ability {
+        Ability::Activated { effect, .. } => effect.0.iter().any(|sentence| matches!(sentence,
+            Sentence::Restrictions(restrictions) if restrictions.iter().any(|restriction|
+                matches!(restriction, ir::Restriction::If(condition) if requires_source_exiled(condition))))),
+        Ability::Triggered { trigger, effect } => event_condition(trigger) || matches!(effect.0.first(),
+            Some(Sentence::Led { lead: ir::Lead::Modifier(ir::Modifier::If(condition)), .. }) if requires_source_exiled(condition)),
+        _ => false,
+    }
+}
+
 /// The zone a triggered or activated ability of a permanent card functions in (113.6): the
 /// battlefield, or the zone its cost or effect moves the object out of (113.6m), including its owner's hand or graveyard. Of an ability whose trigger condition puts the object into that zone
 /// ("When this creature dies, return this card from your graveyard …") the exception of
@@ -198,6 +230,7 @@ pub fn scope(a: &Ability, modes: &[ir::Mode]) -> Res<Scope> {
     if matches!(a, Ability::Keywords(_)) {
         return unsupported("keyword rows use their declared contribution scopes (113.6)");
     }
+    if exile_only(a) { return Ok(Scope::In(Zone::Exile)); }
     // A source cannot be cast from the battlefield. Its own cast trigger functions
     // on the stack (113.6k), regardless of its permanent card type.
     if let Ability::Triggered { trigger: ir::Trigger::Event { pattern, .. }, .. } = a {
@@ -266,6 +299,8 @@ impl Functioning {
     /// The one place the bodies of a definition's abilities are read for where they function.
     pub(crate) fn compile(def: &CardDef) -> Functioning {
         let abilities = || def.abilities.iter().chain(def.keyword_abilities.iter().map(|(_, a)| a));
+        let mut generated_scopes = crate::keyword::contributions(def).filter_map(|(scope, gives)|
+            matches!(gives, crate::keyword::Gives::Ability(_)).then_some(scope));
         let mut cast_from = Vec::new();
         for zone in abilities().filter_map(casting_zone) {
             if !cast_from.contains(&zone) { cast_from.push(zone); }
@@ -285,7 +320,9 @@ impl Functioning {
         Functioning {
             spell_bodies,
             scopes: abilities().enumerate().map(|(i, a)| {
-                if matches!(a, Ability::Keywords(_)) {
+                if i >= def.abilities.len() {
+                    Ok(vec![generated_scopes.next().expect("one scope per generated executable")])
+                } else if matches!(a, Ability::Keywords(_)) {
                     def.keyword_declarations.iter().filter(|instance| instance.row == i).try_fold(Vec::new(), |mut scopes, instance| {
                         scopes.extend(instance.declared.as_ref().map_err(Clone::clone)?.gives.iter().map(|(scope, _)| *scope));
                         Ok(scopes)

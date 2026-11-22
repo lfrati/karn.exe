@@ -51,6 +51,8 @@ pub(crate) enum Gives {
     Destination { when: Departure, to: Zone, then: Option<Then> },
     Replacement(Replacement),
     Plot(ir::mana::ManaCost),
+    /// The fixed hand special action; its exile triggers are separate contributions (702.62a).
+    Suspend { count: u32, cost: ir::mana::ManaCost },
     /// An alternative cost the spell may be cast for rather than its mana cost (118.9): from
     /// any zone it is cast from, its evoke cost (702.74a); `from` one zone only, its warp
     /// cost, from a hand (702.185a).
@@ -342,6 +344,7 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
             for ability in abilities { gives.push((crate::functions::scope(&ability, &[])?, Gives::Ability(ability))); }
             Ok(Declared::new(gives, vec![Context::PermanentsOnly, Context::PrintedOnly]))
         }
+        "Suspend" => crate::suspend::declare(item),
         "Plot" => {
             let Some(cost) = crate::plot::cost(item) else { return refused(item) };
             one(hand, Gives::Plot(cost.clone()), vec![])

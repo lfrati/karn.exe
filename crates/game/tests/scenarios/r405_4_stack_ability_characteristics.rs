@@ -249,7 +249,7 @@ fn r602_2a_a_loyalty_ability_has_no_loyalty_and_its_planeswalker_has_its_counter
     let ajani = *t.g.battlefield.last().expect("Ajani resolved");
     let loyalty = |t: &T, seat: usize| {
         let o = object(&prompt(&t.g, seat).view.objects, ajani).clone();
-        (o.loyalty, o.permanent.and_then(|p| p.counters.get("loyalty").copied()))
+        (o.loyalty, o.counters.get("loyalty").copied())
     };
     // it entered with its printed loyalty in loyalty counters (306.5b), and its loyalty is them
     cite!(["306.5b", "306.5c"]; assert_eq!(loyalty(&t, 1), (None, Some(2))));

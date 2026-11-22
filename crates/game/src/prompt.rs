@@ -831,7 +831,7 @@ fn steps(plan: &[crate::legal::Step], out: &mut Vec<ObjId>) {
 fn move_objects(m: &Move, out: &mut Vec<ObjId>) {
     match m {
         Move::Pass | Move::Concede | Move::Companion | Move::ReversePayment | Move::Mulligan | Move::Keep | Move::ChooseModes(_) | Move::Order(_) => {}
-        Move::Plot(o) | Move::Foretell(o) | Move::TurnFaceUp(o, _) | Move::Unlock { room: o, .. } | Move::PlayLand(o) | Move::PlayLandAs { card: o, .. } => out.push(*o),
+        Move::Plot(o) | Move::Foretell(o) | Move::Suspend(o) | Move::TurnFaceUp(o, _) | Move::Unlock { room: o, .. } | Move::PlayLand(o) | Move::PlayLandAs { card: o, .. } => out.push(*o),
         Move::FinishPayment { plan, paying, .. } => { steps(plan, out); out.extend(paying.iter().flatten()); }
         Move::Activate { source, targets: groups, paying, .. } => { out.push(*source); targets(groups, out); out.extend(paying.iter().flatten()); }
         Move::Cast { card, targets: groups } => { out.push(*card); targets(groups, out); }

@@ -272,7 +272,7 @@ pub enum Instr {
     /// completed (601.2h), and `possible`, whether one was offered: "If you don't, …".
     /// `from`: the fixed source zone supplied by the bound card producer;
     /// `rider`: what a spell cast this way carries; `one`: "cast a spell": one cast at most.
-    Cast { player: action::Operand, cards: Vec<action::Operand>, offered: Slot, costs: crate::permission::Costs, cast: Slot, possible: Slot, from: CastOrigin, rider: Option<crate::permission::Rider>, one: bool, ceiling: Option<Slot> },
+    Cast { player: action::Operand, cards: Vec<action::Operand>, offered: Slot, costs: crate::permission::Costs, cast: Slot, possible: Slot, from: CastOrigin, rider: Option<crate::permission::Rider>, one: bool, ceiling: Option<Slot>, haste: bool },
     /// "Copy it three times": for each of these cards, that many copies of it made in the
     /// zone it is in, for the controller to cast (707.12). `out`: the copies.
     CopyCards { cards: action::Operand, times: expr::Amount, out: Slot },
@@ -4545,7 +4545,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             binder.outcome = Some((player.clone(), cast, possible, e.instrs.len()));
             e.instrs.push(Instr::Cast { player, cards, offered,
                 costs: if *free { crate::permission::Costs::Free } else { crate::permission::Costs::Ordinary },
-                cast, possible, from: CastOrigin::Fixed(Zone::Graveyard), rider: None, one: true, ceiling: None });
+                cast, possible, from: CastOrigin::Fixed(Zone::Graveyard), rider: None, haste: false, one: true, ceiling: None });
             e.end_act(false, None);
             continue;
         }
@@ -4621,7 +4621,12 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                     // Admitted above only by the owning madness keyword's offer.
                     CastOrigin::Fixed(Zone::Exile)
                 } else {
-                    let mut origins = cards.iter().map(|card| e.cast_origin(card));
+                    let mut origins = cards.iter().map(|card| {
+                        if *card == action::Operand::Source {
+                            if support.source_scope() == Some(crate::functions::Scope::In(Zone::Exile)) { return Some(CastOrigin::Fixed(Zone::Exile)); }
+                        }
+                        e.cast_origin(card)
+                    });
                     let from = origins.next().flatten().ok_or_else(|| crate::Unsupported("cast: no fixed source zone supplied by its card producer".into()))?;
                     if !origins.all(|origin| origin == Some(from)) {
                         return unsupported("cast: cards from mixed or unproved source zones");
@@ -4631,7 +4636,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 let (offered, cast, possible) = (e.slot(), e.slot(), e.slot());
                 // "If you don't, …": whether a cast was made (601.2h)
                 binder.outcome = Some((player.clone(), cast, possible, e.instrs.len()));
-                e.instrs.push(Instr::Cast { player, cards, offered, costs, cast, possible, from, rider: None, one: false, ceiling: None });
+                e.instrs.push(Instr::Cast { player, cards, offered, costs, cast, possible, from, rider: None, haste: support.suspend_offer(), one: false, ceiling: None });
                 e.end_act(false, None);
                 continue;
             }
@@ -5078,7 +5083,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             e.instrs.push(Instr::Subjects { cards: hit, out: subjects, still_in: Some(Zone::Exile) });
             e.instrs.push(Instr::Subjects { cards: designated, out: designated_subjects, still_in: None });
             e.instrs.push(Instr::Cast { player, cards: vec![action::Operand::Reference(subjects)],
-                offered, costs: crate::permission::Costs::Free, cast, possible, from: CastOrigin::Fixed(Zone::Exile), rider: None, one: true, ceiling: Some(bound) });
+                offered, costs: crate::permission::Costs::Free, cast, possible, from: CastOrigin::Fixed(Zone::Exile), rider: None, haste: false, one: true, ceiling: Some(bound) });
             e.instrs.push(Instr::Move { src: hit, to: Dest::Hand, by, when: Some(condition::Condition::outcome(cast, possible, ir::condition::Outcome::Didnt)) });
             e.instrs.push(Instr::Remainder { of: all, minus: vec![hit], still_in: Zone::Exile, out: rest });
             e.instrs.push(Instr::Move { src: rest, to: Dest::Library { position: LibraryPosition::Bottom, order: Some(Order::Random) }, by, when: None });
@@ -7501,7 +7506,7 @@ fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt> {
             f.cast_results.push((*out, copies.iter().filter_map(|target| match target { Target::Object(card) => Some(*card), _ => None }).collect()));
             f.slots[*out] = Some(Value::Subjects(copies));
         }
-        Instr::Cast { player, cards, offered, costs, cast, possible, from, rider, one, ceiling } => {
+        Instr::Cast { player, cards, offered, costs, cast, possible, from, rider, one, ceiling, haste } => {
             // a spell was cast, or its cast abandoned: what is left is offered again. Whether
             // it was cast is its payment's result: a cast reversed (733.1) was not made.
             if let Some(Pending::Payment { result }) = &f.pending {
@@ -7543,7 +7548,7 @@ fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt> {
             let done = *one && matches!(f.slots[*cast], Some(Value::Consent(true)));
             let left: Vec<ObjId> = all.iter().copied().filter(|c| !done && game.obj(*c).zone != Zone::Gone && f.cast_origins.iter().any(|(slot, card, zone)| slot == offered && card == c && game.obj(*c).zone == *zone) && !game.obj(*c).is(ir::CardType::Land)).collect();
             if f.pending.is_none() {
-                for card in &left { if !game.offered(player, *card) { game.offer(player, *card, *costs, rider.clone().map(|r| crate::permission::Rider { by: Some((f.ctx.source, f.ctx.ability.clone())), ..r }), ceiling.map(|slot| match f.slots[slot] { Some(Value::Number(n)) => n, _ => unreachable!("typed cast ceiling") })); } }
+                for card in &left { if !game.offered(player, *card) { game.offer(player, *card, *costs, rider.clone().map(|r| crate::permission::Rider { by: Some((f.ctx.source, f.ctx.ability.clone())), ..r }), ceiling.map(|slot| match f.slots[slot] { Some(Value::Number(n)) => n, _ => unreachable!("typed cast ceiling") })).haste = *haste; } }
             }
             // A cast is its own move and arrives as a child; an answer here declines.
             if !left.is_empty() { f.ask(player, Choice::Cast { cards: left })?; }
@@ -8237,7 +8242,7 @@ fn rebound_program() -> &'static Arc<Program> {
     PROGRAM.get_or_init(|| Arc::new(Program::with_initial(vec![Instr::Cast {
         player: action::Operand::Controller, cards: vec![action::Operand::Reference(0)],
         offered: 1, cast: 2, possible: 3, costs: crate::permission::Costs::Free,
-        from: CastOrigin::Fixed(Zone::Exile), rider: None, one: true, ceiling: None,
+        from: CastOrigin::Fixed(Zone::Exile), rider: None, haste: false, one: true, ceiling: None,
     }], vec![ActSpan{end:1,moves:true,keeps_x:false}], Vec::new(), vec![Some(Kind::Subjects)])
         .expect("rebound uses the ordinary retained free-cast instruction")))
 }
@@ -8492,7 +8497,7 @@ mod completion_tests {
             let mut instructions = prefix;
             instructions.push(Instr::Cast { player: Operand::Controller, cards: vec![], offered: 1,
                 costs: crate::permission::Costs::Free, cast: 2, possible: 3,
-                from: CastOrigin::Produced(slot), rider: None, one: true, ceiling: None });
+                from: CastOrigin::Produced(slot), rider: None, haste: false, one: true, ceiling: None });
             let end = instructions.len();
             let error = Program::new(instructions, vec![ActSpan { end, moves: false, keeps_x: false }]).unwrap_err();
             assert!(error.0.contains("cast origin does not name an earlier successful card producer"), "{error:?}");
@@ -8507,7 +8512,7 @@ mod completion_tests {
             Instr::Action { action: action::Action::Move { groups: vec![(vec![Operand::Reference(0)], action::Destination::Zone(Zone::Exile))], said: ir::action::MoveVerb::Put }, created: Some(1), attempt: None },
             Instr::Capture { operand: Operand::Controller, out: 2 },
             Instr::Cast { player: Operand::Controller, cards: vec![], offered: 3, costs: crate::permission::Costs::Free,
-                cast: 4, possible: 5, from: CastOrigin::Retained { original: 2, moved: 1 }, rider: None, one: true, ceiling: None },
+                cast: 4, possible: 5, from: CastOrigin::Retained { original: 2, moved: 1 }, rider: None, haste: false, one: true, ceiling: None },
         ];
         let end = instructions.len();
         let error = Program::new(instructions, vec![ActSpan { end, moves: true, keeps_x: false }]).unwrap_err();

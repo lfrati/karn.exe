@@ -25,6 +25,7 @@ FIELDS = {
     "discard": {"cards"}, "bottom": {"cards"}, "attack": {"attacks"}, "block": {"blocks"},
     "divide": {"division"}, "modes": {"modes"}, "targets": {"targets", "modes", "division"}, "order": {"order"}, "choose": {"answer", "pending_payment"},
     "plot": PAYMENT_FIELDS | {"card"}, "foretell": PAYMENT_FIELDS | {"card"},
+    "suspend": PAYMENT_FIELDS | {"card"},
     "unlock": PAYMENT_FIELDS | {"room", "half"}, "turn_face_up": PAYMENT_FIELDS | {"permanent", "way"},
     "companion": PAYMENT_FIELDS,
 }
@@ -576,7 +577,7 @@ def native_action(adapter, move: dict, after: dict, pending: dict | None = None)
             if face.raw.get("mana_cost") == "{0}":
                 out["pay"] = {}  # an explicit zero cost is paid (118.5), not absent
         return out
-    if kind in ("plot", "foretell", "unlock", "turn_face_up", "companion"):
+    if kind in ("plot", "foretell", "suspend", "unlock", "turn_face_up", "companion"):
         if kind == "companion":
             _refuse("native companion action does not name its card")
         key = {"unlock": "room", "turn_face_up": "permanent"}.get(kind, "card")

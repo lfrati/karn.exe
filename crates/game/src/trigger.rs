@@ -1510,6 +1510,7 @@ impl Game {
         // the objects whose abilities could function: permanents (113.6), and cards in
         // graveyards, where an ability that moves its card out of one functions (113.6m)
         let graveyards: Vec<ObjId> = self.players.iter().flat_map(|p| p.graveyard.iter().copied()).collect();
+        let exile: Vec<ObjId> = self.exile.iter().copied().filter(|object| self.obj(*object).hidden.is_none()).collect();
         // Each incarnation sees only events after its arrival (400.7); setup objects
         // exist from the beginning. Arrival belongs to the object, not retained history.
         let first = self.seen.0 - events.len();
@@ -1533,10 +1534,12 @@ impl Game {
             let at = crate::event::Seq(first + at);
             let graveyards: Vec<ObjId> = graveyards.iter().copied()
                 .filter(|g| self.obj(*g).arrived.is_none_or(|from| from < at)).collect();
+            let exile: Vec<ObjId> = exile.iter().copied()
+                .filter(|object| self.obj(*object).arrived.is_none_or(|from| from < at)).collect();
             let emblems: Vec<ObjId> = self.command.iter().copied()
                 .filter(|o| self.obj(*o).arrived.is_none_or(|from| from < at)).collect();
             if let Event::Began { part } = e {
-                for source in self.battlefield.iter().chain(&emblems).chain(&graveyards).copied().collect::<Vec<_>>() {
+                for source in self.battlefield.iter().chain(&emblems).chain(&graveyards).chain(&exile).copied().collect::<Vec<_>>() {
                     let watching = self.watching_before(source, membership_changed, None, Interest::Step);
                     if watching.is_empty() { continue; }
                     let controller = self.controller(source);
@@ -1581,6 +1584,7 @@ impl Game {
                     sources.extend(self.left_with(was));
                 }
                 sources.extend(graveyards.iter().copied());
+                sources.extend(exile.iter().copied());
                 sources.extend(emblems.iter().copied());
                 // Self-cast abilities function on this spell, not on the battlefield
                 // (113.6k). The event supplies it; no all-stack scan is needed.

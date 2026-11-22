@@ -63,6 +63,7 @@ mod payment_audit;
 mod permission;
 mod preparation;
 mod plot;
+mod suspend;
 pub mod foretell;
 mod saga;
 mod history;

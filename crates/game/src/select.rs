@@ -291,6 +291,17 @@ impl<'a> Support<'a> {
         crate::keyword::madness(self.def?).into_iter().find(|(_, said, trigger)| *trigger == index && said == cost).map(|(row, ..)| row)
     }
 
+    /// A self-cast offer keeps the source zone proved by this very ability's scope.
+    pub(crate) fn source_scope(&self) -> Option<crate::functions::Scope> {
+        self.def?.scope(self.ability.clone()?.index)?.ok()
+    }
+    /// Only the generated last-counter ability carries Suspend's haste rule (702.62a).
+    pub(crate) fn suspend_offer(&self) -> bool {
+        let (Some(def), Some(key)) = (self.def, self.ability.clone()) else { return false };
+        key.index.checked_sub(def.abilities.len()).and_then(|i| def.keyword_abilities.get(i))
+            .is_some_and(|(row, _)| def.keyword_declarations.iter().any(|instance|
+                instance.row == *row && instance.item.keyword.name() == "Suspend" && instance.declared.is_ok()))
+    }
     pub(crate) fn ability_key(&self) -> Option<crate::binding::AbilityKey> { self.ability.clone() }
     pub(crate) fn cost_exile_writer(&self, key: crate::binding::AbilityKey) -> bool {
         self.def.is_some_and(|def| crate::binding::cost_exile_writer(def, key.index))

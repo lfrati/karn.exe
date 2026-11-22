@@ -1103,6 +1103,7 @@ fn render_view(seen: &Snapshot) -> Value {
                 v["may_play"]["grants"] = json!(o.may_play_grants.iter().map(|(land, until)| json!({ "land": land, "until": until })).collect::<Vec<_>>());
             }
         }
+        if o.suspended { v["suspended"] = json!(true); }
         if let Some(turn) = o.plotted { v["plotted"] = json!({"turn": turn}); }
         // a warped card and the turn it was warped in (702.185a–b)
         if let Some(turn) = o.warped { v["warped"] = json!({"turn": turn}); }
@@ -1122,13 +1123,13 @@ fn render_view(seen: &Snapshot) -> Value {
                 "card": hidden.card.as_ref().map(|c| json!({ "name": c.name })) });
             if let Some(watcher) = hidden.watcher { v["hidden"]["watcher"] = oid(watcher); }
         }
+        if o.permanent.is_some() || !o.counters.is_empty() { v["counters"] = json!(o.counters); }
         if let Some(p) = &o.permanent {
             v["attached_to"] = p.attached_to.as_ref().map(target).unwrap_or(Value::Null);
             v["tapped"] = json!(p.tapped);
             // a double-faced permanent with its back face up (701.27g)
             if p.transformed { v["transformed"] = json!(true); }
             v["damage"] = json!(p.damage);
-            v["counters"] = json!(p.counters);
             v["sick"] = json!(p.sick);
             // a Class's level (716.2)
             if let Some(level) = p.level { v["level"] = json!(level); }
@@ -1443,7 +1444,7 @@ fn move_keys(kind: &str) -> Option<&'static [&'static str]> {
     Some(match kind {
         "pass" | "concede" | "mulligan" | "keep" | "reverse_payment" => &[],
         "play" => &["card", "face"],
-        "plot" | "foretell" => &["card", PAYS[0], PAYS[1]],
+        "plot" | "foretell" | "suspend" => &["card", PAYS[0], PAYS[1]],
         "companion" => &PAYS,
         "turn_face_up" => &["permanent", "way", PAYS[0], PAYS[1]],
         "unlock" => &["room", "half", PAYS[0], PAYS[1]],
@@ -1749,6 +1750,7 @@ fn read_plain(v: &Value, offered: &[game::operation::ReplacementId]) -> Result<M
         "play" => match v.get("face") {None=>Move::PlayLand(id("card")?),Some(face)=>Move::PlayLandAs{card:id("card")?,face:face.as_u64().ok_or("a modal face index")? as usize}},
         "plot" => Move::Plot(id("card")?),
         "foretell" => Move::Foretell(id("card")?),
+        "suspend" => Move::Suspend(id("card")?),
         "turn_face_up" => Move::TurnFaceUp(id("permanent")?, {
             let way = v.get("way").and_then(Value::as_str);
             *game::face::Way::ALL.iter().find(|w| Some(w.name()) == way)

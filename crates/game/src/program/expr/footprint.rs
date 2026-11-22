@@ -31,6 +31,7 @@ impl Filter {
                 Atom::Color(_) | Atom::Colorless | Atom::Multicolored | Atom::Monocolored => recipient(P::COLORS),
                 Atom::Opponent => context(P::CONTROL) | I::at(D::Players, P::IDENTITY),
                 Atom::Keyword(_) => recipient(P::KEYWORDS),
+                Atom::Suspended => recipient(P::ZONE | P::KEYWORDS | P::COUNTERS | P::IDENTITY | P::CATALOG),
                 Atom::Ability { .. } => recipient(P::ABILITIES),
                 Atom::TargetCount(_) => recipient(P::BINDINGS),
                 // Reads the recipient's target identities and other objects' descriptions;

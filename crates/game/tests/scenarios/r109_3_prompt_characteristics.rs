@@ -157,7 +157,7 @@ fn r306_5a_a_planeswalker_card_off_the_battlefield_has_its_printed_loyalty() {
     let seen = prompt(&g, 1);
     let permanent = object(&seen, fielded);
     // on the battlefield its loyalty is the loyalty counters it entered with, not a printed number
-    cite!(["306.5c", "306.5b"]; assert_eq!((permanent.loyalty, permanent.permanent.as_ref().and_then(|p| p.counters.get("loyalty").copied())), (None, Some(4))));
+    cite!(["306.5c", "306.5b"]; assert_eq!((permanent.loyalty, permanent.counters.get("loyalty").copied()), (None, Some(4))));
 }
 
 #[test]

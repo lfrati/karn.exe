@@ -34,6 +34,8 @@ pub(crate) struct CastAnnouncement {
     /// The keyword ability an effect gave the card in a hand (613.1f) whose alternative cost
     /// it was cast for, as it was then: "Warp {2}{R}" (702.185a).
     pub given_alternative: Option<std::sync::Arc<ir::token::KeywordInstance>>,
+    /// The accepted resolution-time offer carries Suspend haste (702.62a).
+    pub suspend_haste: bool,
 }
 #[derive(Debug, Clone, Default)]
 pub(crate) struct CastPayment {
@@ -1751,6 +1753,8 @@ impl Game {
             self.obj_mut(permanent).spell_x = old.x;
             for effect in &mut self.continuous {
                 if effect.affected.contains(&id) { effect.affected.push(permanent); }
+                if let crate::layers::Lifetime::Controlled { source, .. } = &mut effect.lifetime
+                    && *source == id { *source = permanent; }
             }
             // its warp cost was paid: the delayed exile of what it became (702.185a)
             self.alternative_resolved(id, permanent);
@@ -2277,7 +2281,7 @@ impl Game {
     pub(crate) fn holds_counters(&self, holder: Target) -> bool {
         match holder {
             Target::Player(p) => self.players.get(p).is_some_and(|p| !p.lost),
-            Target::Object(o) => self.objects.get(o).is_some_and(|o| o.zone == Zone::Battlefield),
+            Target::Object(o) => self.objects.get(o).is_some_and(|o| matches!(o.zone, Zone::Battlefield | Zone::Exile)),
         }
     }
     pub fn counters(&self, holder: impl Into<Target>) -> &BTreeMap<String, u32> {

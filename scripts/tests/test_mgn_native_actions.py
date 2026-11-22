@@ -580,6 +580,11 @@ class NativeActionTests(unittest.TestCase):
         self.assertEqual(self.call({"kind": "unlock", "room": 3, "half": 1, "mana": {"R": 2}}),
                          {"kind": "special_action", "action": "unlock", "object": "c3", "half": 1, "pay": {"pool": {"R": 2}}})
 
+    def test_suspend_special_action_keeps_its_explicit_payment(self):
+        self.a.state["players"][0]["pool"] = {"R": 1}
+        self.assertEqual(self.call({"kind": "suspend", "card": 3, "mana": {"R": 1}}),
+                         {"kind": "special_action", "action": "suspend", "object": "c3", "pay": {"pool": {"R": 1}}})
+
     def test_offered_effect_uses_captured_producer(self):
         self.a.state["asked"]["among"] = [{"id": 8, "source": 2, "ability": 2}]
         self.assertEqual(self.call({"kind": "choose", "answer": {"skip": 8}}, pending={"kind": "skip"}),

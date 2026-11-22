@@ -335,7 +335,7 @@ impl Game {
     /// card in a hand or graveyard whose ability functions there (113.6m), its owner, a card there
     /// having no controller (108.4a).
     fn activator(&self, player: PlayerId, source: ObjId, index: Option<usize>) -> Result<(), String> {
-        if matches!(self.obj(source).zone, Zone::Graveyard | Zone::Hand) && index.is_some_and(|i| self.functions(source, i)) {
+        if matches!(self.obj(source).zone, Zone::Graveyard | Zone::Hand | Zone::Exile) && index.is_some_and(|i| self.functions(source, i)) {
             if self.obj(source).owner != player {
                 return Err("an ability of a card outside the battlefield is activated by its owner (108.4a, 602.2)".into());
             }

@@ -243,6 +243,8 @@ pub enum Move {
     Plot(ObjId),
     /// Pay {2} and exile a hand card with foretell face down, a special action (702.143a).
     Foretell(ObjId),
+    /// Exile a hand card with time counters by paying its suspend cost (116.2f, 702.62a).
+    Suspend(ObjId),
     /// Turn a face-down permanent face up this way, a special action (116.2b, 701.40b).
     TurnFaceUp(ObjId, crate::face::Way),
     /// Pay the unlock cost of this half of a Room, 0 its left, a special action (116.2m,
@@ -606,6 +608,8 @@ fn check_face_as(def: &CardDef, alternative: bool, r: &mut Refusals) -> Res<()> 
     r.need(def.enchant.clone())?;
     r.part(|| format!("{}, its plot cost", def.name()));
     if let Some(plot) = &def.plot { r.need(plot.clone())?; }
+    r.part(|| format!("{}, its suspend action", def.name()));
+    if let Some(suspend) = &def.suspend { r.need(suspend.clone())?; }
     if crate::keyword::replicate_count(def) > 1 { r.say("multiple replicate costs require separately identified announcements (702.56b)")?; }
     r.part(|| format!("{}, its companion condition", def.name()));
     if let Some(companion) = &def.companion { r.need(companion.clone())?; }
@@ -1363,6 +1367,7 @@ impl Game {
         match mv {
             Move::Plot(card) => self.plot(player,card,&[],None)?,
             Move::Foretell(card) => self.foretell(player,card,&[],None)?,
+            Move::Suspend(card) => self.suspend(player,card,&[],None)?,
             Move::TurnFaceUp(permanent, way) => self.turn_face_up_action(player,permanent,way,&[],None)?,
             Move::Unlock { room, half } => self.unlock_action(player,room,half,&[],None)?,
             Move::Companion => self.take_companion(player,&[],None)?,
@@ -1378,6 +1383,7 @@ impl Game {
                     Move::Companion if adding.is_empty() && modes.is_empty() && cast_as.is_none() && paying.is_none() && x.is_none() && kicks == 0 && !buyback && !entwine && replicate == 0 && life.is_empty() && chose.is_empty() && cost.is_none() && route.is_none() && substitutions.is_empty() && gift.is_none() && division.is_empty() => self.take_companion(player,plan.as_deref().unwrap_or(&[]),with.as_ref())?,
                     Move::Plot(card) if adding.is_empty() && modes.is_empty() && cast_as.is_none() && paying.is_none() && x.is_none() && kicks == 0 && !buyback && !entwine && replicate == 0 && life.is_empty() && chose.is_empty() && cost.is_none() && route.is_none() && substitutions.is_empty() && gift.is_none() && division.is_empty() => self.plot(player,card,plan.as_deref().unwrap_or(&[]),with.as_ref())?,
                     Move::Foretell(card) if adding.is_empty() && modes.is_empty() && cast_as.is_none() && paying.is_none() && x.is_none() && kicks == 0 && !buyback && !entwine && replicate == 0 && life.is_empty() && chose.is_empty() && cost.is_none() && route.is_none() && substitutions.is_empty() && gift.is_none() && division.is_empty() => self.foretell(player,card,plan.as_deref().unwrap_or(&[]),with.as_ref())?,
+                    Move::Suspend(card) if adding.is_empty() && modes.is_empty() && cast_as.is_none() && paying.is_none() && x.is_none() && kicks == 0 && !buyback && !entwine && replicate == 0 && life.is_empty() && chose.is_empty() && cost.is_none() && route.is_none() && substitutions.is_empty() && gift.is_none() && division.is_empty() => self.suspend(player,card,plan.as_deref().unwrap_or(&[]),with.as_ref())?,
                     Move::Unlock { room, half } if adding.is_empty() && modes.is_empty() && cast_as.is_none() && paying.is_none() && x.is_none() && kicks == 0 && !buyback && !entwine && replicate == 0 && life.is_empty() && chose.is_empty() && cost.is_none() && route.is_none() && substitutions.is_empty() && gift.is_none() && division.is_empty() => self.unlock_action(player,room,half,plan.as_deref().unwrap_or(&[]),with.as_ref())?,
                     Move::TurnFaceUp(permanent, way) if adding.is_empty() && modes.is_empty() && cast_as.is_none() && paying.is_none() && x.is_none() && kicks == 0 && !buyback && !entwine && replicate == 0 && life.is_empty() && chose.is_empty() && cost.is_none() && route.is_none() && substitutions.is_empty() && gift.is_none() && division.is_empty() => self.turn_face_up_action(player,permanent,way,plan.as_deref().unwrap_or(&[]),with.as_ref())?,
                     Move::Activate { source, ability, targets, paying: chosen } if cast_as.is_none() && paying.is_none() && kicks == 0 && !buyback && !entwine && replicate == 0 && cost.is_none() && route.is_none() && substitutions.is_empty() && gift.is_none() => {
@@ -1691,6 +1697,28 @@ impl Game {
         Ok(())
     }
 
+    /// The rules restriction of legendary instants and sorceries (205.4e), before costs.
+    pub(crate) fn legendary_cast_allowed(&self, player: PlayerId, def: &CardDef) -> bool {
+        !((def.is(CardType::Instant) || def.is(CardType::Sorcery)) && def.supertypes.contains(&Supertype::Legendary))
+            || self.battlefield.iter().any(|object| {
+                let seen = self.seen_for(*object, crate::layers::Aspect::Types);
+                self.controller(*object) == player && seen.supertypes.contains(&Supertype::Legendary)
+                    && (seen.is(CardType::Creature) || seen.is(CardType::Planeswalker))
+            })
+    }
+
+    /// Casting timing, independent of the card's payable cost and target choices. Suspend
+    /// asks exactly this before its special action (116.2f, 702.62c).
+    pub(crate) fn cast_has_instant_timing(&self, player: PlayerId, card: ObjId, cast_as: CastAs, x: Option<u32>) -> bool {
+        let Some(def) = self.def(card).and_then(|def| def.spell(cast_as).ok()) else { return false };
+        if def.is(CardType::Instant) && !def.is(CardType::Sorcery)
+            || crate::keyword::of(def).any(|keyword| keyword.name() == "Flash")
+            || self.casting_as_though_flash(player, card, cast_as, x) { return true; }
+        let ctx = Ctx { casting: Some((card, cast_as)), x, ..Ctx::for_spell(player, card) };
+        def.characteristics.iter().any(|row| row.result.as_ref().is_ok_and(|statement|
+            statement.self_flash(self, &ctx.clone().with_ability(row.ability))))
+    }
+
     /// Can this player begin to cast this card now with these modes chosen (601.2, 117.1a,
     /// 601.2b)? Everything but the choice of its targets and the payment of its cost, which
     /// are returned: what its text targets, in order (601.2c), of a modal spell what the modes
@@ -1787,7 +1815,9 @@ impl Game {
         let ceiling = permit.and_then(|p| p.ceiling);
         let library_life=self.top_life_cost(route);
         let free = costs == Costs::Free || library_life;
-        if flashback && free { return Err("only one alternative cost is paid for a spell (118.9a)".into()); }
+        if free && (flashback || matches!(route, CastRoute::Escape | CastRoute::Foretell | CastRoute::Harmonize { .. })) {
+            return Err("only one alternative cost is paid for a spell (118.9a)".into());
+        }
         // an instant any time its player has priority, anything else in a main phase of their
         // turn with the stack empty (117.1a), unless it has flash (702.8a); a spell an effect
         // has its player cast as it is applied ignores that timing (608.2g)
@@ -1799,21 +1829,12 @@ impl Game {
         }
         // 601.3d checks a conditional self-grant before costs or mana abilities;
         // the granting static itself still functions only on the stack (113.6e).
-        let self_flash = || {
-            let ctx = Ctx { casting: Some((card, cast_as)), x, ..Ctx::for_spell(player, card) };
-            def.characteristics.iter().any(|row| row.result.as_ref().is_ok_and(|statement|
-                statement.self_flash(self, &ctx.clone().with_ability(row.ability))))
-        };
-        if !offered && !sneak && !(def.is(CardType::Instant) && !def.is(CardType::Sorcery)) && !crate::keyword::of(def).any(|k| k.name() == "Flash") && !self.sorcery_timing(player) && !self.casting_as_though_flash(player, card, cast_as, x) && !self_flash() {
+        if !offered && !sneak && !self.sorcery_timing(player) && !self.cast_has_instant_timing(player, card, cast_as, x) {
             return Err("that is cast in a main phase of your own turn with the stack empty (117.1a)".into());
         }
         // a legendary instant or sorcery is cast only by a player who controls a legendary
         // creature or a legendary planeswalker (205.4e)
-        let legendary = |o: &ObjId| {
-            let seen = self.seen_for(*o, crate::layers::Aspect::Types);
-            self.controller(*o) == player && seen.supertypes.contains(&Supertype::Legendary) && (seen.is(CardType::Creature) || seen.is(CardType::Planeswalker))
-        };
-        if (def.is(CardType::Instant) || def.is(CardType::Sorcery)) && def.supertypes.contains(&Supertype::Legendary) && !self.battlefield.iter().any(legendary) {
+        if !self.legendary_cast_allowed(player, def) {
             return Err("a legendary instant or sorcery is cast only by a player who controls a legendary creature or planeswalker (205.4e)".into());
         }
         // the cost it is cast for (601.2b, 601.2f): its mana cost, its flashback cost from a
@@ -1839,7 +1860,7 @@ impl Game {
                 } else { def.costs.given(def, cost)? }
             },
             CastCost::Flashback(_) => return Err("a flashback cost is selected only with the flashback route (702.34a)".into()),
-            CastCost::Mana if library_life && def.costs.normal.is_none() => crate::cost::Plan::default().kicked(&ir::mana::ManaCost(Vec::new()),1).plus(def.costs.additional.as_ref().map_err(Clone::clone)?),
+            CastCost::Mana if free && def.costs.normal.is_none() => crate::cost::Plan::default().kicked(&ir::mana::ManaCost(Vec::new()),1).plus(def.costs.additional.as_ref().map_err(Clone::clone)?),
             CastCost::Mana => if route == CastRoute::Escape { def.costs.escape.as_ref() } else if matches!(route, CastRoute::Harmonize { .. }) { def.costs.harmonize.as_ref() } else if route == CastRoute::Foretell { def.costs.foretell.as_ref() } else { def.costs.normal.as_ref() }
                 .ok_or("that card has no mana cost (202.1b)")?.clone()?,
             CastCost::Alternative(_) if flashback || matches!(route, CastRoute::Escape | CastRoute::Foretell | CastRoute::Harmonize { .. }) || free => return Err("only one alternative cost is paid for a spell (118.9a)".into()),
@@ -2081,7 +2102,7 @@ impl Game {
         self.obj_mut(spell).optional_paid = optional;
         self.obj_mut(spell).entwined = entwine;
         self.obj_mut(spell).cast_by = Some(player);
-        self.obj_mut(spell).cast_announcement = Some(Box::new(crate::state::CastAnnouncement { route, flashback_cost: None, permission: None, payment: None, given_alternative: None }));
+        self.obj_mut(spell).cast_announcement = Some(Box::new(crate::state::CastAnnouncement { route, flashback_cost: None, permission: None, payment: None, given_alternative: None, suspend_haste: false }));
         self.capture_spell(spell);
         self.targeting_events(spell);
         Ok(spell)
@@ -2174,7 +2195,9 @@ impl Game {
             crate::announcement::CastCost::Alternative(row) => proposed.given_alternative(card, cast_as, row),
             _ => None,
         };
+        let suspend_haste = proposed.cast_permission(player, card, cast_as, chosen).ok().flatten().is_some_and(|permission| permission.haste);
         let spell = proposed.announce_spell(player, card, cast_as, route, modes, targets, x, kicks, buyback, optional, entwine, face_down)?;
+        proposed.obj_mut(spell).cast_announcement.as_mut().unwrap().suspend_haste = suspend_haste;
         proposed.obj_mut(spell).cast_announcement.as_mut().unwrap().flashback_cost = match chosen {
             crate::announcement::CastCost::Flashback(index) => Some(index), _ => None,
         };
@@ -2530,7 +2553,7 @@ impl crate::retention::Trace for Move {
             Move::Activate { source, targets, paying, .. } => { source.trace(visit); targets.trace(visit); paying.trace(visit); },
             Move::Cast { card, targets } => { card.trace(visit); targets.trace(visit); },
             Move::Companion => {},
-            Move::Plot(card) | Move::Foretell(card) | Move::TurnFaceUp(card, _) | Move::Unlock { room: card, .. } => card.trace(visit),
+            Move::Plot(card) | Move::Foretell(card) | Move::Suspend(card) | Move::TurnFaceUp(card, _) | Move::Unlock { room: card, .. } => card.trace(visit),
             Move::ChooseTargets(targets) => targets.trace(visit),
             Move::Discard(cards) | Move::Bottom(cards) => cards.trace(visit),
             Move::Attack(attacks) => { for (source, target) in attacks { source.trace(visit); target.trace(visit); } },
@@ -2655,7 +2678,7 @@ impl crate::retention::Players for Move {
             Move::Choose(answer) => answer.players(visit),
             Move::GiftTo(player, action) => { visit(*player); action.players(visit); },
             Move::Paying(_, action) | Move::AuditPayment(action) | Move::WithMana(_, action) | Move::WithCosts(_, action) | Move::Adding(_, action) | Move::Modes(_, action) | Move::CastAs(_, action) | Move::WithX(_, action) | Move::WithReplicate(_, action) | Move::WithKicks(_, action) | Move::WithBuyback(_, action) | Move::WithOptional(_, action) | Move::WithEntwine(_, action) | Move::WithLife(_, action) | Move::WithCostChoice(_, action) | Move::WithCostBranches(_, action) | Move::CastFor(_, action) | Move::CastVia(_, action) | Move::WithDelve(_, action) | Move::WithConvoke(_, action) | Move::WithImprovise(_, action) | Move::WithDivision(_, action) => action.players(visit),
-            Move::PlayLand(_) | Move::PlayLandAs { .. } | Move::Companion | Move::Plot(_) | Move::Foretell(_) | Move::TurnFaceUp(..) | Move::Unlock { .. }
+            Move::PlayLand(_) | Move::PlayLandAs { .. } | Move::Companion | Move::Plot(_) | Move::Foretell(_) | Move::Suspend(_) | Move::TurnFaceUp(..) | Move::Unlock { .. }
             | Move::Discard(_) | Move::Bottom(_) | Move::Block(_) | Move::FinishPayment { .. } | Move::ContinueManaPayment { .. }
             | Move::ChooseModes(_) | Move::Order(_) | Move::Mulligan | Move::Keep | Move::Pass | Move::Concede | Move::ReversePayment => {},
         }

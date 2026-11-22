@@ -322,7 +322,7 @@ impl Lifetime {
     fn holds(self, game: &Game) -> bool {
         match self {
             Self::Controlled { source, player } => game.get_object(source).is_some_and(|o|
-                o.zone == Zone::Battlefield && game.controller(source) == player),
+                matches!(o.zone, Zone::Battlefield | Zone::Stack) && game.controller(source) == player),
             _ => true,
         }
     }

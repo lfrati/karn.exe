@@ -150,7 +150,7 @@ expects `keyword: Fear`. When a keyword lands, point them at one that is still r
 - Echo: direct rule expansion and a control-history condition need a since-last-upkeep history window; turn-only control duration is insufficient for repeated upkeeps.
 - Unearth: the graveyard activation, haste and delayed exile lower, but the full rule and replacement adaptation still need an all-departure exile replacement.
 - Cascade: full-rule and simplified scan expansions stop at exile-until lowering; the continuation must also check the resulting spell's mana value and randomly return the uncast cards.
-- Suspend: special-action and exile-trigger expansions need a hand action, suspended-card counter scope and a last-counter trigger.
+- Suspend moved to Lane 4: fixed-count printed suspend now has its hand action, exile-counter scope and last-counter cast; variable announcements and grants remain refused.
 - Overload: rewriting a target-free effect lowers, but the full rule needs announcement-time text substitution and selection of that executable before targets are chosen.
 - Miracle: reveal-as-drawn and reveal-trigger expansions need draw-time suspension and a linked cost permission with the reveal's bounded visibility.
 - Bestow: cost-only casting cannot declare Aura targets, and the alternative-characteristics owner accepts only Adventure/Omen instants or sorceries; needs a bestowed state through casting, illegal-target resolution and unattachment, preserving the permanent's incarnation.

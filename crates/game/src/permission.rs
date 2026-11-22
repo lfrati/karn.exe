@@ -28,6 +28,8 @@ pub(crate) struct Permission {
     pub(crate) costs: Costs,
     /// 715.3d: normal characteristics only, for as long as this incarnation stays exiled.
     pub(crate) adventure: bool,
+    /// Creature spells cast under this offer gain haste while continuously controlled (702.62a).
+    pub(crate) haste: bool,
     /// Where the card is: exile, or a graveyard for an offer of "a spell from your graveyard".
     /// A card that leaves it is a new object the permission does not follow (400.7).
     pub(crate) zone: Zone,
@@ -159,7 +161,7 @@ impl Costs {
 impl Game {
     /// An effect lets this player play (or only cast) this exiled card until its deadline.
     pub(crate) fn permit(&mut self, player: PlayerId, object: ObjId, play: bool, until: Until) {
-        self.permissions.push(Permission { player, object, play, window: Window::Ordinary, costs: Costs::Ordinary, adventure: false, zone: Zone::Exile, rider: None, ceiling: None, until });
+        self.permissions.push(Permission { player, object, play, window: Window::Ordinary, costs: Costs::Ordinary, adventure: false, haste: false, zone: Zone::Exile, rider: None, ceiling: None, until });
     }
 
     /// [`Game::permit`], put in force now with the deadline the text states.
@@ -167,7 +169,7 @@ impl Game {
         match until {
             Deadline::Warped => {
                 let turn = self.turn;
-                self.permissions.push(Permission { player, object, play, window: Window::Warped(turn), costs: Costs::Ordinary, adventure: false, zone: Zone::Exile, rider: None, ceiling: None, until: Until::EndOfTurn });
+                self.permissions.push(Permission { player, object, play, window: Window::Warped(turn), costs: Costs::Ordinary, adventure: false, haste: false, zone: Zone::Exile, rider: None, ceiling: None, until: Until::EndOfTurn });
             }
             until => self.permit(player, object, play, until.from(self.turn)),
         }
@@ -181,18 +183,19 @@ impl Game {
 
     /// An effect being applied offers this player a cast of this card where it is (exile, or
     /// their graveyard), for these costs, now (608.2g); a spell cast so carries the rider.
-    pub(crate) fn offer(&mut self, player: PlayerId, object: ObjId, costs: Costs, rider: Option<Rider>, ceiling: Option<u32>) {
+    pub(crate) fn offer(&mut self, player: PlayerId, object: ObjId, costs: Costs, rider: Option<Rider>, ceiling: Option<u32>) -> &mut Permission {
         let zone = self.obj(object).zone;
-        self.permissions.push(Permission { player, object, play: false, window: Window::Offered, costs, adventure: false, zone, rider, ceiling, until: Until::EndOfTurn });
+        self.permissions.push(Permission { player, object, play: false, window: Window::Offered, costs, adventure: false, haste: false, zone, rider, ceiling, until: Until::EndOfTurn });
+        self.permissions.last_mut().expect("the new resolution-time offer")
     }
 
     pub(crate) fn permit_adventure(&mut self, player: PlayerId, object: ObjId) {
-        self.permissions.push(Permission { player, object, play: true, window: Window::Ordinary, costs: Costs::Ordinary, adventure: true, zone: Zone::Exile, rider: None, ceiling: None, until: Until::EndOfTurn });
+        self.permissions.push(Permission { player, object, play: true, window: Window::Ordinary, costs: Costs::Ordinary, adventure: true, haste: false, zone: Zone::Exile, rider: None, ceiling: None, until: Until::EndOfTurn });
     }
 
     pub(crate) fn permit_plotted(&mut self, player: PlayerId, object: ObjId) {
         let turn = self.turn;
-        self.permissions.push(Permission { player, object, play: false, window: Window::Plotted(turn), costs: Costs::Free, adventure: false, zone: Zone::Exile, rider: None, ceiling: None, until: Until::EndOfTurn });
+        self.permissions.push(Permission { player, object, play: false, window: Window::Plotted(turn), costs: Costs::Free, adventure: false, haste: false, zone: Zone::Exile, rider: None, ceiling: None, until: Until::EndOfTurn });
     }
 
     /// A public designation of this exile incarnation, even before it can be cast (702.170c).

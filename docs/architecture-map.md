@@ -63,6 +63,16 @@ the cast announcement. An unqualified flashback route requires one distinct pric
 No-mana-cost recipients gain an unpayable ability. Literal granted flashback prices and
 MGN's representation of distinct price choices remain explicitly unsupported.
 
+Suspend's fixed-count hand action uses the retained payment owner. The card stays in its
+hand through the mana window, then is exiled with time counters using counter replacement
+ordering. Its two exile subscriptions use the scopes of their keyword contributions; the
+last-counter event retains the removal's actual remainder. The existing resolution-time
+cast offer supplies explicit targets and payment, with controlled haste continuing from the
+creature spell onto its permanent and ending at the first control loss. Public exile counters
+are object snapshot facts. Native JSON and MGN use the existing payment and counter fields;
+MGN setup of positions with counters outside the battlefield remains explicitly refused.
+Variable suspend announcements and granted suspend remain refused.
+
 Ninjutsu retains the returned attacker's defender. Its rules text includes battles under
 702.49c; execution supports players and planeswalkers. Battle combat and protectors (310.8)
 remain unsupported.

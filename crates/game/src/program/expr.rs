@@ -439,6 +439,8 @@ pub(crate) enum Atom {
     PermanentType,
     HasAdventure,
     PreparedSpell,
+    /// An exile card with suspend and at least one time counter (702.62b).
+    Suspended,
     /// Its printed mana cost is one of these (202.1).
     ManaCost(Vec<ir::mana::ManaCost>),
     Subtype(ir::Subtype),
@@ -521,7 +523,7 @@ impl Filter {
         match self {
             Filter::All(parts) | Filter::Any(parts) => Reads::each(parts, Filter::reads),
             Filter::Not(inner) => inner.reads(),
-            Filter::Atom(Atom::Keyword(_)) => Reads::ABILITIES,
+            Filter::Atom(Atom::Keyword(_) | Atom::Suspended) => Reads::ABILITIES,
             Filter::Atom(Atom::Tapped(_)) => Reads::TAP_STATE,
             // set by a saddle ability's resolving, as an event of the turn (702.171a)
             Filter::Atom(Atom::Saddled) => Reads::HISTORY,
@@ -593,6 +595,7 @@ impl Filter {
                 ir::Atom::Status(Status::Untapped) => Atom::Tapped(false),
                 ir::Atom::Status(Status::Token) => Atom::Token,
                 ir::Atom::Status(Status::Saddled) => Atom::Saddled,
+                ir::Atom::Status(Status::Suspended) => Atom::Suspended,
                 ir::Atom::Status(Status::Commander) => Atom::Commander,
                 ir::Atom::Status(Status::FaceDown) => Atom::FaceDown,
                 ir::Atom::Status(s @ (Status::Attacking | Status::Blocking | Status::Blocked | Status::Unblocked)) => Atom::Combat(*s),
@@ -913,6 +916,7 @@ impl Atom {
             Atom::Saddled => "saddled".into(),
             Atom::PreparedSpell => "a prepare spell".into(),
             Atom::Commander => "a commander".into(),
+            Atom::Suspended => "suspended".into(),
             Atom::FaceDown => "face down".into(),
             Atom::Attached(kind) => format!("{kind:?}").to_lowercase(),
             Atom::Combat(status) => format!("{status:?}").to_lowercase(),
@@ -1028,6 +1032,7 @@ impl Atom {
                 }
             },
             Atom::Commander => game.is_commander(o.id),
+            Atom::Suspended => game.suspended(o.id),
             Atom::InSubjects(_) | Atom::DealtDamageBy(_) | Atom::TappedFor { .. } | Atom::HappenedTo(_) | Atom::Damage { .. } | Atom::FoughtThisTurn { .. } => unreachable!("tested before object lookup"),
             Atom::Entered(slot) => matches!(locals.local(*slot), Some(Value::Cards(cards)) if cards.contains(&o.id)),
             Atom::EnteredThisTurn => o.zone == Zone::Battlefield && o.entered != 0 && o.entered == game.turn,
@@ -1160,7 +1165,7 @@ fn sorts_said(sorts: &[Sort]) -> String {
 enum Domain {
     LinkedExile(crate::binding::AbilityKey),
     CostExile(crate::binding::AbilityKey),
-    /// Cards in the named owned zones (400.1, 400.3), optionally alongside permanents:
+    /// Cards in named owned zones or shared exile (400.1, 400.3), optionally alongside permanents:
     /// "creatures from the battlefield and/or creature cards from graveyards" (115.2).
     Zones { zones: Vec<Zone>, yours: bool, also_permanents: bool },
     /// "creature or player you control": each arm is a description of its own.
@@ -1169,7 +1174,7 @@ enum Domain {
     Sorts { sorts: Vec<Sort>, players: bool },
 }
 
-/// Owned card zones and whether permanents are included in the same description.
+/// Named card zones and whether permanents are included in the same description.
 fn card_zones(set: &ir::ObjectSet) -> Res<Option<(Vec<Zone>, bool, bool)>> {
     let Some(zone) = &set.zone else { return Ok(None) };
     // Permanents already denote the battlefield; spelling that zone adds no new domain.
@@ -1178,6 +1183,7 @@ fn card_zones(set: &ir::ObjectSet) -> Res<Option<(Vec<Zone>, bool, bool)>> {
 
     let players = |who: &ir::Selector| who.set == ir::ObjectSet::of(ir::Domain::Player) && who.chooser.is_none() && who.random.is_none();
     let yours = match zone.owner.as_deref() {
+        None if zone.zones.items == [ir::Zone::Exile] => false,
         Some(who) if is_you(who) => true,
         Some(who) if who.set.domain == ir::Domain::Player && who.chooser.is_none() && who.random.is_none()
             && (crate::select::controlled_by_you(who) == Some(false) || matches!(who.quant, Quant::Definite(_))) => false,
@@ -1193,6 +1199,7 @@ fn card_zones(set: &ir::ObjectSet) -> Res<Option<(Vec<Zone>, bool, bool)>> {
             ir::Zone::Graveyard => Ok(Zone::Graveyard),
             ir::Zone::Library => Ok(Zone::Library),
             ir::Zone::Hand => Ok(Zone::Hand),
+            ir::Zone::Exile if zone.owner.is_none() => Ok(Zone::Exile),
             _ => unsupported("noun phrase: an unsupported card zone"),
         }).collect::<Res<Vec<_>>>()?
     };
@@ -1386,6 +1393,21 @@ impl Set {
                 _ => false,
             }
         }
+        fn suspended(filter: &ir::Filter) -> bool {
+            match filter {
+                ir::Filter::Atom(ir::Atom::Status(ir::selector::Status::Suspended)) => true,
+                ir::Filter::All(items) => items.iter().any(suspended),
+                ir::Filter::Any(items) => !items.is_empty() && items.iter().all(suspended),
+                _ => false,
+            }
+        }
+        if set.domain == ir::Domain::Card && set.zone.is_none() && suspended(&set.filter) {
+            let mut card = set.clone();
+            card.zone = Some(ir::selector::ZoneSpec {
+                zones: ir::Coord { items: vec![ir::Zone::Exile], conj: ir::Conj::And }, owner: None, slice: None,
+            });
+            return Self::compile(&card, support, bind);
+        }
         let domain = match &set.domain {
             ir::Domain::Card if set.zone.is_none() && set.controller.is_some() && commander(&set.filter) =>
                 Domain::Sorts { sorts: vec![Sort::Permanent, Sort::Spell], players: false },
@@ -1570,11 +1592,12 @@ impl Set {
             return out;
         }
         if let Domain::Zones { zones, also_permanents, .. } = &self.domain {
-            let cards = game.players.iter().flat_map(|p| zones.iter().flat_map(move |zone| match zone {
+            let cards = game.players.iter().flat_map(|p| zones.iter().filter(|zone| **zone != Zone::Exile).flat_map(move |zone| match zone {
                 Zone::Graveyard => p.graveyard.iter(), Zone::Library => p.library.iter(), Zone::Hand => p.hand.iter(),
                 _ => unreachable!("compiled owned card zones"),
             })).copied();
-            return ctx.permanents(game).iter().copied().filter(|_| *also_permanents).chain(cards)
+            let exile = game.exile.iter().copied().filter(|_| zones.contains(&Zone::Exile));
+            return ctx.permanents(game).iter().copied().filter(|_| *also_permanents).chain(cards).chain(exile)
                 .map(Target::Object).filter(|t| self.contains(game, ctx, locals, *t)).collect();
         }
         (0..game.players.len()).filter(|p| !game.players[*p].lost).map(Target::Player)
@@ -2041,7 +2064,7 @@ impl Number {
                 Filter::Atom(Atom::HappenedTo(_)) => true,
                 Filter::Atom(Atom::Type(_) | Atom::PermanentType | Atom::HasAdventure | Atom::PreparedSpell | Atom::BasicLandType | Atom::ManaCost(_) | Atom::Subtype(_) | Atom::Supertype(_)
                     | Atom::Color(_) | Atom::Colorless | Atom::Multicolored | Atom::Monocolored
-                    | Atom::Opponent | Atom::Keyword(_) | Atom::Tapped(_) | Atom::Token | Atom::Saddled | Atom::Commander | Atom::FaceDown
+                    | Atom::Opponent | Atom::Keyword(_) | Atom::Tapped(_) | Atom::Token | Atom::Saddled | Atom::Commander | Atom::Suspended | Atom::FaceDown
                     | Atom::Combat(_) | Atom::Attached(_) | Atom::Ability { .. } | Atom::Chosen(_) | Atom::SameName(_) | Atom::SharesCreatureType(_) | Atom::SharesColor(_)
                     | Atom::TargetCount(_) | Atom::Named(_) | Atom::EnteredThisTurn | Atom::LostLifeThisTurn | Atom::DealtDamageBy(_) | Atom::TappedFor { .. } | Atom::Damage { .. } | Atom::FoughtThisTurn { .. } | Atom::Counters { .. } | Atom::Level { .. } | Atom::Entered(_) | Atom::InSubjects(_)) => false,
             }

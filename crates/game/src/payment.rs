@@ -36,6 +36,8 @@ pub(crate) struct Payment {
 #[derive(Debug, Clone)]
 pub(crate) enum Undo {
     Companion,
+    /// An unpaid hand special action has not moved its card (702.62a).
+    HandAction,
     /// Turning a permanent face up moved nothing; what was shown stays shown (701.40b).
     TurnFaceUp,
     /// Paying an unlock cost moved nothing (709.5e).
@@ -54,6 +56,8 @@ pub(crate) enum Finish {
     Plot,
     /// The {2} of foretelling is paid: the card is foretold (702.143a).
     Foretell,
+    /// Its hand cost has been paid; place time counters before the action ends (702.62a).
+    Suspend { count: u32, placement: Option<Box<crate::suspend::Placement>> },
     /// The cost of turning a face-down permanent face up is paid: turn it (701.40b), with a
     /// +1/+1 counter if it was a megamorph cost (702.37b).
     TurnFaceUp { megamorph: bool },
@@ -90,6 +94,10 @@ impl Payment {
         Self { finish: Finish::Foretell, ..Self::plot(player, card, cost, steps, with, undo, triggers) }
     }
 
+    pub(crate) fn suspend(player: PlayerId, card: ObjId, count: u32, cost: Plan, steps: &[Step], with: Option<&Pool>, undo: Undo, triggers: std::ops::Range<usize>) -> Self {
+        Self { finish: Finish::Suspend { count, placement: None }, ..Self::plot(player, card, cost, steps, with, undo, triggers) }
+    }
+
     /// A payment the effect of `source` asks of `player` while it is applied.
     pub(crate) fn effect(player: PlayerId, source: ObjId, cost: Plan, steps: Vec<Step>, paying: Vec<Vec<ObjId>>, with: Option<Pool>) -> Self {
         Self {audit:None,next_child:0,library_tops:None, permission: None, player, source, ctx: Ctx::new(player, source), finish: Finish::Effect, undo: Undo::Effect, triggers: 0..0, cost,
@@ -112,18 +120,22 @@ impl Payment {
         commitment.discard_result = Some(result);
     }
     pub(crate) fn answer(&mut self, answer: crate::state::Answer) {
-        self.committing.as_mut().expect("cost ordering owns this answer").answer(answer);
+        if let Finish::Suspend { placement: Some(placement), .. } = &mut self.finish { placement.answer(answer); }
+        else { self.committing.as_mut().expect("cost ordering owns this answer").answer(answer); }
     }
     /// Lock and validate a payment once its explicitly supplied mana window is over.
     /// A leaf is prepared transactionally before becoming a child, so a rejected
     /// activation still belongs to the parent's correction boundary (733.1).
     pub(crate) fn prepare(&mut self, game:&mut Game) -> crate::play::ActionResult<()> {
         if !self.steps.is_empty() || self.committing.is_some() {return Ok(());}
+        if matches!(self.finish, Finish::Suspend { .. }) && !game.players[self.player].hand.contains(&self.source) {
+            return Err("the card to suspend is no longer in your hand (702.62a)".into());
+        }
         self.audit_scope(game);
         let on = match &self.finish {
             Finish::Spell => Spent::Spell(self.source, crate::card::CastAs::Whole),
             Finish::Ability { keyword, on_stack, .. } => Spent::Ability { source: self.source, keyword: *keyword, mana: on_stack.is_none() },
-            Finish::Companion | Finish::Effect | Finish::Plot | Finish::Foretell | Finish::TurnFaceUp { .. } | Finish::Unlock { .. } => Spent::Effect(self.source),
+            Finish::Companion | Finish::Effect | Finish::Plot | Finish::Foretell | Finish::Suspend { .. } | Finish::TurnFaceUp { .. } | Finish::Unlock { .. } => Spent::Effect(self.source),
         };
         if self.committing.is_none() {
             self.committing = Some(game.prepare_cost(self.ctx.clone(), &self.cost, &self.paying, self.with.as_ref(), on)?);
@@ -150,6 +162,9 @@ impl Payment {
         }
     }
     pub(crate) fn advance(&mut self, game: &mut Game) -> crate::play::ActionResult<bool> {
+        if let Finish::Suspend { placement: Some(placement), .. } = &mut self.finish {
+            return placement.advance(game);
+        }
         if self.waiting {
             game.check_triggers();
             self.waiting = false;
@@ -170,7 +185,16 @@ impl Payment {
         }
         if game.returning() { return Ok(false); }
         let Commitment { bound, spent, paid, .. } = self.committing.take().unwrap();
+        if let Finish::Suspend { count, .. } = self.finish {
+            let exiled = game.exile_result(self.source).ok_or("the suspended card could not be exiled")?;
+            if game.obj(exiled).zone != crate::Zone::Exile { return Err("the suspended card could not be exiled".into()); }
+            let mut placement = crate::suspend::Placement::new(game, self.player, exiled, count);
+            let complete = placement.advance(game)?;
+            self.finish = Finish::Suspend { count, placement: Some(Box::new(placement)) };
+            return Ok(complete);
+        }
         match &self.finish {
+            Finish::Suspend { .. } => unreachable!("suspend counter placement handled above"),
             Finish::Companion => game.complete_companion(self.player,self.source),
             // already shown as it was announced
             Finish::TurnFaceUp { megamorph } => game.turn_up_paid(self.source, *megamorph)?,
@@ -194,6 +218,7 @@ impl Payment {
                 game.obj_mut(self.source).uncounterable = spent.iter().any(|m| m.uncounterable);
                 game.commander_cast_completed(self.source, self.player);
                 game.prepared_cast_completed(self.source);
+                game.suspend_cast_completed(self.player, self.source);
                 game.record_completed_cast(self.source, self.player)?;
                 let cast = Event::Cast { spell: self.source, by: self.player };
                 game.note(&cast);
@@ -519,7 +544,7 @@ impl Game {
         // Remove exactly this announcement's occurrences, not equal-looking mana triggers.
         self.triggered.drain(payment.triggers);
         let restored = match payment.undo {
-            Undo::Companion | Undo::TurnFaceUp | Undo::Unlock => None,
+            Undo::Companion | Undo::HandAction | Undo::TurnFaceUp | Undo::Unlock => None,
             Undo::ExiledFromHand { original, object, position } => {
                 self.exile.retain(|id| *id != payment.source);
                 self.obj_mut(payment.source).zone = crate::Zone::Gone;

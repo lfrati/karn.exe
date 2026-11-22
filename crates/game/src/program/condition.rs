@@ -627,8 +627,8 @@ impl Asks {
                         Is::Card(filter)
                     }
                     Predicate::A(set) => Is::A(expr::Set::compile(set, support, bind)?),
-                    Predicate::In(zone) if zone.zones.items.as_slice() == [ir::Zone::Battlefield] && zone.owner.is_none() && zone.slice.is_none() => Is::Zone(crate::Zone::Battlefield),
-                    Predicate::Designated(d @ (ir::condition::ObjectDesignation::Solved | ir::condition::ObjectDesignation::Monstrous | ir::condition::ObjectDesignation::Renowned | ir::condition::ObjectDesignation::Prepared)) => Is::Designated(*d),
+                    Predicate::In(zone) if zone.zones.items.len() == 1 && matches!(zone.zones.items[0], ir::Zone::Battlefield | ir::Zone::Exile) && zone.owner.is_none() && zone.slice.is_none() => Is::Zone(match zone.zones.items[0] { ir::Zone::Exile => crate::Zone::Exile, _ => crate::Zone::Battlefield }),
+                    Predicate::Designated(d @ (ir::condition::ObjectDesignation::Solved | ir::condition::ObjectDesignation::Monstrous | ir::condition::ObjectDesignation::Renowned | ir::condition::ObjectDesignation::Prepared | ir::condition::ObjectDesignation::Suspended)) => Is::Designated(*d),
                     other => return unsupported(format!("condition: is {}", name(other))),
                 };
                 Asks::Is { what: thing, is, negated: *negated, past: false }
@@ -885,6 +885,7 @@ impl Asks {
                         Is::A(set) => set.contains(game, ctx, locals, thing),
                         Is::Zone(zone) => matches!(thing, Target::Object(o) if game.obj(o).zone == *zone),
                         Is::Designated(d) => matches!(thing, Target::Object(o) if {
+                            if *d == ir::condition::ObjectDesignation::Suspended { game.suspended(o) } else {
                             let o = game.obj(o);
                             o.zone == crate::Zone::Battlefield && match d {
                                 ir::condition::ObjectDesignation::Solved => o.solved,
@@ -892,6 +893,7 @@ impl Asks {
                                 ir::condition::ObjectDesignation::Saddled => o.saddled,
                                 ir::condition::ObjectDesignation::Prepared => o.prepared,
                                 _ => o.renowned,
+                            }
                             }
                         }),
                         // of a face-down permanent this effect revealed, the card it represents,

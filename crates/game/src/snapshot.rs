@@ -27,7 +27,6 @@ pub struct Permanent {
     /// A double-faced permanent with its back face up (701.27g).
     pub transformed: bool,
     pub damage: i32,
-    pub counters: BTreeMap<String, u32>,
     pub sick: bool,
     /// Its level: what it was given, or 1 for a Class without one (716.2b, 716.2d).
     pub level: Option<u32>,
@@ -89,6 +88,8 @@ pub struct Object {
     /// A planeswalker card's loyalty off the battlefield, the number printed on it (306.5a,
     /// 209.1). On the battlefield its loyalty is the loyalty counters on it (306.5c).
     pub loyalty: Option<u32>,
+    /// Counters on this object, including cards in exile (122.1, 702.62a).
+    pub counters: BTreeMap<String, u32>,
     pub token: bool,
     pub is_card: bool,
     pub commander: bool,
@@ -104,6 +105,8 @@ pub struct Object {
     pub may_play_grants: Vec<(bool, Option<&'static str>)>,
     /// Turn on which this exile incarnation was plotted (702.170c-d).
     pub plotted: Option<u32>,
+    /// Exiled with suspend and a time counter, visible as that designation (702.62b).
+    pub suspended: bool,
     /// Turn in which this exile incarnation was warped, castable by its owner after it
     /// (702.185a–b).
     pub warped: Option<u32>,
@@ -348,7 +351,6 @@ impl Snapshot {
                 tapped: o.tapped,
                 transformed: o.transformed,
                 damage: o.damage,
-                counters: o.counters.clone(),
                 sick: g.summoning_sick(id),
                 level: o.level.or_else(|| seen.as_ref().is_some_and(|s| s.subtypes.contains(&ir::Subtype::class())).then_some(1)),
                 unlocked: g.room_card(id).is_some().then_some(o.unlocked),
@@ -376,6 +378,7 @@ impl Snapshot {
             colors,
             pt,
             loyalty: (o.zone != Zone::Battlefield).then(|| def.and_then(|d| d.loyalty)).flatten(),
+            counters: g.counters(id).clone(),
             token: o.token(),
             is_card: g.is(Target::Object(id), ir::Sort::Card),
             commander: g.is_commander(id),
@@ -388,6 +391,7 @@ impl Snapshot {
                 if grants.len() > 1 { grants } else { Vec::new() }
             },
             plotted: g.plotted(id),
+            suspended: g.suspended(id),
             warped: g.warped(id),
             foretold: g.foretold(id).map(|f| f.turn),
             face_down,
