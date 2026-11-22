@@ -1717,6 +1717,14 @@ impl Game {
             view.refresh_face(card);
             return view.castable(player, card, cast_as, route, chosen, modes, x, kicks, buyback, optional, entwine, replicate, gift);
         }
+        // A selected half's own hard zone restriction also overrides external permissions
+        // (101.2, 601.3); face-down characteristics have already been applied above.
+        if let Some(zone) = self.def(card).and_then(|whole| whole.spell(cast_as).ok()).and_then(|def|
+            crate::keyword::contributions(def).find_map(|(_, gives)| match gives {
+                crate::keyword::Gives::CastOnlyFrom(zone) => Some(*zone), _ => None,
+            })) && self.obj(card).zone != zone {
+            return Err("that spell can't be cast from its current zone (601.3)".into());
+        }
         // Restrictions override zone permissions before any announcement mutates the card
         // or pays its cost (101.2, 601.3).
         if self.cast_forbidden(player, card, cast_as, x) {
@@ -2036,12 +2044,14 @@ impl Game {
         let def = self.def(card).ok_or("not a card")?.spell(cast_as)?;
         let departure = if route == CastRoute::Flashback {
             Some((crate::functions::Scope::In(Zone::Stack), Zone::Exile))
-        } else if flashback {
+        } else {
             crate::keyword::contributions(def).find_map(|(scope, gives)| match gives {
-                crate::keyword::Gives::Destination { when: crate::keyword::Departure::Any, to, .. } => Some((scope, *to)),
+                crate::keyword::Gives::Destination { when: crate::keyword::Departure::Any, to, .. } if flashback => Some((scope, *to)),
+                crate::keyword::Gives::Destination { when: crate::keyword::Departure::AnyIfCastFrom(from), to, .. }
+                    if self.obj(card).zone == *from => Some((scope, *to)),
                 _ => None,
             })
-        } else { None };
+        };
         let mut chars = def.chars();
         // While a spell is on the stack, each {X} of its mana cost is the announced value
         // (107.3a, 202.3e).

@@ -26,7 +26,7 @@ pub(crate) enum Times { Once, Repeatable }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Paid { Kicked, Replicated, ReturnsToHand, AllModes, Escalated }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Departure { Any, Resolution }
+pub(crate) enum Departure { Any, Resolution, AnyIfCastFrom(Zone) }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Then { Rebound }
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -45,6 +45,8 @@ pub(crate) enum Gives {
     Ability(Ability),
     Additional { cost: ir::mana::ManaCost, times: Times, then: Paid },
     Route { route: crate::announcement::CastRoute, cost: RouteCost },
+    /// A hard source-zone restriction, applying even when another effect permits casting.
+    CastOnlyFrom(Zone),
     Substitute(Substitution),
     Destination { when: Departure, to: Zone, then: Option<Then> },
     Replacement(Replacement),
@@ -154,6 +156,12 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
                 (stack, Gives::Asked),
                 (stack, Gives::Destination { when: Departure::Resolution, to: Zone::Hand, then: None }),
             ], vec![Context::SpellsOnly, Context::PrintedOnly]))
+        }
+        "Aftermath" if plain => {
+            let mut declared = generated(ability(item)?, true, vec![Context::SpellsOnly, Context::PrintedOnly])?;
+            declared.gives.extend([(Scope::Everywhere, Gives::CastOnlyFrom(Zone::Graveyard)),
+                (stack, Gives::Destination { when: Departure::AnyIfCastFrom(Zone::Graveyard), to: Zone::Exile, then: None })]);
+            Ok(declared)
         }
         "Flashback" => {
             let Some(cost) = flashback_cost(item) else { return refused(item) };

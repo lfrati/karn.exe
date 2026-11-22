@@ -261,7 +261,7 @@ impl Functioning {
     pub(crate) fn compile(def: &CardDef) -> Functioning {
         let abilities = || def.abilities.iter().chain(def.keyword_abilities.iter().map(|(_, a)| a));
         let mut cast_from = Vec::new();
-        for zone in def.abilities.iter().filter_map(casting_zone) {
+        for zone in abilities().filter_map(casting_zone) {
             if !cast_from.contains(&zone) { cast_from.push(zone); }
         }
         // Spree's and Tiered's row is the spell's choice of the modes printed under it

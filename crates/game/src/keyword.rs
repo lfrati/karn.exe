@@ -409,6 +409,7 @@ fn bargain_cost_text() -> &'static ir::Cost {
 /// A keyword's executable meaning, read from its rule sentence. For equip (702.6a),
 /// the parsed cost replaces the template cost; triggered meanings use the same definitions.
 pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
+    if item.keyword.name() == "Aftermath" && item.param == KeywordParam::None { return Some(aftermath_permission().clone()); }
     if item.keyword.name() == "Partner" && let KeywordParam::PartnerWith(name) = &item.param {
         return Some(partner_with(name));
     }
@@ -462,6 +463,15 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
         other => other,
     }));
     Some(Ability::Activated { cost, effect: effect.clone() })
+}
+
+/// 702.127a: the selected half grants its ordinary graveyard self-permission.
+/// Its other two rules are source-zone and departure contributions in the declaration.
+fn aftermath_permission() -> &'static Ability {
+    static RULE: OnceLock<Ability> = OnceLock::new();
+    crate::token::init(&RULE, || CardDef::new("Aftermath rule", "", "Sorcery",
+        "You may cast this card from your graveyard.", None)
+        .expect("the grammar reads rule 702.127a's self-permission").abilities[0].clone())
 }
 
 /// Cycling and typecycling use the same activation/discard procedure (702.29a, e).
