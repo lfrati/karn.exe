@@ -3469,6 +3469,7 @@ fn determiner(num: Number) -> P<Det> {
                 },
             ));
             v.extend([
+                c("the other", Quant::Definite(Ref::Anaphor(Anaphor::Other { plural: true })), false),
                 c("any number of", Quant::Indefinite(Count::AnyNumber), false),
                 c("any number of other", Quant::Indefinite(Count::AnyNumber), true),
                 c("any number of target", Quant::Target(Count::AnyNumber), false),

@@ -450,3 +450,23 @@ fn r105_2c_adjective_relative_after_modifiers() {
     assert_eq!(late, early);
     declines("Destroy target player with power 3 that's black.");
 }
+
+/// CR 608.2c: "the other cards" is the complementary group, not source exclusion.
+#[test]
+fn r608_2c_named_complementary_group() {
+    for text in [
+        "Search your library for up to three monocolored cards with different names and exile them. An opponent chooses one of those cards. Shuffle that card into your library. You may cast the other cards without paying their mana costs. Exile ~.",
+        "Put the other cards exiled this way on the bottom of your library in a random order.",
+        "You may cast up to two spells from among the other cards exiled this way without paying their mana costs.",
+        "Return the other cards exiled this way to the battlefield under their owners' control attached to that creature.",
+        "Whenever one or more other creatures you control enter, if ~ is suspected, you may suspect one of the other creatures.",
+    ] { read(text); }
+    for noun in ["the other cards", "the other creatures"] {
+        let Outcome::Accepted { value, .. } = grammar::selector::selectors().selector.parse_all(&tokenize(noun)) else { panic!("{noun}") };
+        assert_eq!(value.quant, ir::Quant::Definite(ir::Ref::Anaphor(ir::Anaphor::Other { plural: true })));
+        assert!(!value.set.other);
+    }
+    // Status removal is another construction; this family only supplies its object group.
+    declines("If you do, ~ is no longer suspected.");
+    declines("You may cast the other players without paying their mana costs.");
+}
