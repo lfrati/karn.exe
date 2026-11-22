@@ -1,26 +1,11 @@
 """The damage-recipient pronoun path through the real
+from client_support import ClientTestCase
 audited client. Binding a bare "it" recipient to a mixed target changes no pinned card,
 so these are the pinned cards that use a bare "it" recipient, or a named source and subject
 pronoun beside a target, with exact damage records and both viewers."""
-import unittest
-from test_grant_client import GrantClientTests as Helpers
 
 
-class RetainedRecipientReviewClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    object = Helpers.object
-    pass_round = Helpers.pass_round
-    cast = Helpers.cast
-    activate = Helpers.activate
-    step = Helpers.step
-    advance = Helpers.advance
-
+class RetainedRecipientReviewClientTests(ClientTestCase):
     def dealt(self):
         return sorted((e["source"], next(iter(e["to"].items())), e["amount"])
                       for e in self.engine.state["events"] if e["event"] == "damage")
@@ -97,6 +82,3 @@ class RetainedRecipientReviewClientTests(unittest.TestCase):
                 self.assertEqual(self.dealt(), [(source, ("player", 1), amount)])
                 self.assertEqual(self.life(1), [20 - amount] * 2)
                 self.assertEqual(self.seen(self.ids("Craw Wurm")[0], "damage"), [0, 0])
-
-
-del Helpers

@@ -1,23 +1,8 @@
 """Path spending/trigger checks through the actual Python/JSON client."""
-import unittest
-from test_grant_client import GrantClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class ManaTriggerClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    object = Helpers.object
-    cast = Helpers.cast
-    pass_round = Helpers.pass_round
-    reject = Helpers.reject
-    step = Helpers.step
-    advance = Helpers.advance
-    choose = Helpers.choose
-
+class ManaTriggerClientTests(ClientTestCase):
     def setup_path(self, plains=False, card="Universal Automaton", strip=False):
         self.engine.ask({"cmd": "start", "format": "commander", "seed": 8363 if strip else 16,
                          "decks": [["Path of Ancestry", card] + (["Strip Mine"] if strip else []) + ["Plains"] * (96 if strip else 97),
@@ -116,7 +101,3 @@ class ManaTriggerClientTests(unittest.TestCase):
         self.assertEqual(len(self.engine.state["players"][0]["pool"]["restricted"]), 1)
         self.cast("Universal Automaton", spend={"restricted": [0]})
         self.scry()
-
-
-
-del Helpers

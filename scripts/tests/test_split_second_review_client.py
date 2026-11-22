@@ -7,7 +7,8 @@ act again before the next object resolves (Sudden Shock rulings 1b81ebb4, f767e8
 doesn't stop triggers (985d45d8), so a countering trigger can still counter the spell."""
 import unittest
 import test_toxic_review_client as base
-import test_multiplayer_outcome_client as explicit
+import client_support as explicit
+from client_support import ClientTestCase
 
 HELPERS = {k: v for k, v in vars(base.ToxicReviewClientTests).items() if not k.startswith("test_") and not k.startswith("__")}
 
@@ -17,9 +18,9 @@ def command(move):
     return dict(move)
 
 
-class SplitSecondReviewClientTests(unittest.TestCase):
+class SplitSecondReviewClientTests(ClientTestCase):
     locals().update(HELPERS)
-    validate_action = explicit.MultiplayerOutcomeClientTests.validate_action
+    validate_action = explicit.ClientTestCase.validate_action
 
     def new(self, seats):
         HELPERS["new"](self, seats)

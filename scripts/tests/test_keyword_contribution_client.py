@@ -1,23 +1,8 @@
 """Separate keyword contributions through the real Python/JSON client."""
-import unittest
-from test_grant_client import GrantClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class KeywordContributionClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    object = Helpers.object
-    pass_round = Helpers.pass_round
-    choose = Helpers.choose
-    reject = Helpers.reject
-    advance = Helpers.advance
-    step = Helpers.step
-
+class KeywordContributionClientTests(ClientTestCase):
     def named(self, zone, name):
         return [i for i in zone if self.object(i)["name"] == name]
 
@@ -78,6 +63,3 @@ class KeywordContributionClientTests(unittest.TestCase):
         turn = self.engine.state["turn"]
         self.advance(lambda s: s["turn"] > turn and s["active"] == 0 and s["part"] == "Upkeep")
         self.assertFalse(self.engine.state["stack"], "a graveyard cast does not rebound")
-
-
-del Helpers

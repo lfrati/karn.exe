@@ -5,15 +5,15 @@ optional action; only the chooser may learn whether a qualifying card existed.
 """
 import unittest
 import play
-import test_grant_client as helpers
+import client_support as helpers
 
 
 class HiddenOptionalChoicesClientTests(unittest.TestCase):
-    setUpClass = classmethod(helpers.GrantClientTests.setUpClass.__func__)
-    new = helpers.GrantClientTests.new
-    ids = helpers.GrantClientTests.ids
-    cast = helpers.GrantClientTests.cast
-    pass_round = helpers.GrantClientTests.pass_round
+    setUpClass = classmethod(helpers.ClientTestCase.setUpClass.__func__)
+    new = helpers.ClientTestCase.new
+    ids = helpers.ClientTestCase.ids
+    cast = helpers.ClientTestCase.cast
+    pass_round = helpers.ClientTestCase.pass_round
 
     def exercise(self, case, qualifies):
         self.engine = play.Engine(audit=True)

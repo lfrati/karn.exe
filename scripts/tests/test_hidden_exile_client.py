@@ -1,23 +1,10 @@
 """Face-down exile checks through the actual Python/JSON client: Watcher for
+from client_support import ClientTestCase
 Tomorrow's hideaway hides a card only its player may look at (406.3, 702.75a), with no name or
 types for anyone (406.3a), and returns it to its owner's hand when Watcher leaves."""
-import unittest
-from test_grant_client import GrantClientTests as Helpers
 
 
-class HiddenExileClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    ids = Helpers.ids
-    hand = Helpers.hand
-    pass_round = Helpers.pass_round
-    choose = Helpers.choose
-    reject = Helpers.reject
-    cast = Helpers.cast
-
+class HiddenExileClientTests(ClientTestCase):
     def hide(self):
         """Player 0 casts Watcher for Tomorrow over Grizzly Bears, Forest, Llanowar Elves and
         Island, and hides the Bears: the hidden card's id."""
@@ -64,6 +51,3 @@ class HiddenExileClientTests(unittest.TestCase):
         theirs = self.view(1)
         self.assertNotIn(str(card), [str(o) for o in theirs["exile"]])
         self.assertNotIn("Grizzly Bears", str(theirs), "it left exile for a hand, unrevealed")
-
-
-del Helpers

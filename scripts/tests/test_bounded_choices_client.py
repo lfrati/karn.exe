@@ -1,25 +1,9 @@
 """Full pinned cards through the audited client, including private bounded choices."""
 import unittest
-import test_grant_client as helpers
+from client_support import ClientTestCase
 
 
-class BoundedChoicesClientTests(unittest.TestCase):
-    setUpClass = classmethod(helpers.GrantClientTests.setUpClass.__func__)
-    setUp = helpers.GrantClientTests.setUp
-    close_engine = helpers.GrantClientTests.close_engine
-    new = helpers.GrantClientTests.new
-    view = helpers.GrantClientTests.view
-    hand = helpers.GrantClientTests.hand
-    ids = helpers.GrantClientTests.ids
-    pass_round = helpers.GrantClientTests.pass_round
-    choose = helpers.GrantClientTests.choose
-    reject = helpers.GrantClientTests.reject
-    cast = helpers.GrantClientTests.cast
-    object = helpers.GrantClientTests.object
-    activate = helpers.GrantClientTests.activate
-    step = helpers.GrantClientTests.step
-    advance = helpers.GrantClientTests.advance
-
+class BoundedChoicesClientTests(ClientTestCase):
     def test_ballista_uses_its_cost_source_after_its_last_counter_is_removed(self):
         self.new([{'hand': ['Walking Ballista'], 'battlefield': ['Forest', 'Forest']}, {}, {}])
         self.cast('Walking Ballista', mana=self.ids('Forest', zone='battlefield')[:2], spend={'G': 2}, x=1)

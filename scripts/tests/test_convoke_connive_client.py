@@ -1,22 +1,8 @@
 """Lethal Scheme payment and retained connive through Python/JSON."""
-import unittest
-from test_grant_client import GrantClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class ConvokeConniveClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    object = Helpers.object
-    cast = Helpers.cast
-    pass_round = Helpers.pass_round
-    choose = Helpers.choose
-    reject = Helpers.reject
-
+class ConvokeConniveClientTests(ClientTestCase):
     def setup_scheme(self, counters=False):
         self.new([{"hand": ["Lethal Scheme", "Sol Ring", "Island"],
                    "battlefield": ["Baleful Strix"] * 2 + ["Universal Automaton"] * 2 +
@@ -194,6 +180,3 @@ class ConvokeConniveClientTests(unittest.TestCase):
         self.assertNotIn(target, self.engine.state["battlefield"])
         self.assertEqual(len(self.hand(0)), before)
         self.assertEqual(self.engine.state["asked"]["kind"], "priority")
-
-
-del Helpers

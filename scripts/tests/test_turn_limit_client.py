@@ -1,22 +1,8 @@
 """Turn-limit checks through the actual Python/JSON client."""
-import unittest
-from test_multiplayer_outcome_client import MultiplayerOutcomeClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class TurnLimitClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    pass_round = Helpers.pass_round
-    choose = Helpers.choose
-    reject = Helpers.reject
-
-    cast = Helpers.cast
-
+class TurnLimitClientTests(ClientTestCase):
     def tokens(self, name):
         return [o for key, o in self.engine.state["objects"].items()
                 if int(key) in self.engine.state["battlefield"] and name in o["name"]]
@@ -164,4 +150,3 @@ class TurnLimitClientTests(unittest.TestCase):
         self.assertEqual(self.engine.state["asked"]["kind"], "priority")
 
 # Only this class supplies tests; imported methods are reused as fixture helpers.
-del Helpers

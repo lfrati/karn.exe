@@ -1,22 +1,8 @@
 """Timing checks through the actual Python/JSON client."""
-import unittest
-from test_multiplayer_outcome_client import MultiplayerOutcomeClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class TimingClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    pass_round = Helpers.pass_round
-    choose = Helpers.choose
-    reject = Helpers.reject
-    cast = Helpers.cast
-    validate_action = Helpers.validate_action
-
+class TimingClientTests(ClientTestCase):
     def validate_cast(self, name, mana, *, spend, accepted=True):
         state = self.engine.state
         actor = state["asked"]["player"]
@@ -163,6 +149,3 @@ class TimingClientTests(unittest.TestCase):
         self.choose("no")
         self.assertIn(card, self.engine.state["players"][0]["graveyard"])
         self.assertEqual(self.engine.state["asked"]["kind"], "priority")
-
-
-del Helpers

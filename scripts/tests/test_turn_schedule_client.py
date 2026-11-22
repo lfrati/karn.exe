@@ -1,23 +1,10 @@
 """Turn schedule checks through the actual Python/JSON client: a skipped draw
+from client_support import ClientTestCase
 step (614.10), an additional combat and main phase (500.8), and the active player's choice
 between skip effects that last differently (616.1)."""
-import unittest
-from test_grant_client import GrantClientTests as Helpers
 
 
-class TurnScheduleClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    object = Helpers.object
-    choose = Helpers.choose
-    reject = Helpers.reject
-    cast = Helpers.cast
-
+class TurnScheduleClientTests(ClientTestCase):
     # Events are delivered to each seat once, with the next answer that seat sees: these
     # checks read seat 0's, from every answer it sees and its own state request at the end.
     def act(self, move):
@@ -171,6 +158,3 @@ class TurnScheduleClientTests(unittest.TestCase):
         self.watch()
         self.advance(lambda s: s["turn"] == 5 and s["part"] == "PostcombatMain")
         self.assertIn("BeginningOfCombat", [e["part"] for e in self.seen() if e["event"] == "began"])
-
-
-del Helpers

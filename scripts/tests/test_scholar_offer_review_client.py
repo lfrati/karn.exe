@@ -1,11 +1,12 @@
 """Scholar's resolving cast permission (CR 608.2g) and exile rider, through the client."""
 import unittest
 import test_toxic_review_client as base
+from client_support import ClientTestCase
 
 HELPERS = {k: v for k, v in vars(base.ToxicReviewClientTests).items() if not k.startswith("test_") and not k.startswith("__")}
 
 
-class ScholarOfferReviewClientTests(unittest.TestCase):
+class ScholarOfferReviewClientTests(ClientTestCase):
     locals().update(HELPERS)
 
     def test_scholar_offers_its_free_cast_and_the_rider_exiles_it(self):

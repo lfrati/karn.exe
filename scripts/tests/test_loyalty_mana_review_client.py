@@ -3,11 +3,12 @@ adds mana is not a mana ability (605.1a), so it uses the stack and players may r
 the mana is added (606, 405). Full pinned Chandra, Novice Pyromancer through the real client."""
 import unittest
 import test_toxic_review_client as base
+from client_support import ClientTestCase
 
 HELPERS = {k: v for k, v in vars(base.ToxicReviewClientTests).items() if not k.startswith("test_") and not k.startswith("__")}
 
 
-class LoyaltyManaReviewClientTests(unittest.TestCase):
+class LoyaltyManaReviewClientTests(ClientTestCase):
     locals().update(HELPERS)
 
     def test_loyalty_mana_ability_uses_the_stack(self):

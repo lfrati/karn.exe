@@ -8,13 +8,14 @@ to draw more cards than they have, and loses at the next state-based check (121.
 the numbers are not asked again. The trigger resolves after the Djinn leaves (603.10, 113.7a)."""
 import unittest
 import test_toxic_review_client as base
+from client_support import ClientTestCase
 
 HELPERS = {k: v for k, v in vars(base.ToxicReviewClientTests).items() if not k.startswith("test_") and not k.startswith("__")}
 
 DJINN = "Indentured Djinn"
 
 
-class DrawUpToReviewClientTests(unittest.TestCase):
+class DrawUpToReviewClientTests(ClientTestCase):
     locals().update(HELPERS)
 
     # --- reading the state

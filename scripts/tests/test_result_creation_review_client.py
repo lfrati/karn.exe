@@ -1,20 +1,10 @@
 """Full pinned Terastodon and Mogg Infestation through
+from client_support import ClientTestCase
 the real audited client. Tokens go to each destroyed permanent's former controller (608.2h),
 only for actual battlefield-to-graveyard results (Terastodon ruling 6aeb7aa39fd324bf)."""
-import unittest
-from test_multiplayer_outcome_client import MultiplayerOutcomeClientTests as Helpers
 
 
-class ResultCreationReviewClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    ids = Helpers.ids
-    cast = Helpers.cast
-    pass_round = Helpers.pass_round
-
+class ResultCreationReviewClientTests(ClientTestCase):
     def tokens(self):
         """Token names per controller, as both players see them."""
         seen = []
@@ -111,6 +101,3 @@ class ResultCreationReviewClientTests(unittest.TestCase):
         whole = self.engine.send({"cmd": "state"})
         theirs = [o for o in self.ids("Forest") if whole["objects"][str(o)]["controller"] == 1 and o in whole["battlefield"]]
         self.assertEqual([whole["objects"][str(o)]["tapped"] for o in theirs], [True, True])
-
-
-del Helpers

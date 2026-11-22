@@ -1,23 +1,14 @@
 """Room copies use their copied halves and their own designations (707.2, 709.5)."""
 import unittest
 import play
-import test_grant_client as helpers
+from client_support import ClientTestCase
 
 
 POOL = 'Bottomless Pool // Locker Room'
 MEAT = 'Meat Locker // Drowned Diner'
 
 
-class RoomCopiesClientTests(unittest.TestCase):
-    setUpClass = classmethod(helpers.GrantClientTests.setUpClass.__func__)
-    setUp = helpers.GrantClientTests.setUp
-    close_engine = helpers.GrantClientTests.close_engine
-    new = helpers.GrantClientTests.new
-    ids = helpers.GrantClientTests.ids
-    cast = helpers.GrantClientTests.cast
-    pass_round = helpers.GrantClientTests.pass_round
-    view = helpers.GrantClientTests.view
-
+class RoomCopiesClientTests(ClientTestCase):
     def copy(self, original, model):
         self.new([{'hand': ['Mirrorform'], 'battlefield': [original] + ['Island'] * 7},
                   {'battlefield': [model]}])

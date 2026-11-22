@@ -1,23 +1,8 @@
 """After a named actor, "each other creature" is other than that actor, through the real client."""
-import unittest
-from test_grant_client import GrantClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class OtherActorClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    object = Helpers.object
-    pass_round = Helpers.pass_round
-    choose = Helpers.choose
-    reject = Helpers.reject
-    cast = Helpers.cast
-    activate = Helpers.activate
-
+class OtherActorClientTests(ClientTestCase):
     def dealt(self):
         return {(e["source"], e["to"].get("object", ("player", e["to"].get("player"))), e["amount"])
                 for e in self.engine.state["events"] if e["event"] == "damage"}
@@ -52,6 +37,3 @@ class OtherActorClientTests(unittest.TestCase):
         self.assertEqual(self.dealt(), {(ants, elves, 1), (ants, bears, 1)})
         self.assertEqual(self.object(ants)["damage"], 0)
         self.assertEqual(self.object(bears)["damage"], 1)
-
-
-del Helpers

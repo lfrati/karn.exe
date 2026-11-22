@@ -5,11 +5,12 @@ Wolf) can return it again; P/T is unchanged by the cancellation itself."""
 import unittest
 # the module, not its class, so that its own tests are not collected here again
 import test_proliferate_review_client as base
+from client_support import ClientTestCase
 
 HELPERS = {k: v for k, v in vars(base.ProliferateReviewClientTests).items() if not k.startswith("test_") and not k.startswith("__")}
 
 
-class CounterCancellationReviewClientTests(unittest.TestCase):
+class CounterCancellationReviewClientTests(ClientTestCase):
     locals().update(HELPERS)
 
     def cards(self, name):
@@ -55,7 +56,6 @@ class CounterCancellationReviewClientTests(unittest.TestCase):
         again = self.cards("Young Wolf")
         self.assertEqual(len(again), 1, "it had no +1/+1 counter, so undying returns it again")
         self.assertEqual(self.counters({"object": again[0]}), {"+1/+1": 1})
-
 
 
 if __name__ == "__main__":

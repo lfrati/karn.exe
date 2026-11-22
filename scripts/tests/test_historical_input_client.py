@@ -1,22 +1,10 @@
 """608.2h/i: complete Oracle cards read their retained movement inputs through JSON."""
 import unittest
 import play
-import test_grant_client as helpers
+from client_support import ClientTestCase
 
 
-class HistoricalInputClientTests(unittest.TestCase):
-    setUpClass = classmethod(helpers.GrantClientTests.setUpClass.__func__)
-    setUp = helpers.GrantClientTests.setUp
-    close_engine = helpers.GrantClientTests.close_engine
-    new = helpers.GrantClientTests.new
-    view = helpers.GrantClientTests.view
-    ids = helpers.GrantClientTests.ids
-    hand = helpers.GrantClientTests.hand
-    object = helpers.GrantClientTests.object
-    cast = helpers.GrantClientTests.cast
-    activate = helpers.GrantClientTests.activate
-    pass_round = helpers.GrantClientTests.pass_round
-
+class HistoricalInputClientTests(ClientTestCase):
     def test_ooze_creature_and_noncreature_inputs_and_refusal_atomicity(self):
         for name, creature in [('Grizzly Bears', True), ('Island', False)]:
             with self.subTest(name=name):

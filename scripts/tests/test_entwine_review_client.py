@@ -10,11 +10,12 @@ Time ruling dc98f98b). A copy copies the chosen modes and the paid decision (707
 nothing again."""
 import unittest
 import test_toxic_review_client as base
+from client_support import ClientTestCase
 
 HELPERS = {k: v for k, v in vars(base.ToxicReviewClientTests).items() if not k.startswith("test_") and not k.startswith("__")}
 
 
-class EntwineReviewClientTests(unittest.TestCase):
+class EntwineReviewClientTests(ClientTestCase):
     locals().update(HELPERS)
 
     # --- reading the state

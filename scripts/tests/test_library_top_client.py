@@ -1,24 +1,9 @@
 """Citadel regressions using the actual Python/JSON client."""
 import unittest
-from test_grant_client import GrantClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class LibraryTopClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    object = Helpers.object
-    pass_round = Helpers.pass_round
-    choose = Helpers.choose
-    reject = Helpers.reject
-    cast = Helpers.cast
-    advance = Helpers.advance
-    step = Helpers.step
-
+class LibraryTopClientTests(ClientTestCase):
     def setup_top(self, name="Shock", battlefield=None, other=None, hand=None):
         self.new([{"library": ["Forest"] * 12 + ["Plains", name, "Forest"],
                    "battlefield": ["Bolas's Citadel"] + (battlefield or []), "hand": hand or []}, other or {}, {}])
@@ -164,6 +149,5 @@ class LibraryTopClientTests(unittest.TestCase):
         self.private(card)
 
 
-del Helpers
 if __name__ == "__main__":
     unittest.main()

@@ -1,23 +1,8 @@
 """Modal face regressions through the actual Python/JSON client."""
-import unittest
-from test_grant_client import GrantClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class ModalFaceClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    object = Helpers.object
-    pass_round = Helpers.pass_round
-    choose = Helpers.choose
-    reject = Helpers.reject
-    advance = Helpers.advance
-    step = Helpers.step
-
+class ModalFaceClientTests(ClientTestCase):
     def land(self):
         card = next(o for o in self.hand(0) if self.object(o)["name"] == "Sink into Stupor")
         return {"kind": "play", "card": card, "face": 1}
@@ -134,6 +119,3 @@ class ModalFaceClientTests(unittest.TestCase):
         ]:
             with self.assertRaises(SystemExit):
                 self.engine.ask({"cmd": "start", "format": "commander", "decks": decks, "commanders": commanders})
-
-
-del Helpers

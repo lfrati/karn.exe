@@ -7,6 +7,7 @@ Both are always possible; there is no decline. The trigger resolves after its so
 orders them (616.1) and the instruction is not asked again."""
 import unittest
 import test_toxic_review_client as base
+from client_support import ClientTestCase
 
 HELPERS = {k: v for k, v in vars(base.ToxicReviewClientTests).items() if not k.startswith("test_") and not k.startswith("__")}
 
@@ -14,7 +15,7 @@ FOOD = {"index": 0, "action": "Create", "tokens": [{"name": "Food", "count": 1}]
 TREASURE = {"index": 1, "action": "Create", "tokens": [{"name": "Treasure", "count": 1}]}
 
 
-class TokenAlternativeReviewClientTests(unittest.TestCase):
+class TokenAlternativeReviewClientTests(ClientTestCase):
     locals().update(HELPERS)
 
     # --- reading the state

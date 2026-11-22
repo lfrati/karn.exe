@@ -3,11 +3,12 @@ Full Oracle and pinned rulings define free cost, timing and no land casting.
 """
 import unittest
 import test_free_cast_zone_review_client as base
+from client_support import ClientTestCase
 
 HELPERS = {k: v for k, v in vars(base.FreeCastZoneReviewClientTests).items() if not k.startswith("test_") and not k.startswith("__")}
 
 
-class PlanetariumLibraryCastReviewClientTests(unittest.TestCase):
+class PlanetariumLibraryCastReviewClientTests(ClientTestCase):
     locals().update(HELPERS)
 
     def planetarium(self, top, *, off_turn=False):

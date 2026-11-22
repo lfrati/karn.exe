@@ -2,17 +2,10 @@
 import unittest
 
 import play
-import test_grant_client as helpers
+from client_support import ClientTestCase
 
 
-class CoinClientTests(unittest.TestCase):
-    setUpClass = classmethod(helpers.GrantClientTests.setUpClass.__func__)
-    setUp = helpers.GrantClientTests.setUp
-    close_engine = helpers.GrantClientTests.close_engine
-    view = helpers.GrantClientTests.view
-    hand = helpers.GrantClientTests.hand
-    step = helpers.GrantClientTests.step
-
+class CoinClientTests(ClientTestCase):
     def pending(self):
         self.engine.ask({'cmd': 'new', 'players': [
             {'battlefield': ['Mana Crypt'], 'library': ['Forest'] * 8},

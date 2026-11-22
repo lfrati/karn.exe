@@ -11,7 +11,8 @@ any subset, and check the final set (115.7d-e; 03d10e5a). The deflected spell's 
 still the one targeting (6a1fa067, 702.21a)."""
 import unittest
 import test_toxic_review_client as base
-import test_multiplayer_outcome_client as explicit
+import client_support as explicit
+from client_support import ClientTestCase
 
 HELPERS = {k: v for k, v in vars(base.ToxicReviewClientTests).items() if not k.startswith("test_") and not k.startswith("__")}
 
@@ -24,7 +25,7 @@ def O(i):
     return {"object": i}
 
 
-class TargetChangeReviewClientTests(unittest.TestCase):
+class TargetChangeReviewClientTests(ClientTestCase):
     locals().update(HELPERS)
 
     # --- setup and acting
@@ -46,7 +47,7 @@ class TargetChangeReviewClientTests(unittest.TestCase):
         self.assertEqual(len(found), 1, (name, found))
         return found[0]
 
-    validate_action = explicit.MultiplayerOutcomeClientTests.validate_action
+    validate_action = explicit.ClientTestCase.validate_action
 
     def fund(self, name, count):
         """The fixture authors a named set of untapped basic lands and a fixed count."""

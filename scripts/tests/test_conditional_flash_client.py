@@ -1,25 +1,14 @@
 """601.3d: conditional self-flash is checked when casting begins."""
 import unittest
 import play
-import test_grant_client as helpers
+from client_support import ClientTestCase
 
 
 WURM = 'Colossal Rattlewurm'
 DESERT = 'Sunscorched Desert'
 
 
-class ConditionalFlashClientTests(unittest.TestCase):
-    setUpClass = classmethod(helpers.GrantClientTests.setUpClass.__func__)
-    setUp = helpers.GrantClientTests.setUp
-    close_engine = helpers.GrantClientTests.close_engine
-    new = helpers.GrantClientTests.new
-    ids = helpers.GrantClientTests.ids
-    cast = helpers.GrantClientTests.cast
-    advance = helpers.GrantClientTests.advance
-    step = helpers.GrantClientTests.step
-    hand = helpers.GrantClientTests.hand
-    view = helpers.GrantClientTests.view
-
+class ConditionalFlashClientTests(ClientTestCase):
     def upkeep(self, active, desert_controller):
         seats = [{'hand': [WURM], 'battlefield': ['Forest'] * 4}, {}]
         if desert_controller is not None:

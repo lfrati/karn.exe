@@ -1,22 +1,10 @@
 """A spell's "each other creature that player controls" is other than
+from client_support import ClientTestCase
 the earlier target, not the spell (608.2c), for full Flames of the Raze-Boar and Public
 Execution through the real audited JSON client."""
-import unittest
-from test_grant_client import GrantClientTests as Helpers
 
 
-class TargetOtherReviewClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    object = Helpers.object
-    pass_round = Helpers.pass_round
-    cast = Helpers.cast
-
+class TargetOtherReviewClientTests(ClientTestCase):
     def dealt(self):
         return sorted((e["to"]["object"], e["amount"]) for e in self.engine.state["events"]
                       if e["event"] == "damage" and "object" in e["to"])
@@ -76,6 +64,3 @@ class TargetOtherReviewClientTests(unittest.TestCase):
         self.pass_round()
         self.assertNotIn(giant, self.view(1)["battlefield"])
         self.assertEqual(self.seen(behemoth, "power"), [3, 3])
-
-
-del Helpers

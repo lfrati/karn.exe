@@ -7,20 +7,20 @@ import os
 import subprocess
 import unittest
 
-import test_multiplayer_outcome_client as helpers
+import client_support as helpers
 import test_player_hexproof_review_client as targeting
 
 
 class ProtectionQualityReviewClientTests(unittest.TestCase):
-    new = helpers.MultiplayerOutcomeClientTests.new
-    close_engine = helpers.MultiplayerOutcomeClientTests.close_engine
-    ids = helpers.MultiplayerOutcomeClientTests.ids
-    cast = helpers.MultiplayerOutcomeClientTests.cast
-    validate_action = helpers.MultiplayerOutcomeClientTests.validate_action
+    new = helpers.ClientTestCase.new
+    close_engine = helpers.ClientTestCase.close_engine
+    ids = helpers.ClientTestCase.ids
+    cast = helpers.ClientTestCase.cast
+    validate_action = helpers.ClientTestCase.validate_action
     bolt = targeting.PlayerHexproofReviewClientTests.bolt
     assert_player_targets = targeting.PlayerHexproofReviewClientTests.assert_player_targets
-    reject = helpers.MultiplayerOutcomeClientTests.reject
-    view = helpers.MultiplayerOutcomeClientTests.view
+    reject = helpers.ClientTestCase.reject
+    view = helpers.ClientTestCase.view
 
     @classmethod
     def setUpClass(cls):

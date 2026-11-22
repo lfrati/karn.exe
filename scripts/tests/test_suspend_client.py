@@ -1,19 +1,8 @@
 """Suspend through the managed Python/JSON client (116.2f, 702.62a–d)."""
-import unittest
-from test_grant_client import GrantClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class SuspendClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    pass_round = Helpers.pass_round
-    reject = Helpers.reject
-
+class SuspendClientTests(ClientTestCase):
     def until(self, predicate):
         for _ in range(150):
             state = self.engine.state
@@ -119,6 +108,3 @@ class SuspendClientTests(unittest.TestCase):
         self.assertEqual({color: pool[color] for color in "WUBRGC"}, dict.fromkeys("WUBRGC", 0))
         self.assertEqual(pool["restricted"], [])
         self.assertEqual(self.engine.state["asked"]["kind"], "priority")
-
-
-del Helpers

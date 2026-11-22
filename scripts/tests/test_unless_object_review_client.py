@@ -5,18 +5,18 @@ import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import play
-import test_multiplayer_outcome_client as helpers
+import client_support as helpers
 
 class UnlessObjectReviewClientTests(unittest.TestCase):
-    new = helpers.MultiplayerOutcomeClientTests.new
-    view = helpers.MultiplayerOutcomeClientTests.view
-    hand = helpers.MultiplayerOutcomeClientTests.hand
-    ids = helpers.MultiplayerOutcomeClientTests.ids
-    cast = helpers.MultiplayerOutcomeClientTests.cast
-    pass_round = helpers.MultiplayerOutcomeClientTests.pass_round
-    choose = helpers.MultiplayerOutcomeClientTests.choose
-    reject = helpers.MultiplayerOutcomeClientTests.reject
-    close_engine = helpers.MultiplayerOutcomeClientTests.close_engine
+    new = helpers.ClientTestCase.new
+    view = helpers.ClientTestCase.view
+    hand = helpers.ClientTestCase.hand
+    ids = helpers.ClientTestCase.ids
+    cast = helpers.ClientTestCase.cast
+    pass_round = helpers.ClientTestCase.pass_round
+    choose = helpers.ClientTestCase.choose
+    reject = helpers.ClientTestCase.reject
+    close_engine = helpers.ClientTestCase.close_engine
 
     def setUp(self):
         self.engine = play.Engine(audit=True, executable=os.environ.get("MAGIC_REVIEW_ENGINE"))

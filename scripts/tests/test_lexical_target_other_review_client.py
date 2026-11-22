@@ -1,25 +1,10 @@
 """A root "other" without a comparison or controller
+from client_support import ClientTestCase
 reference excludes the earlier target (608.2c), while "you control another …" stays relative to
 the source. Full pinned cards through the real audited JSON client, both viewers."""
-import unittest
-from test_grant_client import GrantClientTests as Helpers
 
 
-class LexicalTargetOtherReviewClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    object = Helpers.object
-    pass_round = Helpers.pass_round
-    cast = Helpers.cast
-    reject = Helpers.reject
-    step = Helpers.step
-    advance = Helpers.advance
-
+class LexicalTargetOtherReviewClientTests(ClientTestCase):
     def seen(self, obj):
         return [(self.view(v)["objects"][str(obj)]["power"], self.view(v)["objects"][str(obj)]["toughness"]) for v in (0, 1)]
 
@@ -96,6 +81,3 @@ class LexicalTargetOtherReviewClientTests(unittest.TestCase):
         self.assertTrue(self.object(wurm)["tapped"])
         self.assertFalse(self.object(bears)["tapped"])
         self.assertIn(giant, self.view(1)["battlefield"])
-
-
-del Helpers

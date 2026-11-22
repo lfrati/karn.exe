@@ -1,21 +1,9 @@
 """Each member of a distributive damage source deals its own
+from client_support import ClientTestCase
 power (608.2c, 120.3), for full Alpha Brawl and Band Together through the real audited client."""
-import unittest
-from test_grant_client import GrantClientTests as Helpers
 
 
-class DistributiveDamageReviewClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    object = Helpers.object
-    pass_round = Helpers.pass_round
-    cast = Helpers.cast
-
+class DistributiveDamageReviewClientTests(ClientTestCase):
     def dealt(self):
         return sorted((e["source"], e["to"].get("object", ("player", e["to"].get("player"))), e["amount"])
                       for e in self.engine.state["events"] if e["event"] == "damage")
@@ -65,6 +53,3 @@ class DistributiveDamageReviewClientTests(unittest.TestCase):
         giant, bears, behemoth = self.band(["bears"])
         self.assertEqual(self.dealt(), [(bears, behemoth, 2)])
         self.assertEqual(self.seen(behemoth, "damage"), [2, 2])
-
-
-del Helpers

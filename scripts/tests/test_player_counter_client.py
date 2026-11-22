@@ -1,19 +1,8 @@
 """Player-counter witnesses through the actual audited JSON client."""
-import unittest
-import test_multiplayer_outcome_client as helpers
+from client_support import ClientTestCase
 
-class PlayerCounterClientTests(unittest.TestCase):
-    setUpClass = classmethod(helpers.MultiplayerOutcomeClientTests.setUpClass.__func__)
-    setUp = helpers.MultiplayerOutcomeClientTests.setUp
-    close_engine = helpers.MultiplayerOutcomeClientTests.close_engine
-    new = helpers.MultiplayerOutcomeClientTests.new
-    view = helpers.MultiplayerOutcomeClientTests.view
-    hand = helpers.MultiplayerOutcomeClientTests.hand
-    ids = helpers.MultiplayerOutcomeClientTests.ids
-    cast = helpers.MultiplayerOutcomeClientTests.cast
-    pass_round = helpers.MultiplayerOutcomeClientTests.pass_round
-    choose = helpers.MultiplayerOutcomeClientTests.choose
 
+class PlayerCounterClientTests(ClientTestCase):
     def assert_public(self, expected):
         for viewer in range(len(expected)):
             self.assertEqual([p["counters"] for p in self.view(viewer)["players"]], expected)

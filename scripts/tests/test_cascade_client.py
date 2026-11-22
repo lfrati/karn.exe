@@ -1,20 +1,8 @@
 """Full-card Cascade through the managed Python/JSON client (702.85a)."""
-import unittest
-from test_grant_client import GrantClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class CascadeClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    cast = Helpers.cast
-    pass_round = Helpers.pass_round
-    reject = Helpers.reject
-
+class CascadeClientTests(ClientTestCase):
     def bloodbraid(self, library):
         self.new([{"hand": ["Bloodbraid Elf"], "battlefield": ["Mountain"] * 2 + ["Forest"] * 2,
                    "library": library}, {}])
@@ -54,6 +42,3 @@ class CascadeClientTests(unittest.TestCase):
         elf, = self.ids("Bloodbraid Elf", zone="battlefield")
         self.assertEqual((self.engine.state["objects"][str(elf)]["power"],
                           self.engine.state["objects"][str(elf)]["toughness"]), (3, 2))
-
-
-del Helpers
