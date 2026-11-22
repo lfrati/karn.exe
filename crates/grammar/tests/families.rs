@@ -397,3 +397,17 @@ fn r205_2a_finite_card_type_choices() {
     }
     declines("Choose creature or red.");
 }
+
+/// CR 608.2c: a definite reference names the number previously chosen or computed.
+#[test]
+fn r608_2c_definite_recalled_number() {
+    let (that, _) = read("Choose a number. Draw cards equal to that number.");
+    let (the, _) = read("Choose a number. Draw cards equal to the number.");
+    assert_eq!(that, the);
+    read("Choose a number. Destroy all artifacts and creatures with mana value equal to that number. Then target player reveals their hand and discards all nonland cards with mana value equal to the number.");
+    // Numeric parity is a separate condition construction, still absent for either spelling.
+    declines("If the number is odd, draw a card.");
+    declines("If that number is odd, draw a card.");
+    read("Draw cards equal to the number of creatures you control.");
+    declines("Draw cards equal to the number of.");
+}

@@ -996,6 +996,7 @@ fn build() -> Amounts {
             recalled("that result", Recalled::Result).alias(),
             recalled("the other result", Recalled::OtherResult),
             recalled("that number", Recalled::Number),
+            recalled("the number", Recalled::Number).not_before(&lit("of")).alias(),
             recalled("the chosen number", Recalled::ChosenNumber),
             recalled("the difference", Recalled::Difference),
         ],
