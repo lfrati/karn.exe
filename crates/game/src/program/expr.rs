@@ -1172,6 +1172,8 @@ fn card_zones(set: &ir::ObjectSet) -> Res<Option<(Vec<Zone>, bool, bool)>> {
     let players = |who: &ir::Selector| who.set == ir::ObjectSet::of(ir::Domain::Player) && who.chooser.is_none() && who.random.is_none();
     let yours = match zone.owner.as_deref() {
         Some(who) if is_you(who) => true,
+        Some(who) if who.set.domain == ir::Domain::Player && who.chooser.is_none() && who.random.is_none()
+            && (crate::select::controlled_by_you(who) == Some(false) || matches!(who.quant, Quant::Definite(_))) => false,
         // "a graveyard", or "graveyards", which are all of them
         Some(who) if players(who) && matches!(&who.quant, Quant::Indefinite(Count::Exactly(ir::Amount::Const(1))) | Quant::Each) => false,
         _ => return unsupported("noun phrase: an unsupported zone or zone owner"),
@@ -1352,6 +1354,17 @@ impl Set {
                 controller: None, owner, filter: Filter::compile(&filter, support, bind)? });
         }
         if let Some((zones, yours, also_permanents)) = card_zones(set)? {
+            let mut owner = owner;
+            if !yours && let Some(who) = set.zone.as_ref().and_then(|z| z.owner.as_deref())
+                && (crate::select::controlled_by_you(who) == Some(false) || matches!(who.quant, Quant::Definite(_))) {
+                // A card in an owned zone has that zone's owner (400.3). Reuse the
+                // ordinary relation rather than building a second zone predicate.
+                let relation = Relation::compile(&ir::Relation { who: Box::new(who.clone()), negated: false, past: false }, bind)?;
+                if owner.as_ref().is_some_and(|existing| existing != &relation) {
+                    return unsupported("noun phrase: distinct card and zone owner constraints");
+                }
+                owner = Some(relation);
+            }
             let filter = Filter::compile(&set.filter, support, bind)?;
             return Ok(Set { domain: Domain::Zones { zones, yours, also_permanents }, other: set.other, other_than: filter.other_than(set.other)?.or_else(|| set.other.then(|| bind.other_subject()).flatten()), controller: None, owner, filter });
         }
