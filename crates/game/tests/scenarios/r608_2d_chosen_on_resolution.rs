@@ -134,15 +134,13 @@ fn r608_2d_the_chosen_card_is_the_one_later_instructions_and_linked_abilities_me
 }
 
 #[test]
-fn r608_2d_choices_by_other_players_or_optional_ones_stay_refused(){
+fn r608_2d_optional_multi_player_and_multi_group_choices_stay_refused(){
  for text in ["You may put a +1/+1 counter on a creature you control.",
   "Each player returns a creature card from their graveyard to their hand.",
-  "Target opponent exiles a creature card from their graveyard.",
   // several object groups: each would be chosen separately
   "Return a creature card from your graveyard to your hand and a land card from your graveyard to the battlefield."]{
   let reason=if text.starts_with("You may") {"selected object: one mandatory choice by the controller"}
     else if text.starts_with("Each") {"selected object: a choice by several players"}
-    else if text.starts_with("Target") {"noun phrase: an unsupported zone or zone owner"}
     else {"selected object: one description"};
   crate::support::refused(game::play::check(&card("Effect","Sorcery",text,None)).map_err(|e|e.0),reason);
  }

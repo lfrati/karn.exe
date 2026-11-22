@@ -100,7 +100,7 @@ fn collect_evidence_consumer_inventory() {
             "Axebane Ferox" => Some("unless: a payment of Numbered"),
             "Bite Down on Crime" | "Kylox's Voltstrider" => Some("program: control flow not lowered"),
             "Conspiracy Unraveler" => Some("ability on a permanent: sentence: AlternativeCost"),
-            "Deadly Cover-Up" => Some("noun phrase: an unsupported zone or zone owner"),
+            "Deadly Cover-Up" => Some("linked choice: no CardName producer (607.2d)"),
             "Hedge Whisperer" => Some("ability on a permanent: static: ChooseNotToUntap"),
             "Incinerator of the Guilty" => Some("amount: X"),
             "Polygraph Orb" => Some("unless: alternative payments"),
