@@ -1045,6 +1045,7 @@ pub enum Taking {
     AnyNumber,
     All,
     Exactly(usize),
+    UpTo(usize),
     Remainder,
 }
 
@@ -1117,6 +1118,7 @@ pub fn mention(s: &Selector) -> Option<Mention> {
         Quant::All | Quant::Each => Taking::All,
         Quant::Indefinite(Count::AnyNumber) => Taking::AnyNumber,
         Quant::Indefinite(Count::Exactly(Amount::Const(n))) => Taking::Exactly(*n as usize),
+        Quant::Indefinite(Count::UpTo(Amount::Const(n))) => Taking::UpTo(*n as usize),
         Quant::Indefinite(Count::Exactly(n)) => Taking::Quantity(n.clone()),
         _ => return None,
     };
@@ -5345,6 +5347,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 let (from, zone) = (group.slot, group.zone);
                 let pick = match mention.taking {
                     Taking::Exactly(n) => Pick::Exactly(n),
+                    Taking::UpTo(n) => Pick::UpTo(n),
                     Taking::Quantity(_) => return unsupported("variable selected reveal not lowered"),
                     Taking::AnyNumber => Pick::AnyNumber,
                     Taking::All => Pick::All,
@@ -6336,6 +6339,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 let (from, zone) = (group.slot, group.zone);
                 let (pick, max) = match mention.taking {
                     Taking::Exactly(n) => (Pick::Exactly(n), n as u32),
+                    Taking::UpTo(n) => (Pick::UpTo(n), n as u32),
                     Taking::Quantity(_) => return unsupported("variable explicit choice not lowered"),
                     Taking::All => (Pick::All, u32::MAX),
                     Taking::AnyNumber => (Pick::AnyNumber, u32::MAX),
@@ -6381,6 +6385,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                     Taking::AnyNumber => e.instrs.push(Instr::Select { from, set: set.into(), pick: Pick::AnyNumber, chooser: doer, gate: None, still_in: zone, out }),
                     Taking::All => e.instrs.push(Instr::Select { from, set: set.into(), pick: Pick::All, chooser: doer, gate: None, still_in: zone, out }),
                     Taking::Exactly(n) => e.instrs.push(Instr::Select { from, set: set.into(), pick: Pick::Exactly(n), chooser: doer, gate: None, still_in: zone, out }),
+                    Taking::UpTo(n) => e.instrs.push(Instr::Select { from, set: set.into(), pick: Pick::UpTo(n), chooser: doer, gate: None, still_in: zone, out }),
                     Taking::Quantity(_) => return unsupported("variable selected exile not lowered"),
                     Taking::Remainder => {
                         let minus = binder.resolve(&mention.reference)?.taken.clone();
@@ -6472,6 +6477,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                         Taking::AnyNumber => e.instrs.push(Instr::Select { from, set: set.clone().into(), pick: Pick::AnyNumber, chooser: doer, gate, still_in: zone, out }),
                         Taking::All => e.instrs.push(Instr::Select { from, set: set.clone().into(), pick: Pick::All, chooser: doer, gate, still_in: zone, out }),
                         Taking::Exactly(n) => e.instrs.push(Instr::Select { from, set: set.clone().into(), pick: Pick::Exactly(n), chooser: doer, gate, still_in: zone, out }),
+                        Taking::UpTo(n) => e.instrs.push(Instr::Select { from, set: set.clone().into(), pick: Pick::UpTo(n), chooser: doer, gate, still_in: zone, out }),
                         Taking::Quantity(n) => {
                             let n = quantity(&n, support, &binder)?;
                             e.instrs.push(Instr::Select { from, set: set.clone().into(), pick: Pick::Quantity(n), chooser: doer, gate, still_in: zone, out });
