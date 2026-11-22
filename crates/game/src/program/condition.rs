@@ -305,6 +305,8 @@ enum Asks {
     Turn { yours: bool, negated: bool },
     /// "it's your first, second, or third turn of the game"
     NthTurn { turns: Vec<u32> },
+    /// Its retained cast ordinal, or the pending announcement's next ordinal (608.2i).
+    GameCastChoice { n: u32 },
     TurnOf { who: expr::Subject, negated: bool },
     /// "your life total is greater than your starting life total"
     Compare { left: Values, cmp: Cmp, right: Values },
@@ -425,6 +427,15 @@ impl Condition {
     /// announcement/payment facts are committed (601.2b). Do not admit a predicate
     /// whose values this announcement context does not yet supply.
     pub(crate) fn compile_cast_choice(c: &ir::Condition, support: &Support<'_>, bind: Bind<'_>) -> Res<Condition> {
+        if let ir::Condition::NthCastThisGame { what, n, set } = c {
+            if *n == 0 || what.quant != Quant::Definite(Ref::This) || what.chooser.is_some() || what.random.is_some()
+                || !matches!(what.set.domain, ir::Domain::Permanent | ir::Domain::Spell)
+                || what.set != ir::ObjectSet::of(what.set.domain.clone()) || *set != ir::ObjectSet::of(ir::Domain::Spell) {
+                return unsupported("game cast ordinal: one unqualified own-spell alternative required");
+            }
+            return Ok(Condition(Asks::GameCastChoice { n: *n }));
+        }
+
         fn available(asks: &Asks) -> bool {
             match asks {
                 Asks::Targets { .. } | Asks::Kicked { .. } | Asks::OptionalPaid { .. } | Asks::CostPaid { .. } | Asks::CastFor { .. } | Asks::Gift { .. } | Asks::CastBy { .. } | Asks::ManaSpent { .. }
@@ -436,6 +447,19 @@ impl Condition {
         let condition = Self::compile(c, support, bind)?;
         if !available(&condition.0) { return unsupported("alternative cost condition: announcement/payment facts not yet supplied (601.2b)"); }
         Ok(condition)
+    }
+
+    /// Missing positioned history cannot silently turn an optional free route off.
+    pub(crate) fn validate_cast_choice_history(&self, game: &Game, ctx: &Ctx) -> Res<()> {
+        fn needs(asks: &Asks) -> bool { match asks {
+            Asks::GameCastChoice { .. } => true,
+            Asks::And(parts) | Asks::Or(parts) => parts.iter().any(needs),
+            _ => false,
+        } }
+        if needs(&self.0) && game.players[ctx.controller].game_casts.is_none() {
+            return unsupported("alternative cost requires a known whole-game cast count; positioned history did not supply it");
+        }
+        Ok(())
     }
 
     /// In which announcements ([`crate::announcement::ANY`]) can it take each branch: (true,
@@ -888,6 +912,12 @@ impl Asks {
             Asks::TurnOf { who, negated } => (who.evaluate(game, ctx, locals) == vec![Target::Player(game.active)]) != *negated,
             Asks::Turn { yours, negated } => ((game.active == ctx.controller) == *yours) != *negated,
             Asks::NthTurn { turns } => game.active == ctx.controller && turns.contains(&game.players[ctx.controller].turns_taken),
+            Asks::GameCastChoice { n } => {
+                if let Some(source) = ctx.source.and_then(|source| game.get_object(source))
+                    && let Some(ordinal) = source.cast_ordinal {
+                    source.cast_by == Some(ctx.controller) && ordinal == *n
+                } else { game.players[ctx.controller].game_casts.and_then(|count| count.checked_add(1)) == Some(*n) }
+            },
             // quantify either side in written order
             Asks::Compare { left, cmp, right } => {
                 let (left, each_left) = left.values(game, ctx, locals);
@@ -990,7 +1020,7 @@ impl Asks {
                 what.scalars(out);
             }
             Asks::TurnOf { who, .. } => who.scalars(out),
-            Asks::Turn { .. } | Asks::NthTurn { .. } | Asks::Kicked { .. } | Asks::OptionalPaid { .. } | Asks::CostPaid { .. } | Asks::Gift { .. } => {}
+            Asks::Turn { .. } | Asks::NthTurn { .. } | Asks::GameCastChoice { .. } | Asks::Kicked { .. } | Asks::OptionalPaid { .. } | Asks::CostPaid { .. } | Asks::Gift { .. } => {}
             Asks::Compare { left, right, .. } => {
                 left.scalars(out);
                 right.scalars(out);
@@ -1036,7 +1066,7 @@ impl Asks {
             Asks::TurnOf { .. } => Reads::NONE,
             Asks::Coin { .. } | Asks::Stored { .. } | Asks::Outcome { .. } | Asks::Turn { .. } | Asks::NthTurn { .. } | Asks::Kicked { .. } | Asks::OptionalPaid { .. } | Asks::CostPaid { .. } | Asks::Gift { .. } => Reads::NONE,
             Asks::CastBy { players: who, .. } => Reads::HISTORY | players(who),
-            Asks::CastFrom { .. } => Reads::HISTORY,
+            Asks::CastFrom { .. } | Asks::GameCastChoice { .. } => Reads::HISTORY,
             Asks::Targets { target, .. } => target.reads(),
             Asks::CastFor { .. } => Reads::NONE,
             Asks::ManaSpent { test, .. } => Reads::HISTORY | match test { PaidTest::Count(_, q) => quantity(q), PaidTest::Symbols(_) => Reads::NONE },

@@ -194,6 +194,7 @@ impl Payment {
                 game.obj_mut(self.source).uncounterable = spent.iter().any(|m| m.uncounterable);
                 game.commander_cast_completed(self.source, self.player);
                 game.prepared_cast_completed(self.source);
+                game.record_completed_cast(self.source, self.player)?;
                 let cast = Event::Cast { spell: self.source, by: self.player };
                 game.note(&cast);
                 game.log.push(cast);

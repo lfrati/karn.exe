@@ -181,6 +181,42 @@ impl Trace for ThisTurn {
 }
 
 impl Game {
+    /// The accepted-cast commit is the only runtime writer. Special actions and
+    /// spell copies do not reach it; offered casts use the ordinary payment commit.
+    pub(crate) fn record_completed_cast(&mut self, source: ObjId, player: crate::PlayerId) -> crate::Res<()> {
+        let ordinal = self.players[player].game_casts.map(|count| count.checked_add(1)
+            .ok_or_else(|| crate::Unsupported("game cast count exceeds the engine numerical range".into()))).transpose()?;
+        self.players[player].game_casts = ordinal;
+        self.obj_mut(source).cast_ordinal = ordinal;
+        Ok(())
+    }
+
+    /// Privileged setup totals include the represented current-turn inventory.
+    /// Earlier unspecified turns remain unknown, rather than implying no casts.
+    pub fn set_initial_game_cast_counts(&mut self, totals: &[Option<u32>]) -> Result<(), String> {
+        if totals.len() != self.players.len() { return Err("one game cast total per player required".into()); }
+        let casts: Vec<_> = self.this_turn.now.iter().filter_map(|f| {
+            if f.verb() != ir::Verb::Cast { return None; }
+            match (f.doer(), f.role(ir::Role::What)) {
+                (Some(crate::Target::Player(player)), Some(crate::Target::Object(source))) => Some((source, player)),
+                _ => None,
+            }
+        }).collect();
+        let mut counts = vec![0u32; totals.len()];
+        for (_, player) in &casts { counts[*player] = counts[*player].checked_add(1).ok_or("initial cast inventory exceeds numerical range")?; }
+        if totals.iter().zip(&counts).any(|(total, count)| total.is_some_and(|total| total < *count)) {
+            return Err("game cast total is smaller than the represented current-turn casts".into());
+        }
+        for (player, total) in self.players.iter_mut().zip(totals) { player.game_casts = *total; }
+        let mut remaining = totals.to_vec();
+        for (source, player) in casts.into_iter().rev() {
+            self.obj_mut(source).cast_ordinal = remaining[player];
+            self.obj_mut(source).cast_by = Some(player);
+            if let Some(count) = &mut remaining[player] { *count -= 1; }
+        }
+        Ok(())
+    }
+
     /// A complete declared inventory of current-turn casts, not replayed cast
     /// events. Frozen spell incarnations support later rule lookback (608.2h).
     pub fn set_initial_cast_history(&mut self, casts:&[(ObjId,crate::PlayerId)]) -> Result<(),String> {
@@ -199,7 +235,12 @@ impl Game {
         }
         self.turn_history_mut().now=casts.iter().map(|(source,player)|
             Fact::new(ir::Verb::Cast,Some(crate::Target::Player(*player)),vec![(ir::lexicon::Role::What,crate::Target::Object(*source))]).remembered()).collect();
-        Ok(())
+        let mut totals = vec![None; self.players.len()];
+        if self.turn == 1 {
+            totals.fill(Some(0u32));
+            for (_, player) in casts { totals[*player] = Some(totals[*player].unwrap().checked_add(1).ok_or("initial cast inventory exceeds numerical range")?); }
+        }
+        self.set_initial_game_cast_counts(&totals)
     }
 
     pub fn audit_casts_this_turn(&self) -> serde_json::Value {

@@ -1864,6 +1864,7 @@ impl Game {
                     _ => {}
                 }
                 let ctx = Ctx { casting: Some((card, cast_as)), x, ..Ctx::for_spell(player, card).with_ability(row) };
+                if let Some(condition) = &alternative.condition { condition.validate_cast_choice_history(self, &ctx)?; }
                 if alternative.condition.as_ref().is_some_and(|c| !c.evaluate(self, &ctx, &crate::program::expr::NoLocals)) {
                     return Err("the condition for that alternative cost is not true (118.9, 601.2b)".into());
                 }

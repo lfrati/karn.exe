@@ -1920,7 +1920,9 @@ fn new_position(faces: &Catalog, position: &Value) -> Result<Game, Error> {
     let active=player(&position["timing"]["active"])?;
     let priority=player(&position["next"]["chooser"])?;
     fields(&position["players"],&["A","B"])?;
-    fields(&position["history"],&["turn_structure","pending","effects","turn_events","previous_turn_spells","land_plays_this_turn","ability_uses","consecutive_passes","control_since"])?;
+    let mut history_fields = vec!["turn_structure","pending","effects","turn_events","previous_turn_spells","land_plays_this_turn","ability_uses","consecutive_passes","control_since"];
+    if position["history"].get("spells_cast_this_game").is_some() { history_fields.push("spells_cast_this_game"); }
+    fields(&position["history"], &history_fields)?;
     let history=&position["history"];
     if history["turn_structure"]!="ordinary_A_first" || !matches!(history["pending"].as_str(),Some("none"|"represented_delayed")) || !matches!(history["effects"].as_str(),Some("intrinsic_only"|"represented_only"))
         || !matches!(history["turn_events"].as_str(),Some("empty"|"represented_casts_only")) || history["previous_turn_spells"]!=0
@@ -2124,6 +2126,14 @@ fn new_position(faces: &Catalog, position: &Value) -> Result<Game, Error> {
         Ok((source,player(&cast["player"])?))
     }).collect::<Result<Vec<_>,String>>()?;
     g.set_initial_cast_history(&casts).map_err(Error::unsupported)?;
+    if let Some(totals) = history.get("spells_cast_this_game") {
+        fields(totals, &["A", "B"])?;
+        let totals = ["A", "B"].map(|seat| if totals[seat].is_null() { Ok(None) } else {
+            totals[seat].as_u64().and_then(|n|u32::try_from(n).ok()).map(Some).ok_or("invalid initial game cast total")
+        }).into_iter().collect::<Result<Vec<_>,_>>()?;
+        g.set_initial_game_cast_counts(&totals).map_err(Error::unsupported)?;
+    }
+
     // An explicit no-use premise already declares the empty inventory. Ordinary
     // observations without this field still say nothing about prior uses.
     let empty_uses=Vec::new();

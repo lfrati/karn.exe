@@ -200,6 +200,8 @@ pub struct Object {
     /// Caster of this spell and the permanent it becomes (400.7d). Cleared on other
     /// zone changes; neither the owner nor a later controller is necessarily its caster.
     pub(crate) cast_by: Option<PlayerId>,
+    /// One-based accepted-cast position for its caster, retained on this spell incarnation.
+    pub(crate) cast_ordinal: Option<u32>,
     /// Of a spell or activated ability on the stack whose cost has {X}: the value announced
     /// for it (107.3a). Elsewhere there is none, and X is 0 (107.3g).
     pub x: Option<u32>,
@@ -745,6 +747,8 @@ pub struct Player {
     pub turn_began: u32,
     /// How many turns this player has begun, extra turns included (500.7).
     pub turns_taken: u32,
+    /// Accepted spells cast in this game; None when a positioned history does not say.
+    pub game_casts: Option<u32>,
     /// Tried to draw from an empty library since state-based actions were last checked (704.5b).
     pub drew_from_empty: bool,
     pub lost: bool,
@@ -1106,6 +1110,7 @@ impl Game {
             land_played: false,
             turn_began: 0,
             turns_taken: 0,
+            game_casts: Some(0),
             drew_from_empty: false,
             speed: None,
             lost: false,
@@ -1308,6 +1313,7 @@ impl Game {
             saddled: false,
             cast_from: None,
             cast_by: None,
+            cast_ordinal: None,
             x: None,
             spell_x: None,
             kicked: 0,
@@ -1509,7 +1515,9 @@ impl Game {
             || controls.iter().any(|(id,by,_)|*by>=2 || !self.battlefield.contains(id)) {
             return Err("initial control duration must cover every permanent".into());
         }
-        self.turn=turn; self.part=part; self.active=active; self.priority=priority; self.passes=passes;
+        self.turn=turn;
+        for player in &mut self.players { player.game_casts = (turn == 1).then_some(0); }
+        self.part=part; self.active=active; self.priority=priority; self.passes=passes;
         self.plan=crate::turn::TurnPlan::at(turn,part,0);
         for (player,state) in self.players.iter_mut().enumerate() {
             state.turn_began=if player==active {turn}else{turn.saturating_sub(1)};

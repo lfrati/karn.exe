@@ -87,7 +87,13 @@ pub(crate) fn alternative_cost(a: &Ability) -> Option<(ir::Cost, Option<ir::Cond
                 || !c.rest.is_empty() || c.first.may || !c.first.mods.is_empty() { return None; }
             let Action::Cast { play: false, what, free: true } = &c.first.action else { return None };
             let [card] = what.items.as_slice() else { return None };
-            if card.quant != Quant::Definite(Ref::This) || card.chooser.is_some() || card.random.is_some()
+            // In "If this spell is the first ... you may cast it", the
+            // condition explicitly supplies the sole self antecedent (201.5).
+            let self_reference = card.quant == Quant::Definite(Ref::This)
+                || card.quant == Quant::Definite(Ref::Anaphor(ir::Anaphor::It))
+                    && matches!(conditions.as_slice(), [ir::Condition::NthCastThisGame { what, .. }]
+                        if what.quant == Quant::Definite(Ref::This));
+            if !self_reference || card.chooser.is_some() || card.random.is_some()
                 || !matches!(card.set.domain, ir::Domain::Object | ir::Domain::Permanent | ir::Domain::Spell | ir::Domain::Card)
                 || card.set != ir::ObjectSet::of(card.set.domain.clone()) { return None; }
             ir::Cost(Vec::new())
