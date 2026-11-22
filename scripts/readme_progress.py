@@ -14,6 +14,7 @@ from mgn.runner import inventory_records
 from progress import route_inventory
 from progress_dashboard import deck_progress, whole_cards
 import rules
+import deck_archive
 import rust_tools
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,7 +28,8 @@ def source_fingerprint():
     """Identify measurement inputs, including dirty source, independently of Git HEAD."""
     digest = hashlib.sha256(rules.suite_hash().encode())
     paths = [ROOT / 'resources/manifest.json', ROOT / 'resources/decks/manifest.json',
-             ROOT / 'resources/decks/selected-decks.jsonl']
+             ROOT / 'resources/decks/selected-decks.jsonl', ROOT / 'resources/decks/commander.jsonl',
+             ROOT / 'resources/decks/commander-legality.json']
     paths += sorted((ROOT / 'tests/fixtures/mgn').rglob('*.json'))
     paths += sorted((ROOT / 'tests/fixtures/mgn').rglob('*.jsonl'))
     paths += sorted((ROOT / 'scripts').glob('*.py'))
@@ -60,6 +62,7 @@ def measure(snapshot):
     cards = whole_cards(inventory, ROOT / 'resources/oracle/cards.jsonl')
     roster = ROOT / 'resources/decks/selected-decks.jsonl'
     decks = deck_progress([json.loads(line) for line in roster.read_text().splitlines() if line.strip()], cards)['overall']
+    commander = deck_progress(deck_archive.load(ROOT / 'resources/decks/commander.jsonl'), cards)['overall']
     corpus = json.loads((ROOT / 'resources/manifest.json').read_text())['sources']['oracle_cards']
     archive = json.loads((ROOT / 'resources/decks/manifest.json').read_text())
     test_paths = [*sorted((ROOT / 'crates/game/tests/scenarios').rglob('*.rs')),
@@ -71,13 +74,15 @@ def measure(snapshot):
         'decks': {'total': decks['decks'], 'main_read': decks['main_fully_read'],
                   'main_run': decks['main_fully_admitted'], 'run': decks['fully_admitted'],
                   'dated': archive['snapshot']},
+        'commander': {'total': commander['decks'], 'main_read': commander['main_fully_read'],
+                      'main_run': commander['main_fully_admitted'], 'dated': archive['commander']['snapshot']},
         'rule_cited_tests': sum(len(rules.test_references(path)) for path in test_paths),
         'mgn_records': record_counts(path for _, path in inventory_records(active=True)),
     }
 
 
 def render(report):
-    cards, decks = report['cards'], report['decks']
+    cards, decks, commander = report['cards'], report['decks'], report['commander']
     return f'''{START}
 <!-- Measurement inputs: {report['fingerprint']} -->
 Snapshot: {report['date']}. Card corpus dated {cards['dated']}; deck roster dated {decks['dated']}.
@@ -91,6 +96,10 @@ Snapshot: {report['date']}. Card corpus dated {cards['dated']}; deck roster date
 | | Decks whose main deck is read in full | {decks['main_read']:,} |
 | | Decks whose main deck runs in full | {decks['main_run']:,} |
 | | Decks that run in full with their sideboard | {decks['run']:,} |
+
+Commander corpus (dated {commander['dated']}): **{commander['total']:,} authored lists**,
+**{commander['main_read']:,} read in full**, **{commander['main_run']:,} compiled in full**, including
+commanders. Separate from the tournament roster above.
 
 A card that runs is one the engine compiles; that does not certify correct play.
 {END}'''

@@ -1,0 +1,1772 @@
+{
+  "retrieved_at": "2026-11-22T09:13:24.456494+00:00",
+  "sources": [
+    {
+      "url": "https://api.scryfall.com/cards/collection",
+      "method": "POST",
+      "oracle_ids": [
+        "02090581-61aa-4348-ad57-451be8ee91c2",
+        "0310dfdb-0498-488d-9f1a-279f8239e024",
+        "032ec6e2-6cc3-4a97-9cc7-3233f5e11904",
+        "0411aead-9f77-435d-a343-635f23221cf7",
+        "04b7362d-0490-4cb0-b5d7-2a7732f659ce",
+        "05849bd6-8f38-4031-be2b-e2aa03beb8cc",
+        "05878e49-93ad-4144-9c50-a0bb86126c2e",
+        "06692cd9-ac2f-4a32-8fd1-043ba3c0fe71",
+        "0895c9b7-ae7d-4bb3-af17-3b75deb50a25",
+        "0b7f9c71-6f3c-4056-9bed-04b9f2296f3b",
+        "0bc7f093-bef0-4f1a-852c-4b75ebf54838",
+        "1065eceb-9150-4ea4-bd6d-acaabda14e00",
+        "11bf211c-95a3-4e7f-bd08-13f979d54e73",
+        "11e02134-7b1a-46a4-a89e-7539dd1efada",
+        "1275653f-de4e-4fe9-aad8-88555fa11680",
+        "12c03a03-36bf-487e-b8be-e55399525da5",
+        "1593ea18-2f2f-4ab4-83fb-6ccc0bec8a90",
+        "16e015b2-f8a3-4b1a-80be-58a8f5fb5e8c",
+        "1b301478-b14f-4ef8-94e6-9647d582eabe",
+        "1b3fb20a-e090-4286-9c03-6b71c27c45be",
+        "1b882a0e-0ede-4d1a-bd1a-9b7cffbcde8e",
+        "1bd3e453-aa21-4ee6-95c2-d6d920ee8e7a",
+        "1c747fe2-289e-492a-a846-aa77707e2dc3",
+        "1c857fa4-e823-494d-9ea4-7eb9e719c9b6",
+        "1cf51f50-24e4-48d0-95b3-1dad3ffa4bf5",
+        "20347559-95a9-4689-bb79-c5bb3809b719",
+        "204f9afe-c20b-4933-b5cd-aa572784762a",
+        "2224b6e0-c5ff-45d0-84e3-83758c5fc99f",
+        "2361ca87-6352-4ba3-8d91-b3d71242914d",
+        "240e85d3-e495-4877-8609-4b4056c402f7",
+        "24882fa2-3fe9-4c1b-aa3d-0e6488b9db27",
+        "2549bc57-9ffb-4053-9f10-f2a5f792b845",
+        "28ddc23c-5b0b-4747-9a33-6845acf27bec",
+        "2b76f9e9-cd28-4eaf-8674-215c34263f96",
+        "2e3ee458-fa3f-4452-ab95-5a7fb5a0483b",
+        "2f0741f9-802b-4761-8094-7b1f3ea1a424",
+        "2fcc69ff-8ab5-4e14-afe3-db892049a872",
+        "30b24e8e-3b0e-4d8e-90f3-f66eb7c1858c",
+        "30d0d75f-e94c-460b-b957-9f1d655c0f65",
+        "310f141c-7f37-4729-aed6-dd9c09db448d",
+        "31f15274-301b-47c5-ba19-0ced04520878",
+        "32116127-cf96-4a1b-8896-a1ebc087b597",
+        "322f44f0-e6da-4ee0-b474-e7d5e9a461c5",
+        "3405c8a9-a8d6-4b45-9b64-94141076603b",
+        "3407fe41-fdd3-4119-8f70-4bc4590a379f",
+        "352b64d2-2ae5-44ee-a64f-94932ef545d3",
+        "365548fb-5acc-4a8a-b20b-26d28b7d029f",
+        "36cd2364-d113-47d1-b2c4-b088d9eb88dd",
+        "39b51f62-8421-42d1-86d3-74fd6e6f31a2",
+        "39da2aa8-f4d9-44f6-a446-488beaec821f",
+        "3a198a16-17b9-481e-b516-5bc945c7e247",
+        "3adbd963-e85d-4569-963a-4472594f06f9",
+        "3d2ea1a3-72af-48bc-a8f1-98facc2eebd0",
+        "3d4a7dd3-9258-4bd1-adc4-08f0205e196a",
+        "3e39224c-72ce-4ecc-aa17-12c071ea1f3e",
+        "3ecaefc8-ead2-47a3-a7ea-b030faab65a7",
+        "3f3439e1-75ce-482d-881f-836492dca6e9",
+        "3f3b2c10-21f8-4e13-be83-4ef3fa36e123",
+        "3fa71348-fa4d-4f39-a451-cf1570591991",
+        "42b8aa14-10bc-4bd6-88d9-4bb287eadd19",
+        "42d121a2-5266-483a-ab16-e0a8073cd6a3",
+        "437b2dab-15e0-4b9a-a204-58622d37a3b3",
+        "4567a528-75f0-4ea6-b927-3a500caf76ac",
+        "457af74a-02b3-4659-846d-63e482667f34",
+        "45d35128-76e6-43f9-8d23-41f7506c3a71",
+        "46665089-aa3d-44c3-964d-6638dfbb5782",
+        "48369aec-a991-4bef-8554-01c84302b063",
+        "4b1bf05e-753e-4350-a913-894cf3cecc0c",
+        "4c9bcba6-87b5-4fb3-97ee-6fe5b739337d",
+        "4ce2357f-93e6-40ca-beca-8f4e15adc464",
+        "4e0b647a-6e1a-421b-bca9-8d5e346bda80",
+        "4f9e07ae-6341-4b46-9f77-f17ab659d266",
+        "50cee3ac-cba0-4abb-babf-de1928b1590e",
+        "51acd176-e84d-42c2-acb2-cceeb28a9fec",
+        "54748cb1-d92a-4212-ad76-417ee79b5ef1"
+      ],
+      "response_sha256": "d3f53f0244269a9db36eb493d27a2d66ad814107197f393f6b95f5772124d2f7"
+    },
+    {
+      "url": "https://api.scryfall.com/cards/collection",
+      "method": "POST",
+      "oracle_ids": [
+        "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+        "56956afd-db53-4542-816b-490c8b0bbcf7",
+        "579cbd92-797f-4cdf-91ed-fca7a523eae5",
+        "5b6bdf5a-2742-4851-92cd-a857a3852836",
+        "5c367b7d-3cb4-45db-b836-dad953efce15",
+        "5da7eea8-bb9e-47ce-a554-8a1ee058bd7a",
+        "5f2a3797-28aa-4c7a-ba2b-fd243a1747fd",
+        "613a41b8-0b4f-4995-bf1e-ca41f96e6438",
+        "65986c1b-8e51-4604-b685-d82fa7d1263a",
+        "6734497c-16f0-4c4b-ba24-337333511fc6",
+        "67a52a74-9474-4f4e-8785-6ff54078a8ca",
+        "68954295-54e3-4303-a6bc-fc4547a4e3a3",
+        "6ad8011d-3471-4369-9d68-b264cc027487",
+        "6de714e1-446d-4fb9-9e3d-bcd3ec6af9ca",
+        "6e2c2423-d854-4478-99e6-64f29851f026",
+        "70dc830e-d05b-4fc7-88dd-879e140b3fbf",
+        "713332c1-5bd8-400f-bfff-c1ca0697a043",
+        "717bbb9d-0a5b-4979-a24b-9d54aac7657a",
+        "72aef1d8-11df-4bc2-af83-907b05df73a8",
+        "72deedab-7c17-4505-aeca-4bc8596d80a5",
+        "765863c8-1be0-4bb1-9e9c-db7701cffde3",
+        "76b003e0-15af-4f22-bdf2-1ade5430964a",
+        "7735eeba-693b-47e2-bd51-414379cf1016",
+        "77637eff-2963-4402-88f3-ca346f762fc8",
+        "777b8ec4-a783-4297-96b7-4f200d0eb734",
+        "78826359-fe63-44ad-adc4-a17ffcd710e4",
+        "7a838374-fc40-4fb6-9d38-a96f01e7038a",
+        "7b459306-149b-4f43-abc1-2dd70c748c0e",
+        "7c779721-cd1b-4696-9ae9-68ccc284ed2a",
+        "7cb9e29f-835f-4155-a2a5-4b778866c773",
+        "7df3e379-c217-416e-a1c8-46338608c49e",
+        "7e40f37c-9a0c-40e0-b195-7ea94b12f798",
+        "7eff84f1-f772-497a-b350-bbc93d0230f7",
+        "7fd4c452-07f2-492c-9c78-d1c6362d9eec",
+        "7fd61a18-6e4f-40c5-aa00-3d101ec1ec82",
+        "814e321d-16fd-4f7b-a8d8-2b089be76f2c",
+        "8203c621-a1a0-4865-8c9a-0d4064c86107",
+        "8305d576-21d8-4ce7-8eda-a7cd9793aca5",
+        "847b5be5-cb0c-4857-bcd9-c5cfe55fdaeb",
+        "8539f295-5d58-4436-a73a-b9277c4c7795",
+        "85e797de-da27-4cd5-8fa4-4aef948988b2",
+        "8959a147-75b1-4f4a-a699-cb354ff55e59",
+        "8973bd99-20f8-4867-90ef-50392147ee1b",
+        "8a05ec32-7b0c-4f23-a4f7-413301c2a70a",
+        "8b755881-a72d-4e21-a369-d2924eb4585a",
+        "8b7a3613-f1bd-4262-9b11-b631167c2c2d",
+        "8ddfc283-c9b4-41a5-af88-cf0068e986cc",
+        "92acb789-0e42-465c-ac16-40fefec48805",
+        "97db6c39-e690-49b6-93a6-e51b8dfad10b",
+        "983caa3f-7089-4e66-825d-4086a5adb9bb",
+        "9965d9c5-2ebf-4a6c-930e-55c5890979be",
+        "9b271430-f53d-42d6-a547-2f286dd9bcb6",
+        "9b9a10ff-5a5d-4df8-88aa-18d84ff9117c",
+        "9e6a3df4-67a3-452e-a6ef-f04dbadb21ef",
+        "a011aefe-5853-4435-b686-179e931ba897",
+        "a044474a-cd72-4e9d-bd8d-a08f2de9cdc0",
+        "a1cc5e37-b09a-4b7f-afd5-77c1c35aa425",
+        "a52a06aa-56fc-4845-bbcd-a54f16369b34",
+        "a5852994-d816-4e62-8a03-254223714544",
+        "a75445d3-1303-4bb5-89ad-26ea93fecd48",
+        "a89ebf63-63c9-42cd-98b4-ec852cd9b0a8",
+        "a8f5440e-5d4b-420a-8cfd-27a3c72be0d2",
+        "a91a3266-cadd-47a0-9b20-160307f14c07",
+        "ab1cc360-b9de-48d9-9983-4dfe4a7d2a37",
+        "ac641490-ca14-48d7-8cc4-b69ce984befa",
+        "ac7a9d73-dbdf-4e97-b382-67cd30ef5649",
+        "ac914d98-221e-426c-8a50-342896b15f9e",
+        "aef07e62-ac7f-4a5b-9732-136052d88a06",
+        "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+        "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+        "b81eaa2f-0554-41c6-bdf6-d1cb73b8f56f",
+        "baf80db7-2ca8-4bfc-b5b6-25ed51878dd7",
+        "bb27bfdf-fe8d-45bd-ad62-8118dce06eda",
+        "bda83ef4-e345-495d-878c-4da171f997ba",
+        "c0d8fef4-65f4-4769-982d-b397d2b7e977"
+      ],
+      "response_sha256": "8154787959a203f9b37d688df0fc8425bcf808ea194143a062adee1ec9811103"
+    },
+    {
+      "url": "https://api.scryfall.com/cards/collection",
+      "method": "POST",
+      "oracle_ids": [
+        "c23e5b80-08d2-4e24-9908-fe2aa4f30f6f",
+        "c2898bbd-82a4-4d26-b6ee-169b0ebe71b4",
+        "c3b1b7bd-cff8-4275-b6d3-868f4e4b2cc0",
+        "c3c45d50-9038-41df-bb2f-9bc40071845b",
+        "c623aeb1-e6d4-48fe-bd2a-a7a6729aa4df",
+        "c6a3a882-a127-4590-93d7-679ef4313efe",
+        "c8b143ad-43ec-4e0d-a440-e348daa31391",
+        "c97361b5-af16-4a7b-af85-a429dbaf4ad2",
+        "c9fe1383-1331-4a58-a45a-3320250221a9",
+        "ca204b66-8d0c-431a-8d34-282f7c2d17da",
+        "ca405696-8c30-4c01-bf90-11cdf8837942",
+        "cc187110-1148-4090-bbb8-e205694a39f5",
+        "cd11c27b-9368-4622-bc5a-2e0b993cc42b",
+        "d0e810bb-5f38-4045-a718-30d423c05659",
+        "d14c633d-977a-4f78-85c2-88582b3c3670",
+        "d1961110-575b-4a1b-9cee-db0e1f0fdbc1",
+        "d1d171de-1c6d-4fb9-817a-9c689c709f3d",
+        "d3a0b660-358c-41bd-9cd2-41fbf3491b1a",
+        "d3d61a6a-7870-44df-92e5-513dac2c2c3e",
+        "dc55421f-dee8-4263-9df0-2365df5f14bb",
+        "dcd4da46-5438-4454-8b1b-43ca51bda1f9",
+        "de6d0248-79f6-48df-bdca-8ce207b2ec08",
+        "df317532-7d36-40fd-938f-e972749c8792",
+        "e1afaef7-9fa3-4662-a95f-adfb0da9fd11",
+        "e1e96802-fd0c-41f1-aa21-3287d75a0e88",
+        "e264ffe3-0252-49d6-b990-dbb3654325a5",
+        "e38b8ecb-e7ae-474d-b6a4-29cc1aa8ccd9",
+        "e3afc704-220f-498f-9eaa-0821b17dc24c",
+        "e5456b35-d7a9-4717-90df-c6c46f1ec437",
+        "e88027a6-24cc-4a8b-86db-734f26149ea8",
+        "e8c7566d-7cc0-48af-a986-83223ec7e06c",
+        "ea1eb902-a23c-44ff-9169-19baf71de238",
+        "ea91be73-40f5-461a-bb39-d60216829a53",
+        "ea9c459a-6047-43aa-968f-a582be4000e8",
+        "ead4c01a-e2ae-49c9-95d9-651d81005907",
+        "ee35de1c-aef1-4bd4-85fd-fe77bc927790",
+        "f1ef5698-14bd-42bf-aae5-2870699e4186",
+        "f2933616-211b-4d3f-8064-2be61c26079a",
+        "f6bd2902-7f8b-419e-bbc7-bcab0c1b7e01",
+        "f75ed312-3a23-4624-80c5-03980aa22d0b",
+        "f82a4e85-526d-4456-b700-7760043a31be",
+        "f8b17b89-26ce-4208-874a-9e1d66514640",
+        "fa6d05a1-3df4-4751-b1a0-8d9693faec73",
+        "fa85c5a2-8e83-4624-a35a-a0bbf17ecbb4",
+        "fdd94383-b573-439a-8e1c-925af887c5a6"
+      ],
+      "response_sha256": "fbba18232566dc753a281d72752ec366431d8025c4ed2b04acb3a772c4d939c6"
+    }
+  ],
+  "cards": [
+    {
+      "oracle_id": "1c747fe2-289e-492a-a846-aa77707e2dc3",
+      "name": "Abrupt Decay",
+      "color_identity": [
+        "B",
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "7c779721-cd1b-4696-9ae9-68ccc284ed2a",
+      "name": "Aetherize",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "48369aec-a991-4bef-8554-01c84302b063",
+      "name": "Aetherspouts",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "c0d8fef4-65f4-4769-982d-b397d2b7e977",
+      "name": "Animate Dead",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "4567a528-75f0-4ea6-b927-3a500caf76ac",
+      "name": "Arbor Elf",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "ab1cc360-b9de-48d9-9983-4dfe4a7d2a37",
+      "name": "Arcane Denial",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "0bc7f093-bef0-4f1a-852c-4b75ebf54838",
+      "name": "Arcane Signet",
+      "color_identity": [],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "a91a3266-cadd-47a0-9b20-160307f14c07",
+      "name": "Archaeomancer",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "8305d576-21d8-4ce7-8eda-a7cd9793aca5",
+      "name": "Archmage Emeritus",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "baf80db7-2ca8-4bfc-b5b6-25ed51878dd7",
+      "name": "Baral, Chief of Compliance",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "5da7eea8-bb9e-47ce-a554-8a1ee058bd7a",
+      "name": "Beast Whisperer",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "7735eeba-693b-47e2-bd51-414379cf1016",
+      "name": "Beast Within",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "e1afaef7-9fa3-4662-a95f-adfb0da9fd11",
+      "name": "Bident of Thassa",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "d3a0b660-358c-41bd-9cd2-41fbf3491b1a",
+      "name": "Birds of Paradise",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "51acd176-e84d-42c2-acb2-cceeb28a9fec",
+      "name": "Blink of an Eye",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "310f141c-7f37-4729-aed6-dd9c09db448d",
+      "name": "Blood Artist",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "613a41b8-0b4f-4995-bf1e-ca41f96e6438",
+      "name": "Blue Sun's Zenith",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "04b7362d-0490-4cb0-b5d7-2a7732f659ce",
+      "name": "Bojuka Bog",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "2fcc69ff-8ab5-4e14-afe3-db892049a872",
+      "name": "Boreal Druid",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "36cd2364-d113-47d1-b2c4-b088d9eb88dd",
+      "name": "Brainstorm",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "8203c621-a1a0-4865-8c9a-0d4064c86107",
+      "name": "Buried Alive",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "77637eff-2963-4402-88f3-ca346f762fc8",
+      "name": "Capsize",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "a1cc5e37-b09a-4b7f-afd5-77c1c35aa425",
+      "name": "Carrion Feeder",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "45d35128-76e6-43f9-8d23-41f7506c3a71",
+      "name": "Caustic Caterpillar",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "05878e49-93ad-4144-9c50-a0bb86126c2e",
+      "name": "Chart a Course",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "1c857fa4-e823-494d-9ea4-7eb9e719c9b6",
+      "name": "Circle of Dreams Druid",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "8a05ec32-7b0c-4f23-a4f7-413301c2a70a",
+      "name": "Coastal Piracy",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "0895c9b7-ae7d-4bb3-af17-3b75deb50a25",
+      "name": "Command Tower",
+      "color_identity": [],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "4c9bcba6-87b5-4fb3-97ee-6fe5b739337d",
+      "name": "Consider",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "3d2ea1a3-72af-48bc-a8f1-98facc2eebd0",
+      "name": "Copperhorn Scout",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "cc187110-1148-4090-bbb8-e205694a39f5",
+      "name": "Counterspell",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "8b755881-a72d-4e21-a369-d2924eb4585a",
+      "name": "Cultivate",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "de6d0248-79f6-48df-bdca-8ce207b2ec08",
+      "name": "Dawntreader Elk",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "457af74a-02b3-4659-846d-63e482667f34",
+      "name": "Deadly Dispute",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "579cbd92-797f-4cdf-91ed-fca7a523eae5",
+      "name": "Deep Analysis",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "983caa3f-7089-4e66-825d-4086a5adb9bb",
+      "name": "Delay",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "1065eceb-9150-4ea4-bd6d-acaabda14e00",
+      "name": "Deprive",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "f8b17b89-26ce-4208-874a-9e1d66514640",
+      "name": "Dig Through Time",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "11e02134-7b1a-46a4-a89e-7539dd1efada",
+      "name": "Disdainful Stroke",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "2f0741f9-802b-4761-8094-7b1f3ea1a424",
+      "name": "Dissolve",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "85e797de-da27-4cd5-8fa4-4aef948988b2",
+      "name": "Docent of Perfection // Final Iteration",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "352b64d2-2ae5-44ee-a64f-94932ef545d3",
+      "name": "Dread Return",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "3d4a7dd3-9258-4bd1-adc4-08f0205e196a",
+      "name": "Dwynen's Elite",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "30d0d75f-e94c-460b-b957-9f1d655c0f65",
+      "name": "Dwynen, Gilt-Leaf Daen",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "20347559-95a9-4689-bb79-c5bb3809b719",
+      "name": "Elves of Deep Shadow",
+      "color_identity": [
+        "B",
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "6e2c2423-d854-4478-99e6-64f29851f026",
+      "name": "Elvish Archdruid",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "7e40f37c-9a0c-40e0-b195-7ea94b12f798",
+      "name": "Elvish Champion",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "a8f5440e-5d4b-420a-8cfd-27a3c72be0d2",
+      "name": "Elvish Clancaller",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "28ddc23c-5b0b-4747-9a33-6845acf27bec",
+      "name": "Elvish Harbinger",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "3f3b2c10-21f8-4e13-be83-4ef3fa36e123",
+      "name": "Elvish Mystic",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "7df3e379-c217-416e-a1c8-46338608c49e",
+      "name": "Elvish Promenade",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "c6a3a882-a127-4590-93d7-679ef4313efe",
+      "name": "Elvish Visionary",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "bda83ef4-e345-495d-878c-4da171f997ba",
+      "name": "Elvish Warmaster",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "46665089-aa3d-44c3-964d-6638dfbb5782",
+      "name": "Essence Scatter",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "30b24e8e-3b0e-4d8e-90f3-f66eb7c1858c",
+      "name": "Eternal Witness",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "fdd94383-b573-439a-8e1c-925af887c5a6",
+      "name": "Evacuation",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "a75445d3-1303-4bb5-89ad-26ea93fecd48",
+      "name": "Evolving Wilds",
+      "color_identity": [],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "6734497c-16f0-4c4b-ba24-337333511fc6",
+      "name": "Ezuri, Renegade Leader",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "437b2dab-15e0-4b9a-a204-58622d37a3b3",
+      "name": "Fact or Fiction",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "4ce2357f-93e6-40ca-beca-8f4e15adc464",
+      "name": "Farhaven Elf",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "2361ca87-6352-4ba3-8d91-b3d71242914d",
+      "name": "Favorable Winds",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "a5852994-d816-4e62-8a03-254223714544",
+      "name": "Final Parting",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "4b1bf05e-753e-4350-a913-894cf3cecc0c",
+      "name": "Fleshbag Marauder",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+      "name": "Forest",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "8b7a3613-f1bd-4262-9b11-b631167c2c2d",
+      "name": "Foundation Breaker",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "16e015b2-f8a3-4b1a-80be-58a8f5fb5e8c",
+      "name": "Frantic Search",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "df317532-7d36-40fd-938f-e972749c8792",
+      "name": "Fyndhorn Elves",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "ac7a9d73-dbdf-4e97-b382-67cd30ef5649",
+      "name": "Glowspore Shaman",
+      "color_identity": [
+        "B",
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "e5456b35-d7a9-4717-90df-c6c46f1ec437",
+      "name": "Golgari Findbroker",
+      "color_identity": [
+        "B",
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "1b301478-b14f-4ef8-94e6-9647d582eabe",
+      "name": "Golgari Rot Farm",
+      "color_identity": [
+        "B",
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "1cf51f50-24e4-48d0-95b3-1dad3ffa4bf5",
+      "name": "Golgari Signet",
+      "color_identity": [
+        "B",
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "d14c633d-977a-4f78-85c2-88582b3c3670",
+      "name": "Grapple with the Past",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "0411aead-9f77-435d-a343-635f23221cf7",
+      "name": "Gravitational Shift",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "72aef1d8-11df-4bc2-af83-907b05df73a8",
+      "name": "Grim Haruspex",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "a89ebf63-63c9-42cd-98b4-ec852cd9b0a8",
+      "name": "Grisly Salvage",
+      "color_identity": [
+        "B",
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "ea9c459a-6047-43aa-968f-a582be4000e8",
+      "name": "Growing Rites of Itlimoc // Itlimoc, Cradle of the Sun",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "4f9e07ae-6341-4b46-9f77-f17ab659d266",
+      "name": "Guardian Project",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "42d121a2-5266-483a-ab16-e0a8073cd6a3",
+      "name": "Halimar Depths",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "7eff84f1-f772-497a-b350-bbc93d0230f7",
+      "name": "Harmonize",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "0b7f9c71-6f3c-4056-9bed-04b9f2296f3b",
+      "name": "Heritage Druid",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "24882fa2-3fe9-4c1b-aa3d-0e6488b9db27",
+      "name": "Heroic Intervention",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "3fa71348-fa4d-4f39-a451-cf1570591991",
+      "name": "Imperious Perfect",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "f6bd2902-7f8b-419e-bbc7-bcab0c1b7e01",
+      "name": "Impulse",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "9b9a10ff-5a5d-4df8-88aa-18d84ff9117c",
+      "name": "Inspiring Call",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "c2898bbd-82a4-4d26-b6ee-169b0ebe71b4",
+      "name": "Into the Roil",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "b2c6aa39-2d2a-459c-a555-fb48ba993373",
+      "name": "Island",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "a011aefe-5853-4435-b686-179e931ba897",
+      "name": "Joraga Treespeaker",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "8959a147-75b1-4f4a-a699-cb354ff55e59",
+      "name": "Joraga Warcaller",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "6de714e1-446d-4fb9-9e3d-bcd3ec6af9ca",
+      "name": "Jungle Hollow",
+      "color_identity": [
+        "B",
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "847b5be5-cb0c-4857-bcd9-c5cfe55fdaeb",
+      "name": "Keep Watch",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "1593ea18-2f2f-4ab4-83fb-6ccc0bec8a90",
+      "name": "Kodama's Reach",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "3e39224c-72ce-4ecc-aa17-12c071ea1f3e",
+      "name": "Krosan Grip",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "ea91be73-40f5-461a-bb39-d60216829a53",
+      "name": "Lead the Stampede",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "5f2a3797-28aa-4c7a-ba2b-fd243a1747fd",
+      "name": "Lifecrafter's Bestiary",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "ca204b66-8d0c-431a-8d34-282f7c2d17da",
+      "name": "Lightning Greaves",
+      "color_identity": [],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "9e6a3df4-67a3-452e-a6ef-f04dbadb21ef",
+      "name": "Living Death",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "68954295-54e3-4303-a6bc-fc4547a4e3a3",
+      "name": "Llanowar Elves",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "92acb789-0e42-465c-ac16-40fefec48805",
+      "name": "Llanowar Reborn",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "f75ed312-3a23-4624-80c5-03980aa22d0b",
+      "name": "Llanowar Visionary",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "32116127-cf96-4a1b-8896-a1ebc087b597",
+      "name": "Llanowar Wastes",
+      "color_identity": [
+        "B",
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "765863c8-1be0-4bb1-9e9c-db7701cffde3",
+      "name": "Lonely Sandbar",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "3f3439e1-75ce-482d-881f-836492dca6e9",
+      "name": "Lys Alana Huntmaster",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "ee35de1c-aef1-4bd4-85fd-fe77bc927790",
+      "name": "Marwyn, the Nurturer",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "c3c45d50-9038-41df-bb2f-9bc40071845b",
+      "name": "Merciless Executioner",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "0310dfdb-0498-488d-9f1a-279f8239e024",
+      "name": "Meren of Clan Nel Toth",
+      "color_identity": [
+        "B",
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "e8c7566d-7cc0-48af-a986-83223ec7e06c",
+      "name": "Midnight Reaper",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "c97361b5-af16-4a7b-af85-a429dbaf4ad2",
+      "name": "Mind Stone",
+      "color_identity": [],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "f2933616-211b-4d3f-8064-2be61c26079a",
+      "name": "Mnemonic Wall",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "322f44f0-e6da-4ee0-b474-e7d5e9a461c5",
+      "name": "Morbid Opportunist",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "1b3fb20a-e090-4286-9c03-6b71c27c45be",
+      "name": "Mortuary Mire",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "7cb9e29f-835f-4155-a2a5-4b778866c773",
+      "name": "Mosswort Bridge",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "12c03a03-36bf-487e-b8be-e55399525da5",
+      "name": "Mulch",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "dcd4da46-5438-4454-8b1b-43ca51bda1f9",
+      "name": "Murmuring Mystic",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "2549bc57-9ffb-4053-9f10-f2a5f792b845",
+      "name": "Myriad Landscape",
+      "color_identity": [],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "cd11c27b-9368-4622-bc5a-2e0b993cc42b",
+      "name": "Mystic Confluence",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "78826359-fe63-44ad-adc4-a17ffcd710e4",
+      "name": "Nature's Lore",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "3407fe41-fdd3-4119-8f70-4bc4590a379f",
+      "name": "Negate",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "5c367b7d-3cb4-45db-b836-dad953efce15",
+      "name": "Nettle Sentinel",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "713332c1-5bd8-400f-bfff-c1ca0697a043",
+      "name": "Opt",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "e88027a6-24cc-4a8b-86db-734f26149ea8",
+      "name": "Oran-Rief, the Vastwood",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "204f9afe-c20b-4933-b5cd-aa572784762a",
+      "name": "Overrun",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "e1e96802-fd0c-41f1-aa21-3287d75a0e88",
+      "name": "Overwhelming Stampede",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "2e3ee458-fa3f-4452-ab95-5a7fb5a0483b",
+      "name": "Plaguecrafter",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "d0e810bb-5f38-4045-a718-30d423c05659",
+      "name": "Poison-Tip Archer",
+      "color_identity": [
+        "B",
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "02090581-61aa-4348-ad57-451be8ee91c2",
+      "name": "Ponder",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "05849bd6-8f38-4031-be2b-e2aa03beb8cc",
+      "name": "Pongify",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "ac641490-ca14-48d7-8cc4-b69ce984befa",
+      "name": "Preordain",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "3a198a16-17b9-481e-b516-5bc945c7e247",
+      "name": "Priest of Titania",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "9b271430-f53d-42d6-a547-2f286dd9bcb6",
+      "name": "Putrefy",
+      "color_identity": [
+        "B",
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "3ecaefc8-ead2-47a3-a7ea-b030faab65a7",
+      "name": "Quirion Ranger",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "8539f295-5d58-4436-a73a-b9277c4c7795",
+      "name": "Rampant Growth",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "06692cd9-ac2f-4a32-8fd1-043ba3c0fe71",
+      "name": "Rapid Hybridization",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "d3d61a6a-7870-44df-92e5-513dac2c2c3e",
+      "name": "Ravenform",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "7b459306-149b-4f43-abc1-2dd70c748c0e",
+      "name": "Ravenous Chupacabra",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "70dc830e-d05b-4fc7-88dd-879e140b3fbf",
+      "name": "Reality Shift",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "b81eaa2f-0554-41c6-bdf6-d1cb73b8f56f",
+      "name": "Realmwalker",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "a044474a-cd72-4e9d-bd8d-a08f2de9cdc0",
+      "name": "Reanimate",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "032ec6e2-6cc3-4a97-9cc7-3233f5e11904",
+      "name": "Reclamation Sage",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "11bf211c-95a3-4e7f-bd08-13f979d54e73",
+      "name": "Reconnaissance Mission",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "e264ffe3-0252-49d6-b990-dbb3654325a5",
+      "name": "Regal Force",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "c23e5b80-08d2-4e24-9908-fe2aa4f30f6f",
+      "name": "Reliquary Tower",
+      "color_identity": [],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "814e321d-16fd-4f7b-a8d8-2b089be76f2c",
+      "name": "Resculpt",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "2b76f9e9-cd28-4eaf-8674-215c34263f96",
+      "name": "Return of the Wildspeaker",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "777b8ec4-a783-4297-96b7-4f200d0eb734",
+      "name": "Return to Nature",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "bb27bfdf-fe8d-45bd-ad62-8118dce06eda",
+      "name": "Rewind",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "e3afc704-220f-498f-9eaa-0821b17dc24c",
+      "name": "Sakura-Tribe Elder",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "f1ef5698-14bd-42bf-aae5-2870699e4186",
+      "name": "Sapphire Medallion",
+      "color_identity": [],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "ead4c01a-e2ae-49c9-95d9-651d81005907",
+      "name": "Satyr Wayfinder",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "d1961110-575b-4a1b-9cee-db0e1f0fdbc1",
+      "name": "Scryb Ranger",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "56956afd-db53-4542-816b-490c8b0bbcf7",
+      "name": "Serum Visions",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "ca405696-8c30-4c01-bf90-11cdf8837942",
+      "name": "Shaman of Forgotten Ways",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "d1d171de-1c6d-4fb9-817a-9c689c709f3d",
+      "name": "Shamanic Revelation",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "717bbb9d-0a5b-4979-a24b-9d54aac7657a",
+      "name": "Shriekmaw",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "39b51f62-8421-42d1-86d3-74fd6e6f31a2",
+      "name": "Skull Prophet",
+      "color_identity": [
+        "B",
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "65986c1b-8e51-4604-b685-d82fa7d1263a",
+      "name": "Skullclamp",
+      "color_identity": [],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "2224b6e0-c5ff-45d0-84e3-83758c5fc99f",
+      "name": "Sky Diamond",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "ac914d98-221e-426c-8a50-342896b15f9e",
+      "name": "Snap",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "6ad8011d-3471-4369-9d68-b264cc027487",
+      "name": "Sol Ring",
+      "color_identity": [],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "97db6c39-e690-49b6-93a6-e51b8dfad10b",
+      "name": "Spore Frog",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "7fd61a18-6e4f-40c5-aa00-3d101ec1ec82",
+      "name": "Stitcher's Supplier",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "56719f6a-1a6c-4c0a-8d21-18f7d7350b68",
+      "name": "Swamp",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "8ddfc283-c9b4-41a5-af88-cf0068e986cc",
+      "name": "Swan Song",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "c8b143ad-43ec-4e0d-a440-e348daa31391",
+      "name": "Swiftfoot Boots",
+      "color_identity": [],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "fa6d05a1-3df4-4751-b1a0-8d9693faec73",
+      "name": "Tainted Wood",
+      "color_identity": [
+        "B",
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "42b8aa14-10bc-4bd6-88d9-4bb287eadd19",
+      "name": "Talisman of Resilience",
+      "color_identity": [
+        "B",
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "ea1eb902-a23c-44ff-9169-19baf71de238",
+      "name": "Talrand, Sky Summoner",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "aef07e62-ac7f-4a5b-9732-136052d88a06",
+      "name": "Taunting Elf",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "dc55421f-dee8-4263-9df0-2365df5f14bb",
+      "name": "Temple of Malady",
+      "color_identity": [
+        "B",
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "1bd3e453-aa21-4ee6-95c2-d6d920ee8e7a",
+      "name": "Terramorphic Expanse",
+      "color_identity": [],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "fa85c5a2-8e83-4624-a35a-a0bbf17ecbb4",
+      "name": "Think Twice",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "9965d9c5-2ebf-4a6c-930e-55c5890979be",
+      "name": "Thought Vessel",
+      "color_identity": [],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "1b882a0e-0ede-4d1a-bd1a-9b7cffbcde8e",
+      "name": "Three Visits",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "50cee3ac-cba0-4abb-babf-de1928b1590e",
+      "name": "Timberwatch Elf",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "a52a06aa-56fc-4845-bbcd-a54f16369b34",
+      "name": "Timeless Witness",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "5b6bdf5a-2742-4851-92cd-a857a3852836",
+      "name": "Treasure Cruise",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "72deedab-7c17-4505-aeca-4bc8596d80a5",
+      "name": "Tribute to the World Tree",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "4e0b647a-6e1a-421b-bca9-8d5e346bda80",
+      "name": "Unearth",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "e38b8ecb-e7ae-474d-b6a4-29cc1aa8ccd9",
+      "name": "Unwind",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "240e85d3-e495-4877-8609-4b4056c402f7",
+      "name": "Victimize",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "365548fb-5acc-4a8a-b20b-26d28b7d029f",
+      "name": "Village Rites",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "f82a4e85-526d-4456-b700-7760043a31be",
+      "name": "Viscera Seer",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "54748cb1-d92a-4212-ad76-417ee79b5ef1",
+      "name": "Wash Out",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "3405c8a9-a8d6-4b45-9b64-94141076603b",
+      "name": "Wavebreak Hippocamp",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "31f15274-301b-47c5-ba19-0ced04520878",
+      "name": "Wayfarer's Bauble",
+      "color_identity": [],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "c3b1b7bd-cff8-4275-b6d3-868f4e4b2cc0",
+      "name": "Wellwisher",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "c623aeb1-e6d4-48fe-bd2a-a7a6729aa4df",
+      "name": "Winged Words",
+      "color_identity": [
+        "U"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "7a838374-fc40-4fb6-9d38-a96f01e7038a",
+      "name": "Wirewood Herald",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "1275653f-de4e-4fe9-aad8-88555fa11680",
+      "name": "Wirewood Lodge",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "67a52a74-9474-4f4e-8785-6ff54078a8ca",
+      "name": "Wirewood Symbiote",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "3adbd963-e85d-4569-963a-4472594f06f9",
+      "name": "Woe Strider",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "8973bd99-20f8-4867-90ef-50392147ee1b",
+      "name": "Wood Elves",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "c9fe1383-1331-4a58-a45a-3320250221a9",
+      "name": "Woodland Cemetery",
+      "color_identity": [
+        "B",
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "39da2aa8-f4d9-44f6-a446-488beaec821f",
+      "name": "Wrap in Vigor",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "7fd4c452-07f2-492c-9c78-d1c6362d9eec",
+      "name": "Yavimaya Elder",
+      "color_identity": [
+        "G"
+      ],
+      "commander": "legal"
+    },
+    {
+      "oracle_id": "76b003e0-15af-4f22-bdf2-1ade5430964a",
+      "name": "Zulaport Cutthroat",
+      "color_identity": [
+        "B"
+      ],
+      "commander": "legal"
+    }
+  ]
+}

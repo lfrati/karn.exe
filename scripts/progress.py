@@ -93,7 +93,7 @@ def input_hashes() -> dict:
                            *sorted((ROOT / "scripts").rglob("*.py"))])
     return {"engine": engine, "tooling": tooling,
             "grammar": grammar_hash(),
-            "decks": fingerprint([*list((ROOT / "decks").rglob("*.dck")), ROOT / "resources/decks/selected-decks.jsonl", LEGAL_POOL, ROOT / "resources/manifest.json"]),
+            "decks": fingerprint([*list((ROOT / "decks").rglob("*.dck")), *sorted((ROOT / "resources/decks").glob("*.json*")), LEGAL_POOL, ROOT / "resources/manifest.json"]),
             "assessments": fingerprint([ROOT / "docs/rule-assessments.json"]),
             "census": census_hash(),
             "corpus": fingerprint([ROOT / "resources/oracle/cards.jsonl"]),

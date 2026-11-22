@@ -1,7 +1,8 @@
 # Pinned Magic source data
 
-The [deck roster](decks/README.md) is a separate pinned input with its own manifest. It is
-independent of the four rules/Oracle source files below.
+The [deck corpora](decks/README.md) are separate pinned inputs with their own manifest:
+the published tournament roster and three authored Commander targets. They are independent
+of the four rules/Oracle source files below.
 
 These plain-text inputs are committed so a fresh clone can build and test offline.
 `manifest.json` records provenance, SHA-256 hashes, counts and exact byte sizes.

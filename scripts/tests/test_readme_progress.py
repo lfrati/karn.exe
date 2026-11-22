@@ -57,6 +57,7 @@ class ReadmeProgressTests(unittest.TestCase):
         report = {'date': '2026-10-16', 'fingerprint': 'test',
                   'cards': {'total': 10, 'read': 8, 'run': 6, 'dated': '2026-10-11'},
                   'decks': {'total': 5, 'main_read': 3, 'main_run': 2, 'run': 1, 'dated': '2026-10-08'},
+                  'commander': {'total': 3, 'main_read': 1, 'main_run': 0, 'dated': '2026-11-22'},
                   'rule_cited_tests': 5, 'mgn_records': {'scenarios_or_prefixes': 2, 'complete_games': 1}}
         result = progress.render(report)
         self.assertIn('| Read every card | Cards in the pinned corpus | 10 |', result)
@@ -94,10 +95,14 @@ class ReadmeProgressTests(unittest.TestCase):
                 json.dumps({'id': f'deck {n}', 'format': 'modern', **deck}) + '\n' for n, deck in enumerate(decks)))
             (root / 'resources/manifest.json').write_text(json.dumps(
                 {'sources': {'oracle_cards': {'verification': {'bulk_updated_at': '2026-10-11T09:01:56+00:00'}}}}))
-            (root / 'resources/decks/manifest.json').write_text(json.dumps({'snapshot': '2026-10-08'}))
+            (root / 'resources/decks/manifest.json').write_text(json.dumps({'snapshot': '2026-10-08', 'commander': {'snapshot': '2026-11-22'}}))
+            (root / 'resources/decks/commander.jsonl').write_text(''.join(json.dumps({
+                'id': c, 'format': 'commander', 'main': {'runs': 99}, 'commanders': {c: 1}}) + '\n'
+                for c in ('two', 'unread')))
             with patch.object(progress, 'ROOT', root), patch.object(progress, 'inventory_records', return_value=[]):
                 report = progress.measure(snapshot)
         self.assertEqual(report['cards'], {'total': 3, 'read': 2, 'run': 1, 'dated': '2026-10-11'})
+        self.assertEqual(report['commander'], {'total': 2, 'main_read': 1, 'main_run': 0, 'dated': '2026-11-22'})
         self.assertEqual(report['decks'], {'total': 4, 'main_read': 3, 'main_run': 2, 'run': 1, 'dated': '2026-10-08'})
 
 

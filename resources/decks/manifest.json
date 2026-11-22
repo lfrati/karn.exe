@@ -23,6 +23,24 @@
     "selected-decks.jsonl": {
       "sha256": "7343dacd78616ff86985b8bbc9bedefbb2eb86483d82040f02fde9dcc16034f0",
       "bytes": 2900351
+    },
+    "commander.jsonl": {
+      "sha256": "73db0c383713e5efbe4be4f191bee028b2757068436dd583bf85987e2c42295d",
+      "bytes": 5681
+    },
+    "commander-legality.json": {
+      "sha256": "471025f3f9b1d94b58c708de06b3ecb2d79624f685574025a35fd3235b230fa2",
+      "bytes": 44835
     }
+  },
+  "commander": {
+    "snapshot": "2026-11-22",
+    "lists": 3,
+    "variant": "Multiplayer Commander (CR 903, edition 20260925), no bracket restriction",
+    "source_kind": "authored",
+    "author": "Karn contributors",
+    "license": "MIT",
+    "selection": "Three casual archetypes: Elf tribal, Drake spells, graveyard sacrifice. Chosen before admission; no substitutions for compilation.",
+    "legality": "Pinned per-card Scryfall Commander legality/color-identity metadata; source requests, retrieval time and response hashes in commander-legality.json. No live legality claim."
   }
 }

@@ -229,10 +229,12 @@ def main(argv=None) -> int:
     source.add_argument("--engine", type=Path, help="game-gate binary (default: the fast build)")
     source.add_argument("--snapshot", type=Path, help="an existing game-gate --all-blockers snapshot")
     parser.add_argument("--compare", type=Path, help="baseline admission snapshot: is the admitted set identical?")
+    parser.add_argument("--roster", type=Path, default=ROSTER, help="deck corpus (default: tournament roster)")
     args = parser.parse_args(argv)
+    roster = args.roster.resolve()
     args.out.mkdir(parents=True, exist_ok=True)
     provenance = {"repository": git_head(), "legal_pool": {"path": str(LEGAL.relative_to(ROOT)), "sha256": sha256(LEGAL)},
-                  "roster": {"path": str(ROSTER.relative_to(ROOT)), "sha256": sha256(ROSTER)},
+                  "roster": {"path": str(roster), "sha256": sha256(roster)},
                   "corpus_sha256": sha256(ROOT / "resources/oracle/cards.jsonl")}
     if args.snapshot:
         snapshot_path = args.snapshot
@@ -253,7 +255,7 @@ def main(argv=None) -> int:
         out.writelines(json.dumps(face, sort_keys=True) + "\n" for face in faces)
     with (args.out / "standard-labels.jsonl").open("w") as out:
         out.writelines(json.dumps(label, sort_keys=True) + "\n" for label in labels)
-    deck_labels, deck_totals = deck_report(snapshot, read_jsonl(ROSTER), read_jsonl(ROOT / "resources/oracle/cards.jsonl"))
+    deck_labels, deck_totals = deck_report(snapshot, read_jsonl(roster), read_jsonl(ROOT / "resources/oracle/cards.jsonl"))
     with (args.out / "deck-labels.jsonl").open("w") as out:
         out.writelines(json.dumps(label, sort_keys=True) + "\n" for label in deck_labels)
     summary = {"decks": deck_totals, "totals": totals, "provenance": provenance}

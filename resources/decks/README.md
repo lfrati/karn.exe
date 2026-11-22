@@ -34,7 +34,28 @@ that collection stays represented, every format and year observed has a list, an
 redundant under those rules. The collection and the selection tooling are not part of this
 repository; the roster is a pinned input, like the cards and the rules.
 
-Commander is not in the roster yet: it needs lists from a source that permits redistribution.
+The tournament roster stays fixed. `commander.jsonl` is a separate corpus of **three
+Karn-authored casual Multiplayer Commander decks**: Ezuri Elf tribal, Talrand Drake spells,
+and Meren graveyard sacrifice. Each has 99 main-deck cards and one designated commander,
+with no sideboard, companion or bracket restriction. They were chosen before admission;
+cards are not substituted to make a list compile. The authored selection is MIT licensed.
+
+`manifest.json` separately pins this corpus and `commander-legality.json`. The latter records
+Commander legality and color identity for all 195 distinct required cards by Oracle ID,
+with Scryfall collection requests, retrieval timestamp and response hashes. This is a dated
+legality snapshot, not a live legality claim. Offline checks enforce 100 cards, singleton
+nonbasics, legal identities and a legendary creature commander against the pinned CR 903
+edition. Complete physical cards include all faces and commander designations.
+
+Measure its blockers without changing the tournament denominator:
+
+```sh
+uv run scripts/blocker_report.py --roster resources/decks/commander.jsonl --out .cache/commander-blockers
+uv run scripts/deck_archive.py --archive resources/decks/commander.jsonl export karn:ezuri --output .cache/ezuri.dck
+```
+
+README counts include both corpora separately. Compilation does not certify correct play;
+these are implementation targets, with no complete-game evidence claimed.
 
 ## What a row holds
 

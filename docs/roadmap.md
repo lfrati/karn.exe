@@ -21,7 +21,8 @@ refreshes them. The queue comes from `scripts/blocker_report.py` ([the rule](#th
 
 The roster is `resources/decks/selected-decks.jsonl`: 2,012 published tournament lists from
 1994 to 2026, across eleven constructed formats ([the roster](../resources/decks/README.md)).
-Commander is not in it yet: it needs lists from a source that permits redistribution.
+Three authored Commander targets are pinned separately in `resources/decks/commander.jsonl`;
+they do not change the tournament denominator.
 
 **A deck is the unit, because a deck needs every one of its cards.** The share of decks that
 run rises slowly at first and then quickly, as the same missing cards are removed from many
@@ -148,10 +149,29 @@ tests and all seven grammar gates. The admission rows, including refusals, are u
 The snapshot receipt-path reporting defect found during that run is tracked separately;
 its missing attribution does not mean the passing tests did not run.
 
-For Commander, [#17](https://github.com/lfrati/karn.exe/issues/17) starts with a small
-representative corpus we author or can include, counting commander(s) too. A bulk archive
-is not a prerequisite, and the tournament roster and synthetic four-player benchmarks do
-not measure Commander deck coverage.
+The Commander corpus [#17](https://github.com/lfrati/karn.exe/issues/17) now pins three
+authored 100-card lists, with every commander and face counted. Ezuri and Talrand each
+compile 62/69 distinct required cards; Meren compiles 68/78. None compiles in full. The
+corpus has 23 distinct refused cards (two unread, 21 engine refusals); these are targets,
+not claims of tested Commander games. The tournament denominator stays 2,012.
+
+For a Commander delivery batch, start with Talrand's seven missing cards: Myriad Landscape,
+Arcane Denial, Chart a Course, Baral, Aetherspouts, Delay and Wash Out. Read Myriad Landscape's
+shared-land-type search family first; it is also in Meren. Its downstream search constraints
+still need assessment after parsing. Then take optional fixed-count draw and conditional
+instruction composition in their existing program owners (Arcane Denial, Chart a Course).
+Counter-cause triggers, per-owner library choices, chosen-color effects and suspend are
+separate capabilities, with their own retained choices and client checks, not one counter
+patch. Delay must include counter destination, counters and granted suspend together.
+
+Ezuri follows with selection/result binding (Lead the Stampede, Inspiring Call), the
+Guardian Project name-comparison phrasing, and actual Graft, hideaway-play, life-setting and
+forced-blocking semantics. Meren shares selection work but also needs simultaneous
+multiplayer results, sacrifice-failure consumers, Aura lifetimes and keyword/copy semantics.
+Complete Oracle text was read for all 23 refusals; first blocker labels are not complete
+implementation assignments. Use the refreshed report to select the next bounded mechanism;
+keep the lists fixed, validate its full cards and clients, then rescan. No bulk archive is
+needed, and no complete-game result is claimed while a required card refuses.
 
 Further performance work is [one profiling investigation](https://github.com/lfrati/karn.exe/issues/31).
 Selective characteristic reuse and long-turn history cost are hypotheses; implement another

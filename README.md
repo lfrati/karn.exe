@@ -19,7 +19,7 @@ rejected with a reason.
 ## Where it stands
 
 <!-- implementation-progress:start -->
-<!-- Measurement inputs: 8aa4394d6a2684378123c98134fc6f2655b89c3448579310370ee9b4df10e342 -->
+<!-- Measurement inputs: 312d1ef47d1bba749c15752702b55f8f5949b9bbe73411aee456eb7c9d9810d6 -->
 Snapshot: 2026-11-22. Card corpus dated 2026-10-11; deck roster dated 2026-10-08.
 
 | Goal | Measure | Count |
@@ -31,6 +31,10 @@ Snapshot: 2026-11-22. Card corpus dated 2026-10-11; deck roster dated 2026-10-08
 | | Decks whose main deck is read in full | 1,147 |
 | | Decks whose main deck runs in full | 84 |
 | | Decks that run in full with their sideboard | 22 |
+
+Commander corpus (dated 2026-11-22): **3 authored lists**,
+**0 read in full**, **0 compiled in full**, including
+commanders. Separate from the tournament roster above.
 
 A card that runs is one the engine compiles; that does not certify correct play.
 <!-- implementation-progress:end -->
