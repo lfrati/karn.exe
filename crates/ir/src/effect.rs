@@ -42,6 +42,9 @@ pub enum Sentence {
     /// creature spells you control and creature cards you own that aren't on the battlefield.":
     /// the sentence before, again for each of these.
     SameIsTrueFor(SameFor),
+    /// Apply the preceding procedure to the objects/actions named by this instruction,
+    /// in their written order, rather than executing them as standalone actions (608.2c).
+    SameWay { subject: Subject, actions: Vec<(crate::lexicon::Verb, ObjectSet)> },
     /// "Choose one —", "Choose one or both —": the modes follow as bulleted rows (700.2).
     /// `unchosen`: "choose one that hasn't been chosen [this turn] —" (700.2).
     /// `random`: "choose one at random —", the mode is picked by chance, not by a player.

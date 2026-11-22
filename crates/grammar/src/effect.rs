@@ -847,6 +847,37 @@ fn build() -> Effects {
         },
     );
 
+    // A repeated procedure names new classes, not a quantity of objects to act on yet.
+    let same_way = alt("procedure application", all.iter().map(|(subject, form)| {
+        use ir::lexicon::{Verb, Role, Doer, Inflection};
+        let inflection = if *form == Form::Third { Inflection::Third } else { Inflection::Base };
+        let verbs = crate::kernel::table("procedure action", Verb::ALL.iter().copied().filter(|v| {
+            let entry = v.entry();
+            !entry.word.is_empty() && v.tail().is_empty() && entry.doer == Doer::Player
+                && matches!(entry.roles, [(Role::What, _)])
+        }).map(|v| (v.head(inflection), v)).collect());
+        let action = verbs.then(&selectors().set_pl).map(
+            |(verb, set)| ir::lexicon::fills(&Selector::new(ir::Quant::All, set.clone()), verb, Role::What)
+                .then_some((verb, set)),
+            |(verb, set): &(Verb, ir::ObjectSet)| ir::lexicon::fills(&Selector::new(ir::Quant::All, set.clone()), *verb, Role::What)
+                .then(|| (*verb, set.clone())),
+        );
+        let actions = alt("procedure actions", vec![
+            action.map(|a| Some(vec![a]), |v: &Vec<(Verb, ir::ObjectSet)>| (v.len() == 1).then(|| v[0].clone())),
+            action.list("and"),
+        ]);
+        subject.then(&actions).skip(&lit("the same way")).map(
+            |(subject, actions)| match subject {
+                Some(subject) if match &subject {
+                    Subject::Selector(s) => s.set.domain == ir::Domain::Player,
+                    Subject::Set(s) => s.domain == ir::Domain::Player,
+                    _ => false,
+                } => Some(Sentence::SameWay { subject, actions }),
+                _ => None,
+            },
+            |s| match s { Sentence::SameWay { subject, actions } => Some((Some(subject.clone()), actions.clone())), _ => None },
+        )
+    }).collect());
     let restrictions = lit("activate").then_keep(&c.restrictions).map(
         |r| Some(Sentence::Restrictions(r)),
         |x| match x {
@@ -1239,7 +1270,7 @@ fn build() -> Effects {
     // (restrictions, riders, additional costs) take none
     any_sentence.define(alt(
         "sentence after a lead",
-        vec![plain.clone(), led.clone(), choose_modes.clone(), statics.clone()],
+        vec![plain.clone(), same_way.clone(), led.clone(), choose_modes.clone(), statics.clone()],
     ));
     // "X is the number of creatures you control."
     let x_is = lit("X is").then_keep(&amounts().amount).map(
@@ -1256,7 +1287,7 @@ fn build() -> Effects {
         );
     let sentence = alt(
         "sentence",
-        vec![plain, led, restrictions, cast_restrictions, same_is_true, rider, choose_modes, additional, statics, x_is, round_each],
+        vec![plain, same_way, led, restrictions, cast_restrictions, same_is_true, rider, choose_modes, additional, statics, x_is, round_each],
     )
     .sentence();
     Effects { sentence, body }

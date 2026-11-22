@@ -826,6 +826,23 @@ fn build() -> Amounts {
             _ => None,
         },
     );
+    let least_number = lit("the least number of").then_keep(&counted(Number::Pl)).map(
+        |a| Some(Amount::LeastCount(Box::new(a))),
+        |a| match a { Amount::LeastCount(a) => Some((**a).clone()), _ => None },
+    );
+    // The count of one least-populated controller cohort, including ties; never the sum
+    // controlled by all players tied for fewest. Canonical printing states the minimum.
+    let least_controlled = lit("the number of").then_keep(&s.set_pl)
+        .skip(&lit("controlled by the player who controls the fewest")).map(
+            |mut set| {
+                if set.controller.is_some() || set.domain != Domain::Permanent { return None; }
+                set.controller = Some(ir::selector::Relation {
+                    who: Box::new(Selector::new(Quant::Indefinite(Count::Exactly(Amount::Const(1))), ObjectSet::of(Domain::Player))),
+                    negated: false, past: false,
+                });
+                Some(Amount::LeastCount(Box::new(Amount::Count(Box::new(set)))))
+            }, |_| None,
+        ).alias();
     // "its power", "the sacrificed creature's power"; "the power of target creature you control"
     // when the object has a postmodifier, and as an alternate spelling otherwise
     let possessive_stat = owner_of().then(&stat()).map(
@@ -1030,6 +1047,8 @@ fn build() -> Amounts {
         lit("the number of unlocked doors among Rooms you control").to(Amount::UnlockedDoors),
         number_of,
         greatest_number,
+        least_number,
+        least_controlled,
         stat_of,
         aggregate,
         life_among,

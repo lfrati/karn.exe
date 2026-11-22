@@ -278,3 +278,20 @@ fn r609_4_targetability_as_though() {
     }
     declines("Target creature can be the target of creatures as though it didn't have hexproof.");
 }
+
+/// CR 101.4 and 608.2c: each repeated domain recomputes its own minimum and choices.
+#[test]
+fn r608_2c_same_way_procedure() {
+    for text in [
+        "Each player chooses a number of lands they control equal to the number of lands controlled by the player who controls the fewest, then sacrifices the rest. Players discard cards and sacrifice creatures the same way.",
+        "Each player chooses a number of lands they control equal to the number of lands controlled by the player who controls the fewest, then sacrifices the rest. Players sacrifice creatures and discard cards the same way.",
+        "{4}{W}, {T}, Sacrifice ~: Each player chooses a number of lands they control equal to the number of lands controlled by the player who controls the fewest, then sacrifices the rest. Players discard cards and sacrifice creatures the same way.",
+        "Each player chooses a number of permanents they control equal to the number of permanents controlled by the player who controls the fewest, then sacrifices the rest. Each player discards cards the same way.",
+    ] {
+        let (value, _) = read(text);
+        let json = serde_json::to_string(&value).unwrap();
+        assert!(json.contains("LeastCount") && json.contains("SameWay"));
+    }
+    declines("Each player chooses a number of players equal to the number of players controlled by the player who controls the fewest.");
+    declines("Each player sacrifices players the same way.");
+}

@@ -64,6 +64,8 @@ pub enum Amount {
     /// "the greatest number of creatures a player controls", "the greatest number of cards a
     /// player discarded this way": the largest of the counts the phrase leaves open.
     GreatestCount(Box<Amount>),
+    /// The least of the per-player or per-group counts the phrase leaves open.
+    LeastCount(Box<Amount>),
     /// "for each kind of counter on target permanent or player": the kinds of counters it has.
     CounterKindsOn(Box<Selector>),
     /// "for each kind of counter among creatures you control".
