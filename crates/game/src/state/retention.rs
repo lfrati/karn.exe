@@ -122,6 +122,7 @@ impl Trace for Object {
             if let Some(payment) = &announcement.payment {
                 for (object, _) in &payment.convoke { visit(*object); }
                 for object in &payment.delve { visit(*object); }
+                for object in &payment.improvise { visit(*object); }
             }
         }
         stack_copy_of.trace(visit);

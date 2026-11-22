@@ -1647,6 +1647,7 @@ class KarnAdapter:
         groups = deepcopy(move.get("paying", []))
         delve = do.get("delve", [])
         convoke = do.get("convoke", [])
+        improvise = do.get("improvise", [])
         if delve:
             move["delve"] = len(delve)
             groups.append([self._engine_id(obj) for obj in delve])
@@ -1656,9 +1657,12 @@ class KarnAdapter:
                 raise unsupported("unsupported_kind", "convoke needs each creature and its colored or generic allocation", "do.convoke")
             move["convoke"] = [part["mana"] or "generic" for part in convoke]
             groups.extend([self._engine_id(part["object"])] for part in convoke)
-        resources = [obj for part in convoke for obj in [self._engine_id(part["object"])]] + [self._engine_id(obj) for obj in delve]
+        if improvise:
+            move["improvise"] = len(improvise)
+            groups.append([self._engine_id(obj) for obj in improvise])
+        resources = [self._engine_id(part["object"]) for part in convoke] + [self._engine_id(obj) for obj in delve + improvise]
         if len(resources) != len(set(resources)) or any(obj in resources for group in move.get("paying", []) for obj in group):
-            raise Refusal("illegal", "illegal_cost", "a selected convoke or delve object cannot pay twice (118.10)")
+            raise Refusal("illegal", "illegal_cost", "a selected substitution object cannot pay twice (118.10)")
         if groups:
             move["paying"] = groups
 
@@ -2744,19 +2748,21 @@ class KarnAdapter:
             if payment is not None:
                 raise unsupported("unsupported_fact", "incomplete cast claims a completed substitution payment", f"objects.{record_id}.cast")
             return out
-        if not isinstance(payment, dict) or set(payment) != {"convoke", "delve"} or not isinstance(payment["convoke"], list) or not isinstance(payment["delve"], list):
+        if not isinstance(payment, dict) or set(payment) not in ({"convoke", "delve"}, {"convoke", "delve", "improvise"}) or not isinstance(payment["convoke"], list) or not isinstance(payment["delve"], list) or not isinstance(payment.get("improvise", []), list):
             raise unsupported("unsupported_fact", "completed casting payment receipt is unavailable", f"objects.{record_id}.cast")
-        convoke, delve = payment["convoke"], payment["delve"]
+        convoke, delve, improvise = payment["convoke"], payment["delve"], payment.get("improvise", [])
         if any(not isinstance(part, dict) or set(part) != {"object", "color"} or type(part["object"]) is not int
-               or part["color"] not in (None, "W", "U", "B", "R", "G") for part in convoke) or any(type(obj) is not int for obj in delve):
+               or part["color"] not in (None, "W", "U", "B", "R", "G") for part in convoke) or any(type(obj) is not int for obj in delve + improvise):
             raise unsupported("unsupported_fact", "casting substitution receipt is malformed", f"objects.{record_id}.cast")
-        resources = [part["object"] for part in convoke] + delve
+        resources = [part["object"] for part in convoke] + delve + improvise
         if len(resources) != len(set(resources)):
             raise unsupported("unsupported_fact", "casting substitution receipt reuses a selected object", f"objects.{record_id}.cast")
         if convoke:
             out["convoke"] = [{"object": self._record_id(part["object"]), "mana": part["color"]} for part in convoke]
         if delve:
             out["delve"] = [self._record_id(obj) for obj in delve]
+        if improvise:
+            out["improvise"] = [self._record_id(obj) for obj in improvise]
         return out
 
     def _cast_from_announced(self, item: dict, record_id: str) -> dict:

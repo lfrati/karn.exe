@@ -41,6 +41,17 @@ impl std::fmt::Display for ActionError {
     }
 }
 
+/// Explicit resources substituting for mana; object identities remain ordinary cost groups.
+#[derive(Default)]
+struct Substitutions {
+    delve: u32,
+    convoke: Vec<Option<ir::Color>>,
+    improvise: u32,
+}
+impl Substitutions {
+    fn is_empty(&self) -> bool { self.delve == 0 && self.convoke.is_empty() && self.improvise == 0 }
+}
+
 /// What is said with a move: the mana that pays, the mana that is added, the modes chosen.
 struct Said {
     with: Option<Pool>,
@@ -66,8 +77,7 @@ struct Said {
     branches: Option<Vec<crate::cost::BranchSelection>>,
     cost: Option<crate::announcement::CastCost>,
     route: Option<CastRoute>,
-    delve: u32,
-    convoke: Vec<Option<ir::Color>>,
+    substitutions: Substitutions,
     gift: Option<PlayerId>,
     /// The division announced (601.2d); empty when none is said.
     division: Vec<Vec<u32>>,
@@ -111,6 +121,7 @@ impl Said {
         let mut route = None;
         let mut delve = None;
         let mut convoke = None;
+        let mut improvise = None;
         let mut gift = None;
         let mut division = None;
         loop {
@@ -121,6 +132,10 @@ impl Said {
                 }
                 Move::WithConvoke(allocation, inner) => {
                     if convoke.replace(allocation).is_some() { return Err("say the convoke allocation once (702.51)".into()); }
+                    *inner
+                }
+                Move::WithImprovise(count, inner) => {
+                    if improvise.replace(count).is_some() { return Err("say the improvise payment once (702.126)".into()); }
                     *inner
                 }
                 Move::WithDelve(count, inner) => {
@@ -209,7 +224,8 @@ impl Said {
         if buyback.is_some() && !matches!(what, Move::Cast { .. }) {
             return Err("buyback is announced only with a cast (702.27a)".into());
         }
-        Ok(Self { with, adding, modes, cast_as, plan, paying, x, kicks: kicks.unwrap_or(0), buyback: buyback.unwrap_or(false), buyback_announced: buyback.is_some(), optional: optional.unwrap_or(false), optional_announced: optional.is_some(), entwine: entwine.unwrap_or(false), entwine_announced: entwine.is_some(), replicate: replicate.unwrap_or(0), life: life.unwrap_or_default(), chose: chose.unwrap_or_default(), branches, cost, route, delve: delve.unwrap_or(0), convoke: convoke.unwrap_or_default(), gift, division: division.unwrap_or_default(), what })
+        if improvise.is_some() && !matches!(what, Move::Cast { .. }) { return Err("improvise is a casting payment (702.126)".into()); }
+        Ok(Self { with, adding, modes, cast_as, plan, paying, x, kicks: kicks.unwrap_or(0), buyback: buyback.unwrap_or(false), buyback_announced: buyback.is_some(), optional: optional.unwrap_or(false), optional_announced: optional.is_some(), entwine: entwine.unwrap_or(false), entwine_announced: entwine.is_some(), replicate: replicate.unwrap_or(0), life: life.unwrap_or_default(), chose: chose.unwrap_or_default(), branches, cost, route, substitutions: Substitutions { delve: delve.unwrap_or(0), convoke: convoke.unwrap_or_default(), improvise: improvise.unwrap_or(0) }, gift, division: division.unwrap_or_default(), what })
     }
 }
 
@@ -320,6 +336,8 @@ pub enum Move {
     WithDelve(u32, Box<Move>),
     /// Colored/generic requirements paid by convoking creatures, whose identities are in cost selections.
     WithConvoke(Vec<Option<ir::Color>>, Box<Move>),
+    /// Tap this many controlled untapped artifacts for generic mana; identities are one final cost group.
+    WithImprovise(u32, Box<Move>),
     /// Cast a spell with gift promising its gift to this opponent: the additional cost "you
     /// may choose an opponent" (601.2b, 702.174a). Without this, its gift is not promised.
     GiftTo(PlayerId, Box<Move>),
@@ -854,10 +872,15 @@ fn said(a: &Ability) -> String {
 }
 
 fn check_cost(def: &CardDef, r: &mut Refusals) -> Res<()> {
-    if crate::keyword::contributions(def).any(|(_, g)| matches!(g, crate::keyword::Gives::Substitute(crate::keyword::Substitution::Convoke))) {
+    let tap_substitution = crate::keyword::contributions(def).find_map(|(_, gives)| match gives {
+        crate::keyword::Gives::Substitute(crate::keyword::Substitution::Convoke) => Some("convoke"),
+        crate::keyword::Gives::Substitute(crate::keyword::Substitution::Improvise) => Some("improvise"),
+        _ => None,
+    });
+    if let Some(kind) = tap_substitution {
         let plans=def.costs.normal.iter().chain(&def.costs.flashback).chain(&def.costs.escape).chain(&def.costs.harmonize).chain(&def.costs.foretell).chain(def.costs.offered.iter().map(|(_,plan)|plan));
         if plans.filter_map(|p|p.as_ref().ok()).any(|p|p.has_zone_cost()) || def.costs.alternatives.iter().filter_map(|(_,p)|p.as_ref().ok()).any(|p|p.plan.has_zone_cost()) {
-            r.say("convoke combined with a zone-changing object cost requires independent resource kinds")?;
+            r.say(format!("{kind} combined with a zone-changing object cost requires independent resource kinds"))?;
         }
     }
     if crate::keyword::contributions(def).filter(|(_, g)| matches!(g, crate::keyword::Gives::Route { route: CastRoute::Escape, .. })).count() > 1 {
@@ -1349,21 +1372,21 @@ impl Game {
             Move::PlayLand(card) => self.play_land(player, card, None)?,
             Move::PlayLandAs {card,face} => self.play_land(player,card,Some(face))?,
             Move::Activate { source, ability, targets, paying } => self.activate(player, source, ability, targets, paying)?,
-            Move::Cast { card, targets } => self.cast(player, card, CastAs::Whole, None, 0, &[], Default::default(), &[], targets, &[], &[], None, &[], None, 0, false, false, false, 0, None, &[], &[], None)?,
-            mv @ (Move::Paying(..) | Move::Adding(..) | Move::Modes(..) | Move::CastAs(..) | Move::WithMana(..) | Move::WithCosts(..) | Move::WithX(..) | Move::WithReplicate(..) | Move::WithKicks(..) | Move::WithBuyback(..) | Move::WithOptional(..) | Move::WithEntwine(..) | Move::WithLife(..) | Move::WithCostChoice(..) | Move::WithCostBranches(..) | Move::CastFor(..) | Move::CastVia(..) | Move::WithDelve(..) | Move::WithConvoke(..) | Move::GiftTo(..) | Move::WithDivision(..)) => {
+            Move::Cast { card, targets } => self.cast(player, card, CastAs::Whole, None, &Substitutions::default(), Default::default(), &[], targets, &[], &[], None, &[], None, 0, false, false, false, 0, None, &[], &[], None)?,
+            mv @ (Move::Paying(..) | Move::Adding(..) | Move::Modes(..) | Move::CastAs(..) | Move::WithMana(..) | Move::WithCosts(..) | Move::WithX(..) | Move::WithReplicate(..) | Move::WithKicks(..) | Move::WithBuyback(..) | Move::WithOptional(..) | Move::WithEntwine(..) | Move::WithLife(..) | Move::WithCostChoice(..) | Move::WithCostBranches(..) | Move::CastFor(..) | Move::CastVia(..) | Move::WithDelve(..) | Move::WithConvoke(..) | Move::WithImprovise(..) | Move::GiftTo(..) | Move::WithDivision(..)) => {
                 let said = Said::read(mv)?;
                 said.validate_optional_costs(self)?;
-                let Said { with, adding, modes, cast_as, plan, paying, x, kicks, buyback, optional, entwine, replicate, life, chose, branches, cost, route, delve, convoke, gift, division, what, .. } = said;
+                let Said { with, adding, modes, cast_as, plan, paying, x, kicks, buyback, optional, entwine, replicate, life, chose, branches, cost, route, substitutions, gift, division, what, .. } = said;
                 match what {
-                    Move::Companion if adding.is_empty() && modes.is_empty() && cast_as.is_none() && paying.is_none() && x.is_none() && kicks == 0 && !buyback && !entwine && replicate == 0 && life.is_empty() && chose.is_empty() && cost.is_none() && route.is_none() && delve == 0 && convoke.is_empty() && gift.is_none() && division.is_empty() => self.take_companion(player,plan.as_deref().unwrap_or(&[]),with.as_ref())?,
-                    Move::Plot(card) if adding.is_empty() && modes.is_empty() && cast_as.is_none() && paying.is_none() && x.is_none() && kicks == 0 && !buyback && !entwine && replicate == 0 && life.is_empty() && chose.is_empty() && cost.is_none() && route.is_none() && delve == 0 && convoke.is_empty() && gift.is_none() && division.is_empty() => self.plot(player,card,plan.as_deref().unwrap_or(&[]),with.as_ref())?,
-                    Move::Foretell(card) if adding.is_empty() && modes.is_empty() && cast_as.is_none() && paying.is_none() && x.is_none() && kicks == 0 && !buyback && !entwine && replicate == 0 && life.is_empty() && chose.is_empty() && cost.is_none() && route.is_none() && delve == 0 && convoke.is_empty() && gift.is_none() && division.is_empty() => self.foretell(player,card,plan.as_deref().unwrap_or(&[]),with.as_ref())?,
-                    Move::Unlock { room, half } if adding.is_empty() && modes.is_empty() && cast_as.is_none() && paying.is_none() && x.is_none() && kicks == 0 && !buyback && !entwine && replicate == 0 && life.is_empty() && chose.is_empty() && cost.is_none() && route.is_none() && delve == 0 && convoke.is_empty() && gift.is_none() && division.is_empty() => self.unlock_action(player,room,half,plan.as_deref().unwrap_or(&[]),with.as_ref())?,
-                    Move::TurnFaceUp(permanent, way) if adding.is_empty() && modes.is_empty() && cast_as.is_none() && paying.is_none() && x.is_none() && kicks == 0 && !buyback && !entwine && replicate == 0 && life.is_empty() && chose.is_empty() && cost.is_none() && route.is_none() && delve == 0 && convoke.is_empty() && gift.is_none() && division.is_empty() => self.turn_face_up_action(player,permanent,way,plan.as_deref().unwrap_or(&[]),with.as_ref())?,
-                    Move::Activate { source, ability, targets, paying: chosen } if cast_as.is_none() && paying.is_none() && kicks == 0 && !buyback && !entwine && replicate == 0 && cost.is_none() && route.is_none() && delve == 0 && convoke.is_empty() && gift.is_none() => {
+                    Move::Companion if adding.is_empty() && modes.is_empty() && cast_as.is_none() && paying.is_none() && x.is_none() && kicks == 0 && !buyback && !entwine && replicate == 0 && life.is_empty() && chose.is_empty() && cost.is_none() && route.is_none() && substitutions.is_empty() && gift.is_none() && division.is_empty() => self.take_companion(player,plan.as_deref().unwrap_or(&[]),with.as_ref())?,
+                    Move::Plot(card) if adding.is_empty() && modes.is_empty() && cast_as.is_none() && paying.is_none() && x.is_none() && kicks == 0 && !buyback && !entwine && replicate == 0 && life.is_empty() && chose.is_empty() && cost.is_none() && route.is_none() && substitutions.is_empty() && gift.is_none() && division.is_empty() => self.plot(player,card,plan.as_deref().unwrap_or(&[]),with.as_ref())?,
+                    Move::Foretell(card) if adding.is_empty() && modes.is_empty() && cast_as.is_none() && paying.is_none() && x.is_none() && kicks == 0 && !buyback && !entwine && replicate == 0 && life.is_empty() && chose.is_empty() && cost.is_none() && route.is_none() && substitutions.is_empty() && gift.is_none() && division.is_empty() => self.foretell(player,card,plan.as_deref().unwrap_or(&[]),with.as_ref())?,
+                    Move::Unlock { room, half } if adding.is_empty() && modes.is_empty() && cast_as.is_none() && paying.is_none() && x.is_none() && kicks == 0 && !buyback && !entwine && replicate == 0 && life.is_empty() && chose.is_empty() && cost.is_none() && route.is_none() && substitutions.is_empty() && gift.is_none() && division.is_empty() => self.unlock_action(player,room,half,plan.as_deref().unwrap_or(&[]),with.as_ref())?,
+                    Move::TurnFaceUp(permanent, way) if adding.is_empty() && modes.is_empty() && cast_as.is_none() && paying.is_none() && x.is_none() && kicks == 0 && !buyback && !entwine && replicate == 0 && life.is_empty() && chose.is_empty() && cost.is_none() && route.is_none() && substitutions.is_empty() && gift.is_none() && division.is_empty() => self.turn_face_up_action(player,permanent,way,plan.as_deref().unwrap_or(&[]),with.as_ref())?,
+                    Move::Activate { source, ability, targets, paying: chosen } if cast_as.is_none() && paying.is_none() && kicks == 0 && !buyback && !entwine && replicate == 0 && cost.is_none() && route.is_none() && substitutions.is_empty() && gift.is_none() => {
                         self.activate_plan(player, source, ability, &modes, targets, &division, chosen, with.as_ref(), &adding, plan.as_deref().unwrap_or(&[]), x, &life, &chose, branches.as_deref())?
                     }
-                    Move::Cast { card, targets } if adding.is_empty() => self.cast(player, card, cast_as.unwrap_or_default(), route, delve, &convoke, cost.unwrap_or_default(), &modes, targets, &division, paying.as_deref().unwrap_or(&[]), with.as_ref(), plan.as_deref().unwrap_or(&[]), x, kicks, buyback, optional, entwine, replicate, gift, &life, &chose, branches.as_deref())?,
+                    Move::Cast { card, targets } if adding.is_empty() => self.cast(player, card, cast_as.unwrap_or_default(), route, &substitutions, cost.unwrap_or_default(), &modes, targets, &division, paying.as_deref().unwrap_or(&[]), with.as_ref(), plan.as_deref().unwrap_or(&[]), x, kicks, buyback, optional, entwine, replicate, gift, &life, &chose, branches.as_deref())?,
                     _ => {
                         return Err(
                             "mana pays the cost of a spell or an ability, is chosen for a mana ability, and modes are chosen for a spell or ability (601.2b, 601.2h, 605.3b)"
@@ -2057,11 +2080,11 @@ impl Game {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn cast(&mut self, player: PlayerId, card: ObjId, cast_as: CastAs, route: Option<CastRoute>, delve: u32, convoke: &[Option<ir::Color>], cost: crate::announcement::CastCost, modes: &[usize], targets: Vec<Vec<Target>>, division: &[Vec<u32>], paying: &[Vec<ObjId>], with: Option<&Pool>, plan: &[crate::legal::Step], x: Option<u32>, kicks: u32, buyback: bool, optional: bool, entwine: bool, replicate: u32, gift: Option<PlayerId>, life: &[bool], chose: &[usize], branches: Option<&[crate::cost::BranchSelection]>) -> ActionResult<()> {
+    fn cast(&mut self, player: PlayerId, card: ObjId, cast_as: CastAs, route: Option<CastRoute>, substitutions: &Substitutions, cost: crate::announcement::CastCost, modes: &[usize], targets: Vec<Vec<Target>>, division: &[Vec<u32>], paying: &[Vec<ObjId>], with: Option<&Pool>, plan: &[crate::legal::Step], x: Option<u32>, kicks: u32, buyback: bool, optional: bool, entwine: bool, replicate: u32, gift: Option<PlayerId>, life: &[bool], chose: &[usize], branches: Option<&[crate::cost::BranchSelection]>) -> ActionResult<()> {
         // A complete proposal is validated on a copy, including dependent mana payments.
         // Refusing it cannot leave half an announcement or its costs in the game (733.1).
         let mut proposed = self.clone();
-        proposed.begin_cast(player, card, cast_as, route, delve, convoke, cost, modes, targets, division, paying, with, plan, x, kicks, buyback, optional, entwine, replicate, gift, life, chose, branches, false)?;
+        proposed.begin_cast(player, card, cast_as, route, substitutions, cost, modes, targets, division, paying, with, plan, x, kicks, buyback, optional, entwine, replicate, gift, life, chose, branches, false)?;
         proposed.continue_execution()?;
         proposed.expose_payments();
         self.adopt(proposed);
@@ -2074,21 +2097,21 @@ impl Game {
     fn cast_during(&mut self, player: PlayerId, cards: &[ObjId], mv: Move) -> ActionResult<()> {
         let said = Said::read(mv)?;
                 said.validate_optional_costs(self)?;
-                let Said { with, adding, modes, cast_as, plan, paying, x, kicks, buyback, optional, entwine, replicate, life, chose, branches, cost, route, delve, convoke, gift, division, what, .. } = said;
+                let Said { with, adding, modes, cast_as, plan, paying, x, kicks, buyback, optional, entwine, replicate, life, chose, branches, cost, route, substitutions, gift, division, what, .. } = said;
         let Move::Cast { card, targets } = what else {
             return Err("a decision is pending: cast one of the cards offered, or decline (608.2g)".into());
         };
         if !adding.is_empty() { return Err("mana is added by a mana ability, not a spell (605.3b)".into()); }
         if !cards.contains(&card) { return Err("the effect offers other cards to cast (608.2g)".into()); }
         self.cast_begun();
-        self.begin_cast(player, card, cast_as.unwrap_or_default(), route, delve, &convoke, cost.unwrap_or_default(), &modes, targets, &division, paying.as_deref().unwrap_or(&[]), with.as_ref(), plan.as_deref().unwrap_or(&[]), x, kicks, buyback, optional, entwine, replicate, gift, &life, &chose, branches.as_deref(), true).map_err(Into::into)
+        self.begin_cast(player, card, cast_as.unwrap_or_default(), route, &substitutions, cost.unwrap_or_default(), &modes, targets, &division, paying.as_deref().unwrap_or(&[]), with.as_ref(), plan.as_deref().unwrap_or(&[]), x, kicks, buyback, optional, entwine, replicate, gift, &life, &chose, branches.as_deref(), true).map_err(Into::into)
         // the offer stands until its effect goes on: a cast abandoned is offered again (733.1)
     }
 
     /// Announce the spell and put its payment on top (601.2a–f). `reports`: it is cast while
     /// an effect is applied, and its payment reports to that resolution.
     #[allow(clippy::too_many_arguments)]
-    fn begin_cast(&mut self, player: PlayerId, card: ObjId, cast_as: CastAs, route: Option<CastRoute>, delve: u32, convoke: &[Option<ir::Color>], chosen: crate::announcement::CastCost, modes: &[usize], targets: Vec<Vec<Target>>, division: &[Vec<u32>], paying: &[Vec<ObjId>], with: Option<&Pool>, plan: &[crate::legal::Step], x: Option<u32>, kicks: u32, buyback: bool, optional: bool, entwine: bool, replicate: u32, gift: Option<PlayerId>, life: &[bool], chose: &[usize], branches: Option<&[crate::cost::BranchSelection]>, reports: bool) -> ActionResult<()> {
+    fn begin_cast(&mut self, player: PlayerId, card: ObjId, cast_as: CastAs, route: Option<CastRoute>, substitutions: &Substitutions, chosen: crate::announcement::CastCost, modes: &[usize], targets: Vec<Vec<Target>>, division: &[Vec<u32>], paying: &[Vec<ObjId>], with: Option<&Pool>, plan: &[crate::legal::Step], x: Option<u32>, kicks: u32, buyback: bool, optional: bool, entwine: bool, replicate: u32, gift: Option<PlayerId>, life: &[bool], chose: &[usize], branches: Option<&[crate::cost::BranchSelection]>, reports: bool) -> ActionResult<()> {
         let proposed = self;
         let route = route.unwrap_or(CastRoute::Normal);
         // what goes back if the cast is reversed: the card as it was, face down if foretold
@@ -2157,13 +2180,17 @@ impl Game {
         proposed.obj_mut(spell).replicated = replicate;
         proposed.check_triggers();
         let triggers = triggers..proposed.triggered.len();
+        let (delve, convoke, improvise) = (substitutions.delve, substitutions.convoke.as_slice(), substitutions.improvise);
         let cost = proposed.modified_cast_cost(spell, cost);
         if delve > 0 && !proposed.has(spell, "Delve") { return Err("that spell has no delve payment (702.66)".into()); }
         // one card for each generic mana of the total cost, as it is after reductions (702.66a-b)
-        if delve > cost.max_delve() { return Err(format!("delve exiles at most {} card(s), one for each generic mana of the total cost (702.66a)", cost.max_delve()).into()); }
+        if delve > cost.max_generic_payment() { return Err(format!("delve exiles at most {} card(s), one for each generic mana of the total cost (702.66a)", cost.max_generic_payment()).into()); }
         let cost = cost.delved(delve, proposed.delve_origin(spell));
         if !convoke.is_empty() && !proposed.has(spell,"Convoke") {return Err("that spell has no convoke (702.51)".into());}
         let cost = cost.convoked(convoke)?;
+        if improvise > 0 && !proposed.has(spell, "Improvise") { return Err("that spell has no improvise (702.126)".into()); }
+        if improvise > 0 && cost.has_zone_cost() { return Err(crate::Unsupported("improvise combined with a zone-changing object cost requires independent resource kinds".into()).into()); }
+        let cost = cost.improvised(improvise)?;
         let payment = crate::payment::Payment::spell(player, spell, cost, plan, paying, with, undo, triggers).permission(permission).library_tops(library_tops);
         proposed.procedures.push(crate::procedure::Procedure::Payment(if reports { payment.reporting() } else { payment }));
         Ok(())
@@ -2514,7 +2541,7 @@ impl crate::retention::Trace for Move {
                 action.trace(visit);
             },
             Move::WithCosts(costs, action) => { costs.trace(visit); action.trace(visit); },
-            Move::Adding(_, action) | Move::Modes(_, action) | Move::CastAs(_, action) | Move::WithX(_, action) | Move::WithReplicate(_, action) | Move::WithKicks(_, action) | Move::WithBuyback(_, action) | Move::WithOptional(_, action) | Move::WithEntwine(_, action) | Move::WithLife(_, action) | Move::WithCostChoice(_, action) | Move::WithCostBranches(_, action) | Move::CastFor(_, action) | Move::CastVia(_, action) | Move::WithDelve(_, action) | Move::WithConvoke(_, action) | Move::GiftTo(_, action) | Move::WithDivision(_, action) => action.trace(visit),
+            Move::Adding(_, action) | Move::Modes(_, action) | Move::CastAs(_, action) | Move::WithX(_, action) | Move::WithReplicate(_, action) | Move::WithKicks(_, action) | Move::WithBuyback(_, action) | Move::WithOptional(_, action) | Move::WithEntwine(_, action) | Move::WithLife(_, action) | Move::WithCostChoice(_, action) | Move::WithCostBranches(_, action) | Move::CastFor(_, action) | Move::CastVia(_, action) | Move::WithDelve(_, action) | Move::WithConvoke(_, action) | Move::WithImprovise(_, action) | Move::GiftTo(_, action) | Move::WithDivision(_, action) => action.trace(visit),
             Move::ChooseModes(_) | Move::Order(_) | Move::Mulligan | Move::Keep | Move::Pass | Move::Concede | Move::ReversePayment => {},
         }
     }
@@ -2619,7 +2646,7 @@ impl crate::retention::Players for Move {
             Move::Divide(parts) => { for (target, _) in parts { target.players(visit); } },
             Move::Choose(answer) => answer.players(visit),
             Move::GiftTo(player, action) => { visit(*player); action.players(visit); },
-            Move::Paying(_, action) | Move::AuditPayment(action) | Move::WithMana(_, action) | Move::WithCosts(_, action) | Move::Adding(_, action) | Move::Modes(_, action) | Move::CastAs(_, action) | Move::WithX(_, action) | Move::WithReplicate(_, action) | Move::WithKicks(_, action) | Move::WithBuyback(_, action) | Move::WithOptional(_, action) | Move::WithEntwine(_, action) | Move::WithLife(_, action) | Move::WithCostChoice(_, action) | Move::WithCostBranches(_, action) | Move::CastFor(_, action) | Move::CastVia(_, action) | Move::WithDelve(_, action) | Move::WithConvoke(_, action) | Move::WithDivision(_, action) => action.players(visit),
+            Move::Paying(_, action) | Move::AuditPayment(action) | Move::WithMana(_, action) | Move::WithCosts(_, action) | Move::Adding(_, action) | Move::Modes(_, action) | Move::CastAs(_, action) | Move::WithX(_, action) | Move::WithReplicate(_, action) | Move::WithKicks(_, action) | Move::WithBuyback(_, action) | Move::WithOptional(_, action) | Move::WithEntwine(_, action) | Move::WithLife(_, action) | Move::WithCostChoice(_, action) | Move::WithCostBranches(_, action) | Move::CastFor(_, action) | Move::CastVia(_, action) | Move::WithDelve(_, action) | Move::WithConvoke(_, action) | Move::WithImprovise(_, action) | Move::WithDivision(_, action) => action.players(visit),
             Move::PlayLand(_) | Move::PlayLandAs { .. } | Move::Companion | Move::Plot(_) | Move::Foretell(_) | Move::TurnFaceUp(..) | Move::Unlock { .. }
             | Move::Discard(_) | Move::Bottom(_) | Move::Block(_) | Move::FinishPayment { .. } | Move::ContinueManaPayment { .. }
             | Move::ChooseModes(_) | Move::Order(_) | Move::Mulligan | Move::Keep | Move::Pass | Move::Concede | Move::ReversePayment => {},

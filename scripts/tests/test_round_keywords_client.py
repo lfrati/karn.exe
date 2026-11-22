@@ -20,6 +20,31 @@ class RoundKeywordsClientTests(unittest.TestCase):
     step = Helpers.step
     advance = Helpers.advance
 
+    def test_improvise_taps_artifacts_and_keeps_the_colored_mana_payment(self):
+        # 702.126a-b: six artifacts pay {6}; the Swamp still pays Fen Hauler's {B}.
+        self.new([{"hand": ["Fen Hauler"], "battlefield": ["Darksteel Relic"] * 6 + ["Swamp"]}, {}])
+        artifacts = self.ids("Darksteel Relic", controller=0)
+        self.cast("Fen Hauler", mana=self.ids("Swamp", controller=0), spend={"B": 1}, improvise=6, paying=[artifacts])
+        self.assertTrue(all(self.object(o)["tapped"] for o in artifacts))
+        self.pass_round()
+        self.assertEqual(len(self.ids("Fen Hauler", zone="battlefield")), 1)
+
+    def test_improvise_cannot_reuse_an_artifact_activated_for_mana(self):
+        # 702.126a: an artifact tapped during mana production is no longer untapped.
+        self.new([{"hand": ["Fen Hauler"], "battlefield": ["Darksteel Relic"] * 4 + ["Sol Ring", "Swamp"]}, {}])
+        artifacts = self.ids("Darksteel Relic", controller=0)
+        ring, = self.ids("Sol Ring", controller=0)
+        swamp, = self.ids("Swamp", controller=0)
+        card, = [o for o in self.hand(0) if self.object(o)["name"] == "Fen Hauler"]
+        move = {"kind": "cast", "card": card, "targets": [], "improvise": 5, "paying": [artifacts + [ring]],
+                "plan": [{"source": ring, "ability": 0}, {"source": swamp, "ability": 0}], "mana": {"C": 1, "B": 1}}
+        self.reject(0, move)
+        self.assertFalse(self.object(ring)["tapped"])
+        move.update(improvise=4, paying=[artifacts], mana={"C": 2, "B": 1})
+        self.engine.act(move)
+        self.assertTrue(self.object(ring)["tapped"])
+        self.assertTrue(all(self.object(o)["tapped"] for o in artifacts))
+
     def test_evolve_trigger_uses_current_creature_sizes(self):
         # 702.100a: matching power still evolves when the entering toughness is greater.
         self.new([{"hand": ["Grizzly Bears"], "battlefield": ["Shambleshark", "Forest", "Forest"]}, {}])

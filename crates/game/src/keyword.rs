@@ -49,6 +49,7 @@ const ASKED: &[(&str, &str)] = &[
     ("Retrace", "702.81a"),
     ("Delve", "702.66a"),
     ("Convoke", "702.51a"),
+    ("Improvise", "702.126a"),
     ("Rebound", "702.88a"),
     ("Haste", "702.10b"),
     ("Vigilance", "702.20b"),
@@ -328,6 +329,13 @@ pub(crate) fn convoke_cost(color: Option<ir::Color>) -> &'static crate::cost::Pl
         CardDef::new("Convoke rule","{0}","Artifact",&format!("As an additional cost to cast this spell, tap an untapped {c}creature you control."),None)
             .expect("convoke creature selection reads").costs.additional.expect("convoke tap selection compiles")
     ).collect())[color.map_or(5,|c|c as usize)]
+}
+/// 702.126a: artifacts pay generic mana by the ordinary object-tapping cost owner.
+pub(crate) fn improvise_cost() -> &'static crate::cost::Plan {
+    static COST: OnceLock<crate::cost::Plan> = OnceLock::new();
+    crate::token::init(&COST, || CardDef::new("Improvise rule", "{0}", "Artifact",
+        "As an additional cost to cast this spell, tap an untapped artifact you control.", None)
+        .expect("the grammar reads rule 702.126a's artifact selection").costs.additional.expect("artifact tap cost compiles"))
 }
 /// What a waterbend cost taps instead of paying a generic mana (701.67a).
 pub(crate) fn waterbend_cost() -> &'static crate::cost::Plan {

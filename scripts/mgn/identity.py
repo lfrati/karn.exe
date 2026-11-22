@@ -19,7 +19,7 @@ _REFERENCE_VALUES = {"card", "source", "object", "current", "copy_of", "attached
                      "attacking", "granted_by", "creature", "keep", "defender", "to", "on", "tapped"}
 _REFERENCE_LISTS = {"cards", "objects", "blocking", "targets", "attacks", "blocks",
                     "assignments", "amounts", "pile", "piles", "order", "from", "chosen",
-                    "excluding", "delve", "summoning_sick", "top", "bottom", "away",
+                    "excluding", "delve", "improvise", "summoning_sick", "top", "bottom", "away",
                     "found", "holders", "for", "in", "out"}
 _REFERENCE_MAPS = {"cards", "objects", "base_controllers"}
 

@@ -255,7 +255,7 @@ Both hold only facts the rules define and a judge could observe at the table.
 | `objects.<id>.blocked` | true once blockers were declared for the attacker, until it leaves combat; default false | 509.1h |
 | `objects.<id>.blocking` | the attacking creatures this creature blocks, default `[]`; a creature it blocked that left combat is no longer listed, while the blocker stays in combat (506.4), which `in_combat` then states | 509.1, 506.4 |
 | `objects.<id>.in_combat` | whether the permanent is in combat; stated only where it differs from "attacking is not null or blocking is not empty", such as a blocking creature whose attacker left (506.4) | 506.4 |
-| `objects.<id>.cast` | for a cast spell: its announcement and payment choices, as the `cast` answer spelled them: `{cost?, permission?, additional?, convoke?, delve?}`; absent when none are stated. Generated spell copies retain resolution-relevant choices such as kicker and alternative costs under 707.10, but do not assert a fresh permission, convoke or delve payment | 601.2, 707.10 |
+| `objects.<id>.cast` | for a cast spell: its announcement and payment choices, as the `cast` answer spelled them: `{cost?, permission?, additional?, convoke?, delve?, improvise?}`; absent when none are stated. Generated spell copies retain resolution-relevant choices such as kicker and alternative costs under 707.10, but do not assert a fresh permission, convoke, improvise or delve payment | 601.2, 707.10 |
 | `objects.<id>.chosen` | values chosen for the object as it entered or resolved and retained by a rule or effect ("as this enters, choose a color"): `{color: "red"}`, `{creature_type: "Elf"}`, `{card_name: "..."}`, `{basic_land_type: "Mountain"}`, `{player: "B"}`, `{number: 3}`; default `{}`; a value chosen as the object enters is a fact of the permanent, written in the delta that puts it onto the battlefield | 614.1c, 608.2d |
 | `objects.<id>.emblem` | for an emblem: `{text}`, the ability text the creating effect gave it; emblems are `E<n>` in creation order, in the command zone, owned and controlled by the player who got them | 114.1, 114.2 |
 
@@ -673,7 +673,7 @@ The recorded answers:
 | Answer | Fields | Rules |
 | --- | --- | --- |
 | `play_land` | `card`; `face` when a multi-faced card is played as a face other than 0 | 305.1, 116.2a |
-| `cast` | `card`; `fused: true` to cast both halves of a pinned split card with fuse from hand (702.102a), or `face` (the 0-based face cast when it is not the first: a modal double-faced card's back, an Adventure, 715.3, or an Omen, 720.3); `cost`, `permission`, `additional`, `convoke`, `delve` (section 5.7); `x`; `modes` (1-based); `targets` (groups); `division`; `pay` (section 5.8) | 601.2 |
+| `cast` | `card`; `fused: true` to cast both halves of a pinned split card with fuse from hand (702.102a), or `face` (the 0-based face cast when it is not the first: a modal double-faced card's back, an Adventure, 715.3, or an Omen, 720.3); `cost`, `permission`, `additional`, `convoke`, `delve`, `improvise` (section 5.7); `x`; `modes` (1-based); `targets` (groups); `division`; `pay` (section 5.8) | 601.2 |
 | `activate` | `source`; `ability`; `x`; `modes`; `targets`; `division`; `additional.choices` (the 1-based cost alternatives, section 5.7); `adding`: present exactly when the ability is a mana ability (605.1a), listing all mana types it added and binding any choice of its output (section 5.8), since a mana ability uses no stack (605.3); `pay` | 602.2, 605.1a, 605.3 |
 | `special_action` | `action`: `turn_face_up` (116.2b), `suspend` (116.2f), `foretell` (116.2h), `plot` (116.2k), `unlock` (116.2m, with `half` 0 or 1), `companion` (116.2g), `end_effect` (116.2c), `ignore_effect` (116.2d); `object` (the card or permanent); `pay` | 116.2 |
 | `concede` | —; any seat may enter it at any boundary, whoever is to answer | 104.3a |
@@ -835,8 +835,9 @@ the discarded land in `pay.objects`; retrace is not an alternative cost (702.81)
 `convoke` lists `{object, mana}` entries, one per tapped creature; `mana` is
 `W`, `U`, `B`, `R`, `G`, or `null` for one generic mana (702.51). It records the
 allocation even when a multicolored creature could pay more than one color.
+`improvise` lists the untapped artifacts tapped to pay generic mana (702.126).
 `delve` lists the cards exiled to pay generic mana (702.66). An object occurs
-at most once in either list (118.10). Convoke, delve and harmonize selections
+at most once across these lists (118.10). Convoke, improvise, delve and harmonize selections
 are not repeated in `pay.objects`; that list describes the remaining object
 costs in their cost-text order. A spell copy is not cast or paid for (707.10);
 its retained choices follow that rule rather than asserting a second payment.

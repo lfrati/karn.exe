@@ -454,7 +454,8 @@ impl Game {
             let selected=payment.cost.cast_payment(&payment.paying);
             boundary["substitutions"]=serde_json::json!({
                 "convoke":selected.convoke.iter().map(|(object,color)|serde_json::json!({"object":object.0,"color":color.map(|c| match c {ir::Color::White=>"W",ir::Color::Blue=>"U",ir::Color::Black=>"B",ir::Color::Red=>"R",ir::Color::Green=>"G"})})).collect::<Vec<_>>(),
-                "delve":selected.delve.iter().map(|object|object.0).collect::<Vec<_>>()});
+                "delve":selected.delve.iter().map(|object|object.0).collect::<Vec<_>>(),
+                "improvise":selected.improvise.iter().map(|object|object.0).collect::<Vec<_>>()});
         }
         Some(boundary)
     }

@@ -35,8 +35,8 @@ PRIORITY_ANSWERS = {"play_land", "cast", "activate", "special_action", "concede"
 # which fields of each answer hold object ids or seats
 REFERENCE_FIELDS = {
     "choose_first": ["first"], "companion": ["card"], "bottom": ["cards"], "opening_hand_action": ["card"],
-    "play_land": ["card"], "cast": ["card", "targets", "convoke", "delve", "pay", "cost", "permission"],
-    "cast_during_resolution": ["card", "targets", "convoke", "delve", "pay", "cost", "permission"],
+    "play_land": ["card"], "cast": ["card", "targets", "convoke", "delve", "improvise", "pay", "cost", "permission"],
+    "cast_during_resolution": ["card", "targets", "convoke", "delve", "improvise", "pay", "cost", "permission"],
     "activate": ["source", "targets", "pay", "ability"], "special_action": ["object", "pay"],
     "declare_attackers": ["attacks", "pay"], "declare_blockers": ["blocks", "pay"], "assign_combat_damage": ["assignments"],
     "order_triggers": ["order"], "order_cards": ["order"], "legend_rule": ["keep"], "separate": ["piles"],
@@ -84,9 +84,11 @@ def _check_references(action, state: State, path: str, problems: list[Problem]):
     kind = action["kind"]
     convoked = [entry["object"] for entry in action.get("convoke", [])]
     delved = action.get("delve", [])
-    for field, ids in (("convoke", convoked), ("delve", delved)):
+    for field, ids in (("convoke", convoked), ("delve", delved), ("improvise", action.get("improvise", []))):
         if len(ids) != len(set(ids)):
             problems.append(Problem("error", "coherence", f"{path}/{field}", "an object cannot pay this substitution twice (118.10)"))
+    if set(action.get("improvise", [])) & set(convoked + delved):
+        problems.append(Problem("error", "coherence", f"{path}/improvise", "an object cannot pay multiple substitutions (118.10)"))
     for field_name in REFERENCE_FIELDS.get(kind, []):
         if field_name not in action:
             continue
@@ -189,7 +191,7 @@ def _check_coherence(action, before: State, created_before: int, state: State, d
                     problems.append(Problem("error", "coherence", f"{path}/{fact}", f"the spell's {fact} differ from the announcement"))
             if action.get("x") is not None and state.objects.get(card, {}).get("x") != action["x"]:
                 problems.append(Problem("error", "coherence", f"{path}/x", "the spell's x differs from the announcement"))
-            announced = {k: action[k] for k in ("cost", "permission", "additional", "convoke", "delve") if k in action}
+            announced = {k: action[k] for k in ("cost", "permission", "additional", "convoke", "delve", "improvise") if k in action}
             if state.objects.get(card, {}).get("cast", {}) != announced:
                 problems.append(Problem("error", "coherence", path, "the spell's cast fact must repeat the cost, permission, additional, convoke and delve choices of the announcement, or be absent when there are none"))
         elif state.zone_of(card) == before.zone_of(card) and not _moved(delta, card):

@@ -34,7 +34,7 @@ pub(crate) enum RouteCost { Alternative(ir::Cost), Additional,
     /// The selected spell's mana cost, including its announced X (702.34a).
     ManaCost }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Substitution { Delve, Convoke }
+pub(crate) enum Substitution { Delve, Convoke, Improvise }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Replacement { Dredge(u32), Madness(ir::Cost), Sunburst }
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -218,9 +218,9 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
             (grave, Gives::Asked),
             (grave, Gives::Route { route: crate::announcement::CastRoute::Retrace, cost: RouteCost::Additional }),
         ], vec![])),
-        "Delve" | "Convoke" if plain => Ok(Declared::new(vec![
+        "Delve" | "Convoke" | "Improvise" if plain => Ok(Declared::new(vec![
             (stack, Gives::Asked),
-            (stack, Gives::Substitute(if item.keyword.name() == "Delve" { Substitution::Delve } else { Substitution::Convoke })),
+            (stack, Gives::Substitute(match item.keyword.name() { "Delve" => Substitution::Delve, "Convoke" => Substitution::Convoke, _ => Substitution::Improvise })),
         ], vec![])),
         "Intimidate" if plain => one(bf, Gives::Rule(intimidate_rule()), vec![Context::PermanentsOnly]),
         "Shadow" if plain => Ok(Declared::new(shadow_rules().iter()

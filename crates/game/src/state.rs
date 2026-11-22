@@ -39,6 +39,7 @@ pub(crate) struct CastAnnouncement {
 pub(crate) struct CastPayment {
     pub convoke: Vec<(ObjId, Option<Color>)>,
     pub delve: Vec<ObjId>,
+    pub improvise: Vec<ObjId>,
 }
 
 /// A physical card across incarnations (903.3). Never sent to players or used as a target.

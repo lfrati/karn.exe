@@ -17,7 +17,7 @@ from .vocabulary import canonical_subtype
 MANA = frozenset("WUBRGC")
 PAYMENT_FIELDS = {"plan", "mana", "paying", "life"}
 ANNOUNCEMENT_FIELDS = PAYMENT_FIELDS | {"targets", "x", "modes", "division", "chose", "cost_branches"}
-CAST_FIELDS = ANNOUNCEMENT_FIELDS | {"card", "cast_as", "cost", "route", "convoke", "delve", "kicks", "replicate", "entwine", "buyback", "bargain", "additional", "offspring", "casualty", "teamwork", "gift", "slots", "pay_life", "face_down", "alternatives"}
+CAST_FIELDS = ANNOUNCEMENT_FIELDS | {"card", "cast_as", "cost", "route", "convoke", "delve", "improvise", "kicks", "replicate", "entwine", "buyback", "bargain", "additional", "offspring", "casualty", "teamwork", "gift", "slots", "pay_life", "face_down", "alternatives"}
 FIELDS = {
     "pass": set(), "concede": set(), "keep": set(), "mulligan": set(),
     "play": {"card", "face"}, "cast": CAST_FIELDS,
@@ -380,7 +380,7 @@ def _cast_evidence(adapter, move, after):
         if len(sources) != 1:
             _refuse("prepared card copy lacks an exact input-to-cast transition and matching prepared donor")
     enriched = [objects.get(str(source), {}) for source in sources]
-    required = ("physical" in before and physical is None) or bool(move.get("convoke") or move.get("delve") or move.get("route") not in (None, "normal"))
+    required = ("physical" in before and physical is None) or bool(move.get("convoke") or move.get("delve") or move.get("improvise") or move.get("route") not in (None, "normal"))
     if len(enriched) != 1 or (enriched[0].get("announced") or {}).get("cast") is None:
         if required or any((item.get("announced") or {}).get("cast") is not None for item in enriched):
             _refuse("native casting route and chosen objects need one completed retained cast announcement")
@@ -410,15 +410,15 @@ def _cast_evidence(adapter, move, after):
         if route != expected:
             _refuse("native casting route disagrees with the accepted announcement")
     if boundary is not None and boundary.get("stage") == "mana_choice":
-        if move.get("convoke") or move.get("delve"):
+        if move.get("convoke") or move.get("delve") or move.get("improvise"):
             _refuse("unfinished mana choice does not authenticate substitution spending")
         return facts, move.get("paying", [])
     payment = boundary["substitutions"] if boundary is not None else retained["payment"]
-    convoke, delve = payment["convoke"], payment["delve"]
-    if len(delve) != move.get("delve", 0) or [part["color"] for part in convoke] != [None if color == "generic" else color for color in move.get("convoke", [])]:
+    convoke, delve, improvise = payment["convoke"], payment["delve"], payment.get("improvise", [])
+    if len(improvise) != move.get("improvise", 0) or len(delve) != move.get("delve", 0) or [part["color"] for part in convoke] != [None if color == "generic" else color for color in move.get("convoke", [])]:
         _refuse("native substitution count or allocation disagrees with the completed payment")
     groups = move.get("paying", [])
-    suffix = ([delve] if delve else []) + [[part["object"]] for part in convoke]
+    suffix = ([delve] if delve else []) + [[part["object"]] for part in convoke] + ([improvise] if improvise else [])
     if suffix and (len(groups) < len(suffix) or groups[-len(suffix):] != suffix):
         _refuse("native chosen objects disagree with the completed substitution payment")
     return facts, groups[:-len(suffix)] if suffix else groups

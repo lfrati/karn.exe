@@ -65,6 +65,20 @@ class CastRouteTests(unittest.TestCase):
                                            'convoke': ['B', 'generic'], 'paying': [[5], [1], [2]]})
         self.assertEqual(self.a._cast_from_announced(following['audit']['objects']['4'], 'c3'), {'convoke': do['convoke']})
 
+    def test_improvise_retains_the_exact_artifacts_and_refuses_changed_receipts(self):
+        # 702.126a/118.10: the count alone does not authenticate the tapped artifacts.
+        following = self.frame({'kind': 'normal'})
+        following['audit']['objects']['4']['announced']['cast']['payment']['improvise'] = [1, 2]
+        move = {'kind': 'cast', 'card': 3, 'improvise': 2, 'paying': [[1, 2]]}
+        do = self.inverse(move, following)
+        self.assertEqual(do, {'kind': 'cast', 'card': 'c3', 'improvise': ['c1', 'c2']})
+        self.assertEqual(self.a._move(do), {'kind': 'cast', 'card': 3, 'targets': [], 'route': 'normal',
+                                         'improvise': 2, 'paying': [[1, 2]]})
+        wrong = deepcopy(following)
+        wrong['audit']['objects']['4']['announced']['cast']['payment']['improvise'] = [1, 5]
+        self.refuses_atomically(move, wrong, 'chosen objects')
+        self.refuses_atomically({**move, 'improvise': 1}, following, 'substitution count')
+
     def test_delve_selection_is_separate_from_the_additional_discard_group(self):
         # CR 702.66a/b: the discarded card cannot be inferred to have paid delve.
         following = self.frame({'kind': 'normal'}, delve=[2, 1])
@@ -268,6 +282,15 @@ class NativeCastRouteTests(unittest.TestCase):
                               expected_cast={'convoke': convoke})
         for i in range(4):
             self.assertTrue(reply['state']['objects'][f'g{i}']['tapped'])
+
+    def test_real_improvise_projects_and_records_its_exact_artifact_group(self):
+        # Fen Hauler {6}{B}; artifacts pay only the generic portion (702.126a-b).
+        cards = {'spell': ('Fen Hauler', 'A'), **{f'a{i}': ('Darksteel Relic', 'A') for i in range(6)}}
+        artifacts = [f'a{i}' for i in range(6)]
+        reply = self.exercise(cards, {'A.hand': ['spell'], 'battlefield': artifacts},
+                              {'kind': 'cast', 'card': 'spell', 'improvise': artifacts, 'pay': {'pool': {'B': 1}}},
+                              pool={'B': 1}, expected_cast={'improvise': artifacts})
+        self.assertTrue(all(reply['state']['objects'][artifact]['tapped'] for artifact in artifacts))
 
     def test_real_delve_keeps_the_selected_preexile_physical_cards(self):
         # Treasure Cruise {7}{U}; CR 702.66a/b. The U remains a mana payment.

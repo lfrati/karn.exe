@@ -427,6 +427,7 @@ impl Game {
         let payment=announcement.payment.as_ref().map(|payment|json!({
             "convoke":payment.convoke.iter().map(|(object,allocation)|json!({"object":object.0,"color":allocation.map(color)})).collect::<Vec<_>>(),
             "delve":payment.delve.iter().map(|object|object.0).collect::<Vec<_>>(),
+            "improvise":payment.improvise.iter().map(|object|object.0).collect::<Vec<_>>(),
         }));
         json!({"route":route,"permission":permission,"completed":payment.is_some(),"payment":payment})
     }

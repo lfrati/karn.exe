@@ -26,6 +26,15 @@ class InterpreterTests(unittest.TestCase):
                 "kind": "alternative", "keyword": keyword, "tapped": "bear"}}
             self.assertEqual(not errors(action), valid)
 
+    def test_improvise_lists_artifact_identities_and_prevents_resource_reuse(self):
+        # 702.126a/118.10: MGN records the artifacts, not an unauthenticated count.
+        schema = load_schema("mgn-1.schema.json")
+        validator = Validator(schema)
+        action = {"kind": "cast", "card": "spell", "improvise": ["artifact", "other"]}
+        self.assertEqual(validator.errors(action, schema["$defs"]["cast_fields"]), [])
+        for invalid in (2, ["artifact", "artifact"], [{"object": "artifact"}]):
+            self.assertTrue(validator.errors({**action, "improvise": invalid}, schema["$defs"]["cast_fields"]))
+
     def test_cast_resource_references_are_live_and_not_duplicated(self):
         from mgn.validate import _check_references
         from types import SimpleNamespace

@@ -278,7 +278,7 @@ impl Part {
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct Plan { parts: Vec<Part>, generic_reduction: u32, minimum: u32, generic_substitution: u32, convoke_colors: [u32;5], convoke_groups: Vec<usize>, convoke_allocation: Vec<Option<ir::Color>>, delve_group: Option<usize>, changed: (u32, u32),
+pub struct Plan { parts: Vec<Part>, generic_reduction: u32, minimum: u32, generic_substitution: u32, convoke_colors: [u32;5], convoke_groups: Vec<usize>, convoke_allocation: Vec<Option<ir::Color>>, delve_group: Option<usize>, improvise_group: Option<usize>, changed: (u32, u32),
     /// Its choices among alternatives not yet made ([`Plan::chosen`]); none is paid until made.
     choices: Vec<Choice>,
     typed_reduction: [u32; 6],
@@ -447,7 +447,7 @@ impl Plan {
         // silently admit them until choices describe independent resource kinds.
         if mixed(&parts) { return unsupported("cost: selected tapping combined with a zone-changing cost"); }
         if choices.len() > 1 { return unsupported("cost: more than one choice among alternatives"); }
-        let plan = Self { parts, generic_reduction: 0, minimum: 0, generic_substitution: 0, convoke_colors: [0;5], convoke_groups: Vec::new(), convoke_allocation: Vec::new(), delve_group: None, changed: (0, 0), choices, typed_reduction: [0;6], reduction_choices: Vec::new(), reduction_owners: Vec::new() };
+        let plan = Self { parts, generic_reduction: 0, minimum: 0, generic_substitution: 0, convoke_colors: [0;5], convoke_groups: Vec::new(), convoke_allocation: Vec::new(), delve_group: None, improvise_group: None, changed: (0, 0), choices, typed_reduction: [0;6], reduction_choices: Vec::new(), reduction_owners: Vec::new() };
         plan.validate_selections()?;
         for way in plan.ways() { plan.clone().chosen(&way).map_err(|e| crate::Unsupported(e.to_string()))?; }
         Ok(plan)
@@ -755,6 +755,23 @@ impl Plan {
         }
         Ok(self)
     }
+    /// Improvise spends only generic mana after total-cost adjustment (702.126a-b).
+    /// One selected group keeps the plan proportional to the cost, not its numeric size.
+    pub(crate) fn improvised(mut self, count: u32) -> Result<Self, String> {
+        if count == 0 { return Ok(self); }
+        let most = self.max_generic_payment().saturating_sub(self.generic_substitution);
+        if count > most { return Err(format!("improvise taps at most {most} artifact(s), one for each remaining generic mana (702.126a)")); }
+        self.generic_substitution = self.generic_substitution.checked_add(count).ok_or("generic substitution exceeds the supported mana amount")?;
+        self.improvise_group = Some(self.object_choice_count());
+        let mut tap = crate::keyword::improvise_cost().clone();
+        for part in &mut tap.parts {
+            if let Part::Objects { groups, .. } = part {
+                for group in groups { if let Objects::Choose { selection, .. } = group { *selection = Selection::Exact(count as usize); } }
+            }
+        }
+        self.parts.extend(tap.parts);
+        Ok(self)
+    }
     fn object_choice_count(&self) -> usize {
         self.parts.iter().map(|p| match p { Part::Objects { groups, .. } => groups.iter().filter(|g| matches!(g, Objects::Choose { .. })).count(), _ => 0 }).sum()
     }
@@ -764,6 +781,7 @@ impl Plan {
             convoke: self.convoke_groups.iter().zip(&self.convoke_allocation)
                 .flat_map(|(index, color)| paying[*index].iter().map(move |object| (*object, *color))).collect(),
             delve: self.delve_group.map(|index| paying[index].clone()).unwrap_or_default(),
+            improvise: self.improvise_group.map(|index| paying[index].clone()).unwrap_or_default(),
         }
     }
     /// The choice index of its waterbend cost's tapping, and the most it may tap (701.67a).
@@ -795,7 +813,8 @@ impl Plan {
     pub(crate) fn convokers(&self, paying: &[Vec<ObjId>]) -> Vec<crate::Target> {
         self.convoke_groups.iter().flat_map(|i|paying[*i].iter().copied().map(crate::Target::Object)).collect()
     }
-    pub(crate) fn max_delve(&self) -> u32 {
+    /// The largest generic portion after reductions and the final floor, before substitution.
+    pub(crate) fn max_generic_payment(&self) -> u32 {
         self.mana().0.iter().map(|s| match s {
             ManaSymbol::Generic(n) => *n,
             _ => s.mana_payments().map(|(a,b)| std::iter::once(a).chain(b).map(|s| if let ManaSymbol::Generic(n)=s {n} else {0}).max().unwrap_or(0)).unwrap_or(0),

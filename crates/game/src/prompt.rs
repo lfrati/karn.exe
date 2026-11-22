@@ -861,7 +861,7 @@ fn move_objects(m: &Move, out: &mut Vec<ObjId>) {
             move_objects(inner, out);
         }
         Move::Paying(_, inner) | Move::WithX(_, inner) | Move::WithKicks(_, inner) | Move::WithBuyback(_, inner) | Move::WithOptional(_, inner) | Move::WithEntwine(_, inner)
-            | Move::WithReplicate(_, inner) | Move::CastFor(_, inner) | Move::WithDelve(_, inner) | Move::WithConvoke(_, inner)
+            | Move::WithReplicate(_, inner) | Move::CastFor(_, inner) | Move::WithDelve(_, inner) | Move::WithConvoke(_, inner) | Move::WithImprovise(_, inner)
             | Move::GiftTo(_, inner) | Move::WithLife(_, inner) | Move::WithCostChoice(_, inner) | Move::WithCostBranches(_, inner) | Move::Adding(_, inner) | Move::Modes(_, inner) | Move::CastAs(_, inner) | Move::WithDivision(_, inner) => move_objects(inner, out),
     }
 }

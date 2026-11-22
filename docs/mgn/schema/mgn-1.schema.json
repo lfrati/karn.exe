@@ -65,6 +65,7 @@
         "permission": {"$ref": "#/$defs/casting_permission"},
         "additional": {"$ref": "#/$defs/additional_costs"},
         "convoke": {"$ref": "#/$defs/convoke"},
+        "improvise": {"type": "array", "items": {"$ref": "#/$defs/object_id"}, "uniqueItems": true},
         "delve": {"type": "array", "items": {"$ref": "#/$defs/object_id"}}
       },
       "additionalProperties": false,
@@ -876,6 +877,7 @@
         "division": {"$ref": "#/$defs/division"},
         "additional": {"$ref": "#/$defs/additional_costs"},
         "convoke": {"$ref": "#/$defs/convoke"},
+        "improvise": {"type": "array", "items": {"$ref": "#/$defs/object_id"}, "uniqueItems": true},
         "delve": {"type": "array", "items": {"$ref": "#/$defs/object_id"}},
         "pay": {"$ref": "#/$defs/payment"}
       },

@@ -1448,7 +1448,7 @@ fn move_keys(kind: &str) -> Option<&'static [&'static str]> {
         "turn_face_up" => &["permanent", "way", PAYS[0], PAYS[1]],
         "unlock" => &["room", "half", PAYS[0], PAYS[1]],
         "cast" => &["card", "targets", "paying", "convoke", "cast_as", "modes", "x", "replicate", "entwine", "buyback", "bargain", "additional", "offspring", "casualty", "teamwork", "kicks", "cost",
-            "delve", "route", "gift", "life", "chose", "alternatives", "cost_branches", PAYS[0], PAYS[1], "slots", "pay_life", "face_down", "division"],
+            "delve", "improvise", "route", "gift", "life", "chose", "alternatives", "cost_branches", PAYS[0], PAYS[1], "slots", "pay_life", "face_down", "division"],
         "activate" => &["source", "ability", "targets", "paying", "modes", "adding", "x", "life", "chose", "alternatives", "cost_branches", PAYS[0], PAYS[1], "slots", "asks", "division"],
         "payment" => &["paying", PAYS[0], PAYS[1]],
         "targets" => &["targets", "modes", "division"],
@@ -1653,6 +1653,10 @@ fn read_move_at_pools(v: &Value, pool: &Pool, offered: &[game::operation::Replac
             _ => return Err("a cost is \"mana\", {\"alternative\": an ability row}, or {\"flashback\": a cost index}".into()),
         };
         mv = Move::CastFor(cost, Box::new(mv));
+    }
+    if let Some(improvise) = v.get("improvise").filter(|v| !v.is_null()) {
+        let count = improvise.as_u64().and_then(|n| u32::try_from(n).ok()).ok_or("improvise is a nonnegative artifact count")?;
+        mv = Move::WithImprovise(count, Box::new(mv));
     }
     if let Some(delve) = v.get("delve").filter(|v| !v.is_null()) {
         if v["kind"] != "cast" { return Err("delve is a casting payment (702.66)".into()); }
