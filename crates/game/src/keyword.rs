@@ -514,8 +514,8 @@ fn cycling(mut cost: ir::Cost, filter: Option<ir::Filter>) -> Ability {
     Ability::Activated { cost, effect }
 }
 
-/// Keyword-triggered abilities are compiled once as ordinary abilities, not passive
-/// flags. Granting them remains refused until grants carry these executable instances.
+/// Keyword-triggered abilities are cached as ordinary abilities. Each declaration
+/// determines whether its executable instances may also be granted.
 fn triggered(item: &ir::token::KeywordInstance) -> Option<&'static Ability> {
     if item.param != KeywordParam::None { return None; }
     match item.keyword.name() {
@@ -530,8 +530,18 @@ fn triggered(item: &ir::token::KeywordInstance) -> Option<&'static Ability> {
         "Flanking" => Some(flanking()),
         "Evolve" => Some(evolve()),
         "Mentor" => Some(mentor()),
+        "Dethrone" => Some(dethrone()),
         _ => None,
     }
+}
+
+/// 702.105a: the defender's life rank is checked by the attack event, not
+/// again when this ordinary counter-placement ability resolves.
+fn dethrone() -> &'static Ability {
+    static RULE: OnceLock<Ability> = OnceLock::new();
+    crate::token::init(&RULE, || CardDef::new("Dethrone rule", "", "Creature",
+        "Whenever this creature attacks the player with the most life or tied for most life, put a +1/+1 counter on this creature.", None)
+        .expect("the grammar reads rule 702.105a").abilities[0].clone())
 }
 
 /// 702.46a-b: an ordinary dies trigger, with its target chosen before the optional return.
