@@ -702,6 +702,18 @@ fn vanishing(item: &ir::token::KeywordInstance) -> Option<Vec<Ability>> {
     Some(abilities)
 }
 
+/// 702.32a: inability to pay the mandatory upkeep removal sacrifices the
+/// source. Removing the last counter alone does not trigger sacrifice.
+fn fading(item: &ir::token::KeywordInstance) -> Option<Vec<Ability>> {
+    let KeywordParam::Number(ir::Amount::Const(count)) = item.param else { return None };
+    static RULE: OnceLock<Vec<Ability>> = OnceLock::new();
+    let mut abilities = crate::token::init(&RULE, || CardDef::new("Fading rule", "", "Artifact",
+        "This permanent enters with a fade counter on it.\nAt the beginning of your upkeep, remove a fade counter from this permanent. If you can't, sacrifice this permanent.", None)
+        .expect("the grammar reads rule 702.32a").abilities).clone();
+    entry_counter_count(&mut abilities[0], count);
+    Some(abilities)
+}
+
 /// 702.123a: the choice is made on resolution. The ordinary optional action
 /// falls through to Servos when counters cannot be put on the source.
 fn fabricate(item: &ir::token::KeywordInstance) -> Option<Ability> {

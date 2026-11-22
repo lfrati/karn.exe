@@ -383,6 +383,8 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
         "Bloodthirst" => generated(ability(item)?, true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
         "Vanishing" => generated_many(vanishing(item).ok_or_else(|| crate::Unsupported("keyword: Vanishing".into()))?,
             true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
+        "Fading" => generated_many(fading(item).ok_or_else(|| crate::Unsupported("keyword: Fading".into()))?,
+            true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
         "Modular" => generated_many(modular(item).ok_or_else(|| crate::Unsupported("keyword: Modular".into()))?,
             true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
         "Hideaway" => {

@@ -2733,6 +2733,10 @@ impl Emit {
     fn producer(&mut self, instruction: usize) -> Res<()> {
         match &mut self.instrs[instruction] {
             Instr::Choice { action, payment, .. } => { action.payment_ok()?; *payment = true; },
+            Instr::Action { action: action::Action::RemoveCounters { .. }, attempt: Some(attempt), .. } => {
+                attempt.payment = true;
+                attempt.cost = true;
+            }
             Instr::Action { attempt: Some(attempt), .. } | Instr::Place { attempt: Some(attempt), .. } => attempt.payment = true,
             _ => {},
         }
@@ -4899,7 +4903,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
         }
         let causative_loss = matches!(&act.action, Action::Have { action, .. } if matches!(**action,Action::LoseLife(_)));
         if causative_loss && !controller_only(clause.subject.as_ref()) { return unsupported("causative life loss: one controller chooses"); }
-        let ordinary_attempt = causative_loss || (optional && matches!(act.action, Action::Destroy(_) | Action::RemoveCounters { .. })) || matches!(&act.action, Action::PayEnergy(_) | Action::Draw(_) | Action::DrawUpTo(_) | Action::Mill(_) | Action::GainLife(_) | Action::LoseLife(_) | Action::Tap(_) | Action::Untap(_) | Action::PutCounters(_) | Action::GetCounters { .. } | Action::Create(_) | Action::GetEmblem(_) | Action::Move { .. } | Action::Exile(_)) && !result_move;
+        let ordinary_attempt = causative_loss || (optional && matches!(act.action, Action::Destroy(_))) || matches!(&act.action, Action::RemoveCounters { .. } | Action::PayEnergy(_) | Action::Draw(_) | Action::DrawUpTo(_) | Action::Mill(_) | Action::GainLife(_) | Action::LoseLife(_) | Action::Tap(_) | Action::Untap(_) | Action::PutCounters(_) | Action::GetCounters { .. } | Action::Create(_) | Action::GetEmblem(_) | Action::Move { .. } | Action::Exile(_)) && !result_move;
         let optional_top = optional && matches!(&act.action, Action::Reveal(o) if o.items.iter().all(|s| top_of_library(s).is_some()));
         let flash_permission = matches!(&act.action, Action::Static(s) if matches!(**s, ir::statics::StaticAct::CastAsThoughFlash { .. }));
         let optional_branch = if optional && !flash_permission && !optional_top && !matches!(act.action, Action::Scry(_) | Action::Surveil(_)) && !ordinary_attempt && !result_move && !named_exile && !matches!(act.action, Action::Discard(_) | Action::Sacrifice(_) | Action::PayMana(_) | Action::PayLife(_) | Action::Numbered(ir::NumberedAction::CollectEvidence, _) | Action::OnObjects(ir::action::ObjectAction::Behold, _)) {
