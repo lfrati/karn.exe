@@ -25,6 +25,7 @@ fn r700_3b_pile_membership() {
         "−6: Separate all permanents target player controls into two piles. That player sacrifices all permanents in the pile of their choice.",
         "Destroy all creatures in the pile of your choice.",
         "Exile all cards in that pile.",
+        "Put all cards from the pile of your choice onto the battlefield under your control.",
         "Return all cards in the other pile to your hand.",
     ] {
         let (value, _) = read(text);
@@ -245,6 +246,7 @@ fn r700_2_choice_header_is_not_object_ellipsis() {
         assert!(serde_json::to_string(&value).unwrap().contains("ChooseModes"));
     }
     read("An opponent chooses one —");
+    read("If you discarded a card this turn, you choose one instead.");
     declines("You choose one —");
 }
 

@@ -166,7 +166,7 @@ pub(crate) fn choice(objects: &P<Objects>, modes: &P<Modes>, set_sg: &P<ObjectSe
         },
     );
     // The ellipsis "choose one" names one member of the group in scope (608.2d), not a number.
-    let one_member = lit("one").not_before(&lit("—")).to(Choice::Objects(ir::Coord::one(ir::Selector::new(
+    let one_member = lit("one").not_before(&alt("modal continuation", vec![lit("—"), lit("instead")])).to(Choice::Objects(ir::Coord::one(ir::Selector::new(
         ir::Quant::Definite(ir::Ref::Anaphor(ir::Anaphor::One)), ir::ObjectSet::of(ir::Domain::Object),
     ))));
     let single = alt("choice", vec![of_objects, one_member, one, any_name, several, number, words, among_colors, among_keywords, modal]);

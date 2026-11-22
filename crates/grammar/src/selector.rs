@@ -1548,17 +1548,18 @@ fn source(n: Number, sel: &P<Selector>) -> P<Filter> {
 /// Membership in a temporary pile is a predicate on its objects, not a pile object (700.3b).
 fn pile_membership() -> P<Filter> {
     use ir::procedure::PileRef;
-    let named = alt("pile", vec![
-        lit("in that pile").to(PileRef::That),
-        lit("in the other pile").to(PileRef::TheOther),
-    ]).map(
+    let in_or_from = alt("membership", vec![lit("in"), lit("from").alias()]);
+    let named = in_or_from.then_keep(&alt("pile", vec![
+        lit("that pile").to(PileRef::That),
+        lit("the other pile").to(PileRef::TheOther),
+    ])).map(
         |pile| Some(Filter::Atom(Atom::InPile { pile, chooser: None })),
         |f| match f {
             Filter::Atom(Atom::InPile { pile, chooser: None }) => Some(*pile),
             _ => None,
         },
     );
-    let chosen = lit("in the pile of").then_keep(&crate::kernel::lazy("possessive", || selectors().possessive.clone()))
+    let chosen = in_or_from.skip(&lit("the pile of")).then_keep(&crate::kernel::lazy("possessive", || selectors().possessive.clone()))
         .skip(&lit("choice")).map(
             |who| Some(Filter::Atom(Atom::InPile { pile: PileRef::One, chooser: Some(Box::new(who)) })),
             |f| match f {
