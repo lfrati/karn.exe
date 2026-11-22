@@ -1305,21 +1305,24 @@ fn participle_phrase() -> P<Deed> {
         },
     );
     // Only explicit agent roles: the player instructed to act is not an effect source.
-    let with_agent = |verb: Verb, who: Selector| {
-        (!verb.kinds(Role::By).is_empty() && ir::lexicon::fills(&who, verb, Role::By))
-            .then(|| Deed { verb, passive: true, args: vec![(Role::By, Arg::Noun(who))] })
+    let with_agent = |mut deed: Deed, who: Selector| {
+        (deed.passive && !deed.args.iter().any(|(role, _)| *role == Role::By)
+            && !deed.verb.kinds(Role::By).is_empty() && ir::lexicon::fills(&who, deed.verb, Role::By))
+            .then(|| { deed.args.push((Role::By, Arg::Noun(who))); deed })
     };
-    let done_by = words.skip(&lit("by")).then(&selectors().selector).map(
-        move |(verb, who)| with_agent(verb, who),
-        move |d: &Deed| match (d.passive, d.args.as_slice()) {
-            (true, [(Role::By, Arg::Noun(who))]) if with_agent(d.verb, who.clone()).is_some() => Some((d.verb, who.clone())),
-            _ => None,
+    let agentless = alt("passive before agent", vec![cast.clone(), done.clone(), done_under.clone()]);
+    let done_by = agentless.skip(&lit("by")).then(&selectors().selector).map(
+        move |(deed, who)| with_agent(deed, who),
+        move |d: &Deed| {
+            let (Role::By, Arg::Noun(who)) = d.args.last()? else { return None };
+            let mut base = d.clone(); base.args.pop();
+            (with_agent(base.clone(), who.clone()).as_ref() == Some(d)).then(|| (base, who.clone()))
         },
     );
     // Oracle also names the permanent supplying champion with "with" (702.72c).
     let championed_with = lit(&Verb::Champion.phrase(Inflection::Participle)).skip(&lit("with"))
         .then(&selectors().selector).map(
-            move |((), who)| with_agent(Verb::Champion, who), |_| None,
+            move |((), who)| with_agent(Deed { verb: Verb::Champion, passive: true, args: Vec::new() }, who), |_| None,
         ).alias();
     alt("participle", vec![cast, done, done_under, done_by, championed_with])
 }

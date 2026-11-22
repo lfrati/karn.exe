@@ -228,7 +228,7 @@ lexicon! {
     Shuffle: "shuffle", "701.24", Player, [What => CARD_OR_PERMANENT];
     Scry: "scry", "701.22", Player, [];
     Surveil: "surveil", "701.25", Player, [];
-    Cast: "cast", "601.2", Player, [What => CASTABLE];
+    Cast: "cast", "601.2", Player, [What => CASTABLE, By => PLAYER];
     Play: "play", "701.18", Player, [What => PLAYABLE];
     SeparateIntoPiles: "separate", "700.3", Player, [What => CARD_OR_PERMANENT];
     // permanents

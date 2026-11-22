@@ -480,3 +480,16 @@ fn r608_2i_passive_agents_need_declared_role() {
         "Return the creature you sacrificed this way to the battlefield.",
     ] { read(text); }
 }
+
+/// CR 601.2 and 400.7: caster and permission provenance both survive the passive spelling.
+#[test]
+fn r601_2_passive_caster_and_permission_provenance() {
+    let (value, _) = read("Exile target nonland permanent. For as long as that card remains exiled, its owner may play it. A spell cast by an opponent this way costs {2} more to cast.");
+    let json = serde_json::to_string(&value).unwrap();
+    assert!(json.contains("ThisWay") && json.contains("By") && json.contains("Opponent"));
+    let (passive, _) = read("A spell cast by an opponent this way costs {2} more to cast.");
+    let (active, _) = read("A spell an opponent cast this way costs {2} more to cast.");
+    assert_eq!(passive, active);
+    read("If a spell was cast from exile by an opponent this turn, draw a card.");
+    declines("A spell cast by target creature this way costs {2} more to cast.");
+}
