@@ -143,6 +143,15 @@ pub(crate) fn choice(objects: &P<Objects>, modes: &P<Modes>, set_sg: &P<ObjectSe
             _ => None,
         },
     );
+    // Explicit type alternatives are the existing rules-defined value domain with
+    // its complement excluded; there is no second choice representation to bind.
+    let among_types = card_types.list("or").then(&random).map(
+        |(included, random)| {
+            let except = CardType::ALL.iter().filter(|t| !included.contains(t))
+                .map(|t| Exclusion::CardType(*t)).collect();
+            Some(Choice::Value { kind: ValueKind::CardType, count: Amount::Const(1), except, random })
+        }, |_| None,
+    ).alias();
     let among_keywords = crate::keyword::keyword().list("or").then(&random).map(
         |(k, random)| Some(Choice::Among { options: Options::Keywords(k), random }),
         |c| match c {
@@ -169,7 +178,7 @@ pub(crate) fn choice(objects: &P<Objects>, modes: &P<Modes>, set_sg: &P<ObjectSe
     let one_member = lit("one").not_before(&alt("modal continuation", vec![lit("—"), lit("instead")])).to(Choice::Objects(ir::Coord::one(ir::Selector::new(
         ir::Quant::Definite(ir::Ref::Anaphor(ir::Anaphor::One)), ir::ObjectSet::of(ir::Domain::Object),
     ))));
-    let single = alt("choice", vec![of_objects, one_member, one, any_name, several, number, words, among_colors, among_keywords, modal]);
+    let single = alt("choice", vec![of_objects, one_member, one, any_name, several, number, words, among_colors, among_types, among_keywords, modal]);
     // "a color and an opponent": two kinds of thing; objects joined to objects are one object phrase
     let together = single.list("and").map(
         |v| (!v.iter().any(|c| matches!(c, Choice::All(_))) && !v.windows(2).any(|w| matches!(w, [Choice::Objects(_), Choice::Objects(_)])))

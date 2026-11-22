@@ -378,3 +378,22 @@ fn r508_4_token_defender_alternatives() {
     declines("Create a 1/1 white Soldier creature token that's attacking target spell.");
     declines("Create a 1/1 white Soldier creature token that's attacking target player and target planeswalker.");
 }
+
+/// CR 205.2a and 608.2d: a finite list restricts the existing card-type value domain.
+#[test]
+fn r205_2a_finite_card_type_choices() {
+    for (text, allowed) in [
+        ("Choose creature or land. Reveal the top four cards of your library. Put all cards of the chosen type revealed this way into your hand and the rest into your graveyard.", [ir::CardType::Creature, ir::CardType::Land]),
+        ("Choose artifact or enchantment. Destroy all permanents of the chosen type.", [ir::CardType::Artifact, ir::CardType::Enchantment]),
+    ] {
+        let (value, _) = read(text);
+        let ir::Ability::Text(effect) = value else { panic!() };
+        let ir::Sentence::Do(body) = &effect.0[0] else { panic!() };
+        let ir::Action::Choose(ir::Choice::Value { kind: ir::ValueKind::CardType, except, .. }) = &body.first.first.action else { panic!() };
+        assert_eq!(except.len(), ir::CardType::ALL.len() - 2);
+        for card_type in ir::CardType::ALL {
+            assert_eq!(except.contains(&ir::Exclusion::CardType(*card_type)), !allowed.contains(card_type));
+        }
+    }
+    declines("Choose creature or red.");
+}
