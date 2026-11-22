@@ -845,3 +845,38 @@ fn r608_2c_closed_exclusions_before_zone_qualifiers() {
     declines("Exile a black creature card other than ~ from.");
     declines("Destroy target player other than ~.");
 }
+
+/// CR 201.2c: different from a reference group requires a name and no shared name with any member.
+#[test]
+fn r201_2c_different_names_and_conjoined_properties() {
+    read("Whenever an Aura you control enters, if you cast it, you may search your library for an Aura card with mana value less than or equal to that Aura and with a different name than each Aura you control, put that card onto the battlefield attached to ~, then shuffle.");
+    // Tibalt's Trickery has the same predicate; its separate numeric-choice sentence is unread.
+    read("They exile cards from the top of their library until they exile a nonland card with a different name than that spell.");
+    let (joined, _) = read("Exile target creature with power 2 and with flying.");
+    let (plain, _) = read("Exile target creature with power 2 with flying.");
+    assert_eq!(joined, plain);
+    let (elided, _) = read("Exile an Aura card with mana value less than or equal to that Aura.");
+    let (explicit, _) = read("Exile an Aura card with mana value less than or equal to that Aura's mana value.");
+    assert_eq!(elided, explicit);
+    let (than, _) = read("Exile a card with a different name than that spell.");
+    let (from, _) = read("Exile a card with a different name from that spell.");
+    assert_eq!(than, from);
+    let rule = &grammar::selector::selectors().selector;
+    let text = "an Aura card with a different name than each Aura you control";
+    let Outcome::Accepted { value, .. } = rule.parse_all(&tokenize(text)) else { panic!("{text}") };
+    let ir::Filter::All(filters) = &value.set.filter else { panic!() };
+    let source = filters.iter().find_map(|f| match f {
+        ir::Filter::Atom(ir::Atom::DifferentNameFrom(source)) => Some(source), _ => None,
+    }).unwrap();
+    assert_eq!(source.quant, ir::Quant::Each);
+    assert_eq!(source.set.controller.as_ref().unwrap().who.as_ref(), &ir::Selector::you());
+    assert!(!filters.iter().any(|f| matches!(f, ir::Filter::Not(_))));
+    read("Exile a creature card with a different name than it from your graveyard.");
+    for text in [
+        "Exile a card with a different name than target player.",
+        "Exile a creature card and with flying.",
+        "Exile a card with a different name than.",
+        "Exile a card with mana value less than or equal to each Aura you control.",
+        "Exile a card with mana value less than or equal to that player.",
+    ] { declines(text); }
+}

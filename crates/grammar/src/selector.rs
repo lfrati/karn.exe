@@ -1041,16 +1041,7 @@ fn post_filter(n: Number, sel: &P<Selector>) -> P<Filter> {
     // a literal takes "2 or less" above, except strict comparisons ("power less than 0")
     let literal = |a: &Amount| matches!(a, Amount::Const(_) | Amount::X);
     let fits = move |cmp: Cmp, a: &Amount| matches!(cmp, Cmp::Lt | Cmp::Gt) || !literal(a);
-    let cmp_words = alt(
-        "comparison",
-        vec![
-            lit("less than or equal to").to(Cmp::Le),
-            lit("greater than or equal to").to(Cmp::Ge),
-            lit("less than").to(Cmp::Lt),
-            lit("greater than").to(Cmp::Gt),
-            lit("equal to").to(Cmp::Eq),
-        ],
-    );
+    let cmp_words = comparison_words();
     let stat_vs = lit("with")
         .then_keep(&own_stat())
         .then(&cmp_words)
@@ -1656,6 +1647,16 @@ fn is_player_filter(f: &Filter) -> bool {
     }
 }
 
+fn comparison_words() -> P<Cmp> {
+    alt("comparison", vec![
+        lit("less than or equal to").to(Cmp::Le),
+        lit("greater than or equal to").to(Cmp::Ge),
+        lit("less than").to(Cmp::Lt),
+        lit("greater than").to(Cmp::Gt),
+        lit("equal to").to(Cmp::Eq),
+    ])
+}
+
 /// "with lesser mana value", "with greater power", "with equal or lesser mana value"; with the
 /// object named, "with lesser mana value than that creature" is an alternate spelling of "with
 /// mana value less than that creature's mana value".
@@ -1686,7 +1687,18 @@ fn compared(sel: &P<Selector>) -> P<Filter> {
             |_: &Filter| None,
         )
         .alias();
-    alt("compared", vec![implicit, explicit])
+    // A previously named object's stat can be omitted after the comparison: "with mana
+    // value less than or equal to that Aura". This is the same scalar as its explicit stat,
+    // never an aggregate over "each Aura" or a player's unrelated numeric property.
+    let elided = lit("with").then_keep(&own_stat()).then(&comparison_words()).then(sel).map(
+        |((stat, cmp), of)| {
+            (matches!(of.quant, Quant::Definite(Ref::This | Ref::Granting | Ref::Anaphor(Anaphor::It | Anaphor::That)))
+                && ir::lexicon::of_kind(&of, &[ir::lexicon::Sort::Permanent, ir::lexicon::Sort::Card, ir::lexicon::Sort::Spell]))
+                .then(|| Filter::Atom(Atom::Stat { stat, cmp, value: Amount::Stat { of: Box::new(of), stat } }))
+        },
+        |_| None,
+    ).alias();
+    alt("compared", vec![implicit, explicit, elided])
 }
 
 /// "with the greatest power among creatures they control", "with the least toughness", "with the
@@ -1802,7 +1814,21 @@ fn shares(n: Number, sel: &P<Selector>) -> P<Filter> {
             _ => None,
         },
     );
-    alt("shares", vec![positive, negative])
+    let different = lit("with a different name")
+        .skip(&alt("name comparison", vec![lit("than"), lit("from").alias()])).then_keep(sel).map(
+            |source| {
+                ir::lexicon::of_kind(&source, &[ir::lexicon::Sort::Permanent, ir::lexicon::Sort::Card,
+                    ir::lexicon::Sort::Spell, ir::lexicon::Sort::Ability])
+                    .then(|| Filter::Atom(Atom::DifferentNameFrom(Box::new(source))))
+            },
+            |f| match f {
+                Filter::Atom(Atom::DifferentNameFrom(source))
+                    if ir::lexicon::of_kind(source, &[ir::lexicon::Sort::Permanent, ir::lexicon::Sort::Card,
+                        ir::lexicon::Sort::Spell, ir::lexicon::Sort::Ability]) => Some((**source).clone()),
+                _ => None,
+            },
+        );
+    alt("shares", vec![positive, negative, different])
 }
 
 /// A distinct value for every selected object, with a shared bound (202.3, 208.1).
@@ -2248,6 +2274,7 @@ fn is_post_filter(f: &Filter) -> bool {
             | Atom::InPile { .. }
             | Atom::DealtDamageBy { .. }
             | Atom::Shares { .. }
+            | Atom::DifferentNameFrom(_)
             | Atom::Targets { .. }
             | Atom::Did { .. }
             | Atom::Most { .. }
@@ -3066,6 +3093,22 @@ fn post(prep: ZonePrep, n: Number, player_sg: &P<Selector>, player_pl: &P<Select
     )
 }
 
+/// Properties can repeat their introducer after "and": "with power 2 and with flying".
+/// Require an earlier modifier, and retain the usual nested-phrase attachment checks.
+fn post_sequence(prep: ZonePrep, n: Number, player_sg: &P<Selector>, player_pl: &P<Selector>, sel: &P<Selector>) -> P<Vec<Post>> {
+    let one = post(prep, n, player_sg, player_pl, sel);
+    let property = one.map(
+        |p| matches!(p, Post::With(_) | Post::WithAll(_)).then_some(p),
+        |p| matches!(p, Post::With(_) | Post::WithAll(_)).then(|| p.clone()),
+    );
+    let later = alt("later postmodifier", vec![one.clone(), lit("and").then_keep(&property).alias()]);
+    let some = one.then(&later.many()).map(
+        |(first, mut rest)| { rest.insert(0, first); Some(rest) },
+        |v: &Vec<Post>| v.split_first().map(|(first, rest)| (first.clone(), rest.to_vec())),
+    );
+    alt("postmodifiers", vec![empty().to(Vec::new()), some])
+}
+
 /// Fold postmodifiers into a set and a selector's extras; each kind at most once except "with".
 ///
 /// A postmodifier that ends in a nested noun phrase ("attached to target creature") must come
@@ -3281,7 +3324,7 @@ fn ends_nested(p: &Post) -> bool {
     };
     match p {
         Post::With(Filter::Not(b)) if matches!(&**b, Filter::Atom(Atom::Among(s)) if closed(s)) => false,
-        Post::With(Filter::Atom(Atom::Shares { with, .. })) if closed(with) => false,
+        Post::With(Filter::Atom(Atom::Shares { with, .. } | Atom::DifferentNameFrom(with))) if closed(with) => false,
         Post::With(Filter::Atom(Atom::DealtDamageBy { by, .. })) if closed(by) => false,
         Post::With(Filter::Atom(Atom::DealtDamageBy { .. })) => true,
         Post::With(Filter::Atom(Atom::MoreThan { than, .. })) if closed(than) => false,
@@ -3296,7 +3339,7 @@ fn ends_nested(p: &Post) -> bool {
         Post::With(Filter::Atom(Atom::MoreThan { .. } | Atom::Controls(_) | Atom::CouldEnchant(_))) => true,
         Post::With(Filter::Not(b)) if matches!(b.as_ref(), Filter::Atom(Atom::Controls(_))) => true,
         Post::With(Filter::Atom(Atom::MostOf { measure, tied: false, .. })) => **measure != Measure::Life,
-        Post::With(Filter::Atom(Atom::AttachedTo(_) | Atom::Among(_) | Atom::AmongSet(_) | Atom::Shares { .. } | Atom::Targets { .. })) => {
+        Post::With(Filter::Atom(Atom::AttachedTo(_) | Atom::Among(_) | Atom::AmongSet(_) | Atom::Shares { .. } | Atom::DifferentNameFrom(_) | Atom::Targets { .. })) => {
             true
         }
         // "with power less than the number of cards in your hand"; a stat of a thing ("~'s
@@ -4125,7 +4168,7 @@ fn build() -> Selectors {
     let player_sg_any = alt("player", vec![player_one, either.clone()]);
 
     let branch = |num: Number, prep: ZonePrep| {
-        let posts = post(prep, num, &player_sg_any, &player_pl, &any_sel.rule()).many();
+        let posts = post_sequence(prep, num, &player_sg_any, &player_pl, &any_sel.rule());
         let unions = match num {
             Number::Sg => vec![Union::Or, Union::And],
             Number::Pl => vec![Union::AndOr, Union::And],
@@ -4159,7 +4202,7 @@ fn build() -> Selectors {
         let one = |num: Number, union: Union| {
             other
                 .then(&core(num, union))
-                .then(&post(prep, num, &player_sg_any, &player_pl, &any_sel.rule()).many())
+                .then(&post_sequence(prep, num, &player_sg_any, &player_pl, &any_sel.rule()))
                 .map(
                     |((o, (domain, items)), posts)| {
                         let mut set = ObjectSet {

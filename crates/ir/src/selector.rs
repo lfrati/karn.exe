@@ -405,6 +405,10 @@ pub enum Atom {
         what: Characteristic,
         with: Box<Selector>,
     },
+    /// The candidate has at least one name and no name in common with any object
+    /// the reference names (201.2c). Referenced nameless objects do not invalidate this.
+    /// Unlike negated Shares, this rejects a nameless candidate and covers the whole group.
+    DifferentNameFrom(Box<Selector>),
     /// "with that name": the name an earlier instruction chose or named ("Choose a card name.
     /// Search … for any number of cards with that name", CR 201.4); the resolver binds it.
     ThatName,
