@@ -44,3 +44,15 @@ fn r702_83_exalted_pumps_the_lone_attacker_once_per_instance() {
     cite!(["702.83b"]; assert!(g.stack.is_empty()));
     cite!(["702.83a"]; assert_eq!(g.power(bear), Some(2)));
 }
+
+#[test]
+fn r702_25_flanking_binds_each_blocker_and_ignores_other_flankers() {
+    let mut g = fixture(vec![oracle("Benalish Cavalry"), oracle("Grizzly Bears")]);
+    let cavalry = g.put(0, 0, Zone::Battlefield);
+    let bear = g.put(1, 1, Zone::Battlefield);
+    let flanker = g.put(1, 0, Zone::Battlefield);
+    attack(&mut g, &[cavalry]);
+    blockers(&mut g, vec![(bear, cavalry), (flanker, cavalry)]);
+    cite!(["702.25a"]; assert_eq!((g.power(bear), g.toughness(bear)), (Some(1), Some(1))));
+    cite!(["702.25a"]; assert_eq!((g.power(flanker), g.toughness(flanker)), (Some(2), Some(2))));
+}

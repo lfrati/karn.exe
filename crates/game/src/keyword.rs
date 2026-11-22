@@ -469,6 +469,7 @@ fn triggered(item: &ir::token::KeywordInstance) -> Option<&'static Ability> {
         "Prowess" => Some(prowess()),
         "Battle Cry" => Some(battle_cry()),
         "Exalted" => Some(exalted()),
+        "Flanking" => Some(flanking()),
         _ => None,
     }
 }
@@ -487,6 +488,14 @@ fn exalted() -> &'static Ability {
     crate::token::init(&EXALTED, || CardDef::new("Exalted rule", "", "Creature",
         "Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn.", None)
         .expect("the grammar reads rule 702.83a").abilities[0].clone())
+}
+
+/// 702.25a: each blocker lacking flanking receives its own independent effect.
+fn flanking() -> &'static Ability {
+    static FLANKING: OnceLock<Ability> = OnceLock::new();
+    crate::token::init(&FLANKING, || CardDef::new("Flanking rule", "", "Creature",
+        "Whenever a creature without flanking blocks this creature, the blocking creature gets -1/-1 until end of turn.", None)
+        .expect("the grammar reads rule 702.25a").abilities[0].clone())
 }
 
 /// 702.91a-b: each instance triggers separately as this creature attacks.
