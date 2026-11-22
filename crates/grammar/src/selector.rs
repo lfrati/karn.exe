@@ -1510,6 +1510,10 @@ fn source(n: Number, sel: &P<Selector>) -> P<Filter> {
         ),
         Number::Pl => crate::kernel::lazy("plural set", || selectors().set_pl.clone()),
     };
+    let objects_only = |set: &ObjectSet| ir::lexicon::of_kind(&Selector::new(Quant::All, set.clone()), &[
+        ir::Sort::Permanent, ir::Sort::Card, ir::Sort::Spell, ir::Sort::Ability,
+    ]);
+    let set = set.map(move |set| objects_only(&set).then_some(set), move |set| objects_only(set).then(|| set.clone()));
     alt("ability source", vec![lit("from"), lit("of").alias()]).then_keep(&set).map(
         |set| Some(Filter::Atom(Atom::Source(Box::new(set)))),
         |f| match f {
@@ -2598,7 +2602,7 @@ fn event_relative(n: Number, sel: &P<Selector>) -> P<Post> {
         .map(
             // the other participles with a window are counts of their own ("each spell cast this turn")
             |(action, when)| {
-                matches!(action, EventAction::PutIntoGraveyard { .. }).then(|| Post::Event { who: false, filter: event_filter(action, when, false) })
+                matches!(action, EventAction::PutIntoGraveyard { .. } | EventAction::Deed(Deed { verb: Verb::Draw, passive: true, .. })).then(|| Post::Event { who: false, filter: event_filter(action, when, false) })
             },
             |_| None,
         )

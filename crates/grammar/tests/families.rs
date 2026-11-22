@@ -185,3 +185,17 @@ fn r608_2c_endpoints_before_objects() {
         declines(text);
     }
 }
+
+/// CR 121.1 and 608.2i: a card's draw history is distinct from its current hand membership.
+#[test]
+fn r608_2i_drawn_card_history() {
+    for text in [
+        "At the beginning of your draw step, you may draw two additional cards. If you do, choose two cards in your hand drawn this turn. For each of those cards, pay 4 life or put the card on top of your library.",
+        "Exile a card drawn this turn.",
+        "Reveal two cards in your hand drawn this game.",
+    ] {
+        let (value, _) = read(text);
+        assert!(serde_json::to_string(&value).unwrap().contains("Did"));
+    }
+    declines("Choose two players drawn this turn.");
+}
