@@ -98,6 +98,12 @@ pub trait Binding {
     /// (608.2h). Other predicates/actions may name its completed public-zone successor.
     fn amount_subject(&mut self, s: &ir::Selector) -> Res<Subject> { self.subject(s) }
 
+    /// The retained input of the immediately preceding movement, before its zone change
+    /// (608.2h/i). An ordinary reference alone does not prove that earlier time.
+    fn past_subject(&mut self, _: &ir::Selector) -> Res<Subject> {
+        unsupported("past condition: no retained movement input")
+    }
+
     /// Refuse scalar interpretations of a potentially replacement-expanded created group.
     fn singular_read(&self, _: &Subject) -> Res<()> { Ok(()) }
 

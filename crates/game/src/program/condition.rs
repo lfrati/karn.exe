@@ -528,6 +528,18 @@ impl Asks {
                 let ir::Condition::Controls { player, what, negated } = before.as_ref() else { unreachable!("matched") };
                 Asks::Controlled { players: Players::compile(player, support, &mut *bind)?, what: expr::Subject::compile(&what.items[0], &mut *bind)?, negated: *negated }
             }
+            ir::Condition::Was(before) if matches!(before.as_ref(), ir::Condition::Is { pred: Predicate::A(_), .. }) => {
+                let ir::Condition::Is { what, pred: Predicate::A(set), negated } = before.as_ref() else { unreachable!("matched") };
+                if set.domain != ir::Domain::Card || set.zone.is_some() || set.controller.is_some()
+                    || set.owner.is_some() || set.caster.is_some() || set.other {
+                    return unsupported("past condition: only a moved card's characteristics are implemented");
+                }
+                let filter = expr::Filter::compile(&set.filter, support, bind)?;
+                if !filter.printable() { return unsupported("past condition: only a moved card's characteristics are implemented"); }
+                let subject = bind.past_subject(what)?;
+                bind.singular_read(&subject)?;
+                Asks::Is { what: Thing::Named(subject), is: Is::Card(filter), negated: *negated, past: true }
+            }
             ir::Condition::Was(before) => {
                 let ir::Condition::Is { what, pred: Predicate::Has(ir::Filter::Atom(ir::Atom::Counters { kind, count })), negated } = before.as_ref() else {
                     return unsupported("past condition: only departure counter facts are implemented");

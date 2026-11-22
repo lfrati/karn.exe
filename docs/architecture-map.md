@@ -43,6 +43,11 @@ are recorded as ranges with whose object received each, and applied in APNAP ord
 that choice could change is refused and undone. `SIMULTANEOUS_ORDER` in
 [layers.rs](../crates/game/src/layers.rs) states exactly what is refused.
 
+Historical card predicates bind to the immediately preceding movement's retained input,
+using ordinary program slots and that incarnation's departure characteristics (608.2h/i).
+They do not follow the new object or infer an earlier time from an announced target alone.
+Other historical predicates remain refused unless their own producer supplies the facts.
+
 `Simulation` owns the gameplay boundary: correlated requests, chooser validation, accepted
 commands and viewer projections. `Game` also exposes low-level state access for fixtures and
 tooling; a direct state edit is not equivalent to a rules action. Player prompts expose only

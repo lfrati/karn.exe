@@ -54,17 +54,25 @@ including refusals, remain unchanged; these repairs add no compilation coverage.
 An independent Room copy-exception rebuilding defect is tracked separately in
 [#33](https://github.com/lfrati/karn.exe/issues/33), outside the initial queue.
 
-**Next: implement [#27, retained historical predicates](https://github.com/lfrati/karn.exe/issues/27),
-with Scavenging Ooze as the first full-card witness.** The coverage sequence is:
+Historical card predicates now retain the immediately preceding movement's actual input
+([#27](https://github.com/lfrati/karn.exe/issues/27)), reusing ordinary program slots and
+departure characteristics. Scavenging Ooze, Cling to Dust and General's Enforcer now compile:
+three whole-card gains, with no compilation losses and no additional complete roster main
+decks. Deluge of the Dead's face also compiles; Invasion of Innistrad still refuses, so that
+is not a whole-card gain. The batch passes `make check`: 4,766 rules tests and 1,115 tooling
+tests. Other historical predicates still need their own supported facts and producer proof.
+Repeated matched release replay medians are 0.6–1.8% lower than the baseline; no speedup
+is claimed. The profiling task below retains these measurements.
 
-1. [#27: retained historical predicates](https://github.com/lfrati/karn.exe/issues/27),
-   with Scavenging Ooze as a witness.
-2. [#28: counter results and destination self-replacements](https://github.com/lfrati/karn.exe/issues/28),
+**Next: implement [#28, counter results and destination self-replacements](https://github.com/lfrati/karn.exe/issues/28),
+with Remand and Memory Lapse.** The coverage sequence is:
+
+1. [#28: counter results and destination self-replacements](https://github.com/lfrati/karn.exe/issues/28),
    with Remand and Memory Lapse. Reuse the departure work from #6 where appropriate without
    conflating their different replacement rules.
-3. [#29: granted alternative costs](https://github.com/lfrati/karn.exe/issues/29),
+2. [#29: granted alternative costs](https://github.com/lfrati/karn.exe/issues/29),
    with Snapcaster Mage.
-4. [#30: typed coin results](https://github.com/lfrati/karn.exe/issues/30),
+3. [#30: typed coin results](https://github.com/lfrati/karn.exe/issues/30),
    with Mana Crypt.
 
 Re-rank coverage candidates against fresh blockers when the evidence justifies it. Trace

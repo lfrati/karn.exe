@@ -384,6 +384,8 @@ impl Instr {
 /// have asked for was not made and could not be (false, false); anything else the block
 /// bound is not known outside it.
 fn close_branch(instrs: &mut [Instr], at: usize, inner: &Binder, outer: &mut Binder) {
+    // A conditional body is not proof of one immediately preceding movement.
+    outer.past_inputs.clear();
     outer.completed_subject = outer.completed_subject.joined(inner.completed_subject);
     outer.alternative_result |= inner.alternative_result;
     outer.unrepresented_movement |= inner.unrepresented_movement;
@@ -1187,6 +1189,9 @@ struct Binder {
     groups: Vec<Group>,
     scalars: Vec<(Slot, Kind)>,
     subjects: Vec<Named>,
+    /// Original lexical names and the actual inputs of the last movement. These slots
+    /// retain the pre-move incarnation, independently of its public-zone successor.
+    past_inputs: Vec<(Slot, Slot)>,
     /// Where the text last said "this creature" of its own source: what "it" is in a later
     /// act, where nothing else can be meant. Not in the same act: "attach this Equipment
     /// to it" is not said of the Equipment, which would be "itself".
@@ -1330,6 +1335,15 @@ impl expr::Binding for Scoped<'_, '_> {
             Referent::Input(input) => Ok(expr::Subject::Input(input)),
             Referent::Source => Ok(expr::Subject::Source),
         }
+    }
+    fn past_subject(&mut self, s: &Selector) -> Res<expr::Subject> {
+        let expr::Subject::Local(named) = self.amount_subject(s)? else {
+            return unsupported("past condition: no retained movement input");
+        };
+        self.singular_read(&expr::Subject::Local(named))?;
+        self.binder.past_inputs.iter().find(|(name, _)| *name == named)
+            .map(|(_, input)| expr::Subject::Local(*input))
+            .ok_or_else(|| crate::Unsupported("past condition: no retained movement input".into()))
     }
     fn x(&mut self) -> bool {
         self.binder.x.as_ref().is_some_and(|read| { read.set(true); true })
@@ -3599,6 +3613,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
     let inherited_antecedents = (binder.subjects.len(), binder.source_named);
     binder.completed_subject = CompletedSubject::Other; // fresh body: no creator/sibling context
     let acts = text_steps(effect, support)?;
+    let past_reads = acts.iter().any(|step| matches!(step, TextStep::If(ir::Condition::Was(_), _)));
     reach.steps = acts.iter().map(TextStep::instructions).collect();
     // the clause each sentence begins with, under its leads
     fn head(sentence: &Sentence) -> Option<&Clause> {
@@ -4230,6 +4245,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
         };
         if std::ptr::eq(act, &clause.first) && heads.iter().any(|h| std::ptr::eq(*h, clause)) { e.sentence_targets = e.targets.len(); }
         if skip_rider { skip_rider = false; continue; }
+        binder.past_inputs.clear();
         // "For each opponent, you may discard a card": once for each of them, which an act
         // done once doesn't say
         if binder.each.is_some() && (clause.may || act.may || !(matches!(act.action, Action::Search { .. } | Action::Exile(_) | Action::Shuffle(ir::procedure::Shuffled::Default))
@@ -6040,6 +6056,24 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             } else { None };
             // the payment is offered after the act's targets are bound, before it is done
             if let Some((who, said)) = e.unless_said.take() { e.unless(&who, said, support, &mut binder)?; }
+            // Retain only a proven named input, and only in texts that read its past.
+            // Gather follows this occurrence's own public transitions; Subjects keeps
+            // that incarnation after the movement. Its departure snapshot already owns
+            // the characteristics (608.2h/i), so no second LKI store is needed.
+            if past_reads && let action::Action::Move { groups, .. } = &instruction {
+                for (objects, _) in groups {
+                    for object in objects {
+                        let action::Operand::Reference(old) = object else { continue };
+                        let names: Vec<_> = binder.subjects.iter()
+                            .filter(|named| named.slot == *old || named.object == Some(*old))
+                            .map(|named| named.slot).chain(std::iter::once(*old)).collect();
+                        let (cards, input) = (e.slot(), e.slot());
+                        e.instrs.push(Instr::Gather { objects: object.clone(), out: cards });
+                        e.instrs.push(Instr::Subjects { cards, out: input, still_in: None });
+                        binder.past_inputs.extend(names.into_iter().map(|name| (name, input)));
+                    }
+                }
+            }
             if investigate && times != 1 {
                 // each time is an action of its own, creating a Clue; what they created is all
                 // of those together, and nothing when it was done zero times
