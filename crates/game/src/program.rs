@@ -26,6 +26,7 @@ mod purpose;
 pub(crate) mod initial;
 pub mod arrange;
 pub mod piles;
+mod value_iteration;
 pub mod search;
 pub(crate) mod registration;
 pub(crate) mod footprint;
@@ -2066,6 +2067,8 @@ enum TextStep<'a> { Reflexive(&'a Sentence, &'a [Sentence], Option<&'a ir::Event
     /// "If that creature would die this turn, exile it instead.": a replacement kept for the
     /// objects it names (614.1a).
     ExiledInstead(&'a Selector),
+    /// One optional retained-card selection for each card type, committed together.
+    CardTypes(&'a Sentence),
     /// A keyword cost defined by the recipient's own mana cost (702.34a).
     KeywordCost(ir::Keyword, &'a Selector) }
 
@@ -2323,6 +2326,9 @@ fn text_steps<'a>(effect: &'a Effect, support: &Support<'_>) -> Res<Vec<TextStep
             Sentence::Led { lead: Lead::WhenManaSpent { on }, rest } => out.push(TextStep::ManaSpent(on, rest, sentence)),
             Sentence::Led { lead: Lead::Otherwise, rest } => {
                 out.push(TextStep::Otherwise); walk(rest, out)?; out.push(TextStep::EndIf);
+            }
+            Sentence::Led { lead: Lead::Modifier(ir::effect::Modifier::ForEachValue(ir::action::ValueKind::CardType)), rest } => {
+                out.push(TextStep::CardTypes(rest));
             }
             Sentence::Led { lead: Lead::Modifier(ir::effect::Modifier::If(condition)), rest } => {
                 out.push(TextStep::If(condition, true));
@@ -3683,6 +3689,7 @@ impl TextStep<'_> {
         match self {
             TextStep::Act(..) | TextStep::Rule(_) | TextStep::CastRider(_) | TextStep::ExiledInstead(_) | TextStep::KeywordCost(..) => (1, 0),
             TextStep::Alternative(clause) => (1 + clause.rest.len(), 0),
+            TextStep::CardTypes(rest) => (all(rest, &[]), 0),
             TextStep::Reflexive(rest, more, _, _) | TextStep::Later(_, _, rest, more, _) => (0, all(rest, more)),
             TextStep::Delayed(_, _, _, rest, _) | TextStep::ManaSpent(_, rest, _) => (0, all(rest, &[])),
             _ => (0, 0),
@@ -3853,6 +3860,11 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             _ => { binder.clause = None; binder.at = (usize::MAX, index); }
         }
         let (clause, act, alone) = match part {
+            TextStep::CardTypes(rest) => {
+                value_iteration::hand_selection(rest, support, &mut e, &mut binder)?;
+                e.end_act(true, None);
+                continue;
+            }
             TextStep::May(said_of) => {
                 if matches!(said_of.rest.last().map(|(_,a)| &a.action), Some(Action::Numbered(ir::NumberedAction::CollectEvidence, _))) {
                     if !controller_only(said_of.subject.as_ref()) || optional_groups != 0 || binder.each.is_some() {
