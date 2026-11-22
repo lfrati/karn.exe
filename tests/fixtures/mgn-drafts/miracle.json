@@ -1,0 +1,244 @@
+{
+  "mgn": "1",
+  "tier": 2,
+  "pins": {
+    "rules": {
+      "effective": "2026-09-25",
+      "sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
+    },
+    "oracle": {
+      "source": "scryfall-oracle-cards",
+      "sha256": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5",
+      "updated_at": "2026-10-11T09:01:56.463+00:00"
+    }
+  },
+  "game": {
+    "format": "custom",
+    "life": 20,
+    "hand_size": 7,
+    "seats": [
+      "A",
+      "B"
+    ]
+  },
+  "author": {
+    "kind": "tool",
+    "name": "mgn-scenario",
+    "version": "1"
+  },
+  "cards": {
+    "shock": {
+      "owner": "A",
+      "oracle": "a9d288b8-cdc1-4e55-a0c9-d6edfc95e65d",
+      "name": "Shock"
+    },
+    "mountain": {
+      "owner": "A",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain"
+    },
+    "wrath": {
+      "owner": "A",
+      "oracle": "78260893-c443-44c8-ab45-ce86ef347d98",
+      "name": "Thunderous Wrath"
+    },
+    "a2": {
+      "owner": "A",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain"
+    },
+    "b1": {
+      "owner": "B",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain"
+    },
+    "b2": {
+      "owner": "B",
+      "oracle": "a3fb7228-e76b-4e96-a40e-20b5fed75685",
+      "name": "Mountain"
+    }
+  },
+  "start": {
+    "kind": "position",
+    "state": {
+      "turn": {
+        "number": 1,
+        "step": "precombat_main",
+        "active": "A"
+      },
+      "pending": {
+        "kind": "priority",
+        "seat": "A"
+      },
+      "result": {
+        "kind": "unfinished"
+      },
+      "players": {
+        "A": {
+          "life": 20
+        },
+        "B": {
+          "life": 20
+        }
+      },
+      "zones": {
+        "A.library": [
+          "wrath",
+          "a2"
+        ],
+        "A.hand": [
+          "shock"
+        ],
+        "A.graveyard": [],
+        "B.library": [
+          "b1",
+          "b2"
+        ],
+        "B.hand": [],
+        "B.graveyard": [],
+        "battlefield": [
+          "mountain"
+        ],
+        "stack": [],
+        "exile": [],
+        "command": []
+      },
+      "objects": {}
+    }
+  },
+  "transitions": [
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast",
+        "card": "shock",
+        "targets": [
+          [
+            "B"
+          ]
+        ],
+        "pay": {
+          "abilities": [
+            {
+              "source": "mountain",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "R"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "turn": {
+          "number": 3,
+          "step": "draw",
+          "active": "A"
+        },
+        "pending": {
+          "seat": "A",
+          "kind": "optional",
+          "about": {
+            "object": "wrath"
+          }
+        },
+        "players": {
+          "B": {
+            "life": 18
+          }
+        },
+        "objects": {
+          "shock": {
+            "zone": "A.graveyard"
+          },
+          "b1": {
+            "zone": "B.hand"
+          },
+          "wrath": {
+            "zone": "A.hand"
+          }
+        }
+      }
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "optional",
+        "yes": true
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "cast_during_resolution",
+          "about": {
+            "object": "S1"
+          }
+        },
+        "objects": {
+          "S1": {
+            "zone": "stack",
+            "kind": "ability",
+            "source": "wrath",
+            "ability": {
+              "face": 0,
+              "paragraph": 2
+            },
+            "controller": "A"
+          }
+        }
+      }
+    },
+    {
+      "seat": "A",
+      "do": {
+        "kind": "cast_during_resolution",
+        "card": "wrath",
+        "cost": {
+          "kind": "alternative",
+          "keyword": "miracle"
+        },
+        "targets": [
+          [
+            "B"
+          ]
+        ],
+        "pay": {
+          "abilities": [
+            {
+              "source": "mountain",
+              "ability": {
+                "rule": "305.6"
+              },
+              "adding": [
+                "R"
+              ]
+            }
+          ]
+        }
+      },
+      "delta": {
+        "pending": {
+          "seat": "A",
+          "kind": "priority"
+        },
+        "players": {
+          "B": {
+            "life": 13
+          }
+        },
+        "objects": {
+          "wrath": {
+            "zone": "A.graveyard"
+          },
+          "S1": null,
+          "mountain": {
+            "tapped": true
+          }
+        }
+      }
+    }
+  ],
+  "note": "CR702.94a-b,121.2,608.2g: Shock is cast before the next real turn boundary. A explicitly reveals its first actual draw on turn3, then casts that exact Thunderous Wrath from hand for its printed Miracle cost with the named Mountain. The original trigger owns continuing reveal visibility; no declared draw history is assumed."
+}

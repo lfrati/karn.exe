@@ -122,9 +122,9 @@ fn granted_rebound_and_printed_flashback_apply_only_to_their_own_casts() {
     cite!(["702.88a"]; assert!(g.stack.is_empty(), "not cast from a hand: no rebound trigger"));
 }
 
-/// Keyword counters (122.1b) give their keyword to the permanent. One whose meaning the engine
-/// does not implement (decayed, banding, soulbond) is held as before, not a panic while its
-/// characteristics are read; supported ones (flying) keep functioning.
+/// CR 122.1b has a finite keyword-counter list: banding and soulbond counters
+/// are named markers. A raw fixture can retain an unimplemented decayed keyword
+/// without inventing executable abilities; admitting its placement remains refused.
 #[test]
 fn unsupported_keyword_counter_does_not_panic_reading_abilities() {
     for kind in ["flying", "banding", "soulbond", "decayed"] {
@@ -133,10 +133,19 @@ fn unsupported_keyword_counter_does_not_panic_reading_abilities() {
         g.put_counters(bear, kind, 1);
         let name = kind[..1].to_uppercase() + &kind[1..];
         // Any panic fails this ordinary assertion; no exception is accepted as a refusal.
-        cite!(["122.1b"]; case: kind; assert!(g.has(bear, &name), "the counter retains keyword identity"));
+        let keyword_counter = matches!(kind, "flying" | "decayed");
+        cite!(["122.1b"]; case: kind; assert_eq!(g.has(bear, &name), keyword_counter));
         assert!(g.abilities(bear).is_empty(), "no executable ability is invented");
         let cloned = g.clone();
-        assert!(cloned.has(bear, &name), "cloning preserves the held keyword");
+        assert_eq!(cloned.has(bear, &name), keyword_counter, "cloning preserves the counter's actual meaning");
+        let placement = CardDef::new("Counter placement", "{0}", "Instant",
+            &format!("Put a {kind} counter on target creature."), None).unwrap();
+        if kind == "decayed" {
+            crate::support::refused(game::play::check(&placement).map_err(|e| e.0), "keyword counter: Decayed");
+        } else {
+            // Uncited (admission): supported flying and cosmetic named counters compile.
+            game::play::check(&placement).unwrap();
+        }
         if kind != "flying" {
             let printed = CardDef::new("Unsupported", "{0}", "Creature — Bear", &name, Some((2, 2))).unwrap();
             crate::support::refused(game::play::check(&printed).map_err(|e|e.0),&format!("keyword: {name}"));

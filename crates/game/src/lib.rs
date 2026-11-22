@@ -64,6 +64,7 @@ mod permission;
 mod preparation;
 mod plot;
 mod suspend;
+mod miracle;
 pub mod foretell;
 mod saga;
 mod history;

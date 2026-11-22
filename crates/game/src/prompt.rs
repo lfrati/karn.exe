@@ -805,6 +805,7 @@ impl Simulation {
 /// lets them choose among without showing them to anyone else.
 fn question_objects(question: &Asked) -> Vec<ObjId> {
     match question {
+        Asked::Miracle { card, .. } => vec![*card],
         Asked::Search { cards, among, .. } => cards.iter().chain(among).copied().collect(),
         Asked::ConstrainedObjects { among, .. } | Asked::Select { among, .. } | Asked::Objects { among, .. } | Asked::OptionalObjects { among, .. } | Asked::Discard { among, .. } | Asked::Bottom { among, .. } => among.clone(),
         Asked::OrderCards { cards, .. } | Asked::LibraryDestination { cards, .. } | Asked::Arrange { cards, .. } | Asked::Cast { cards, .. } => cards.clone(),

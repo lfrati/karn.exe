@@ -301,6 +301,11 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
         }
         "Transmute" => generated(ability(item)?, true, vec![Context::PrintedOnly]),
         "Soulshift" => generated(ability(item)?, true, vec![Context::PermanentsOnly]),
+        "Miracle" => {
+            let Some(cost) = crate::miracle::cost(item) else { return refused(item) };
+            let ability = crate::miracle::trigger(&cost?);
+            Ok(Declared::new(vec![(hand, Gives::Asked), (hand, Gives::Ability(ability))], vec![Context::PrintedOnly]))
+        }
         "Madness" => {
             let Some(cost) = madness_cost(item) else { return refused(item) };
             let ability = madness_trigger(&cost);
@@ -380,6 +385,7 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
         "Undying" | "Persist" | "Extort" | "Living Weapon" | "Job Select" | "Prowess" | "Battle Cry" | "Renown" | "Annihilator" => generated(ability(item)?, true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
         "Affinity" => generated(ability(item)?, false, vec![Context::PrintedOnly]),
         "Cumulative Upkeep" => generated(ability(item)?, true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
+        "Echo" => generated(ability(item)?, true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
         "Bloodthirst" => generated(ability(item)?, true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
         "Vanishing" => generated_many(vanishing(item).ok_or_else(|| crate::Unsupported("keyword: Vanishing".into()))?,
             true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
@@ -393,7 +399,7 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
         }
         // Ward is held, so effects can grant it (613.1f); its trigger goes with each grant
         // ([`crate::layers::granted_bound`]), and each instance triggers on its own.
-        "Exalted" | "Flanking" | "Bushido" | "Evolve" | "Mentor" | "Fabricate" | "Dethrone" | "Afflict" => generated(ability(item)?, true, vec![Context::PermanentsOnly]),
+        "Exalted" | "Flanking" | "Bushido" | "Evolve" | "Mentor" | "Fabricate" | "Dethrone" | "Afflict" | "Training" | "Ingest" | "Rampage" => generated(ability(item)?, true, vec![Context::PermanentsOnly]),
         "Ward" => generated(ability(item)?, true, vec![Context::PermanentsOnly]),
         // held as ward is: "gains firebending 4 until end of turn" grants the trigger (613.1f)
         "Firebending" => generated(ability(item)?, true, vec![Context::PermanentsOnly]),

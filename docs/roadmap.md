@@ -147,12 +147,12 @@ expects `keyword: Fear`. When a keyword lands, point them at one that is still r
 
 *Skipped:*
 
-- Echo: direct rule expansion and a control-history condition need a since-last-upkeep history window; turn-only control duration is insufficient for repeated upkeeps.
+- Echo moved to Lane 4: printed fixed mana costs use observed per-player acquisitions and actual upkeep boundaries, including repeated upkeeps; nonmana costs, grants and unproved positioned history remain refused.
 - Unearth: the graveyard activation, haste and delayed exile lower, but the full rule and replacement adaptation still need an all-departure exile replacement.
 - Cascade moved to Lane 4: printed instances share the retained library scan with Discover, check the resulting spell's mana value and return uncast exiles in a captured random order; grants remain refused.
 - Suspend moved to Lane 4: fixed-count printed suspend now has its hand action, exile-counter scope and last-counter cast; variable announcements and grants remain refused.
 - Overload: rewriting a target-free effect lowers, but the full rule needs announcement-time text substitution and selection of that executable before targets are chosen.
-- Miracle: reveal-as-drawn and reveal-trigger expansions need draw-time suspension and a linked cost permission with the reveal's bounded visibility.
+- Miracle moved to Lane 4: printed mana/X costs pause the first actual draw for an explicit reveal and link their exact hand incarnation and price to a trigger. Visibility spans the original occurrence through resolution; grants, ambiguous same-row prices, unknown positioned first draws and deferred announcement-time disclosure remain refused.
 - Bestow: cost-only casting cannot declare Aura targets, and the alternative-characteristics owner accepts only Adventure/Omen instants or sorceries; needs a bestowed state through casting, illegal-target resolution and unattachment, preserving the permanent's incarnation.
 - Myriad: full and split rule expansions stop at mixed referent defenders and attacking-copy lowering; needs a per-opponent optional copy loop that preserves the chosen player/planeswalker constraint and captures the resulting group for delayed exile.
 
@@ -209,6 +209,11 @@ because it is what moves the deck count.
   before a resumable proposed turn. [#37](https://github.com/lfrati/karn.exe/issues/37) tracks
   retaining that candidate, competing skips and the follow-up in the next actual turn.
 
+- Oath of Druids: typed chooser/predicate lowering and an actor-owned optional reveal attempt
+  still stop at moving the matched creature and the other revealed cards to two destinations.
+  [#38](https://github.com/lfrati/karn.exe/issues/38) tracks the retained chooser/result partition;
+  incomplete experiments were removed.
+
 - Chain Lightning / Chain of Vapor: two narrowed copy probes still require optional
   copying, an explicit copy controller and one-target retargeting; existing stack-copy
   execution assigns the effect controller. Both complete cards remain refused.
@@ -237,7 +242,11 @@ way of saying one kind of thing, read wherever it occurs. [The grammar](grammar.
 method and the tool that finds the families. Cards no roster deck names still count toward
 the first goal: a family's rule covers them too.
 
-*Skipped:* none yet.
+*Skipped:*
+
+- Drain Life: direct capped-gain and scalar-minimum decompositions both stop in the amount
+  grammar. Needs receiver-specific ceilings and pre-damage life/loyalty snapshots; a current
+  statistic or a sum of recipient limits would change its meaning.
 
 #### Lane 4: mechanisms (worktree `mechanisms`)
 

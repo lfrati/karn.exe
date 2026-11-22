@@ -29,16 +29,11 @@ fn r401_library_placements_accept_supported_choices_and_refuse_unbound_owners() 
 }
 
 #[test]
-fn r400_7_qualified_graveyard_moves_compile_and_the_command_zone_stays_refused() {
-    // Uncited (admission): explicit graveyard origins qualify targets in either word order.
-    for text in [
-        "Put target creature card into your hand from your graveyard.",
-        "Return target creature card from your graveyard to your hand.",
-    ] {
-        assert!(checked(text).is_ok(), "{text}");
-    }
+fn r400_7_a_proved_postposed_source_runs_and_the_command_zone_stays_refused() {
+    assert!(checked("Put target creature card into your hand from your graveyard.").is_ok());
     crate::support::refused(checked("Return target creature card to the command zone."),
         "program: movement destination not lowered");
+    assert!(checked("Return target creature card from your graveyard to your hand.").is_ok());
 }
 
 #[test]

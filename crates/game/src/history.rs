@@ -22,6 +22,81 @@ pub(crate) const KEPT_A_TURN: [Verb; 1] = [Verb::Cast];
 /// what is kept is what can be asked, and nothing else is kept alive by it.
 const ALWAYS: [Verb; 3] = [Verb::Die, Verb::Cast, Verb::CommitCrime];
 
+/// Actual upkeep boundaries, including additional upkeeps in the same turn (702.30a).
+/// Sequence anchors survive log retirement; no events are kept alive by them.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct Upkeeps {
+    last: Option<crate::event::Seq>,
+    previous: Option<crate::event::Seq>,
+}
+impl Upkeeps {
+    fn began(&mut self, at: crate::event::Seq) { self.previous = self.last.replace(at); }
+    fn before(&self, current: bool) -> crate::event::Seq {
+        (if current { self.previous } else { self.last }).unwrap_or_default()
+    }
+}
+
+/// The last observed acquisition by each player, bounded by the number of players.
+/// A real entry establishes that every other player has never controlled this incarnation.
+/// A positioned object has unknown earlier history; a later acquisition proves only that
+/// player's fact, without erasing unknown history or another player's observed acquisition.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct ControlAcquisitions {
+    complete: bool,
+    last: Vec<(crate::PlayerId, crate::event::Seq)>,
+}
+impl ControlAcquisitions {
+    pub(crate) fn entered(player: crate::PlayerId, at: crate::event::Seq) -> Self {
+        Self { complete: true, last: vec![(player, at)] }
+    }
+    fn acquired(&mut self, player: crate::PlayerId, at: crate::event::Seq) {
+        if let Some((_, before)) = self.last.iter_mut().find(|(who, _)| *who == player) { *before = at; }
+        else { self.last.push((player, at)); }
+    }
+    fn since(&self, player: crate::PlayerId, from: crate::event::Seq) -> Option<bool> {
+        self.last.iter().find(|(who, _)| *who == player).map(|(_, at)| *at >= from)
+            .or_else(|| self.complete.then_some(false))
+    }
+}
+
+impl Game {
+    /// Called after the Began event. An acquisition before that event is before this
+    /// boundary; one after it may have the same log end and is included by `>=`.
+    pub(crate) fn record_upkeep_boundary(&mut self) {
+        let at = self.log.end(); let player = self.active;
+        self.players[player].upkeeps.began(at);
+    }
+    pub(crate) fn record_control_entry(&mut self, object: ObjId) {
+        let player = self.controller(object); let at = self.log.end();
+        self.obj_mut(object).control_acquisitions = ControlAcquisitions::entered(player, at);
+    }
+    pub(crate) fn record_control_acquisition(&mut self, object: ObjId, player: crate::PlayerId) {
+        let at = self.log.end(); self.obj_mut(object).control_acquisitions.acquired(player, at);
+    }
+    pub(crate) fn came_under_control_since_upkeep(&self, object: ObjId, player: crate::PlayerId) -> bool {
+        // Echo's intervening condition rechecks the historical acquisition, independently
+        // of who controls the source now. Its old incarnation retains this fact (608.2h).
+        let from = self.players[player].upkeeps.before(self.part == ir::Part::Upkeep && self.active == player);
+        if let Some(answer) = self.get_object(object).and_then(|object| object.control_acquisitions.since(player, from)) { return answer; }
+        self.defer_refusal(crate::Unsupported("control acquisition since last upkeep requires known history of this exact incarnation".into()));
+        false
+    }
+    pub(crate) fn validate_setup_control_history(&self) -> crate::Res<()> {
+        for object in &self.battlefield {
+            let Some(def) = self.def(*object) else { continue };
+            fn needs(value: &serde_json::Value) -> bool { match value {
+                serde_json::Value::Object(fields) => fields.contains_key("CameUnderControl") || fields.values().any(needs),
+                serde_json::Value::Array(items) => items.iter().any(needs), _ => false,
+            } }
+            if serde_json::to_value((&def.abilities, &def.keyword_abilities, &def.modes)).is_ok_and(|value| needs(&value))
+                && self.obj(*object).control_acquisitions.since(self.controller(*object), crate::event::Seq::default()).is_none() {
+                return crate::unsupported("initial permanent requires known control acquisition/upkeep history");
+            }
+        }
+        Ok(())
+    }
+}
+
 /// Does any of these cards look back at what happened in a turn: "if you attacked this turn",
 /// "creatures that died this turn", "for the first time each turn"? Read from the text as
 /// written, wherever it is (a granted ability, a token's), not as lowered.
@@ -106,6 +181,8 @@ pub(crate) struct ThisTurn {
     // Event-time type counts, bounded by seats × card types. No object/history retention.
     entries: Vec<(crate::PlayerId, ir::CardType, usize)>,
     draws: Vec<u32>,
+    /// A declared mid-turn position supplies no completed-draw history.
+    draws_unknown: bool,
     life_lost: Vec<u32>,
     departures: Vec<usize>,
     /// Which source dealt damage to what, once each and whether in combat: "dealt damage by ~
@@ -137,6 +214,11 @@ pub(crate) struct ThisTurn {
 }
 
 impl ThisTurn {
+    /// A declared position omits earlier draws; this is distinct from observing none.
+    pub(crate) fn is_initial_position_history(&self) -> bool {
+        self == &Self { draws_unknown: true, ..Self::default() }
+    }
+
     fn of(&self, turn: Turn) -> &[Fact] {
         match turn { Turn::This => &self.now, Turn::Last => &self.last }
     }
@@ -427,6 +509,12 @@ impl Game {
     /// ordinal until delivery, so several draws can finish before any trigger is stacked.
     /// Also counted, within a player's own draw step: "except the first one they draw in each
     /// of their draw steps" (the turn-based draw only if it was not replaced).
+    pub(crate) fn declare_initial_draw_history(&mut self) {
+        self.this_turn.draws.clear(); self.this_turn.draw_step = 0;
+        self.this_turn.draws_unknown = true;
+    }
+    pub(crate) fn draw_history_known(&self) -> bool { !self.this_turn.draws_unknown }
+
     pub(crate) fn note_draw(&mut self, player: crate::PlayerId) -> (u32, Option<u32>) {
         let seats = self.players.len();
         self.this_turn.draws.resize(seats, 0);
@@ -489,6 +577,7 @@ impl Game {
         self.this_turn.entries.clear();
         self.this_turn.departures.clear();
         self.this_turn.draws.clear();
+        self.this_turn.draws_unknown = false;
         self.this_turn.life_lost.clear();
         self.this_turn.damaged.clear();
         self.this_turn.attacked.clear();

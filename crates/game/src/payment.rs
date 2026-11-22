@@ -75,6 +75,7 @@ pub(crate) enum Finish {
     Effect,
 }
 impl Payment {
+    pub(crate) fn announcement_in_progress(&self) -> bool { matches!(self.undo, Undo::Spell { .. } | Undo::Ability { .. }) }
     pub(crate) fn audit_child(mut self, scope: Option<Box<crate::payment_audit::Scope>>) -> Self { self.audit=scope; self }
     pub(crate) fn companion(player: PlayerId, card: ObjId, cost: Plan, steps: &[Step], with: Option<&Pool>) -> Self {
         Self {audit:None,next_child:0,library_tops:None,permission:None,player,source:card,ctx:Ctx::new(player,card),finish:Finish::Companion,undo:Undo::Companion,triggers:0..0,cost,steps:steps.iter().cloned().collect(),paying:Vec::new(),with:with.cloned(),waiting:false,committing:None,interactive:false,reports:false}
@@ -248,7 +249,7 @@ impl Payment {
                 let tapped: Vec<ObjId> = bound.inputs.iter().find(|(i, _)| *i == crate::program::input::Input::Cost(0))
                     .map(|(_, paid)| paid.iter().filter_map(|t| if let crate::Target::Object(o) = t { Some(*o) } else { None }).collect())
                     .unwrap_or_default();
-                if crew { bound.crew = Some(tapped.clone()); }
+                if crew && bound.crew.is_none() { bound.crew = Some(Vec::new()); }
                 if let Some(ability) = on_stack { game.obj_mut(*ability).bound = bound.clone(); }
                 game.log.push(Event::Activated { source: self.source, by: self.player, ability: *on_stack, keyword: *keyword });
                 if let Some(ability) = on_stack { game.announcement_crime(self.player, *ability); }
@@ -326,7 +327,7 @@ impl Commitment {
                 Part::Loyalty(o, n) => {
                     game.remove_counters(o, "loyalty", n.unsigned_abs());
                 },
-                Part::RemoveCounters { on, kind, count } => { game.remove_counters(on, &kind, count); },
+                Part::RemoveCounters { on, kind, count, .. } => { game.remove_counters(on, &kind, count); },
                 // blight N (701.68a)
                 Part::Blight { .. } => unreachable!("counter cost handled above"),
                 // "Tap two untapped creatures you control": one event (118.3, 603.2c)

@@ -27,6 +27,7 @@ enum Change {
 #[derive(Debug, Clone)]
 enum Phase {
     Propose,
+    Miracle { card: crate::ObjId, instances: Vec<(usize, ir::mana::ManaCost)>, cursor: usize },
     Asked(Vec<(ReplacementId, Change)>),
     Child { count: u32, applied: Vec<ReplacementId> },
     WaitingChild,
@@ -53,17 +54,36 @@ impl Drawing {
         Self { players, cursor: 0, applied: Vec::new(), phase: Phase::Propose, choices: Vec::new() }
     }
     pub(crate) fn waiting(&self) -> bool { match &self.phase {
-        Phase::Asked(_) => true, Phase::Move { batch, .. } | Phase::Mill { batch, .. } => batch.waiting(), _ => false,
+        Phase::Asked(_) | Phase::Miracle { .. } => true, Phase::Move { batch, .. } | Phase::Mill { batch, .. } => batch.waiting(), _ => false,
     } }
 
-    fn draw_one(&mut self, game: &mut Game, player: PlayerId) {
+    fn after_draw(&mut self, game: &mut Game, card: crate::ObjId, ordinal: u32) -> crate::Res<()> {
+        if ordinal != 1 || !game.begun() { return Ok(()); }
+        let instances = game.def(card).into_iter().flat_map(crate::miracle::instances).map(|(_, cost, index)| {
+            let [ir::CostPart::Mana(mana)] = cost.0.as_slice() else { unreachable!("a supported Miracle cost is mana") };
+            (index, mana.clone())
+        }).collect::<Vec<_>>();
+        if instances.is_empty() { return Ok(()); }
+        if !game.draw_history_known() {
+            return crate::unsupported("miracle: the declared position does not supply earlier draws this turn (702.94a)");
+        }
+        if game.procedures.iter().any(|procedure| matches!(procedure, crate::procedure::Procedure::Payment(payment) if payment.announcement_in_progress())) {
+            return crate::unsupported("miracle: revealing after an unfinished announcement requires deferred draw disclosure (121.8)");
+        }
+        self.phase = Phase::Miracle { card, instances, cursor: 0 };
+        Ok(())
+    }
+
+    fn draw_one(&mut self, game: &mut Game, player: PlayerId) -> crate::Res<()> {
         if let Some(top) = game.top_cards(player, 1).first().copied().filter(|c| game.is_commander(*c)) {
             self.phase = Phase::Move { batch: crate::departure::Batch::new(game, vec![(top, crate::departure::Kind::RuleMove(Zone::Hand))]), drawn: Some(top) };
         } else {
             // No commander destination replacement can apply to this ordinary draw.
-            game.commit_draw(player);
+            let drawn = game.commit_draw(player);
             self.players[self.cursor].1 -= 1;
+            if let Some((card, ordinal)) = drawn { self.after_draw(game, card, ordinal)?; }
         }
+        Ok(())
     }
 
     fn offered(&self) -> Decision {
@@ -121,12 +141,18 @@ impl Drawing {
                 if let Some(physical) = physical && let Some(card) = game.players[player].hand.iter().copied().find(|c| game.obj(*c).card_id == Some(physical)) {
                     let (ordinal, in_draw_step) = game.note_draw(player);
                     game.log.push(Event::Drew { player, card, ordinal, in_draw_step });
+                    self.after_draw(game, card, ordinal)?;
                 }
                 self.players[self.cursor].1 -= 1;
                 continue;
             }
             match &self.phase {
                 Phase::Move { .. } | Phase::Mill { .. } => unreachable!("movement handled above"),
+                Phase::Miracle { card, instances, cursor } => {
+                    let (ability, cost) = &instances[*cursor];
+                    return Ok(Some(Decision::Choose { player: self.players[self.cursor].0,
+                        choice: Choice::Miracle { card: *card, ability: *ability, cost: cost.clone() } }));
+                }
                 Phase::Asked(_) => return Ok(Some(self.offered())),
                 Phase::WaitingChild => unreachable!("only the top procedure advances"),
                 Phase::Child { count, applied } => {
@@ -177,11 +203,17 @@ impl Drawing {
                 self.phase = Phase::Asked(options);
                 return Ok(Some(self.offered()));
             }
-            self.draw_one(game, player);
+            self.draw_one(game, player)?;
         }
     }
 
     pub(crate) fn answer(&mut self, game: &mut Game, answer: Answer) -> crate::Res<()> {
+        if let Phase::Miracle { card, instances, cursor } = &mut self.phase {
+            if answer == Answer::Yes { game.reveal_miracle(*card, instances[*cursor].0); }
+            *cursor += 1;
+            if *cursor == instances.len() { self.phase = Phase::Propose; }
+            return Ok(());
+        }
         if let Phase::Move { batch, .. } | Phase::Mill { batch, .. } = &mut self.phase {
             let published = batch.choices().len();
             batch.answer(answer);
@@ -193,7 +225,7 @@ impl Drawing {
         match answer {
             Answer::No => {
                 assert!(options.iter().all(|(_, change)| matches!(change, Change::Dredge(_))));
-                self.draw_one(game, player);
+                self.draw_one(game, player)?;
             }
             Answer::Replacement(chosen) => {
                 let change = options.into_iter().find(|(id, _)| *id == chosen).expect("validated replacement").1;
@@ -226,15 +258,17 @@ impl Game {
     }
 
     /// Commit one unreplaced draw (121.1). Runtime callers must use the draw operation.
-    fn commit_draw(&mut self, player: PlayerId) {
+    fn commit_draw(&mut self, player: PlayerId) -> Option<(crate::ObjId, u32)> {
         match self.top_cards(player, 1).first().copied() {
             Some(top) => {
                 if let Some(card) = self.move_to(top, Zone::Hand, player) {
                     let (ordinal, in_draw_step) = self.note_draw(player);
                     self.log.push(Event::Drew { player, card, ordinal, in_draw_step });
+                    return Some((card, ordinal));
                 }
             }
             None => self.players[player].drew_from_empty = true,
         }
+        None
     }
 }

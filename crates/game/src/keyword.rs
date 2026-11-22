@@ -433,10 +433,12 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if let Some(ability) = saddle(item) { return Some(ability); }
     if let Some(ability) = affinity(item) { return Some(ability); }
     if let Some(ability) = cumulative_upkeep(item) { return Some(ability); }
+    if let Some(ability) = echo(item) { return Some(ability); }
     if let Some(ability) = bloodthirst(item) { return Some(ability); }
     if let Some(ability) = fabricate(item) { return Some(ability); }
     if let Some(ability) = bushido(item) { return Some(ability); }
     if let Some(ability) = afflict(item) { return Some(ability); }
+    if let Some(ability) = rampage(item) { return Some(ability); }
     if let Some(ability) = soulshift(item) { return Some(ability); }
     if let Some(ability) = renown(item) { return Some(ability); }
     if let Some(ability) = annihilator(item) { return Some(ability); }
@@ -532,8 +534,27 @@ fn triggered(item: &ir::token::KeywordInstance) -> Option<&'static Ability> {
         "Evolve" => Some(evolve()),
         "Mentor" => Some(mentor()),
         "Dethrone" => Some(dethrone()),
+        "Training" => Some(training()),
+        "Ingest" => Some(ingest()),
         _ => None,
     }
+}
+
+/// 702.115a: the damaged player exiles one library card, regardless of damage amount.
+fn ingest() -> &'static Ability {
+    static RULE: OnceLock<Ability> = OnceLock::new();
+    crate::token::init(&RULE, || CardDef::new("Ingest rule", "", "Creature",
+        "Whenever this creature deals combat damage to a player, that player exiles the top card of their library.", None)
+        .expect("the grammar reads rule 702.115a").abilities[0].clone())
+}
+
+/// 702.149a: another greater-power attacker is required at the attack event.
+/// Consumers of a successful "trains" event remain explicitly unsupported.
+fn training() -> &'static Ability {
+    static RULE: OnceLock<Ability> = OnceLock::new();
+    crate::token::init(&RULE, || CardDef::new("Training rule", "", "Creature",
+        "Whenever this creature attacks while you control another attacking creature with power greater than this creature's power, put a +1/+1 counter on this creature.", None)
+        .expect("the grammar reads rule 702.149a").abilities[0].clone())
 }
 
 /// 702.105a: the defender's life rank is checked by the attack event, not
@@ -680,6 +701,16 @@ fn cumulative_upkeep(item: &ir::token::KeywordInstance) -> Option<Ability> {
     CardDef::new("Cumulative upkeep rule", "", "Enchantment", &text, None).ok()?.abilities.into_iter().next()
 }
 
+/// 702.30a: a fixed mana echo cost is paid through the ordinary retained unless-payment.
+fn echo(item: &ir::token::KeywordInstance) -> Option<Ability> {
+    if item.keyword.name() != "Echo" { return None; }
+    let KeywordParam::Mana(mana) = &item.param else { return None };
+    if mana.0.is_empty() || mana.0.iter().any(|symbol| *symbol == crate::cost::X || symbol.mana_payments().is_none()) { return None; }
+    let cost: String = mana.0.iter().map(|symbol| format!("{{{}}}", symbol.text())).collect();
+    let text = format!("At the beginning of your upkeep, if this permanent came under your control since the beginning of your last upkeep, sacrifice this permanent unless you pay {cost}.");
+    CardDef::new("Echo rule", "", "Enchantment", &text, None).ok()?.abilities.into_iter().next()
+}
+
 /// 702.54a: the ordinary prospective-entry replacement checks damage history.
 fn bloodthirst(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if item.keyword.name() != "Bloodthirst" { return None; }
@@ -756,6 +787,14 @@ fn entry_counter_count(ability: &mut Ability, count: u32) {
     let ir::statics::StaticAct::Enters(arrivals) = action.as_mut() else { unreachable!("entry counters") };
     let [ir::statics::Arrival::Counters(on)] = arrivals.as_mut_slice() else { unreachable!("one counter kind") };
     on.counters.count = ir::Amount::Const(count);
+}
+
+/// 702.23a/b: count current blockers on resolution and freeze the resulting bonus.
+fn rampage(item: &ir::token::KeywordInstance) -> Option<Ability> {
+    if item.keyword.name() != "Rampage" { return None; }
+    let KeywordParam::Number(ir::Amount::Const(n)) = item.param else { return None };
+    let text = format!("Whenever this creature becomes blocked, it gets +{n}/+{n} until end of turn for each creature blocking it beyond the first.");
+    CardDef::new("Rampage rule", "", "Creature", &text, None).ok()?.abilities.into_iter().next()
 }
 
 /// 702.130a: the blocked occurrence retains its own defending player.
@@ -853,7 +892,8 @@ fn mobilize(item: &ir::token::KeywordInstance) -> Option<Ability> {
 /// Is this, of a card's abilities (the printed ones, then those [`executable_in`] makes, in
 /// order), a crew ability (702.122a)? "Becomes crewed" is said of its resolving (702.122e).
 pub(crate) fn crews(def: &CardDef, index: usize) -> bool {
-    made_by(def, index).is_some_and(|item| crew(item).is_some())
+    made_by(def, index).is_some_and(|item| item.keyword.name() == "Crew"
+        && matches!(item.param, KeywordParam::Number(ir::Amount::Const(_))))
 }
 
 /// Is this, of a card's abilities, a saddle ability (702.171a)? The creatures tapped to pay
@@ -868,7 +908,7 @@ pub(crate) fn ninjutsu(def: &CardDef, index: usize) -> bool {
 }
 
 /// Generated owner indices follow the cached declaration's exact ability order.
-fn generated_by(def: &CardDef) -> impl Iterator<Item = (usize, &Instance)> {
+pub(crate) fn generated_by(def: &CardDef) -> impl Iterator<Item = (usize, &Instance)> {
     def.keyword_declarations.iter().flat_map(|instance| {
         instance.declared.iter().flat_map(|d| &d.gives)
             .filter_map(move |(_, gives)| matches!(gives, Gives::Ability(_)).then_some(instance))
@@ -1007,9 +1047,13 @@ pub(crate) fn madness_cost(item: &ir::token::KeywordInstance) -> Option<ir::Cost
     }
 }
 
-/// Each madness ability of a card: the row printing it, its cost, and the index its triggered
-/// ability has among the card's abilities (after the printed ones, in the order
-/// [`executable_in`] makes them).
+/// Alternative prices available only through their owning linked keyword trigger:
+/// the printed cost row, cost, and generated trigger index (702.35a, 702.94a).
+pub(crate) fn offered_costs(def: &CardDef) -> Vec<(usize, ir::Cost, usize)> {
+    madness(def).into_iter().chain(crate::miracle::instances(def)).collect()
+}
+
+/// Each Madness instance's printed row, cost and exact generated trigger.
 pub(crate) fn madness(def: &CardDef) -> Vec<(usize, ir::Cost, usize)> {
     generated_by(def).filter_map(|(made, instance)| {
         madness_cost(&instance.item).map(|cost| (instance.row, cost, made))

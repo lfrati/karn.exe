@@ -297,6 +297,9 @@ def _cost(adapter, move, kind):
         choice = move.get("cost")
         rows = item.get("definition_rows", [])
         index = choice.get("alternative") if isinstance(choice, dict) else None
+        miracle = (type(index) is int and 0 <= index < len(rows) and keyword_name(rows[index]) == "miracle")
+        if miracle and not any(o.get("alternative") == index for o in selected):
+            _refuse("the exact Miracle alternative row has no captured linked permission")
         paid_permission = (move["card"] in adapter.state["asked"].get("cards", [])
                            and move.get("cast_as", "whole") in ("whole", {"face": 0})
                            and type(index) is int and 0 <= index < len(rows)

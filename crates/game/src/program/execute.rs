@@ -268,7 +268,7 @@ pub(super) fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt
         }
         Instr::AddPhases { after, kinds, count } => {
             let count = count.checked(game, &f.ctx, f)?;
-            game.add_phases(*after, kinds, count);
+            game.add_phases(*after, kinds, count)?;
         }
         Instr::Copy { objects, from, turn } => {
             let affected = action::objects(game, f, objects);

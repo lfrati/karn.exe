@@ -336,6 +336,7 @@ impl EntryEvent {
             EntryRequest::Token { .. } => {
                 game.obj_mut(self.on).zone = Zone::Battlefield;
                 game.battlefield.push(self.on);
+                game.record_control_entry(self.on);
                 let attacking = self.entry.attacking;
                 let inventory = self.entry.frozen_counters.clone();
                 game.arrive(self.on, self.entry);

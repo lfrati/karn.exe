@@ -156,6 +156,12 @@ fn schema(support: &Support<'_>) -> Vec<Producer> {
             let mut result = Vec::new();
             for part in support.costs().into_iter().flat_map(|cost| &cost.0) {
                 let CostPart::Action(action) = part else { continue };
+                if let ir::Action::RemoveCounters { from: Some(from), .. } = action
+                    && from.quant == Quant::Indefinite(Count::Exactly(Amount::Const(1))) {
+                    result.push(Producer { input: Input::Cost(result.len()), paid_by: Some(ir::Verb::RemoveCounters), players: false, max: 1,
+                        standing: Standing::Introduced, said: true, described: vec![from.set.clone()] });
+                    continue;
+                }
                 let Some((verb, objects)) = crate::activate::object_payment(action) else { continue };
                 let max = objects.items.iter().try_fold(0u32, |sum, s| {
                     let n = match &s.quant { Quant::Definite(Ref::This) => 1,

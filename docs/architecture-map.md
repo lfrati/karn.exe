@@ -81,6 +81,28 @@ actual exile identities; its optional cast uses the ordinary permission and resu
 ceiling, then the existing library placement owner returns the remainder in a captured random
 order. Printed Cascade supports repeated instances; grants remain refused.
 
+Echo's fixed mana costs use the retained unless-payment owner. Historical control queries
+keep the last observed acquisition by each player on the exact incarnation, plus the last two
+actual upkeep boundaries of each player; retiring the event log does not lose those facts.
+A copied trigger uses its controller's window even if that player no longer controls the
+source. Current control is checked separately by sacrifice. Real entries establish complete
+history; positioned permanents with unproved acquisition history are refused. Nonmana Echo,
+grants and other control-history windows remain refused.
+
+Miracle pauses the retained draw operation after its first actual hand arrival and before
+another draw. Each printed instance has an explicit reveal question and its own linked
+trigger; only that trigger can offer its exact alternative-price row, from that hand
+incarnation. Reveals belong to the original occurrence across pending triggers, stack and
+resolution. Copying retains the cast link but does not extend the original reveal lifetime.
+Opening hands are outside any turn. Positioned first-draw history is unknown; a first observed
+Miracle draw there is refused, as are draws requiring deferred announcement-time disclosure
+under 121.8. Printed mana/X costs are supported; grants and same-row price ambiguity are refused.
+
+Additional beginning phases use the existing turn plan's untap/upkeep/draw steps, preserving
+the current turn and its history. Extra beginning phases on the starting player's first
+two-player turn remain refused until draw omission is represented; additional ending phases
+still require a cleanup continuation.
+
 Ninjutsu retains the returned attacker's defender. Its rules text includes battles under
 702.49c; execution supports players and planeswalkers. Battle combat and protectors (310.8)
 remain unsupported.

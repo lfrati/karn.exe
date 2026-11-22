@@ -126,7 +126,8 @@
 //! information and choices; only the decision-maker may answer, using the actor's resources.
 //!
 //! Any request may say whom its answer is shown to: `"viewer":0`, or `"viewer":"asked"` for
-//! the player the game is waiting for, which is how a program playing a seat asks. That player
+//! the player the game is waiting for, which is how a program playing a seat asks. A different
+//! seat sees only `"kind":"waiting"` for a private Miracle reveal question. That player
 //! is shown what they may see (CR 400.2, 402.3): their own hand, how many cards the other
 //! hands and the libraries have, what is asked only when it is asked of them, and in
 //! `"events"` what happened since they last looked, a card they could not see left null; and
@@ -611,6 +612,7 @@ fn render_asked(g: &Game, question: Option<(usize, Asked)>) -> Value {
             game::state::ActionOptionBody::Create { tokens } => json!({"index":option.index,"action":"Create","tokens":tokens.iter().map(|(kind,count)|json!({"name":kind.name(),"count":count})).collect::<Vec<_>>()}),
         }).collect::<Vec<_>>() }),
         // what it lets the player do, when the instruction says (608.2d)
+        Asked::Miracle { card, ability, cost } => json!({ "kind": "miracle", "card": oid(card), "ability": ability, "cost": mana(&cost.0) }),
         Asked::May => match g.optional() {
             Some((verb, to)) => json!({ "kind": "may", "optional": { "verb": format!("{verb:?}"), "to": to.map(placement) } }),
             None => json!({ "kind": "may" }),
@@ -1052,7 +1054,10 @@ fn render_snapshot(seen: &Snapshot, mut asking: Value, logged: &mut Delivery) ->
     if let (Some(v), Some(player)) = (viewer, asking.get("player").and_then(Value::as_u64)) {
         if player as usize != v && asking.get("acting").and_then(Value::as_u64) != Some(v as u64) {
             let acting=asking.get("acting").cloned();
-            asking = json!({ "kind": asking["kind"], "player": player });
+            // A private draw-time reveal decision does not identify the drawn keyword
+            // to another seat (402.3, 702.94a). That seat only knows whom it waits for.
+            let kind = if asking["kind"] == "miracle" { json!("waiting") } else { asking["kind"].clone() };
+            asking = json!({ "kind": kind, "player": player });
             if let Some(acting)=acting { asking["acting"]=acting; }
         }
     }

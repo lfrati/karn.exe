@@ -270,6 +270,25 @@ impl Game {
                     "without_paying":permission.costs==Costs::Free,"during_resolution":true}));
             }
         }
+        // A linked Miracle price is evidence only for its exact offered row. Ordinary
+        // hand casts and another accepted instance cannot inherit this permission.
+        for player in 0..self.players.len() {
+            for (row, _, _) in crate::miracle::instances(def) {
+                for choice in choices.iter().copied() {
+                    if !def.spell(choice).is_ok_and(|spell| !spell.is(ir::CardType::Land)) { continue; }
+                    let selected = CastCost::Alternative(row);
+                    let Ok(Some(permission)) = self.cast_permission(player, source, choice, selected) else { continue; };
+                    if permission.window != Window::Offered || permission.costs != Costs::Only(selected) { continue; }
+                    let cast_as = match choice {
+                        CastAs::Whole => json!("whole"), CastAs::Half(index) => json!(index),
+                        CastAs::Fused => json!("fused"), CastAs::Adventure => json!("adventure"),
+                        CastAs::Omen => json!("omen"), CastAs::Face(index) => json!({"face": index}),
+                    };
+                    rows.push(json!({"player": player, "cast_as": cast_as, "without_paying": false,
+                        "during_resolution": true, "alternative": row}));
+                }
+            }
+        }
         json!(rows)
     }
 
@@ -570,7 +589,7 @@ impl Game {
         if self.players.len()!=2 || self.turn==0 || self.active>=2
             || !self.ordinary_turn_suffix() || self.plan!=crate::turn::TurnPlan::at(self.turn,self.part,0)
             || self.active!=(self.turn as usize-1)%2
-            || self.this_turn!=crate::history::ThisTurn::default()
+            || !self.this_turn.is_initial_position_history()
             || self.log.start()!=self.log.end()
             || !self.activation_started.is_empty() || !self.ability_uses.is_empty()
             || !self.until.is_empty() || !self.lasting.is_empty() || !self.skips.is_empty() || !self.shields.is_empty()
@@ -1344,6 +1363,10 @@ mod turn_bookkeeping_tests {
             assert_eq!(actual["consecutive_passes"],1);
             assert_eq!(actual["land_plays_this_turn"],json!({"A":1,"B":0}));
             assert_eq!(game.audit_initial_history().unwrap()["land_plays_this_turn"],json!({"A":1,"B":0}));
+            let mut drawn=game.clone();
+            drawn.note_draw(holder);
+            assert_eq!(drawn.audit_initial_history(),Err("initial causal history no longer representable".into()),
+                "actual completed draws do not fit the declared position's unknown draw history");
             game.act(holder,Move::Pass).unwrap();
             assert_eq!(game.part,Part::BeginningOfCombat);
             assert_eq!(game.audit_turn_bookkeeping()["consecutive_passes"],0);
@@ -1369,7 +1392,7 @@ mod turn_bookkeeping_tests {
                 0=>{changed.extra_turn(1,None);},
                 1=>{changed.control_next_turn(1,0);},
                 2=>changed.add_skip(&[0],crate::turn::Occurrence::Part(Part::Draw),false,None,None),
-                _=>{changed.add_phases(ir::action::AfterPhase::This,&[ir::turn::Phase::Combat],1);},
+                _=>{changed.add_phases(ir::action::AfterPhase::This,&[ir::turn::Phase::Combat],1).unwrap();},
             }
             let before = format!("{changed:?}");
             assert_eq!(changed.audit_turn_bookkeeping(), json!({"unavailable":"nonordinary turn schedule, phase suffix, skip or turn control"}));

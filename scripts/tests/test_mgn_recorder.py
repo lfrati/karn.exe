@@ -231,6 +231,43 @@ class OpeningHandReplayTests(unittest.TestCase):
 
 @unittest.skipUnless(ENGINE.is_file(), "build target/fast/game-serve to record MGN games on Karn")
 class RecorderTests(unittest.TestCase):
+    def test_miracle_first_draw_reveal_and_exact_linked_cost_round_trip(self):
+        # 702.94/121.2/608.2g: the real next turn establishes first-draw history.
+        driver = ROOT / "tests/fixtures/mgn-drafts/miracle.json"
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "miracle"
+            from_driver(driver, out, ENGINE, ORACLE, tier=2)
+            self.assertEqual((out / "draft.json").read_bytes(), driver.read_bytes())
+            saved = record(out / "record.json")
+            problems = []
+            state = State.from_record(saved, problems)
+            for index, transition in enumerate(saved["transitions"]):
+                state.apply(transition["delta"], transition.get("random", []), f"transitions.{index}.delta", problems)
+            self.assertEqual(problems, [])
+            self.assertEqual(state.turn, {"number": 3, "step": "draw", "active": "A"})
+            self.assertEqual(state.zone_of("wrath"), "A.graveyard")
+            self.assertEqual(state.players["B"]["life"], 13)
+            self.assertEqual(saved["transitions"][1]["do"], {"kind": "optional", "yes": True})
+            self.assertEqual(saved["transitions"][2]["do"]["cost"], {"kind": "alternative", "keyword": "miracle"})
+
+    def test_echo_history_is_established_by_the_recorded_cast_before_paying_its_cost(self):
+        # 702.30a/603.4/118.12: the start asserts no unknown battlefield Echo history.
+        driver = ROOT / "tests/fixtures/mgn-drafts/echo.json"
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "echo"
+            from_driver(driver, out, ENGINE, ORACLE, tier=2)
+            self.assertEqual((out / "draft.json").read_bytes(), driver.read_bytes())
+            saved = record(out / "record.json")
+            problems = []
+            state = State.from_record(saved, problems)
+            for index, transition in enumerate(saved["transitions"]):
+                state.apply(transition["delta"], transition.get("random", []), f"transitions.{index}.delta", problems)
+            self.assertEqual(problems, [])
+            self.assertEqual(state.turn, {"number": 3, "step": "upkeep", "active": "A"})
+            self.assertEqual(state.zone_of("jaguar"), "battlefield")
+            self.assertEqual(state.players["A"].get("mana", {}), {})
+            self.assertEqual(state.zones["B.hand"], ["b1"])
+
     def test_cascade_decline_records_the_supplied_random_return_order(self):
         # 702.85a: the authored driver supplies the order, rather than an engine seed.
         driver = ROOT / "tests/fixtures/mgn-drafts/cascade.json"

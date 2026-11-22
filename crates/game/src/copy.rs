@@ -374,6 +374,7 @@ impl Game {
         // and the division announced, which new targets do not change (707.10, 115.7f)
         made.division = old.division;
         made.replicated = old.replicated; made.gift = old.gift; made.announced = old.announced; made.bound = old.bound;
+        made.bound.revealed_through_resolution.clear();
         made.bound.inputs.retain(|(i,_)|*i!=crate::program::input::Input::Convoked);
         made.invocations = old.invocations.map(|invocations| invocations.map(|mut invocations| {
             for invocation in &mut invocations {

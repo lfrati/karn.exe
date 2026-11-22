@@ -484,11 +484,12 @@ impl Rule {
     pub(crate) fn exiled_instead_of_dying(s: &ir::statics::Static) -> Option<&ir::Selector> {
         use ir::statics::{Static, Substitute};
         let Static::Replacement(r) = s else { return None };
-        if r.next_time || !r.this_turn || r.while_.is_some() || r.instead_first || r.event.counted()
-            || r.event.during.is_some() || r.event.condition.is_some() || r.event.cause.is_some()
-            || r.event.nth_each_turn.is_some() || r.event.except_nth_in_step.is_some() { return None; }
-        let [who] = r.event.subjects.as_slice() else { return None };
-        let [ir::EventAction::Deed(deed)] = r.event.actions.as_slice() else { return None };
+        let event = r.single_event()?;
+        if r.next_time || !r.this_turn || r.while_.is_some() || r.instead_first || event.counted()
+            || event.during.is_some() || event.condition.is_some() || event.cause.is_some()
+            || event.nth_each_turn.is_some() || event.except_nth_in_step.is_some() { return None; }
+        let [who] = event.subjects.as_slice() else { return None };
+        let [ir::EventAction::Deed(deed)] = event.actions.as_slice() else { return None };
         if deed.verb != ir::Verb::Die || deed.passive || !deed.args.is_empty() { return None; }
         let Substitute::Body(body) = &r.with else { return None };
         let ir::Clause { subject: None, may: false, also: false, first, rest } = &body.first else { return None };

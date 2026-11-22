@@ -269,35 +269,34 @@ fn set_of_one(s: &Selector) -> Option<ObjectSet> {
         .then(|| s.set.clone())
 }
 
-/// The one subject and one action of a pattern without other modifiers.
-fn simple(p: &EventPattern) -> Option<(&Selector, &EventAction)> {
-    match (p.subjects.as_slice(), p.actions.as_slice(), p.nth_each_turn, &p.during) {
-        ([s], [a], None, None) => Some((s, a)),
-        _ => None,
-    }
+/// One subject and any of its actions, without other pattern modifiers.
+fn participant_shape(p: &EventPattern) -> Option<(&Selector, &[EventAction])> {
+    let [subject] = p.subjects.as_slice() else { return None };
+    (!p.actions.is_empty() && *p == EventPattern::new(vec![subject.clone()], p.actions.clone()))
+        .then_some((subject, &p.actions))
 }
 
-/// Members of a set that took part in an event: "creatures that died this turn", "opponents
-/// who lost life this turn" (the subject), "cards you've drawn this turn", "opponents you
-/// attacked this turn" (the object). The window is required: without it, "this turn" after the
-/// count would also read as the duration of the instruction.
+/// Members of a set that took part in an event: "cards you've drawn this turn",
+/// "cards you've cycled or discarded this turn", "opponents you attacked this turn".
+/// The window and one shared actor govern every alternative, not a sum of event counts.
 fn participants(set: &P<ObjectSet>) -> P<Amount> {
-    // subject relatives ("creatures that died this turn") are the set's own (selector Atom::Did)
-    let mut v = Vec::new();
-    // object relatives: "cards you've drawn", "opponents you attacked"; the perfect is Oracle's
-    // spelling after a player for casting, drawing, discarding and sacrificing
-    // (the verb, whether the perfect is the spelling printed)
-    let verbs = [(Verb::Cast, true), (Verb::Draw, true), (Verb::Discard, true), (Verb::Sacrifice, true), (Verb::Attack, false)];
-    // "opponents you attacked": the one attacked; the others, what it is done to
-    let mk = |verb: Verb, o: Selector| match verb {
-        Verb::Attack => EventAction::Attacks { alone: false, defender: vec![o], with: None },
-        verb => EventAction::does(verb, o),
+    let verbs: Vec<_> = crate::event::player_object_verbs().chain(std::iter::once(Verb::Attack)).collect();
+    let words = |form: Inflection| {
+        let one = table("participant action", verbs.iter().map(|v| (v.head(form), *v)).collect());
+        alt("participant actions", vec![
+            one.map(|v| Some(vec![v]), |v: &Vec<Verb>| (v.len() == 1).then(|| v[0])),
+            one.list("or"),
+        ])
     };
-    fn un(verb: Verb, a: &EventAction) -> Option<&Selector> {
-        match (verb, a) {
+    let mk = |verb: Verb, object: Selector| match verb {
+        Verb::Attack => EventAction::Attacks { alone: false, defender: vec![object], with: None },
+        verb => EventAction::does(verb, object),
+    };
+    fn object(verb: Verb, action: &EventAction) -> Option<&Selector> {
+        match (verb, action) {
             (Verb::Attack, EventAction::Attacks { alone: false, defender, with: None }) if defender.len() == 1 => Some(&defender[0]),
             (Verb::Attack, _) => None,
-            (verb, a) => match a.deed(verb)? {
+            (verb, action) => match action.deed(verb)? {
                 ir::Deed { passive: false, args, .. } => match args.as_slice() {
                     [(ir::Role::What, ir::Arg::Noun(what))] => Some(what),
                     _ => None,
@@ -306,55 +305,65 @@ fn participants(set: &P<ObjectSet>) -> P<Amount> {
             },
         }
     }
-    // the passive names no player: "spells cast this turn" (by anyone); "this way" after a bare
-    // participle is the selector's ("cards drawn this way")
-    let anyone = one_of(ObjectSet::of(Domain::Player));
-    let not_this_way = alt("window", vec![lit("this turn").to(When::ThisTurn), lit("this game").to(When::ThisGame)]);
-    for (verb, perfect) in verbs {
-        let (past, participle) = (verb.head(Inflection::Past), verb.head(Inflection::Participle));
-        let simple_past = past_subject().skip(&lit(&past));
-        let perfect_form = perfect_subject().skip(&lit(&participle));
-        let subject = if perfect {
-            alt("player and verb", vec![perfect_form, simple_past.alias()])
-        } else {
-            alt("player and verb", vec![simple_past, perfect_form.alias()])
-        };
-        let (anyone, anyone2) = (anyone.clone(), anyone.clone());
-        v.push(set.skip(&lit(&participle)).then(&not_this_way).map(
-            move |(set, when)| {
-                Some(Amount::Participants {
-                    pattern: Box::new(EventPattern::new(vec![anyone.clone()], vec![mk(verb, one_of(set))])),
-                    counted: Role::Object,
-                    when,
-                })
-            },
-            move |a| match a {
-                Amount::Participants { pattern, counted: Role::Object, when } if *when != When::ThisWay => {
-                    let (subject, action) = simple(pattern)?;
-                    (*subject == anyone2).then_some(())?;
-                    Some((set_of_one(un(verb, action)?)?, *when))
-                }
+    let make = move |set: ObjectSet, subject: Selector, verbs: Vec<Verb>, when| {
+        let actions: Vec<_> = verbs.into_iter().map(|verb| mk(verb, one_of(set.clone()))).collect();
+        actions.iter().all(|a| a.takes_subject(&subject) && a.roles_fit()).then(|| Amount::Participants {
+            pattern: Box::new(EventPattern::new(vec![subject], actions)), counted: Role::Object, when,
+        })
+    };
+    let parts = |amount: &Amount| -> Option<(ObjectSet, Selector, Vec<Verb>, When)> {
+        let Amount::Participants { pattern, counted: Role::Object, when: when @ (When::ThisTurn | When::ThisGame) } = amount else { return None };
+        let (subject, actions) = participant_shape(pattern)?;
+        let verbs = actions.iter().map(|action| match action {
+            EventAction::Attacks { .. } => Some(Verb::Attack),
+            EventAction::Deed(d) if !d.passive => Some(d.verb),
+            _ => None,
+        }).collect::<Option<Vec<_>>>()?;
+        let first = object(verbs[0], &actions[0])?;
+        if !actions.iter().zip(&verbs).all(|(action, verb)| object(*verb, action) == Some(first)
+            && action.takes_subject(subject) && action.roles_fit()) { return None; }
+        Some((set_of_one(first)?, subject.clone(), verbs, *when))
+    };
+    let window = alt("window", vec![lit("this turn").to(When::ThisTurn), lit("this game").to(When::ThisGame)]);
+    // A passive leaves the actor unbound: destruction may be caused by a rule rather
+    // than a player. Its counted object is the subject of the passive deed.
+    let make_passive = |set: ObjectSet, verbs: Vec<Verb>, when| {
+        let subject = one_of(set);
+        let actions: Vec<_> = verbs.into_iter().map(EventAction::undergoes).collect();
+        actions.iter().all(|a| a.takes_subject(&subject) && a.roles_fit()).then(|| Amount::Participants {
+            pattern: Box::new(EventPattern::new(vec![subject], actions)), counted: Role::Subject, when,
+        })
+    };
+    let passive = set.then(&words(Inflection::Participle)).then(&window).map(
+        move |((set, verbs), when)| make_passive(set, verbs, when),
+        move |amount| {
+            let Amount::Participants { pattern, counted: Role::Subject, when: when @ (When::ThisTurn | When::ThisGame) } = amount else { return None };
+            let (subject, actions) = participant_shape(pattern)?;
+            let verbs = actions.iter().map(|action| match action {
+                EventAction::Deed(d) if d.passive && d.args.is_empty() => Some(d.verb),
                 _ => None,
-            },
-        ));
-        v.push(set.then(&subject).then(&not_this_way).map(
-            move |((set, subject), when)| {
-                Some(Amount::Participants {
-                    pattern: Box::new(EventPattern::new(vec![subject], vec![mk(verb, one_of(set))])),
-                    counted: Role::Object,
-                    when,
-                })
-            },
-            move |a| match a {
-                Amount::Participants { pattern, counted: Role::Object, when } if *when != When::ThisWay => {
-                    let (subject, action) = simple(pattern)?;
-                    Some(((set_of_one(un(verb, action)?)?, subject.clone()), *when))
-                }
-                _ => None,
-            },
-        ));
-    }
-    alt("participants", v)
+            }).collect::<Option<Vec<_>>>()?;
+            let set = set_of_one(subject)?;
+            (make_passive(set.clone(), verbs.clone(), *when).as_ref() == Some(amount)).then_some(((set, verbs), *when))
+        },
+    );
+    let perfect = perfect_subject().then(&words(Inflection::Participle));
+    let past = past_subject().then(&words(Inflection::Past));
+    let said = |perfect: bool| move |(who, verbs): &(Selector, Vec<Verb>)| {
+        (verbs.iter().all(|v| *v != Verb::Attack) == perfect).then(|| (who.clone(), verbs.clone()))
+    };
+    let actor = alt("player and actions", vec![
+        perfect.map(Some, said(true)),
+        past.map(Some, said(false)),
+    ]);
+    let active = set.then(&actor).then(&window).map(
+        move |((set, (subject, verbs)), when)| make(set, subject, verbs, when),
+        move |amount| {
+            let (set, subject, verbs, when) = parts(amount)?;
+            Some(((set, (subject, verbs)), when))
+        },
+    );
+    alt("participants", vec![passive, active])
 }
 
 fn counted(n: Number) -> P<Amount> {

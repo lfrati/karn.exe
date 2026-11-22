@@ -67,7 +67,7 @@ ZONES = {"Library": "library", "Hand": "hand", "Graveyard": "graveyard", "Battle
 # the engine's question kinds (game-serve `render_asked`) as MGN pending kinds (spec 5)
 KINDS = {"priority": "priority", "attackers": "declare_attackers", "blockers": "declare_blockers",
          "divide": "assign_combat_damage", "order": "order_triggers", "targets": "choose_targets",
-         "modes": "choose_modes", "may": "optional", "objects": "choose_objects", "optional_objects": "choose_objects",
+         "modes": "choose_modes", "may": "optional", "miracle": "optional", "objects": "choose_objects", "optional_objects": "choose_objects",
          "select": "choose_objects", "search": "search", "arrange": "arrange", "library_destination": "library_destination",
          "pay": "pay", "alternative": "choose_alternative", "discard": "discard", "mulligan": "mulligan",
          "bottom": "bottom", "player": "choose_player", "number": "choose_number", "value": "choose_value",
@@ -1685,13 +1685,19 @@ class KarnAdapter:
                     if self._record_id(a.get("source", engine_id)) == cost.get("source")
                     and self._ability_ref(a, a.get("source", engine_id)) == cost.get("ability")]
         if not rows and keyword and (self.state.get("asked") or {}).get("kind") == "cast":
-            # CR 702.35a: the resolving madness trigger supplies the permission.
+            # The linked trigger supplies the permission. Miracle additionally exposes
+            # its exact offered alternative row; another instance's price is not enough.
             # The pending card domain and retained definition identify its paid cost.
             texts = self.audit["objects"][str(engine_id)].get("definition_rows", [])
-            if (engine_id in self.state["asked"].get("cards", []) and keyword == "madness"
+            offers = self.audit["objects"][str(engine_id)].get("offered_casts", [])
+            actor = self.state["asked"].get("acting", self.state["asked"]["player"])
+            linked_rows = {offer["alternative"] for offer in offers
+                           if offer.get("player") == actor and offer.get("cast_as") == move.get("cast_as", "whole")
+                           and type(offer.get("alternative")) is int}
+            if (engine_id in self.state["asked"].get("cards", []) and keyword in ("madness", "miracle")
                     and move.get("cast_as", "whole") in ("whole", {"face": 0})):
                 rows = [{"paragraph": i + 1} for i, text in enumerate(texts)
-                        if keyword_name(text) == keyword]
+                        if keyword_name(text) == keyword and (keyword == "madness" or i in linked_rows)]
         if len(rows) != 1:
             raise unsupported("unsupported_kind", f"alternative cost {json.dumps(cost)} matches {len(rows)} of the engine's rows")
         move["cost"] = {"alternative": rows[0]["paragraph"] - 1}
@@ -1814,7 +1820,7 @@ class KarnAdapter:
             return {"kind": "block", "blocks": []}
         if kind == "mulligan":
             return {"kind": "keep"}
-        if kind == "may":
+        if kind in ("may", "miracle"):
             return {"kind": "choose", "answer": "no"}
         if kind == "optional_objects":
             return {"kind": "choose", "answer": {"accept": False}}
@@ -2273,7 +2279,7 @@ class KarnAdapter:
             else:
                 pending["about"] = {"object": self._record_id(on["object"])}
             return pending
-        about = self._about_object()
+        about = self._record_id(asked["card"]) if asked["kind"] == "miracle" else self._about_object()
         if about is None:
             raise unsupported("unsupported_fact", f"the object a {kind} question is about cannot be told", "pending.about")
         pending["about"] = {"object": about}

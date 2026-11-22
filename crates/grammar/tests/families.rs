@@ -734,3 +734,216 @@ fn r601_3_scoped_casting_restrictions_and_caps() {
         "You can cast only one more spell this turn.",
     ] { declines(text); }
 }
+
+/// CR 702.29a and 608.2i: alternative actions share one participant query and time window.
+#[test]
+fn r702_29_alternative_object_participant_histories() {
+    let (value, _) = read("~ costs {2} less to cast for each card you've cycled or discarded this turn.");
+    read("Cycling {2}");
+    let ir::Ability::Text(effect) = value else { panic!() };
+    let ir::Sentence::Do(body) = &effect.0[0] else { panic!() };
+    let [ir::Modifier::ForEach(ir::Amount::Participants { pattern, counted, when })] = body.first.first.mods.as_slice() else { panic!() };
+    assert_eq!(*counted, ir::amount::Role::Object);
+    assert_eq!(*when, ir::amount::When::ThisTurn);
+    assert_eq!(pattern.subjects, vec![ir::Selector::you()]);
+    assert_eq!(pattern.actions.len(), 2);
+    for (action, verb) in pattern.actions.iter().zip([ir::Verb::Cycle, ir::Verb::Discard]) {
+        let ir::EventAction::Deed(deed) = action else { panic!() };
+        assert_eq!(deed.verb, verb);
+        assert!(!deed.passive);
+        assert_eq!(deed.what().unwrap().set.domain, ir::Domain::Card);
+    }
+    for text in [
+        "Draw a card for each card you've drawn or discarded this turn.",
+        "Draw a card for each card that player has cycled or discarded this game.",
+        "Gain life equal to the number of cards cycled or discarded this turn.",
+        "Draw a card for each spell you've cast or copied this turn.",
+        "Draw a card for each artifact you've sacrificed or exiled this turn.",
+        "Gain life equal to the number of opponents you attacked this turn.",
+    ] { read(text); }
+    let (past, _) = read("Draw a card for each card you cycled or discarded this turn.");
+    let (perfect, _) = read("Draw a card for each card you've cycled or discarded this turn.");
+    assert_eq!(past, perfect);
+    for text in [
+        "Draw a card for each opponent you've cycled or discarded this turn.",
+        "Draw a card for each spell you've cycled or discarded this turn.",
+        "Draw a card for each card you've cycled and discarded this turn.",
+        "Draw a card for each card you've cycled or discarded.",
+    ] { declines(text); }
+}
+
+/// CR 608.2c and 614.1a: a coordinated replacement stays inside its whole sentence's gate.
+#[test]
+fn r608_2c_instruction_followed_by_replacement() {
+    let (value, _) = read("~ deals X damage to any target. If it's a creature, it can't be regenerated this turn, and if it would die this turn, exile it instead.");
+    read("~ deals 3 damage to any target. If it's a creature, it can't be regenerated this turn, and if it would die this turn, exile it instead.");
+    read("Kicker {R}");
+    read("~ deals 2 damage to any target. If this spell was kicked, that creature can't be regenerated this turn and if it would die this turn, exile it instead.");
+    read("When you unlock this door, you may cast spells from your graveyard this turn, and if a card would be put into your graveyard from anywhere this turn, exile it instead.");
+    let ir::Ability::Text(effect) = value else { panic!() };
+    let ir::Sentence::Led { lead: ir::Lead::Modifier(ir::Modifier::If(condition)), rest } = &effect.0[1] else { panic!() };
+    assert!(matches!(condition, ir::Condition::Is { negated: false, .. }));
+    let ir::Sentence::Static(rule) = &**rest else { panic!() };
+    let ir::Static::After { body, join, rest } = &**rule else { panic!() };
+    assert_eq!(*join, ir::Join::CommaAnd);
+    assert!(matches!(body.first.first.action, ir::Action::Cant(_)));
+    assert_eq!(body.first.first.mods, vec![ir::Modifier::Duration(ir::Duration::ThisTurn)]);
+    assert!(matches!(&**rest, ir::Static::Replacement(_)));
+    read("Target creature gains trample until end of turn, and the next time it would die this turn, exile it instead.");
+    read("If a spell or ability an opponent controls causes you to discard a card, you may reveal that card and put it on top of your library instead of putting it anywhere else.");
+    declines("It can't be regenerated this turn, and if it would die this turn.");
+    declines("Target player can't be regenerated this turn, and if it would die this turn, exile it instead.");
+}
+
+
+/// CR 608.2i: a source-free passive does not require any player to have caused the event.
+#[test]
+fn r608_2i_passive_participants_keep_actor_unbound() {
+    let rule = &grammar::amount::amounts().for_each;
+    let text = "for each creature destroyed or exiled this turn";
+    let Outcome::Accepted { value, .. } = rule.parse_all(&tokenize(text)) else { panic!("{text}") };
+    let ir::Amount::Participants { pattern, counted, .. } = &value else { panic!() };
+    assert_eq!(*counted, ir::amount::Role::Subject);
+    assert_eq!(pattern.subjects.len(), 1);
+    assert_eq!(pattern.subjects[0].set.domain, ir::Domain::Permanent);
+    for action in &pattern.actions {
+        let ir::EventAction::Deed(deed) = action else { panic!() };
+        assert!(deed.passive && deed.args.is_empty());
+    }
+    let printed = rule.print_text(&value, false).unwrap();
+    let Outcome::Accepted { value: again, .. } = rule.parse_all(&tokenize(&printed)) else { panic!("{printed}") };
+    assert_eq!(value, again);
+    let Outcome::Accepted { value: active, .. } = rule.parse_all(&tokenize("for each creature you've destroyed or exiled this turn")) else { panic!() };
+    assert_ne!(value, active);
+    let ir::Amount::Participants { pattern, counted, .. } = active else { panic!() };
+    assert_eq!(counted, ir::amount::Role::Object);
+    assert_eq!(pattern.subjects, vec![ir::Selector::you()]);
+}
+
+/// CR 608.2c: a closed excluded reference cannot take the outer object's zone qualifier.
+#[test]
+fn r608_2c_closed_exclusions_before_zone_qualifiers() {
+    read("At the beginning of your upkeep, if ~ is in your graveyard, you may exile a black creature card other than ~ from your graveyard. If you do, return ~ to the battlefield.");
+    let (late, _) = read("Exile a black creature card other than ~ from your graveyard.");
+    let (early, _) = read("Exile a black creature card from your graveyard other than ~.");
+    assert_eq!(late, early);
+    let rule = &grammar::selector::selectors().selector_from;
+    let text = "a black creature card other than it from your graveyard";
+    let Outcome::Accepted { value, .. } = rule.parse_all(&tokenize(text)) else { panic!("{text}") };
+    assert_eq!(value.set.zone.as_ref().unwrap().zone(), Some(ir::Zone::Graveyard));
+    let ir::Filter::All(filters) = &value.set.filter else { panic!() };
+    let excluded = filters.iter().find_map(|filter| match filter {
+        ir::Filter::Not(inner) => match &**inner { ir::Filter::Atom(ir::Atom::Among(s)) => Some(s), _ => None },
+        _ => None,
+    }).unwrap();
+    assert_eq!(excluded.quant, ir::Quant::Definite(ir::Ref::Anaphor(ir::Anaphor::It)));
+    assert!(excluded.set.zone.is_none());
+    read("Destroy target creature other than ~ you control.");
+    // A complete noun can take its own following zone; preserve right association.
+    let Outcome::Accepted { value, .. } = rule.parse_all(&tokenize("a creature card other than a creature card in your graveyard")) else { panic!() };
+    assert!(value.set.zone.is_none());
+    declines("Exile a black creature card other than ~ from.");
+    declines("Destroy target player other than ~.");
+}
+
+/// CR 201.2c: different from a reference group requires a name and no shared name with any member.
+#[test]
+fn r201_2c_different_names_and_conjoined_properties() {
+    read("Whenever an Aura you control enters, if you cast it, you may search your library for an Aura card with mana value less than or equal to that Aura and with a different name than each Aura you control, put that card onto the battlefield attached to ~, then shuffle.");
+    // Tibalt's Trickery has the same predicate; its separate numeric-choice sentence is unread.
+    read("They exile cards from the top of their library until they exile a nonland card with a different name than that spell.");
+    let (joined, _) = read("Exile target creature with power 2 and with flying.");
+    let (plain, _) = read("Exile target creature with power 2 with flying.");
+    assert_eq!(joined, plain);
+    let (elided, _) = read("Exile an Aura card with mana value less than or equal to that Aura.");
+    let (explicit, _) = read("Exile an Aura card with mana value less than or equal to that Aura's mana value.");
+    assert_eq!(elided, explicit);
+    let (than, _) = read("Exile a card with a different name than that spell.");
+    let (from, _) = read("Exile a card with a different name from that spell.");
+    assert_eq!(than, from);
+    let rule = &grammar::selector::selectors().selector;
+    let text = "an Aura card with a different name than each Aura you control";
+    let Outcome::Accepted { value, .. } = rule.parse_all(&tokenize(text)) else { panic!("{text}") };
+    let ir::Filter::All(filters) = &value.set.filter else { panic!() };
+    let source = filters.iter().find_map(|f| match f {
+        ir::Filter::Atom(ir::Atom::DifferentNameFrom(source)) => Some(source), _ => None,
+    }).unwrap();
+    assert_eq!(source.quant, ir::Quant::Each);
+    assert_eq!(source.set.controller.as_ref().unwrap().who.as_ref(), &ir::Selector::you());
+    assert!(!filters.iter().any(|f| matches!(f, ir::Filter::Not(_))));
+    read("Exile a creature card with a different name than it from your graveyard.");
+    for text in [
+        "Exile a card with a different name than target player.",
+        "Exile a creature card and with flying.",
+        "Exile a card with a different name than.",
+        "Exile a card with mana value less than or equal to each Aura you control.",
+        "Exile a card with mana value less than or equal to that player.",
+    ] { declines(text); }
+}
+
+
+/// CR 400.1 and 603.2c: plural graveyards allow any owner without changing event batching.
+#[test]
+fn r603_2c_plural_graveyard_event_destinations() {
+    read("Whenever one or more creature cards are put into graveyards from anywhere, investigate. This ability triggers only once each turn.");
+    read("Destroy all artifacts, then ~ deals damage to each creature equal to the number of artifacts that were put into graveyards from the battlefield this turn.");
+    read("Exile up to two creature cards put into graveyards this way.");
+    let (plural, _) = read("Whenever one or more creature cards are put into graveyards from anywhere, draw a card.");
+    let (singular, _) = read("Whenever one or more creature cards are put into a graveyard from anywhere, draw a card.");
+    assert_eq!(plural, singular);
+    let ir::Ability::Triggered { trigger: ir::Trigger::Event { pattern, .. }, .. } = plural else { panic!() };
+    assert_eq!(pattern.subjects.len(), 1);
+    assert_eq!(pattern.subjects[0].quant, ir::Quant::Indefinite(ir::Count::AtLeast(ir::Amount::Const(1))));
+    let [ir::EventAction::PutIntoGraveyard { into, from: None }] = pattern.actions.as_slice() else { panic!() };
+    assert_eq!(into.quant, ir::Quant::Indefinite(ir::Count::Exactly(ir::Amount::Const(1))));
+    assert_eq!(into.set, ir::ObjectSet::of(ir::Domain::Player));
+    let (one, _) = read("Whenever a creature card is put into graveyards from anywhere, draw a card.");
+    assert_ne!(singular, one);
+    for text in [
+        "Whenever one or more creature cards are put into players from anywhere, draw a card.",
+        "Whenever one or more creature cards are put into your graveyards from anywhere, draw a card.",
+        "Whenever one or more players are put into graveyards from anywhere, draw a card.",
+    ] { declines(text); }
+}
+
+
+/// CR 614.1a and 700.4: complete alternative events keep their subject/action correlation.
+#[test]
+fn r614_1a_correlated_replacement_event_alternatives() {
+    let (value, _) = read("If a nontoken creature an opponent owns would die or a creature card not on the battlefield would be put into an opponent's graveyard, exile that card instead.");
+    let ir::Ability::Text(effect) = value else { panic!() };
+    let [ir::Sentence::Static(rule)] = effect.0.as_slice() else { panic!() };
+    let ir::Static::Replacement(replacement) = &**rule else { panic!() };
+    assert_eq!(replacement.event.conj, ir::Conj::Or);
+    let [battlefield, elsewhere] = replacement.event.items.as_slice() else { panic!() };
+    assert!(replacement.single_event().is_none());
+    assert_eq!(battlefield.subjects.len(), 1);
+    assert_eq!(battlefield.subjects[0].set.domain, ir::Domain::Permanent);
+    assert!(battlefield.subjects[0].set.owner.is_some());
+    let [ir::EventAction::Deed(deed)] = battlefield.actions.as_slice() else { panic!() };
+    assert_eq!(deed.verb, ir::Verb::Die);
+    assert!(!deed.passive && deed.args.is_empty());
+    assert_eq!(elsewhere.subjects.len(), 1);
+    assert_eq!(elsewhere.subjects[0].set.domain, ir::Domain::Card);
+    assert!(elsewhere.subjects[0].set.owner.is_none());
+    let ir::Filter::All(filters) = &elsewhere.subjects[0].set.filter else { panic!() };
+    assert!(filters.iter().any(|f| matches!(f, ir::Filter::Not(inner)
+        if matches!(&**inner, ir::Filter::Atom(ir::Atom::InZone(zone)) if zone.zone() == Some(ir::Zone::Battlefield)))));
+    let [ir::EventAction::PutIntoGraveyard { into, from: None }] = elsewhere.actions.as_slice() else { panic!() };
+    assert_ne!(into.as_ref(), &ir::Selector::you());
+    // A shared subject with alternative verbs remains the existing single event pattern.
+    let (shared, _) = read("If a creature would die or be exiled, exile it instead.");
+    let ir::Ability::Text(effect) = shared else { panic!() };
+    let ir::Sentence::Static(rule) = &effect.0[0] else { panic!() };
+    let ir::Static::Replacement(replacement) = &**rule else { panic!() };
+    assert_eq!(replacement.single_event().unwrap().actions.len(), 2);
+    read("The first time you would draw a card each turn, instead draw two cards.");
+    let (short, _) = read("Exile a creature card not on the battlefield.");
+    let (relative, _) = read("Exile a creature card that isn't on the battlefield.");
+    assert_eq!(short, relative);
+    for text in [
+        "If a creature would die and a card would be exiled, draw a card instead.",
+        "The first time a creature would die or a card would be exiled each turn, instead draw a card.",
+        "If a creature would die or a player would die, draw a card instead.",
+    ] { declines(text); }
+}

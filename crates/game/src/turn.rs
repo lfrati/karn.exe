@@ -216,6 +216,7 @@ impl Game {
         }
     }
     pub(crate) fn begin_checked(&mut self) -> crate::play::ActionResult<()> {
+        self.validate_setup_control_history()?;
         let next_id = self.plan.next_id;
         self.plan = TurnPlan::turn(self.turn, next_id);
         self.advance()
@@ -416,16 +417,20 @@ impl Game {
     /// progress, when it is the one named. The block most recently added comes first, and
     /// its phases stay together. They are phases of this turn, whoever's effect added them.
     /// Returns how many phases were added.
-    pub(crate) fn add_phases(&mut self, after: ir::action::AfterPhase, kinds: &[Phase], count: u32) -> usize {
+    pub(crate) fn add_phases(&mut self, after: ir::action::AfterPhase, kinds: &[Phase], count: u32) -> crate::Res<usize> {
         self.sync_plan();
-        let Some(current) = self.plan.phase() else { return 0 };
+        let Some(current) = self.plan.phase() else { return Ok(0) };
         let holds = match after {
             ir::action::AfterPhase::This => true,
             ir::action::AfterPhase::ThisMain => current.phase.main(),
             ir::action::AfterPhase::ThisCombat => current.phase == Phase::Combat,
         };
         if !holds || kinds.is_empty() || count == 0 {
-            return 0;
+            return Ok(0);
+        }
+        if kinds.contains(&Phase::Ending) { return crate::unsupported("additional ending phase requires a cleanup continuation (500.8)"); }
+        if self.turn == 1 && self.players.len() == 2 && kinds.contains(&Phase::Beginning) {
+            return crate::unsupported("additional beginning phase during the starting player's first turn: draw-step omission not implemented (103.8a)");
         }
         for _ in 0..count {
             for kind in kinds.iter().rev() {
@@ -434,7 +439,7 @@ impl Game {
             }
         }
         self.plan.modified = true;
-        kinds.len() * count as usize
+        Ok(kinds.len() * count as usize)
     }
 
     /// The next player in turn order takes their turn (500.1, 101.4): one land may be played in
@@ -480,6 +485,7 @@ impl Game {
         self.passes = 0;
         self.priority_from(self.active);
         self.log.push(Event::Began { part });
+        if part == Part::Upkeep { self.record_upkeep_boundary(); }
         self.begin_part_permissions(part);
         match part {
             // the active player untaps their permanents (502.3); no player receives priority

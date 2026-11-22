@@ -284,11 +284,11 @@ impl<'a> Support<'a> {
     }
     pub(crate) fn event(&self) -> Option<&'a ir::EventPattern> { self.event }
 
-    /// The madness ability whose triggered ability this text is, when it offers its card's cast
-    /// for this cost: its row (702.35a).
-    pub(crate) fn madness_offer(&self, cost: &ir::Cost) -> Option<usize> {
+    /// The linked keyword instance whose trigger offers this exact cost: its printed row
+    /// (702.35a, 702.94a), separately from the generated trigger's index.
+    pub(crate) fn linked_cost_offer(&self, cost: &ir::Cost) -> Option<usize> {
         let index = self.ability.clone()?.index;
-        crate::keyword::madness(self.def?).into_iter().find(|(_, said, trigger)| *trigger == index && said == cost).map(|(row, ..)| row)
+        crate::keyword::offered_costs(self.def?).into_iter().find(|(_, said, trigger)| *trigger == index && said == cost).map(|(row, ..)| row)
     }
 
     /// A self-cast offer keeps the source zone proved by this very ability's scope.
@@ -299,10 +299,8 @@ impl<'a> Support<'a> {
     pub(crate) fn suspend_offer(&self) -> bool { self.generated_by("Suspend") }
     pub(crate) fn generated_by(&self, name: &str) -> bool {
         let (Some(def), Some(key)) = (self.def, self.ability.clone()) else { return false };
-        let Some(index) = key.index.checked_sub(def.abilities.len()) else { return false };
-        def.keyword_declarations.iter().flat_map(|instance| instance.declared.iter().flat_map(move |declared|
-            declared.gives.iter().filter_map(move |(_, gives)| matches!(gives, crate::keyword::Gives::Ability(_)).then_some(instance))))
-            .nth(index).is_some_and(|instance| instance.item.keyword.name() == name)
+        crate::keyword::generated_by(def).find_map(|(index, instance)| (index == key.index).then_some(instance))
+            .is_some_and(|instance| instance.item.keyword.name() == name)
     }
     pub(crate) fn ability_key(&self) -> Option<crate::binding::AbilityKey> { self.ability.clone() }
     pub(crate) fn cost_exile_writer(&self, key: crate::binding::AbilityKey) -> bool {

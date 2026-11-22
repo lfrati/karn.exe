@@ -267,6 +267,17 @@ pub(crate) fn own_rule(v: Verb) -> bool {
         )
 }
 
+/// Regular player actions with one object slot; By is an optional passive agent.
+/// Counts and literal limits use these same role signatures rather than separate verb lists.
+pub(crate) fn player_object_verbs() -> impl Iterator<Item = Verb> {
+    Verb::ALL.iter().copied().filter(|v| {
+        let e = v.entry();
+        !own_rule(*v) && v.tail().is_empty() && e.doer == ir::lexicon::Doer::Player
+            && e.roles.first().is_some_and(|(role, _)| *role == Role::What)
+            && e.roles.iter().skip(1).all(|(role, _)| *role == Role::By)
+    })
+}
+
 /// Does the verb take what it is done to as its object ("sacrifices a creature")?
 fn transitive(v: Verb) -> bool {
     v.subject() == ir::SubjectIs::Doer && v.entry().roles.iter().any(|(r, _)| *r == Role::What)
@@ -613,9 +624,15 @@ fn moves(put: P<()>, returned: P<()>, says_anywhere: bool) -> (P<EventAction>, P
     // no "from" is from anywhere; an event says so, a reduced relative leaves it out
     let none = empty().map(|()| Some(None), |z: &Option<Zone>| z.is_none().then_some(()));
     let gy_from = alt("from zone", vec![gy_from, if says_anywhere { none.alias() } else { none }]);
+    // In an event, bare "graveyards" permits any destination owner, just as "a graveyard".
+    // The subject still says whether to match one card or a batch of one or more cards.
+    let anyone = Selector::new(Quant::Indefinite(ir::Count::Exactly(ir::Amount::Const(1))), ObjectSet::of(Domain::Player));
+    let graveyard_owner = alt("graveyard owner", vec![
+        s.possessive.skip(&lit("graveyard")),
+        lit("graveyards").to(anyone).alias(),
+    ]);
     let put_into_gy = put
-        .then_keep(&s.possessive)
-        .skip(&lit("graveyard"))
+        .then_keep(&graveyard_owner)
         .then(&gy_from)
         .map(
             |(into, from)| Some(EventAction::PutIntoGraveyard { into: Box::new(into), from }),

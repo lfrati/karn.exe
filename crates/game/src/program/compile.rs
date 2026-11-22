@@ -861,11 +861,11 @@ fn admitted(act: &ir::Act) -> Res<()> {
     match &act.action {
         Action::DrawUpTo(n) if !matches!(n, Amount::Const(_)) => unsupported("draw up to: fixed numeric bound required"),
         // what the turn plan does not hold: a skipped turn, every combat phase of a turn, an
-        // added beginning or ending phase, which needs added steps (500.10)
+        // added ending phase, which needs a cleanup continuation (500.8)
         Action::Static(s) if matches!(**s, ir::StaticAct::Skip(ir::statics::Skipped::ThatTurn)) => unsupported("skipping a named turn (614.10)"),
         Action::Static(s) if matches!(**s, ir::StaticAct::Skip(ir::statics::Skipped::CombatPhasesOfNextTurn)) => unsupported("skipping every combat phase of a turn (614.10a)"),
         Action::Static(s) if matches!(**s, ir::StaticAct::Skip(ir::statics::Skipped::Step { next: false, .. })) => unsupported("skipping a step that is not the next one (614.10)"),
-        Action::AdditionalPhase { kind: ir::turn::Phase::Beginning | ir::turn::Phase::Ending, .. } => unsupported("adding a beginning or ending phase (500.8; needs added steps)"),
+        Action::AdditionalPhase { kind: ir::turn::Phase::Ending, .. } => unsupported("adding an ending phase (500.8; cleanup continuation not implemented)"),
         Action::Create(tokens) if tokens.items.len() > 1 && tokens.conj != ir::Conj::And && tokens.conj != ir::Conj::Or => unsupported("unsupported token connective"),
         Action::DealDamage(hits) => hits.iter().flat_map(|h| &h.to.items).try_for_each(|to| crate::event::damage_recipient_ok(&to.set)),
         _ => Ok(()),
@@ -1017,6 +1017,7 @@ enum TextStep<'a> { Reflexive(&'a Sentence, &'a [Sentence], Option<&'a ir::Event
     ExiledInstead(&'a Selector),
     /// One optional retained-card selection for each card type, committed together.
     CardTypes(&'a Sentence),
+    CardPayments(&'a ObjectSet, &'a Sentence),
     /// A cost-component rider attached to the body's one proved mana producer.
     ManaGenericForbidden,
     /// A keyword cost defined by the recipient's own mana cost (702.34a).
@@ -1028,7 +1029,7 @@ enum TextStep<'a> { Reflexive(&'a Sentence, &'a [Sentence], Option<&'a ir::Event
 fn cast_rider(rule: &ir::statics::Static) -> Option<Vec<ir::CardType>> {
     let ir::statics::Static::Replacement(r) = rule else { return None };
     if r.next_time || r.while_.is_some() || r.this_turn || r.instead_first { return None; }
-    let p = &r.event;
+    let p = r.single_event()?;
     if p.counted() || p.during.is_some() || p.condition.is_some() || p.cause.is_some() { return None; }
     let ([s], [ir::EventAction::PutIntoGraveyard { into, from: None }]) = (p.subjects.as_slice(), p.actions.as_slice()) else { return None };
     if !crate::select::is_you(into) || !matches!(s.quant, Quant::Indefinite(Count::Exactly(Amount::Const(1))) | Quant::Definite(Ref::Anaphor(ir::Anaphor::That))) || s.set.domain != Domain::Spell
@@ -1279,6 +1280,10 @@ fn text_steps<'a>(effect: &'a Effect, support: &Support<'_>) -> Res<Vec<TextStep
             }
             Sentence::Led { lead: Lead::Modifier(ir::effect::Modifier::ForEachValue(ir::action::ValueKind::CardType)), rest } => {
                 out.push(TextStep::CardTypes(rest));
+            }
+            Sentence::Led { lead: Lead::Modifier(ir::effect::Modifier::ForEach(Amount::Count(set))), rest }
+                if value_iteration::life_or_top(rest).is_some() => {
+                out.push(TextStep::CardPayments(set, rest));
             }
             Sentence::Led { lead: Lead::Modifier(ir::effect::Modifier::If(condition)), rest } => {
                 out.push(TextStep::If(condition, true));
@@ -2323,7 +2328,7 @@ impl Emit {
         let description = ObjectSet { zone: None, ..s.set.clone() };
         let set = binder.selection(&description, support)?;
         self.instrs.push(Instr::Select { from, set: set.into(), pick, chooser, gate: None, still_in: Zone::Hand, out: selected });
-        self.instrs.push(Instr::Subjects { cards: selected, out: subjects, still_in: None });
+        self.instrs.push(Instr::Subjects { cards: selected, out: subjects, still_in: Some(Zone::Hand) });
         binder.result = Some((subjects, s.set.clone(), max));
         binder.name(subjects, s.set.clone(), (0, max), false);
         Ok(action::Operand::Reference(subjects))
@@ -2508,11 +2513,12 @@ fn quantity_leads(effect: &mut Effect) -> Res<()> {
     fn normalize(sentence: &mut Sentence) -> Res<()> {
         if let Sentence::Led { lead, rest } = sentence {
             if let Lead::Modifier(ir::Modifier::ForEach(amount)) = lead {
-                if !matches!(amount, Amount::Count(set) if set.domain == Domain::Player) {
+                if !matches!(amount, Amount::Count(set) if set.domain == Domain::Player)
+                    && value_iteration::life_or_top(rest).is_none() {
                     let Sentence::Do(body) = &mut **rest else { return unsupported("for-each quantity lead: a single ordinary action required"); };
                     let clause = &mut body.first;
                     if !body.rest.is_empty() || !clause.rest.is_empty() || clause.may || clause.also || clause.first.may
-                        || !matches!(clause.first.action, Action::Draw(_) | Action::Mill(_) | Action::GainLife(_) | Action::LoseLife(_) | Action::DealDamage(_) | Action::PutCounters(_) | Action::GetCounters { .. } | Action::Create(_)) {
+                        || !matches!(clause.first.action, Action::Draw(_) | Action::DrawAdditional(_) | Action::Mill(_) | Action::GainLife(_) | Action::LoseLife(_) | Action::DealDamage(_) | Action::PutCounters(_) | Action::GetCounters { .. } | Action::Create(_)) {
                         return unsupported("for-each quantity lead: compound, optional or non-quantity action");
                     }
                     clause.first.mods.push(ir::Modifier::ForEach(amount.clone()));
@@ -2704,7 +2710,7 @@ impl TextStep<'_> {
         match self {
             TextStep::Act(..) | TextStep::Rule(_) | TextStep::CastRider(_) | TextStep::ExiledInstead(_) | TextStep::KeywordCost(..) => (1, 0),
             TextStep::Alternative(clause) => (1 + clause.rest.len(), 0),
-            TextStep::CardTypes(rest) => (all(rest, &[]), 0),
+            TextStep::CardTypes(rest) | TextStep::CardPayments(_, rest) => (all(rest, &[]), 0),
             TextStep::Reflexive(rest, more, _, _) | TextStep::Later(_, _, rest, more, _) => (0, all(rest, more)),
             TextStep::Delayed(_, _, _, rest, _) | TextStep::ManaSpent(_, rest, _) => (0, all(rest, &[])),
             _ => (0, 0),
@@ -2882,6 +2888,13 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
         let (clause, act, alone) = match part {
             TextStep::ManaGenericForbidden => {
                 if !non_generic { return unsupported("mana: non-generic spending rider needs one unconditional producer"); }
+                continue;
+            }
+            TextStep::CardPayments(set, rest) => {
+                if !durations.is_empty() || optional_groups != 0 || binder.each.is_some() {
+                    return unsupported("per-card payment: nested, lasting or optional scope");
+                }
+                value_iteration::card_payments(set, rest, support, &mut e, &mut binder)?;
                 continue;
             }
             TextStep::CardTypes(rest) => {
@@ -3566,8 +3579,8 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             let costs = match (free, act.mods.as_slice()) {
                 (true, []) => Some(Costs::Free),
                 (false, [ir::effect::Modifier::By(said)]) if said.kind == ir::statics::CastCostKind::Alternative => {
-                    // only the cost its card states for the cast its madness ability offers
-                    let row = support.madness_offer(&crate::keyword::said_cost(said))
+                    // Only the price linked to this very keyword-generated casting trigger.
+                    let row = support.linked_cost_offer(&crate::keyword::said_cost(said))
                         .ok_or_else(|| crate::Unsupported("program: a cast for an alternative cost an effect states".into()))?;
                     Some(Costs::Only(crate::announcement::CastCost::Alternative(row)))
                 }
@@ -3630,8 +3643,8 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                     card
                 }).collect::<Vec<_>>();
                 let from = if matches!(costs, Costs::Only(_)) {
-                    // Admitted above only by the owning madness keyword's offer.
-                    CastOrigin::Fixed(Zone::Exile)
+                    // The owning linked keyword proves its exact source zone.
+                    CastOrigin::Fixed(if support.generated_by("Miracle") { Zone::Hand } else { Zone::Exile })
                 } else {
                     let mut origins = cards.iter().map(|card| {
                         if *card == action::Operand::Source {
@@ -3825,7 +3838,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 ir::effect::Modifier::WhereX(n) if x.is_none() => x = Some(n),
                 // "investigate twice": the keyword action done that many times (701.16a)
                 ir::effect::Modifier::Times(Amount::Const(_)) if matches!(act.action, Action::Keyword(ir::KeywordAction::Investigate | ir::KeywordAction::ManifestDread)) => {},
-                ir::effect::Modifier::ForEach(n) if each.is_none() && (lasting || matches!(act.action, Action::Counter(_) | Action::PayMana(_) | Action::AddMana(_) | Action::AddAdditionalMana(_) | Action::Draw(_) | Action::Mill(_) | Action::GainLife(_) | Action::LoseLife(_) | Action::DealDamage(_) | Action::PutCounters(_) | Action::GetCounters { .. } | Action::Create(_))) => each = Some(n),
+                ir::effect::Modifier::ForEach(n) if each.is_none() && (lasting || matches!(act.action, Action::Counter(_) | Action::PayMana(_) | Action::AddMana(_) | Action::AddAdditionalMana(_) | Action::Draw(_) | Action::DrawAdditional(_) | Action::Mill(_) | Action::GainLife(_) | Action::LoseLife(_) | Action::DealDamage(_) | Action::PutCounters(_) | Action::GetCounters { .. } | Action::Create(_))) => each = Some(n),
                 // a modifier the engine does not follow is refused with the act it is said of
                 _ => return unsupported(format!("modifier: {} of {}", crate::select::name(modifier), crate::select::name(&act.action))),
             }
@@ -3860,7 +3873,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
         }
         let causative_loss = matches!(&act.action, Action::Have { action, .. } if matches!(**action,Action::LoseLife(_)));
         if causative_loss && !controller_only(clause.subject.as_ref()) { return unsupported("causative life loss: one controller chooses"); }
-        let ordinary_attempt = causative_loss || (optional && matches!(act.action, Action::Destroy(_))) || matches!(&act.action, Action::RemoveCounters { .. } | Action::PayEnergy(_) | Action::Draw(_) | Action::DrawUpTo(_) | Action::Mill(_) | Action::GainLife(_) | Action::LoseLife(_) | Action::Tap(_) | Action::Untap(_) | Action::PutCounters(_) | Action::GetCounters { .. } | Action::Create(_) | Action::GetEmblem(_) | Action::Move { .. } | Action::Exile(_)) && !result_move;
+        let ordinary_attempt = causative_loss || (optional && matches!(act.action, Action::Destroy(_))) || matches!(&act.action, Action::RemoveCounters { .. } | Action::PayEnergy(_) | Action::Draw(_) | Action::DrawAdditional(_) | Action::DrawUpTo(_) | Action::Mill(_) | Action::GainLife(_) | Action::LoseLife(_) | Action::Tap(_) | Action::Untap(_) | Action::PutCounters(_) | Action::GetCounters { .. } | Action::Create(_) | Action::GetEmblem(_) | Action::Move { .. } | Action::Exile(_)) && !result_move;
         let optional_top = optional && matches!(&act.action, Action::Reveal(o) if o.items.iter().all(|s| top_of_library(s).is_some()));
         let flash_permission = matches!(&act.action, Action::Static(s) if matches!(**s, ir::statics::StaticAct::CastAsThoughFlash { .. }));
         let optional_branch = if optional && !flash_permission && !optional_top && !matches!(act.action, Action::Scry(_) | Action::Surveil(_)) && !ordinary_attempt && !result_move && !named_exile && !matches!(act.action, Action::Discard(_) | Action::Sacrifice(_) | Action::PayMana(_) | Action::PayLife(_) | Action::Numbered(ir::NumberedAction::CollectEvidence, _) | Action::OnObjects(ir::action::ObjectAction::Behold, _)) {
@@ -3890,7 +3903,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                     !std::ptr::eq(end, clause.rest.last().map_or(&clause.first, |(_, a)| a)));
             defining = Some(WhereX { stated, start: e.instrs.len(), gated: optional_branch.is_some(), branch_local, last, before });
         }
-        if matches!(act.action, Action::Draw(_) | Action::DrawUpTo(_) | Action::Mill(_) | Action::GainLife(_) | Action::LoseLife(_) | Action::GetCounters { .. }) {
+        if matches!(act.action, Action::Draw(_) | Action::DrawAdditional(_) | Action::DrawUpTo(_) | Action::Mill(_) | Action::GainLife(_) | Action::LoseLife(_) | Action::GetCounters { .. }) {
             let players = e.clause_subject(clause, support, &mut binder)?;
             if matches!(players, action::Operand::All(_) | action::Operand::Union(_)) {
                 binder.clause = Some(expr::Subject::Actor);
@@ -4274,6 +4287,24 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             for named in &mut binder.subjects[before..] {
                 if named.target { named.explicit_choice = true; }
             }
+            e.end_act(false, optional_branch);
+            continue;
+        }
+        // "Choose two cards in your hand drawn this turn": retain the private
+        // selection before later per-card instructions, using the ordinary hand chooser.
+        if let Action::Choose(ir::action::Choice::Objects(objects)) = &act.action
+            && let [selector] = objects.items.as_slice()
+            && matches!(selector.quant, Quant::Indefinite(Count::Exactly(Amount::Const(_)) | Count::UpTo(Amount::Const(_))))
+            && selector.set.domain == Domain::Card && !selector.set.other
+            && selector.set.zone.as_ref().is_some_and(|zone| zone.zones.items == [ir::Zone::Hand]
+                && zone.slice.is_none() && zone.owner.as_deref().is_some_and(crate::select::is_you))
+        {
+            if optional || !controller_only(clause.subject.as_ref()) || selector.chooser.is_some()
+                || selector.random.is_some() || !act.mods.is_empty() {
+                return unsupported("choice in hand: one mandatory controller choice required");
+            }
+            e.chosen_from_hand(selector, Who::Controller, support, &mut binder)?;
+            binder.subjects.last_mut().expect("private choice just named").explicit_choice = true;
             e.end_act(false, optional_branch);
             continue;
         }
@@ -4910,7 +4941,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             Action::Keyword(ir::action::KeywordAction::BecomeMonarch) => Some(action::Action::BecomeMonarch { players: e.clause_subject(clause, support, &mut binder)? }),
             // said of no subject: the speed of the player whose ability it is (702.179d)
             Action::Keyword(ir::action::KeywordAction::IncreaseSpeed) if clause.subject.is_none() => Some(action::Action::IncreaseSpeed { players: action::Operand::Controller }),
-            Action::Draw(n) | Action::DrawUpTo(n) => Some(action::Action::Draw { players: e.clause_subject(clause, support, &mut binder)?, amount: player_quantity(n, support, &binder)? }),
+            Action::Draw(n) | Action::DrawAdditional(n) | Action::DrawUpTo(n) => Some(action::Action::Draw { players: e.clause_subject(clause, support, &mut binder)?, amount: player_quantity(n, support, &binder)? }),
             Action::Mill(n) => Some(action::Action::Mill { players: e.clause_subject(clause, support, &mut binder)?, amount: player_quantity(n, support, &binder)? }),
             Action::GainLife(n) => Some(action::Action::GainLife { players: e.clause_subject(clause, support, &mut binder)?, amount: player_quantity(n, support, &binder)? }),
             Action::Have { who, action } if matches!(**action,Action::LoseLife(_)) => {
@@ -5279,7 +5310,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
         };
         if let Some(instruction) = instruction {
             let instruction = if let Some(each) = each {
-                let amount = if matches!(act.action, Action::Draw(_) | Action::DrawUpTo(_) | Action::Mill(_) | Action::GainLife(_) | Action::LoseLife(_) | Action::GetCounters { .. }) {
+                let amount = if matches!(act.action, Action::Draw(_) | Action::DrawAdditional(_) | Action::DrawUpTo(_) | Action::Mill(_) | Action::GainLife(_) | Action::LoseLife(_) | Action::GetCounters { .. }) {
                     player_quantity(each, support, &binder)?
                 } else { quantity(each, support, &binder)? };
                 instruction.scaled(amount)?

@@ -203,6 +203,12 @@ impl Replacement {
                 crate::draw::dredge(item).map(|result| result.map(|n| (part, n)))).collect();
             if !found.is_empty() { return Some(found.into_iter().collect::<Res<Vec<_>>>().map(Replacement::Dredge)); }
         }
+        if let Ability::Text(Effect(sentences)) = a
+            && let Some(Sentence::Static(rule)) = sentences.first()
+            && let ir::Static::Replacement(r) = &**rule
+            && r.single_event().is_none() {
+            return Some(unsupported("replacement: alternative event patterns not lowered"));
+        }
         if let Some(counters) = as_turned_face_up(a, support) { return Some(counters.map(Replacement::AsTurnedFaceUp)); }
         let arrive_each = |arrivals: &[Arrival], each: Option<&expr::Amount>| arrivals.iter().map(|arrival| Enters::compile(arrival, each, support)).collect::<Res<Vec<_>>>();
         let arrive = |arrivals: &[Arrival]| arrive_each(arrivals, None);
@@ -306,8 +312,9 @@ fn token_creation(a:&Ability)->Option<Res<Replacement>> {
     let Ability::Text(Effect(sentences))=a else{return None};
     let [Sentence::Static(statement)]=sentences.as_slice() else{return None};
     let Static::Replacement(r)=statement.as_ref() else{return None};
-    if r.next_time || r.this_turn || r.while_.is_some() || r.event.counted()
-        || r.event.during.is_some() || r.event.condition.is_some() {return None;}
+    let event = r.single_event()?;
+    if r.next_time || r.this_turn || r.while_.is_some() || event.counted()
+        || event.during.is_some() || event.condition.is_some() {return None;}
     let (change,effect_voice,active_plus)=match &r.with {
         Substitute::TokensCreated {count:Amount::Multiple(factor,n),effect_voice}
             if matches!(**n,Amount::That {many:true}) && *factor>=2 && !r.instead_first =>
@@ -317,15 +324,15 @@ fn token_creation(a:&Ability)->Option<Res<Replacement>> {
             (crate::token::token_values(&token.kind).map(TokenChange::Append),false,*active),
         _=>return None,
     };
-    let [EventAction::Deed(deed)]=r.event.actions.as_slice() else{return None};
+    let [EventAction::Deed(deed)]=event.actions.as_slice() else{return None};
     if deed.verb!=ir::Verb::Create {return None;}
-    let effect_only=matches!(r.event.cause,Some(EventCause::Effect));
+    let effect_only=matches!(event.cause,Some(EventCause::Effect));
     let tokens=if deed.passive && !effect_only && !effect_voice && !active_plus {
-        let [tokens]=r.event.subjects.as_slice() else{return None};tokens
-    } else if !deed.passive && effect_only && effect_voice && r.event.subjects.is_empty() {
+        let [tokens]=event.subjects.as_slice() else{return None};tokens
+    } else if !deed.passive && effect_only && effect_voice && event.subjects.is_empty() {
         deed.noun(Role::What)?
     } else if !deed.passive && !effect_only && active_plus {
-        let [who]=r.event.subjects.as_slice() else{return None};
+        let [who]=event.subjects.as_slice() else{return None};
         if !crate::select::is_you(who) {return None;} deed.noun(Role::What)?
     } else {return None;};
     if !active_plus && (!crate::select::is_you(deed.noun(Role::Under)?) || deed.args.len()!=if deed.passive {1}else{2}) {return None;}
@@ -376,11 +383,12 @@ fn death_to_library(a: &Ability) -> Option<ir::action::LibraryPosition> {
     let Ability::Text(Effect(sentences)) = a else { return None };
     let [Sentence::Static(statement)] = sentences.as_slice() else { return None };
     let Static::Replacement(r) = statement.as_ref() else { return None };
-    if r.next_time || r.this_turn || r.while_.is_some() || r.event.counted()
-        || r.event.during.is_some() || r.event.condition.is_some() || r.event.cause.is_some() { return None; }
-    let [who] = r.event.subjects.as_slice() else { return None };
+    let event = r.single_event()?;
+    if r.next_time || r.this_turn || r.while_.is_some() || event.counted()
+        || event.during.is_some() || event.condition.is_some() || event.cause.is_some() { return None; }
+    let [who] = event.subjects.as_slice() else { return None };
     if *who != Selector::new(Quant::Definite(Ref::This), ObjectSet::of(Domain::Permanent)) { return None; }
-    let [EventAction::Deed(deed)] = r.event.actions.as_slice() else { return None };
+    let [EventAction::Deed(deed)] = event.actions.as_slice() else { return None };
     if deed.verb != Verb::Die || deed.passive || !deed.args.is_empty() { return None; }
     let Substitute::Body(body) = &r.with else { return None };
     let Clause { subject: None, may: false, also: false, first, rest } = &body.first else { return None };
@@ -404,14 +412,15 @@ fn elsewhere(a: &Ability, support: &Support<'_>) -> Option<Res<Replacement>> {
     let Ability::Text(Effect(sentences)) = a else { return None };
     let Some(Sentence::Static(statement)) = sentences.first() else { return None };
     let Static::Replacement(r) = statement.as_ref() else { return None };
-    if r.next_time || r.this_turn || r.while_.is_some() || r.event.counted() || r.event.during.is_some()
-        || r.event.condition.is_some() || r.event.cause.is_some() || r.event.nth_each_turn.is_some() || r.event.except_nth_in_step.is_some() { return None; }
-    let [who] = r.event.subjects.as_slice() else { return None };
+    let event = r.single_event()?;
+    if r.next_time || r.this_turn || r.while_.is_some() || event.counted() || event.during.is_some()
+        || event.condition.is_some() || event.cause.is_some() || event.nth_each_turn.is_some() || event.except_nth_in_step.is_some() { return None; }
+    let [who] = event.subjects.as_slice() else { return None };
     let this = who.quant == Quant::Definite(Ref::This);
     let one = who.quant == Quant::Indefinite(ir::Count::Exactly(Amount::Const(1))) && who.chooser.is_none() && who.random.is_none();
     if !this && !one { return None; }
     // "would be put into a graveyard from anywhere", "would die"
-    let dies = match r.event.actions.as_slice() {
+    let dies = match event.actions.as_slice() {
         [EventAction::PutIntoGraveyard { from: None, .. }] => false,
         [EventAction::Deed(deed)] if deed.verb == ir::Verb::Die && !deed.passive && deed.args.is_empty() => true,
         _ => return None,
@@ -450,7 +459,7 @@ fn elsewhere(a: &Ability, support: &Support<'_>) -> Option<Res<Replacement>> {
         _ => return refused("what else it does instead"),
     };
     if this && (dies || instead != Instead::Shuffle) { return refused("its own death or exile (the library form is DeathToLibrary)"); }
-    let moved = (|| Ok(match (this, dies, r.event.actions.as_slice()) {
+    let moved = (|| Ok(match (this, dies, event.actions.as_slice()) {
         (true, _, _) => Moved::Own,
         (false, true, _) => Moved::Dies(expr::Set::compile(&who.set, support, &mut linked(support))?),
         (false, false, [EventAction::PutIntoGraveyard { into, .. }]) => {
@@ -480,14 +489,15 @@ fn discard_to_battlefield(a: &Ability) -> Option<Res<Option<expr::Controller>>> 
     let Ability::Text(Effect(sentences)) = a else { return None };
     let [Sentence::Static(statement)] = sentences.as_slice() else { return None };
     let Static::Replacement(r) = statement.as_ref() else { return None };
+    let event = r.single_event()?;
     if r.next_time || r.this_turn || r.while_.is_some() || r.instead_first
-        || r.event.counted() || r.event.during.is_some() || r.event.condition.is_some()
-        || r.event.subjects.as_slice() != [Selector::you()] { return None; }
-    let [EventAction::Deed(deed)] = r.event.actions.as_slice() else { return None };
+        || event.counted() || event.during.is_some() || event.condition.is_some()
+        || event.subjects.as_slice() != [Selector::you()] { return None; }
+    let [EventAction::Deed(deed)] = event.actions.as_slice() else { return None };
     let [(Role::What, ir::event::Arg::Noun(discarded))] = deed.args.as_slice() else { return None };
     if deed.verb != Verb::Discard || deed.passive
         || *discarded != Selector::new(Quant::Definite(Ref::This), ObjectSet::of(Domain::Permanent)) { return None; }
-    let ir::EventCause::Source(cause) = r.event.cause.as_ref()? else { return None; };
+    let ir::EventCause::Source(cause) = event.cause.as_ref()? else { return None; };
     let mut plain = cause.set.clone();
     plain.controller = None;
     if plain != ObjectSet::of(Domain::Union(vec![ObjectSet::of(Domain::Spell), ObjectSet::of(Domain::Ability)]))
@@ -514,13 +524,14 @@ fn draw_replacement(a: &Ability) -> Option<(&Selector, u32)> {
     let Ability::Text(Effect(sentences)) = a else { return None };
     let [Sentence::Static(statement)] = sentences.as_slice() else { return None };
     let Static::Replacement(r) = statement.as_ref() else { return None };
+    let event = r.single_event()?;
     if r.next_time || r.this_turn || r.while_.is_some()
-        || r.event.counted() || r.event.during.is_some()
-        || r.event.nth_each_turn.is_some() || r.event.except_nth_in_step.is_some()
-        || r.event.condition.is_some() || r.event.cause.is_some() { return None; }
+        || event.counted() || event.during.is_some()
+        || event.nth_each_turn.is_some() || event.except_nth_in_step.is_some()
+        || event.condition.is_some() || event.cause.is_some() { return None; }
     let card = Selector::new(Quant::Indefinite(Count::Exactly(Amount::Const(1))), ObjectSet::of(Domain::Card));
-    if r.event.actions.as_slice() != [EventAction::does(Verb::Draw, card)] { return None; }
-    let [who] = r.event.subjects.as_slice() else { return None };
+    if event.actions.as_slice() != [EventAction::does(Verb::Draw, card)] { return None; }
+    let [who] = event.subjects.as_slice() else { return None };
     // An imperative body instructs "you". Broader player references need their own binding.
     if *who != Selector::you() { return None; }
     let Substitute::Body(body) = &r.with else { return None };
@@ -543,11 +554,12 @@ fn life_gain_multiplier(a: &Ability) -> Option<(&Selector, u32)> {
     let Ability::Text(Effect(sentences)) = a else { return None };
     let [Sentence::Static(statement)] = sentences.as_slice() else { return None };
     let Static::Replacement(r) = statement.as_ref() else { return None };
+    let event = r.single_event()?;
     if r.next_time || r.this_turn || r.while_.is_some()
-        || r.event.counted() || r.event.during.is_some()
-        || r.event.condition.is_some() || r.event.cause.is_some()
-        || r.event.actions.as_slice() != [EventAction::GainsLife { amount: None }] { return None; }
-    let [who] = r.event.subjects.as_slice() else { return None };
+        || event.counted() || event.during.is_some()
+        || event.condition.is_some() || event.cause.is_some()
+        || event.actions.as_slice() != [EventAction::GainsLife { amount: None }] { return None; }
+    let [who] = event.subjects.as_slice() else { return None };
     if who.set.domain != Domain::Player { return None; }
     let Substitute::Body(body) = &r.with else { return None };
     let Clause { subject: Some(Subject::Selector(to)), may: false, also: false, first, rest } = &body.first else { return None };
@@ -618,9 +630,10 @@ fn counter_replacement(a: &Ability) -> Option<CounterReplacement<'_>> {
     let Ability::Text(Effect(sentences)) = a else { return None };
     let [Sentence::Static(statement)] = sentences.as_slice() else { return None };
     let Static::Replacement(r) = statement.as_ref() else { return None };
+    let event = r.single_event()?;
     if r.next_time || r.this_turn || r.instead_first || r.while_.is_some()
-        || r.event.counted() || r.event.during.is_some() || r.event.condition.is_some() { return None; }
-    let (on, by, effect_only, event_kind, voice) = match (r.event.subjects.as_slice(), r.event.actions.as_slice(), &r.event.cause) {
+        || event.counted() || event.during.is_some() || event.condition.is_some() { return None; }
+    let (on, by, effect_only, event_kind, voice) = match (event.subjects.as_slice(), event.actions.as_slice(), &event.cause) {
         ([on], [EventAction::CountersPut { kind, one_or_more: true, nth: None }], None) =>
             (on, None, false, kind.as_ref(), CounterVoice::Passive),
         ([by], [EventAction::PutsCounters { kind, one_or_more: true, on }], None) =>

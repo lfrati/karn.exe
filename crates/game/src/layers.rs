@@ -1000,6 +1000,17 @@ pub fn statement(a: &Ability) -> Option<Statement<'_>> {
     crate::statement::read(a).filter(|s| s.acts.iter().all(|(action, _, _)| changes(action)))
 }
 
+/// CR 122.1b fixes this vocabulary; other counter names grant no keyword.
+fn counter_keyword(kind: &str) -> Option<Keyword> {
+    let keyword = Keyword::from_name(kind)?;
+    match keyword.name() {
+        "Flying" | "First Strike" | "Double Strike" | "Deathtouch" | "Decayed"
+        | "Exalted" | "Haste" | "Hexproof" | "Indestructible" | "Lifelink"
+        | "Menace" | "Reach" | "Shadow" | "Trample" | "Vigilance" => Some(keyword),
+        _ => None,
+    }
+}
+
 /// Does the engine give a counter of this kind what its rule says it does (122.1)? A +X/+Y
 /// or -X/-Y counter changes power and toughness (122.1a) and a keyword counter gives its
 /// keyword (122.1b), which is asked of the keyword. Finality counters create a departure
@@ -1008,7 +1019,7 @@ pub fn statement(a: &Ability) -> Option<Statement<'_>> {
 /// puts one is not run. A counter of any other name does nothing
 /// by itself: other text says what it means.
 pub fn counter_ok(kind: &str) -> Res<()> {
-    match (kind, Keyword::from_name(kind)) {
+    match (kind, counter_keyword(kind)) {
         // the grammar reads the two-word keyword counters (first strike, double strike) since the
         // noun phrases name them; their effect on combat is not tested here yet, so they are refused
         (kind, Some(k)) if kind.contains(' ') => unsupported(format!("keyword counter: {}", k.name())),
@@ -1300,6 +1311,7 @@ impl Game {
             if self.obj(object).zone == Zone::Battlefield && self.controller(object) != player {
                 self.grant_hideaway_look(object, self.controller(object));
                 self.obj_mut(object).since = self.turn;
+                self.record_control_acquisition(object, self.controller(object));
                 self.combat.remove(object);
                 // Its new controller may look at a face-down permanent (708.5).
                 if self.face_down(object) {
@@ -1532,7 +1544,7 @@ impl Game {
                     let obj = self.obj(*id);
                     if obj.zone != Zone::Battlefield { continue; }
                     for (kind, _) in obj.counters.iter().filter(|(_, n)| **n > 0) {
-                        if let Some(keyword) = Keyword::from_name(kind) {
+                        if let Some(keyword) = counter_keyword(kind) {
                             effects.push(Effect { stamp: obj.counter_stamps.get(kind).copied().unwrap_or(obj.stamp), also: Vec::new(),
                                 by: None, part: 0, started: None, body: Body::Counter { on: *id, keyword } });
                         }
@@ -1713,7 +1725,7 @@ impl Game {
     fn layer_counters(&self, o: ObjId, seen: &mut Seen, layer: Layer) {
         if self.obj(o).zone != Zone::Battlefield { return; }
         if layer == Layer::Abilities {
-            for k in self.obj(o).counters.iter().filter(|(_, n)| **n > 0).filter_map(|(kind, _)| Keyword::from_name(kind)) {
+            for k in self.obj(o).counters.iter().filter(|(_, n)| **n > 0).filter_map(|(kind, _)| counter_keyword(kind)) {
                 if !seen.has(k) { seen.keywords.push(Held::plain(k)); }
             }
         }

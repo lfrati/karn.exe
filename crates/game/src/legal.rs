@@ -207,6 +207,7 @@ pub enum Asked {
     Divide { attacker: ObjId, among: Vec<Target>, amount: u32, lethal: Vec<Option<u32>> },
     /// "You may …": yes or no (608.2d).
     May,
+    Miracle { card: ObjId, ability: usize, cost: ManaCost },
     /// One optional object action: accept with the selected objects, or decline.
     OptionalObjects { verb: Verb, to: Option<crate::state::Placement>, among: Vec<ObjId>, count: usize },
     /// Which `count` of these to do the action to (608.2d).
@@ -401,6 +402,7 @@ impl Game {
             Some(Decision::Choose { player, choice: Choice::Retarget { copy, original, slots } }) => (player, Asked::Retarget { copy, original, slots }),
             Some(Decision::Choose { player, choice: Choice::CommandZone { object } }) => (player, Asked::CommandZone { object }),
             Some(Decision::Choose { player, choice: Choice::May { .. } }) => (player, Asked::May),
+            Some(Decision::Choose { player, choice: Choice::Miracle { card, ability, cost } }) => (player, Asked::Miracle { card, ability, cost }),
             Some(Decision::Choose { player, choice: Choice::OptionalObjects { verb, to, among, count } }) => (player, Asked::OptionalObjects { verb, to, among, count }),
             Some(Decision::Choose { player, choice: Choice::Cast { cards } }) => {
                 (player, Asked::Cast { cards })

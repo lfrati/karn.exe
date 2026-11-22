@@ -323,9 +323,10 @@ pub enum XLimit {
 pub struct Replacement {
     /// "The next time …": it applies once, then ends (615.8 for damage from a source).
     pub next_time: bool,
-    /// The event it replaces, as "would" says it: "that creature would die", "~ would be put
-    /// into a graveyard from anywhere", "damage would be dealt to ~".
-    pub event: EventPattern,
+    /// The event it replaces, or complete alternative patterns joined by "or" (614.1a).
+    /// Each pattern retains its own subjects and actions; alternatives are not a product
+    /// of all their subjects and all their actions.
+    pub event: crate::Coord<EventPattern>,
     /// "while it has a +1/+1 counter on it", "while your library has no cards in it": the
     /// replacement applies only then.
     pub while_: Option<Condition>,
@@ -335,6 +336,13 @@ pub struct Replacement {
     pub with: Substitute,
     /// "…, instead exile it": "instead" opens the substitute.
     pub instead_first: bool,
+}
+
+impl Replacement {
+    /// Existing single-event consumers must refuse a disjunction until they handle every arm.
+    pub fn single_event(&self) -> Option<&EventPattern> {
+        match self.event.items.as_slice() { [event] => Some(event), _ => None }
+    }
 }
 
 /// Which parts of the proposed counter inventory a replacement transforms.

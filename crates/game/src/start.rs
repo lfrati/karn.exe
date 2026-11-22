@@ -400,11 +400,13 @@ impl Game {
             assert!(unused.is_empty(), "every recorded initial order is consumed");
             g.random.recorded_only(false);
         }
+        // Opening hands precede the first turn (103.5); draw-time abilities must see
+        // this marker during the draws, as they do during later mulligan redraws.
+        let n = decks.len();
+        g.opening = Some(Opening { taken: vec![0; n], kept: vec![false; n], declared: vec![None; n], owing: Vec::new() });
         for player in g.turn_order() {
             g.draw(player, STARTING_HAND_SIZE);
         }
-        let n = decks.len();
-        g.opening = Some(Opening { taken: vec![0; n], kept: vec![false; n], declared: vec![None; n], owing: Vec::new() });
         g.ask_opening();
         Ok(self)
     }
