@@ -176,15 +176,48 @@ fn r701_23_partition_refuses_unproved_source_groups_and_larger_singular_compleme
         let error = game::play::check(&def).unwrap_err();
         assert!(error.0.contains("one mandatory library result of at most two cards"), "{error:?}");
     }
-    // No new generic card-group fallback: a different selected movement remains refused.
-    let def = CardDef::new("Unmodeled selected search", "{0}", "Sorcery",
-        "Search your library for up to two cards, reveal them, put one into your hand, then shuffle.", None).unwrap();
-    crate::support::refused(game::play::check(&def).map_err(|e|e.0),"no earlier instruction produces what it names");
     // Entry choices/counters are exercised above; destination redirection remains a
     // separate unmodeled replacement, rather than a claim made by this evidence.
     let def = CardDef::new("Unmodeled entry destination", "{0}", "Enchantment",
         "If a creature would enter the battlefield, exile it instead.", None).unwrap();
     crate::support::refused(game::play::check(&def).map_err(|e|e.0),"ability on a permanent: sentence: Replacement");
+}
+
+#[test]
+fn r608_2d_revealed_search_group_supplies_only_the_explicitly_chosen_hand_card() {
+    let spell = CardDef::new("Selected search", "{0}", "Sorcery",
+        "Search your library for up to two cards, reveal them, put one into your hand, then shuffle.", None).unwrap();
+    game::play::check(&spell).unwrap();
+    for count in [0, 2] {
+        let mut g = Game::new(vec![spell.clone(), real("Forest"), real("Island"), real("Plains")], 2, 20);
+        let forest = g.put(0, 1, Zone::Library);
+        let island = g.put(0, 2, Zone::Library);
+        let hidden = g.put(0, 3, Zone::Library);
+        let card = g.put(0, 0, Zone::Hand);
+        g.act(0, Move::Cast { card, targets: vec![] }).unwrap();
+        resolve(&mut g);
+        let found = [forest, island][..count].to_vec();
+        cite!(["701.23a"]; assert!(matches!(g.decision, Some(Decision::Choose { choice: Choice::Search { min: 0, max: 2, .. }, .. }))));
+        choose(&mut g, found.clone());
+        if count == 2 {
+            cite!(["608.2d"]; assert_eq!(allocation(&g), found));
+            cite!(["701.20a", "701.20b"]; assert!(g.sees(1, forest) && g.sees(1, island) && !g.sees(1, hidden)));
+            let before = format!("{g:?}");
+            cite!(["608.2d"]; refused("not among the offered objects"): g.act(0, Move::Choose(Answer::Objects(vec![hidden]))));
+            assert_eq!(format!("{g:?}"), before);
+            choose(&mut g, vec![forest]);
+            cite!(["608.2c"]; assert_eq!(g.players[0].hand.len(), 1));
+            assert_eq!(g.obj(g.players[0].hand[0]).chars.name, "Forest");
+            assert_eq!(g.players[0].library.iter().map(|o| g.obj(*o).chars.name.as_str()).collect::<std::collections::BTreeSet<_>>(),
+                       ["Island", "Plains"].into_iter().collect());
+        } else {
+            cite!(["609.3"]; assert!(g.players[0].hand.is_empty() && g.decision.is_none()));
+            assert_eq!(g.players[0].library.len(), 3);
+        }
+        cite!(["701.24d"]; assert_eq!(shuffles(&g), 1));
+        cite!(["701.20d"]; assert!(!g.players[0].library.iter().any(|o| g.sees(1, *o))));
+        assert!(g.stack.is_empty());
+    }
 }
 
 #[test]
