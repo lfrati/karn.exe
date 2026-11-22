@@ -60,7 +60,7 @@ pub(crate) fn self_modifier(a: &Ability) -> bool {
 }
 
 pub(crate) fn registrations(def: &CardDef) -> Vec<Registered<Modifier>> {
-    def.abilities.iter().enumerate().filter_map(|(index, ability)| {
+    def.abilities.iter().chain(def.keyword_abilities.iter().map(|(_, ability)| ability)).enumerate().filter_map(|(index, ability)| {
         let stated = statement(ability)?;
         let support = Support::definition(def, Some(AbilityKey::printed(index)));
         let result = (|| {

@@ -411,6 +411,7 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if let Some(cost) = ward_cost(item) { return Some(ward_trigger(&cost)); }
     if let Some(ability) = crew(item) { return Some(ability); }
     if let Some(ability) = saddle(item) { return Some(ability); }
+    if let Some(ability) = affinity(item) { return Some(ability); }
     if let Some(ability) = cumulative_upkeep(item) { return Some(ability); }
     if let Some(ability) = bloodthirst(item) { return Some(ability); }
     if let Some(ability) = bushido(item) { return Some(ability); }
@@ -566,6 +567,23 @@ fn saddle(item: &ir::token::KeywordInstance) -> Option<Ability> {
     let text = format!("Tap any number of other untapped creatures you control with total power {n} or greater: This permanent becomes saddled until end of turn. Activate only as a sorcery.");
     let def = CardDef::new("Saddle rule", "", "Creature — Mount", &text, Some((0, 0))).expect("the grammar reads rule 702.171a");
     Some(def.abilities[0].clone())
+}
+
+/// 702.41a: affinity is an ordinary self cost reduction over a controlled set.
+fn affinity(item: &ir::token::KeywordInstance) -> Option<Ability> {
+    if item.keyword.name() != "Affinity" { return None; }
+    let KeywordParam::Affinity(quality) = &item.param else { return None; };
+    if quality.domain != ir::Domain::Permanent || quality.controller.is_some() || quality.owner.is_some()
+        || quality.caster.is_some() || quality.zone.is_some() || quality.other { return None; }
+    let mut set = quality.clone();
+    set.controller = Some(ir::Relation { who: Box::new(ir::Selector::you()), negated: false, past: false });
+    let source = ir::Selector::new(ir::Quant::Definite(ir::Ref::This), ir::ObjectSet::of(ir::Domain::Spell));
+    Some(Ability::Text(ir::Effect(vec![ir::Sentence::Do(ir::effect::Body {
+        first: ir::effect::Clause { subject: Some(ir::Subject::Selector(source)), may: false, also: false,
+            first: ir::effect::Act { action: ir::Action::Static(Box::new(ir::statics::StaticAct::CostChange {
+                more: false, by: ir::mana::ManaCost(vec![ir::mana::ManaSymbol::Generic(1)]), of: ir::statics::CostOf::Cast,
+            })), mods: vec![ir::effect::Modifier::ForEach(ir::Amount::Count(Box::new(set)))], may: false }, rest: vec![] }, rest: vec![],
+    })])))
 }
 
 /// 702.24a: put the age counter before computing one atomic generic-mana payment.
