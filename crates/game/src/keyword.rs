@@ -438,6 +438,7 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if let Some(ability) = fabricate(item) { return Some(ability); }
     if let Some(ability) = bushido(item) { return Some(ability); }
     if let Some(ability) = afflict(item) { return Some(ability); }
+    if let Some(ability) = rampage(item) { return Some(ability); }
     if let Some(ability) = soulshift(item) { return Some(ability); }
     if let Some(ability) = renown(item) { return Some(ability); }
     if let Some(ability) = annihilator(item) { return Some(ability); }
@@ -786,6 +787,14 @@ fn entry_counter_count(ability: &mut Ability, count: u32) {
     let ir::statics::StaticAct::Enters(arrivals) = action.as_mut() else { unreachable!("entry counters") };
     let [ir::statics::Arrival::Counters(on)] = arrivals.as_mut_slice() else { unreachable!("one counter kind") };
     on.counters.count = ir::Amount::Const(count);
+}
+
+/// 702.23a/b: count current blockers on resolution and freeze the resulting bonus.
+fn rampage(item: &ir::token::KeywordInstance) -> Option<Ability> {
+    if item.keyword.name() != "Rampage" { return None; }
+    let KeywordParam::Number(ir::Amount::Const(n)) = item.param else { return None };
+    let text = format!("Whenever this creature becomes blocked, it gets +{n}/+{n} until end of turn for each creature blocking it beyond the first.");
+    CardDef::new("Rampage rule", "", "Creature", &text, None).ok()?.abilities.into_iter().next()
 }
 
 /// 702.130a: the blocked occurrence retains its own defending player.

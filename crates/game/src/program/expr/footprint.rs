@@ -46,6 +46,7 @@ impl Filter {
                 Atom::FaceDown => recipient(P::IDENTITY | P::CATALOG | P::ZONE),
                 Atom::Attached(_) => recipient(P::IDENTITY | P::ZONE) | I::at(D::Objects, P::COLLECTIONS | P::IDENTITY | P::ZONE | P::ATTACHMENT | P::TYPES),
                 Atom::Combat(_) => recipient(P::COMBAT),
+                Atom::Blocking(attacker) => recipient(P::COMBAT) | attacker.inputs() | I::at(D::Objects, P::COMBAT | P::IDENTITY),
                 Atom::Stat { stat, value, .. } => recipient(stat.inputs()) | value.inputs(),
                 Atom::Most { stat, among, .. } => recipient(stat.inputs()) | among.inputs() | I::at(D::Objects, stat.inputs()),
                 Atom::Chosen(_) => I::UNKNOWN, // Binding kind chooses type/color; no narrower proof yet.

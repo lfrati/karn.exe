@@ -463,6 +463,8 @@ pub(crate) enum Atom {
     FaceDown,
     /// Attacking, blocking, blocked or unblocked (506.4).
     Combat(Status),
+    /// A current blocker of one bound attacking creature (509.1g-h).
+    Blocking(Subject),
     /// Inverse unqualified attachment relation (301.5a, 303.4b).
     Attached(ir::selector::Attachment),
     Stat { stat: Stat, cmp: Cmp, value: Number },
@@ -537,7 +539,7 @@ impl Filter {
             Filter::Atom(Atom::Targets(sets)) => Reads::each(sets, Set::reads),
             Filter::Atom(Atom::Type(_) | Atom::PermanentType | Atom::HasAdventure | Atom::PreparedSpell | Atom::BasicLandType | Atom::ManaCost(_) | Atom::Subtype(_) | Atom::Supertype(_)
                 | Atom::Color(_) | Atom::Colorless | Atom::Multicolored | Atom::Monocolored
-                | Atom::Opponent | Atom::MostLife { .. } | Atom::Token | Atom::Commander | Atom::FaceDown | Atom::Combat(_) | Atom::Attached(_) | Atom::Ability { .. } | Atom::TargetCount(_)
+                | Atom::Opponent | Atom::MostLife { .. } | Atom::Token | Atom::Commander | Atom::FaceDown | Atom::Combat(_) | Atom::Blocking(_) | Atom::Attached(_) | Atom::Ability { .. } | Atom::TargetCount(_)
                 | Atom::Chosen(_) | Atom::SameName(_) | Atom::SharesCreatureType(_) | Atom::SharesColor(_) | Atom::Named(_)
                 | Atom::Counters { .. } | Atom::Level { .. } | Atom::Entered(_) | Atom::InSubjects(_)) => Reads::NONE,
         }
@@ -601,6 +603,11 @@ impl Filter {
                 ir::Atom::Status(Status::Commander) => Atom::Commander,
                 ir::Atom::Status(Status::FaceDown) => Atom::FaceDown,
                 ir::Atom::Status(s @ (Status::Attacking | Status::Blocking | Status::Blocked | Status::Unblocked)) => Atom::Combat(*s),
+                ir::Atom::Blocking(attacker) => {
+                    let attacker = Subject::comparison(attacker, bind)?;
+                    bind.singular_read(&attacker)?;
+                    Atom::Blocking(attacker)
+                },
                 ir::Atom::Stat { stat, cmp, value } => {
                     Atom::Stat { stat: Stat::compile(*stat, "description")?, cmp: *cmp, value: Number::compile(value, support, bind)? }
                 }
@@ -883,7 +890,7 @@ impl Filter {
             Filter::Atom(Atom::Chosen(scalar)) => out.push(scalar.clone()),
             Filter::Atom(Atom::InSubjects(slot)) => out.push(Scalar::Local { slot: *slot, kind: Kind::Subjects }),
             Filter::Atom(Atom::Entered(slot)) => out.push(Scalar::Local { slot: *slot, kind: Kind::Cards }),
-            Filter::Atom(Atom::SameName(subject) | Atom::SharesCreatureType(subject) | Atom::SharesColor(subject) | Atom::DealtDamageBy(subject) | Atom::TappedFor { what: subject, .. } | Atom::Damage { to: Some(subject), .. }) => subject.scalars(out),
+            Filter::Atom(Atom::SameName(subject) | Atom::SharesCreatureType(subject) | Atom::SharesColor(subject) | Atom::Blocking(subject) | Atom::DealtDamageBy(subject) | Atom::TappedFor { what: subject, .. } | Atom::Damage { to: Some(subject), .. }) => subject.scalars(out),
             Filter::Atom(Atom::Stat { value, .. }) => value.scalars(out),
             Filter::Atom(Atom::Most{among,..}) => among.collect(out),
             Filter::Atom(Atom::Targets(sets)) => sets.iter().for_each(|set| set.collect(out)),
@@ -1055,6 +1062,8 @@ impl Atom {
             Atom::Level { min, max } => (*min..=*max).contains(&o.level.unwrap_or(1)),
             Atom::Attached(_) => unreachable!("tested before object lookup"),
             Atom::Combat(s) => crate::combat::status(game, o.id, *s).unwrap_or(false),
+            Atom::Blocking(attacker) => attacker.objects(game, ctx, locals)
+                .any(|attacker| game.combat.blockers.iter().any(|(blocker, blocked)| *blocker == o.id && *blocked == attacker)),
             Atom::Stat { stat, cmp, value } => {
                 let want = value.evaluate(game, ctx, locals);
                 stat.of(game, ctx, o.id).is_some_and(|have| match cmp {
@@ -2083,7 +2092,7 @@ impl Number {
                 Filter::Atom(Atom::Type(_) | Atom::PermanentType | Atom::HasAdventure | Atom::PreparedSpell | Atom::BasicLandType | Atom::ManaCost(_) | Atom::Subtype(_) | Atom::Supertype(_)
                     | Atom::Color(_) | Atom::Colorless | Atom::Multicolored | Atom::Monocolored
                     | Atom::Opponent | Atom::MostLife { .. } | Atom::Keyword(_) | Atom::Tapped(_) | Atom::Token | Atom::Saddled | Atom::Commander | Atom::Suspended | Atom::FaceDown
-                    | Atom::Combat(_) | Atom::Attached(_) | Atom::Ability { .. } | Atom::Chosen(_) | Atom::SameName(_) | Atom::SharesCreatureType(_) | Atom::SharesColor(_)
+                    | Atom::Combat(_) | Atom::Blocking(_) | Atom::Attached(_) | Atom::Ability { .. } | Atom::Chosen(_) | Atom::SameName(_) | Atom::SharesCreatureType(_) | Atom::SharesColor(_)
                     | Atom::TargetCount(_) | Atom::Named(_) | Atom::EnteredThisTurn | Atom::LostLifeThisTurn | Atom::DealtDamageBy(_) | Atom::TappedFor { .. } | Atom::Damage { .. } | Atom::FoughtThisTurn { .. } | Atom::Counters { .. } | Atom::Level { .. } | Atom::Entered(_) | Atom::InSubjects(_)) => false,
             }
         }
@@ -2205,9 +2214,8 @@ impl Number {
             ir::Amount::Const(n) => Number::Const(*n),
             ir::Amount::Recalled(ir::amount::Recalled::Number) => bind.number()?.0,
             ir::Amount::Half { of, round_up: Some(round_up) } => Number::Half { of: Box::new(Self::compile(of, support, bind)?), round_up: *round_up },
-            // Literal multiples of announced X reuse checked Product arithmetic.
-            // Other multiplicative quantity forms remain outside this bounded owner.
-            ir::Amount::Multiple(factor,n) if matches!(n.as_ref(), ir::Amount::X) => Number::Product(Box::new(Number::Const(*factor)),Box::new(Self::compile(n,support,bind)?)),
+            // Whole multiples compose the same checked arithmetic with any modeled quantity.
+            ir::Amount::Multiple(factor,n) => Number::Product(Box::new(Number::Const(*factor)),Box::new(Self::compile(n,support,bind)?)),
             ir::Amount::Plus(a,b) => Number::Sum(Box::new(Self::compile(a,support,bind)?),Box::new(Self::compile(b,support,bind)?)),
             ir::Amount::Minus(a,b) => Number::Difference(Box::new(Self::compile(a,support,bind)?),Box::new(Self::compile(b,support,bind)?)),
             ir::Amount::LifeChange { player: None, gained: false, when: ir::amount::When::ThisWay } => Number::LifeLost(bind.life_lost()?),
