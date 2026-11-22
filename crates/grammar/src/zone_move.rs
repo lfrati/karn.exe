@@ -311,6 +311,19 @@ pub fn zone_move(form: Form, objects: &P<Objects>) -> P<Action> {
             )
             .alias()
     };
+    // A long object may follow both endpoints. The endpoints retain their normal roles.
+    let endpoints_first = |mv: MoveVerb, third: &str, base: &str| {
+        let sg = objects.map(|o| (!plural(&o)).then_some(o), |o| (!plural(o)).then(|| o.clone()));
+        let pl = objects.map(|o| plural(&o).then_some(o), |o| plural(o).then(|| o.clone()));
+        let pair = alt("endpoints before objects", vec![
+            destination(Number::Sg, mv).then(&sg), destination(Number::Pl, mv).then(&pl),
+        ]);
+        verb(form, third, base, "").then_keep(&origin()).then(&pair).map(
+            move |(from, (to, objects))| origin_fits([&objects], 1, &Some(from.clone()))
+                .then(|| Action::Move { verb: mv, moves: vec![(objects, to)], from: Some(from) }),
+            |_| None,
+        ).alias()
+    };
     alt(
         "zone move",
         vec![
@@ -318,6 +331,8 @@ pub fn zone_move(form: Form, objects: &P<Objects>) -> P<Action> {
             one(MoveVerb::Put, "puts", "put"),
             shifted(MoveVerb::Return, "returns", "return"),
             shifted(MoveVerb::Put, "puts", "put"),
+            endpoints_first(MoveVerb::Return, "returns", "return"),
+            endpoints_first(MoveVerb::Put, "puts", "put"),
         ],
     )
 }

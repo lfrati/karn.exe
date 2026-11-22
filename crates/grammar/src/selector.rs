@@ -762,6 +762,8 @@ enum Post {
     Owner(Relation),
     Caster(ir::selector::Casting),
     With(Filter),
+    /// One surface phrase that supplies several ordinary postnominal predicates.
+    WithAll(Vec<Filter>),
     Zone(ZoneSpec),
     Chooser(Selector),
     Random(ir::selector::Random),
@@ -1761,6 +1763,22 @@ fn shares(n: Number, sel: &P<Selector>) -> P<Filter> {
         },
     );
     alt("shares", vec![positive, negative])
+}
+
+/// A distinct value for every selected object, with a shared bound (202.3, 208.1).
+/// Printing uses the ordinary independent predicates, so this spelling is an alias.
+fn collective_each(n: Number) -> P<Post> {
+    let characteristic = table("distinct characteristic", vec![
+        ("mana value".into(), (Characteristic::ManaValue, Stat::ManaValue)),
+        ("power".into(), (Characteristic::Power, Stat::Power)),
+    ]);
+    let cmp = alt("comparison", vec![lit("or less").to(Cmp::Le), lit("or greater").to(Cmp::Ge), empty().to(Cmp::Eq)]);
+    lit("that each have a different").then_keep(&characteristic).then(&stat_amount()).then(&cmp).map(
+        move |(((what, stat), value), cmp)| (n == Number::Pl).then(|| Post::WithAll(vec![
+            Filter::Atom(Atom::Different(what)), Filter::Atom(Atom::Stat { stat, cmp, value }),
+        ])),
+        |_| None,
+    ).alias()
 }
 
 /// Collective predicates of a plural selection: "with different names", "with different
@@ -2921,6 +2939,7 @@ fn post(prep: ZonePrep, n: Number, player_sg: &P<Selector>, player_pl: &P<Select
                         _ => None,
                     },
                 ),
+            collective_each(n),
             post_filter(n, sel).map(
                 |f| Some(Post::With(f)),
                 |p| match p {
@@ -3044,6 +3063,7 @@ fn fold_posts(set: &mut ObjectSet, posts: Vec<Post>) -> Option<(Option<Box<Selec
             }
             // what an earlier instruction did ("exiled this way") may be followed by a "with" of
             // the same noun phrase; it prints before it (a variant)
+            Post::WithAll(filters) if set.domain != Domain::Player && events.is_empty() => withs.extend(filters),
             Post::With(f) if events.iter().all(|e| unevent_filter(e).is_some_and(|(_, when, _)| when == When::ThisWay)) => withs.push(f),
             // "that died this turn" after objects, "who lost life this turn" after players
             Post::Event { who, filter } if who == (set.domain == Domain::Player) => events.push(filter),

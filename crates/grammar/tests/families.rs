@@ -167,3 +167,21 @@ fn r119_1_life_rank_conditions() {
     }
     declines("If you have the most life or are tied for least life, draw a card.");
 }
+
+/// CR 608.2c and 202.3: moving the endpoints does not change the selected objects or constraints.
+#[test]
+fn r608_2c_endpoints_before_objects() {
+    for text in [
+        "Return from your graveyard to the battlefield any number of target creature cards that each have a different mana value X or less.",
+        "Return from your graveyard to your hand two target creature cards with different names.",
+        "Put from your hand onto the battlefield two creature cards.",
+    ] {
+        read(text);
+    }
+    for text in [
+        "Return from your graveyard to the battlefield target creature card from your hand.",
+        "Return from your graveyard to the battlefield target creature card that each have a different mana value X or less.",
+    ] {
+        declines(text);
+    }
+}
