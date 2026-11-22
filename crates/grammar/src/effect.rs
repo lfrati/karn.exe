@@ -396,7 +396,10 @@ fn build_modifiers() -> Modifiers {
             lit(", rounded down").to(Modifier::Rounded { up: false }),
             crate::procedure::in_pile(),
             with_counters,
-            lit("instead of one").to(Modifier::InsteadOfOne),
+            lit("instead of").then_keep(&crate::words::count_amount()).map(
+                |n| Some(Modifier::InsteadOfCount(n)),
+                |m| match m { Modifier::InsteadOfCount(n) => Some(n.clone()), _ => None },
+            ),
             lit("for that player to ignore this effect until end of turn").to(Modifier::ToIgnoreThisEffect),
             lit("when you cast it").to(Modifier::WhenYouCastIt),
             lit("when ~ leaves the battlefield").to(Modifier::WhenThisLeaves),

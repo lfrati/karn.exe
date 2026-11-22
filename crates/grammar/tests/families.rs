@@ -648,3 +648,25 @@ fn r111_3_whole_subtype_class_in_token_description() {
     declines("Create a creature token that is every card type.");
     declines("Create two land tokens that is every basic land type.");
 }
+
+/// CR 608.2c: a count override retains the old count instead of adding a second procedure.
+#[test]
+fn r608_2c_replaced_instruction_counts() {
+    let (value, _) = read("Search your library for up to two basic Forest cards, reveal those cards, and put one onto the battlefield tapped and the rest into your hand. Then shuffle. If there are two or more instant and/or sorcery cards in your graveyard, search your library for up to three basic Forest cards instead of two.");
+    let ir::Ability::Text(effect) = value else { panic!() };
+    let ir::Sentence::Led { rest, .. } = &effect.0[2] else { panic!() };
+    let ir::Sentence::Do(body) = &**rest else { panic!() };
+    assert!(body.first.first.mods.contains(&ir::Modifier::InsteadOfCount(ir::Amount::Const(2))));
+    for text in [
+        "Reveal the top five cards of your library. You may put a creature card from among them into your hand. Put the rest into your graveyard. If there are two or more instant and/or sorcery cards in your graveyard, put up to two creature cards from among the revealed cards into your hand instead of one.",
+        "Target opponent reveals the top seven cards of their library. You may cast an instant or sorcery spell from among them without paying its mana cost. Then that player puts the rest into their graveyard. If there are two or more instant and/or sorcery cards in your graveyard, you may cast up to two instant and/or sorcery spells from among the revealed cards instead of one.",
+        "Reveal the top eight cards of your library. You may put a creature card from among them onto the battlefield. Put the rest into your graveyard. If you control a creature with power 4 or greater, you may put two creature cards onto the battlefield instead of one.",
+        "Search your library for a basic land card, reveal it, put it into your hand, then shuffle. If this spell was kicked, search your library for two basic land cards instead of one.",
+        "Search your library for up to four basic land cards instead of three.",
+    ] { read(text); }
+    let (words, _) = read("Draw three cards instead of two.");
+    let (digits, _) = read("Draw three cards instead of 2.");
+    assert_eq!(words, digits);
+    declines("Draw three cards instead of two lands.");
+    declines("Draw three cards instead of a card.");
+}

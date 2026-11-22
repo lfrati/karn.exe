@@ -269,9 +269,9 @@ pub enum Modifier {
     /// "except for Giants, Wizards, and lands", after where the things go ("return all
     /// permanents to their owners' hands except for …"): these are left out.
     ExceptFor(crate::selector::ObjectSet),
-    /// "instead of one": the count this instruction names replaces the one an earlier
-    /// instruction named ("put up to two creature cards … into your hand instead of one").
-    InsteadOfOne,
+    /// "instead of one", "instead of two": this instruction replaces the named count in
+    /// an earlier instruction, retaining that procedure's other steps (608.2c).
+    InsteadOfCount(Amount),
     /// "twice", "three times", "X times", "that many times": the action repeated.
     Times(Amount),
     /// "it explores, then it explores again": the act restates one done before in the
