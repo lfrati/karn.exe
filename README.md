@@ -19,14 +19,14 @@ rejected with a reason.
 ## Where it stands
 
 <!-- implementation-progress:start -->
-<!-- Measurement inputs: 3b4b2e4fe4760784e617734440a4a7689e1759050b108991604f937f77cdba0c -->
+<!-- Measurement inputs: d41714701c25e6edbbec8a5783c68cc1f00f19dc05d379a0804f51dc5d3c0311 -->
 Snapshot: 2026-11-22. Card corpus dated 2026-10-11; deck roster dated 2026-10-08.
 
 | Goal | Measure | Count |
 | --- | --- | ---: |
 | Read every card | Cards in the pinned corpus | 32,018 |
 | | Cards the grammar reads, every face | 30,074 |
-| Run most of Magic | Cards the engine runs, every face | 19,895 |
+| Run most of Magic | Cards the engine runs, every face | 19,914 |
 | | Published decks in the roster | 2,012 |
 | | Decks whose main deck is read in full | 1,454 |
 | | Decks whose main deck runs in full | 138 |
@@ -135,8 +135,8 @@ Rules, Oracle text, rulings and the published deck lists are checked into
 ## Testing
 
 <!-- testing-inventory:start -->
-Repository inventory: **3,993 rule-cited tests**,
-**55 active MGN scenarios or game prefixes**, and
+Repository inventory: **4,004 rule-cited tests**,
+**58 active MGN scenarios or game prefixes**, and
 **3 complete MGN game recordings**. These are counts of tests
 and recordings, not current test results or a measure of coverage.
 <!-- testing-inventory:end -->

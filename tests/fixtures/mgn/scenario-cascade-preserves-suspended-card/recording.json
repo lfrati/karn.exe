@@ -1,0 +1,117 @@
+{
+ "format": "mgn-recording/2",
+ "record": "sha256:db384bbdebee1be418a9cbc76928a501bbad7a0f30b5fb399419bd7e3053c32f",
+ "game": "sha256:29988102ac98794f2a44c435f3e3cae803fbd95574c0f97b0568a92859e9b0c5",
+ "driven_by": {
+  "driver": "tests/fixtures/mgn-drafts/cascade-preserves-suspended-card.json",
+  "identity": "sha256:81a8921640792ed33954e5b5a4c72da002f8f0ca23065e3b55fbed3b30717b16",
+  "tier": 2
+ },
+ "engine": {
+  "name": "karn",
+  "version": "0.1.0+6f32ac18"
+ },
+ "adapter": {
+  "name": "karn-mgn",
+  "version": "1"
+ },
+ "date": "2026-11-22",
+ "transitions": 2,
+ "decisions_replayed": 2,
+ "not_projected": [
+  "game.initiative",
+  "game.day_night",
+  "players.*.designations",
+  "objects.*.flipped",
+  "objects.*.phased_out",
+  "objects.*.in_combat"
+ ],
+ "supplied": [],
+ "accepted": [],
+ "renewed": {
+  "1": [
+   "bolt"
+  ],
+  "2": [
+   "agent",
+   "bear",
+   "giant",
+   "land"
+  ]
+ },
+ "canonical_bytes": 4908,
+ "replay": {
+  "levels": {
+   "L0": "pass",
+   "L1": "pass",
+   "L2": "pass",
+   "L3": "pass",
+   "L4": "pass",
+   "L5": "not_applicable"
+  },
+  "replayed": 2,
+  "divergences": 0,
+  "inconclusive": 0,
+  "seconds": 1.388
+ },
+ "provenance": {
+  "engine_executable": {
+   "path": "/home/lapo/git/karn-wt/quality/.cache/quality/baseline-game-serve",
+   "sha256": "a02d38b4e0fef3cff48fa46841d3e74ad54e5cf086eb4c06b5860d3c7cf10a23"
+  },
+  "python": {
+   "path": "/home/lapo/.local/share/uv/python/cpython-3.14.10-linux-x86_64-gnu/bin/python3.14",
+   "version": "3.14.10 (main, Nov 11 2026, 00:18:44) [Clang 23.1.3 ]"
+  },
+  "tooling_checkout": {
+   "path": "/home/lapo/git/karn-wt/quality",
+   "commit": "6f32ac1815864cae8eb6d13b47b86029ac90ef96"
+  },
+  "files": {
+   "/home/lapo/git/karn-wt/quality/docs/mgn/schema/adapter-protocol.schema.json": "fd1849c1d7413eb594b9c67474adda3f576b8378b3f003759299de6e16b45d72",
+   "/home/lapo/git/karn-wt/quality/docs/mgn/schema/divergence-report.schema.json": "cb0e5fa2ee095a207c29af9c32cb420480f8852e321bf87922cbd5b053f05596",
+   "/home/lapo/git/karn-wt/quality/docs/mgn/schema/mgn-1.schema.json": "4a6dfd5ad04b0c71c76b4de9adae62afd132efe6fd1872332cc9629893415456",
+   "/home/lapo/git/karn-wt/quality/docs/mgn/schema/review-log.schema.json": "1a9f46fe22ebfa2802cc42c016e42bdce5a4d4dad742b25f4bcb1786a7dc19bd",
+   "/home/lapo/git/karn-wt/quality/resources/manifest.json": "c63c7a36629dc08e421d583b08ecc42627f28d40b41810d4a8d688760c91997c",
+   "/home/lapo/git/karn-wt/quality/resources/oracle/cards.jsonl": "afda2e8de024387848267601d749d170c3f36fe98a982291509091b7d5670bc5",
+   "/home/lapo/git/karn-wt/quality/resources/oracle/legal-standard.jsonl": "c0e1a47e5865aa5d46507ba2d4263e2d3601d07937888c6cae11217e5d550a21",
+   "/home/lapo/git/karn-wt/quality/resources/rules/MagicCompRules-20260925.txt": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/__init__.py": "89fe82b7feca8c1ec57e56fd0858b0fa0ed84667b1b724f16ebaa975d2f9b05d",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/abilities.py": "80d4e7854d9168f0aeddc8a9a37f620e2400bd00e97026caf3e81993c6f7b81d",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/adapters/__init__.py": "ea96ee4a73768a1e948ccbe7d09bbd4dc73e2c8494a270ad924f2c0beefe3676",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/adapters/karn.py": "19bcd3b311f93a3a4b0e5a5deb8496a4944b3156945ff7d3392bed792e14ba04",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/canonical.py": "34d76648b66b03cbe2e203eb953da38a07d1a427bb49db70917d91bb7e230edb",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/causal.py": "498fe91d10a6d1f6ef9d73987e63cb671473e8f162660fa458e1526d8be5d074",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/copy_definition.py": "6287abff55e9646f7c9977c505d1a1928e1fb01ed5b9cd023277614319ad5f31",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/delta.py": "056adbd9f88d8b60daf888c29b90b4be6df5a2d0f9821ecbbc49d697d9c97290",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/examples.py": "378a634f4258b0e1ee9ae1ccfbfbb78eeb66feddca49abce1ea2101f5f657034",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/identity.py": "9256d12cd0a966790c83f2ec53627fdc2d0d8b54683fb1a29703eec3dc15a0fa",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/integrity.py": "1997f4955a7df781563276b81f043397cf577c33453f4f2d3a00da78c37c65e0",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/keywords.py": "0cb16a7382c44e58aa6e2e241056d012dbe77d04133d64a43627b3f7904dba37",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/lots.py": "51feb49d349064818b992631838e4be9e52febe4ef9ee7410eeab68a01fb3080",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/native_actions.py": "2459922cbe869ad91463883ebce246d7e8f6495d670e316c6eee6f1dbff8d94d",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/oracle.py": "43386b95925574a1e46b8d308e8b0af4e06db69db6403bb02f6741180ef52d02",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/payments.py": "6b5e8a38d89160bd282c95e0632d8810273516ccc610c34177a114051cc0063c",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/randomness.py": "d039870286ce62e42ee379c967b2021ebc1febd90af7d1b0a520d7e76be72115",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/record.py": "30ea3a4ab6389aca6fab62431068e5320028a72ed10593534da8add720bea755",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/render.py": "274249367151293ca991c833167dfba4ae095c3e89aa33654a3c68f89a50b0ca",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/reviews.py": "5dea44f7299e85398d9ecdab313bf615c652698434275934a37d2b2820f61012",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/runner.py": "833f8179ac02dd3bb7a19cdc0a4150402d4818065ccf3388921e3f3de82e5f05",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/scenario.py": "ca5e8416379856571ee96edd01b9c0ee234eef999473599bbf94e40bfcdb0871",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/schema.py": "2b2fd51724b9c1649c83068e4362e3e9f4dc3320000fcf8bec8d9f986bb466e5",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/show.py": "7170331efc3a621622786f67701fd9afaddd34a3e26bd756a3e140e2f47b8101",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/state.py": "071ae9192bfd1fb841aa1a0bcd81f2e0e8bce75e3acd7f21bb7bc80ba3d536c1",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/tokens.py": "868bb0c07718cca778acdab2e6830759c14c8fb2a156909bec6ef2254a4d3642",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/validate.py": "bdb4a75b31924950041bcbdcd56a00feed7bbe407abf4fddabfe385ed8f5c43e",
+   "/home/lapo/git/karn-wt/quality/scripts/mgn/vocabulary.py": "66ab19d9da13fcdd0f1814ac3c97c5b25aee28efd47c9337436c3d64e3a7dca6",
+   "/home/lapo/git/karn-wt/quality/.cache/quality/baseline-game-serve": "a02d38b4e0fef3cff48fa46841d3e74ad54e5cf086eb4c06b5860d3c7cf10a23",
+   "/home/lapo/.local/share/uv/python/cpython-3.14.10-linux-x86_64-gnu/bin/python3.14": "32b6777d62aba66726091c65e4a4631073a49b069e4267cc83d4a5df14009f91",
+   "/home/lapo/git/karn-wt/quality/tests/fixtures/mgn-drafts/cascade-preserves-suspended-card.json": "5a3e0b881ca3d1c116787c155a09337891ea31576896bcd0b342e200d6f6f2fd"
+  },
+  "driver_input": {
+   "path": "/home/lapo/git/karn-wt/quality/tests/fixtures/mgn-drafts/cascade-preserves-suspended-card.json",
+   "sha256": "5a3e0b881ca3d1c116787c155a09337891ea31576896bcd0b342e200d6f6f2fd"
+  },
+  "executed_driver_sha256": "81a8921640792ed33954e5b5a4c72da002f8f0ca23065e3b55fbed3b30717b16"
+ }
+}
