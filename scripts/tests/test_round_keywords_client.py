@@ -29,6 +29,23 @@ class RoundKeywordsClientTests(unittest.TestCase):
         self.pass_round()
         self.assertEqual(len(self.ids("Fen Hauler", zone="battlefield")), 1)
 
+    def test_improvise_combines_with_jegantha_mana_for_the_remaining_colored_cost(self):
+        # 702.126a: artifacts pay {6}; Jegantha's restricted black unit pays {B}, not generic.
+        self.new([{"hand": ["Fen Hauler"], "battlefield": ["Darksteel Relic"] * 6 + ["Jegantha, the Wellspring"]}, {}])
+        artifacts = self.ids("Darksteel Relic", controller=0)
+        source, = self.ids("Jegantha, the Wellspring", controller=0)
+        card, = [o for o in self.hand(0) if self.object(o)["name"] == "Fen Hauler"]
+        before = self.view(0)
+        with self.assertRaisesRegex(play.Refused, "does not pay that cost"):
+            self.engine.act({"kind": "cast", "card": card, "targets": [], "improvise": 5, "paying": [artifacts[:5]],
+                             "plan": [{"source": source, "ability": 1}], "mana": {"restricted_after": [0, 2]}})
+        self.assertEqual(self.view(0), before)
+        self.cast("Fen Hauler", plan=[{"source": source, "ability": 1}], spend={"restricted_after": [2]}, improvise=6, paying=[artifacts])
+        self.assertTrue(self.object(source)["tapped"])
+        self.assertTrue(all(self.object(o)["tapped"] for o in artifacts))
+        self.pass_round()
+        self.assertEqual(len(self.ids("Fen Hauler", zone="battlefield")), 1)
+
     def test_improvise_cannot_reuse_an_artifact_activated_for_mana(self):
         # 702.126a: an artifact tapped during mana production is no longer untapped.
         self.new([{"hand": ["Fen Hauler"], "battlefield": ["Darksteel Relic"] * 4 + ["Sol Ring", "Swamp"]}, {}])
