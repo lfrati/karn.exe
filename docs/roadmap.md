@@ -49,12 +49,17 @@ implemented: concealed qualification no longer suppresses optional prompts, and 
 affirmative answers are refused. Six paired full-card client regressions and the full
 repository check pass.
 
-**Next: fix [#4, Room copiable values and doors](https://github.com/lfrati/karn.exe/issues/4).**
+[#4, Room copies](https://github.com/lfrati/karn.exe/issues/4), is implemented: unlock costs
+and characteristics use the copied definition and the permanent's own designations,
+including token entry and expired copies. Eight focused rules regressions and three client
+regressions cover the repair. Copy exceptions use a separate rebuilding path whose Room
+halves defect is tracked in [#33](https://github.com/lfrati/karn.exe/issues/33).
+
+**Next: fix [#5, conditional self-flash](https://github.com/lfrati/karn.exe/issues/5).**
 The remaining core correctness queue then proceeds through:
 
-1. [#5: conditional self-flash](https://github.com/lfrati/karn.exe/issues/5).
-2. [#6: Adventure replacement choice and permission](https://github.com/lfrati/karn.exe/issues/6).
-3. [#7: cost-reveal lifetime](https://github.com/lfrati/karn.exe/issues/7).
+1. [#6: Adventure replacement choice and permission](https://github.com/lfrati/karn.exe/issues/6).
+2. [#7: cost-reveal lifetime](https://github.com/lfrati/karn.exe/issues/7).
 
 Fix these shared mechanisms or explicitly refuse the unsupported behavior before adding
 coverage.

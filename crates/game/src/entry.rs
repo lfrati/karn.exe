@@ -148,7 +148,8 @@ impl Game {
             let def = &self.defs[index];
             if back { def.back()?.chars() } else { def.room(self.entering_unlocked(card)).chars() }
         } else if let Some(faces) = &o.token_faces {
-            if back { faces.back.as_ref()?.chars.clone() } else { faces.front.chars.clone() }
+            let values = if back { faces.back.as_ref()? } else { &faces.front };
+            values.permanent_chars(self, self.entering_unlocked(card))
         } else if back { return None; } else { o.chars.clone() };
         (!back || chars.types.iter().any(|t| t.permanent())).then_some((chars, back))
     }
@@ -167,9 +168,11 @@ impl Game {
         // The entrant's own static effects will have a new zone timestamp. Observe
         // that ordering without consuming a timestamp merely to ask this question.
         let stamp = self.clock + 1;
+        let unlocked = self.entering_unlocked(card);
         let face = self.entry_face(card, chosen);
         let view = Viewing::new(self, card, Some(card), controller, &entry);
         view.game.obj_mut(card).stamp = stamp;
+        view.game.obj_mut(card).unlocked = unlocked;
         if let Some((chars, transformed)) = face {
             view.game.obj_mut(card).chars = chars;
             view.game.obj_mut(card).transformed = transformed;
@@ -178,7 +181,8 @@ impl Game {
         // The permanent a copied spell will become is a token (111.13).
         if view.before.card_copy && view.before.zone == Zone::Stack { view.game.obj_mut(card).card_copy = false; }
         if let Some(values) = &chosen.copied {
-            view.game.obj_mut(card).chars = values.chars.clone();
+            let chars = values.permanent_chars(view.game, unlocked);
+            view.game.obj_mut(card).chars = chars;
             view.game.obj_mut(card).copied = Some(values.clone());
         }
         let prepared = entry.enters_prepared && view.game.has_prepare_spell(card);
@@ -225,15 +229,19 @@ impl Drop for Viewing<'_> {
 
 impl EntryEvent {
     pub(crate) fn new(game: &mut Game, request: EntryRequest) -> crate::Res<Self> {
+        let unlocked = match &request {
+            EntryRequest::Card { card, .. } => game.entering_unlocked(*card),
+            EntryRequest::Token { .. } => [false; 2],
+        };
         let (card, chars, owner, controller, chosen, tapped, transformed) = match &request {
             EntryRequest::Card { card, controller, chosen, .. } => {
                 let old = game.obj(*card);
                 let (chars, transformed) = game.entry_face(*card, chosen).expect("eligible entry has a permanent face");
                 (old.card, chars, old.owner, *controller, chosen.clone(), false, transformed)
             }
-            EntryRequest::Token { controller, values, tapped, chosen, .. } => (None, values.current().chars.clone(), *controller, *controller, chosen.clone(), *tapped, values.transformed),
+            EntryRequest::Token { controller, values, tapped, chosen, .. } => (None, values.current().permanent_chars(game, unlocked), *controller, *controller, chosen.clone(), *tapped, values.transformed),
         };
-        let chars = chosen.copied.as_ref().map(|v| v.chars.clone()).unwrap_or(chars);
+        let chars = chosen.copied.as_ref().map(|v| v.permanent_chars(game, unlocked)).unwrap_or(chars);
         let on = if let EntryRequest::Token { prepared: Some(on), .. } = &request {
             game.obj_mut(*on).chars = chars;
             *on
@@ -242,6 +250,7 @@ impl EntryEvent {
         game.obj_mut(on).copy_acquisition = chosen.copy_acquisition.clone();
         game.obj_mut(on).copied = chosen.copied.clone();
         game.obj_mut(on).transformed = transformed;
+        game.obj_mut(on).unlocked = unlocked;
         if let Some(by) = chosen.face_down {
             game.obj_mut(on).face = crate::face::Face::Down(crate::face::Down { by });
             game.refresh_face(on);
@@ -259,7 +268,6 @@ impl EntryEvent {
             // before the copied spell moves. Both faces survive that move (707.10g).
             game.obj_mut(on).token_faces = game.obj(*card).token_faces.clone();
             game.obj_mut(on).transformed = transformed;
-            game.obj_mut(on).unlocked = game.entering_unlocked(*card);
         }
         let mut entry = Entry::default();
         entry.prepared = Some(on);

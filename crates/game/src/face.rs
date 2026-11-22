@@ -225,7 +225,9 @@ impl Game {
         self.underlying_def(id)
     }
 
-    fn underlying_def(&self, id: ObjId) -> Option<&CardDef> {
+    /// The definition before the face-down overlay and Room lock abilities; in
+    /// particular, both Room halves remain available as copiable values (709.5).
+    pub(crate) fn underlying_def(&self, id: ObjId) -> Option<&CardDef> {
         let o = self.obj(id);
         if let Some(values) = &o.copied { return values.definition(self); }
         if let Some(faces) = &o.token_faces {
@@ -246,8 +248,13 @@ impl Game {
     /// its token's or card's face that is up.
     pub(crate) fn face_up_chars(&self, id: ObjId) -> Chars {
         let o = self.obj(id);
-        if let Some(values) = &o.copied { return values.chars.clone(); }
-        if let Some(faces) = &o.token_faces { return faces.face(o.transformed).chars.clone(); }
+        if let Some(values) = &o.copied {
+            return if o.zone == Zone::Battlefield { values.permanent_chars(self, o.unlocked) } else { values.chars.clone() };
+        }
+        if let Some(faces) = &o.token_faces {
+            let values = faces.face(o.transformed);
+            return if o.zone == Zone::Battlefield { values.permanent_chars(self, o.unlocked) } else { values.chars.clone() };
+        }
         match o.card {
             Some(i) if o.transformed => self.defs[i].back().map_or_else(|| o.chars.clone(), CardDef::chars),
             Some(i) if o.zone == Zone::Battlefield => self.defs[i].room(o.unlocked).chars(),

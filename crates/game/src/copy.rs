@@ -47,6 +47,12 @@ impl Values {
             None => self.chars.predefined.and_then(|k| crate::token::definition(k).ok()),
         }
     }
+    /// Battlefield characteristics apply the holder's Room designations without
+    /// changing the full, reusable copiable values (709.5).
+    pub(crate) fn permanent_chars(&self, game: &Game, unlocked: [bool; 2]) -> Chars {
+        self.definition(game).filter(|def| def.is_room())
+            .map_or_else(|| self.chars.clone(), |room| room.room(unlocked).chars())
+    }
 }
 /// A creating effect defines immutable faces for a token or castable card copy
 /// (111.3, 707.8a, 707.10g, 707.12). This is
@@ -94,7 +100,11 @@ impl Game {
             if matches!(values.definition, Some(Definition::Back(i)) if !self.defs[i].modal) { values.chars.mana_value = 0; }
             return values;
         }
-        let mut chars = o.chars.clone();
+        // A Room's lock abilities and both halves are copiable; the current
+        // unlocked designations are not (709.5, 707.2).
+        let mut chars = if o.zone == crate::Zone::Battlefield {
+            self.room_card(source).map_or_else(|| o.chars.clone(), CardDef::chars)
+        } else { o.chars.clone() };
         if o.transformed && o.card.is_some_and(|i| !self.defs[i].modal) { chars.mana_value = 0; }
         let definition = o.card.map(|i| if o.transformed { Definition::Back(i) } else { Definition::Card(i, o.cast_as) });
         Values { chars, definition }
@@ -264,7 +274,7 @@ impl Game {
             if !turn { o.copy_effects.layers.clear(); }
             o.copy_effects.layers.push(Resolved { values: values.clone(), stamp, turn });
             o.copied = Some(values.clone());
-            if down { self.refresh_face(object); } else { self.obj_mut(object).chars = values.chars.clone(); }
+            self.refresh_face(object);
         }
         self.prune_control_durations();
         self.control_transitions(previous);
@@ -282,8 +292,9 @@ impl Game {
                 o.chars = base.chars;
                 o.copied = base.copied;
             }
-            // what it is face up changed; face down it is still the nameless 2/2 (708.10)
-            if down { self.refresh_face(object); }
+            // Restore the face-down overlay or apply the Room's own current
+            // designations, which may have changed during the copy (708.10, 709.5).
+            if down || self.room_card(object).is_some() { self.refresh_face(object); }
         }
     }
 }

@@ -7,12 +7,13 @@ use crate::state::{Pool, Zone};
 use crate::{Event, Game, ObjId, PlayerId};
 
 impl Game {
-    /// The Room card this permanent is, with doors: not while it is face down, when it is a
-    /// 2/2 with no halves at all (708.2a), and no one can tell that it is a Room (708.5).
+    /// The whole Room definition this permanent has, including copy effects and tokens:
+    /// not while it is face down, when it is a 2/2 with no halves at all (708.2a),
+    /// and no one can tell that it is a Room (708.5).
     pub(crate) fn room_card(&self, permanent: ObjId) -> Option<&crate::CardDef> {
         let o = self.get_object(permanent)?;
         if matches!(o.face, crate::face::Face::Down(_)) { return None; }
-        o.card.map(|i| &self.defs[i]).filter(|d| d.is_room())
+        self.underlying_def(permanent).filter(|d| d.is_room())
     }
 
     /// The unlock cost of this half of a Room permanent, if this player may pay it now: the
