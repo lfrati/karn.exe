@@ -151,6 +151,7 @@ expects `keyword: Fear`. When a keyword lands, point them at one that is still r
 - Overload: rewriting a target-free effect lowers, but the full rule needs announcement-time text substitution and selection of that executable before targets are chosen.
 - Miracle: reveal-as-drawn and reveal-trigger expansions need draw-time suspension and a linked cost permission with the reveal's bounded visibility.
 - Bestow: cost-only casting cannot declare Aura targets, and the alternative-characteristics owner accepts only Adventure/Omen instants or sorceries; needs a bestowed state through casting, illegal-target resolution and unattachment, preserving the permanent's incarnation.
+- Myriad: full and split rule expansions stop at mixed referent defenders and attacking-copy lowering; needs a per-opponent optional copy loop that preserves the chosen player/planeswalker constraint and captures the resulting group for delayed exile.
 
 Cumulative upkeep currently supports fixed generic mana only; colored, life and choice-bearing repeated costs remain refused.
 
