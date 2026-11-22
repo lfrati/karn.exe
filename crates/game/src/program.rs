@@ -6401,6 +6401,9 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 binder.resolve(&mention.reference)?.taken.push(out);
                 let shown = e.slot();
                 e.instrs.push(Instr::Exile { from: out, out: shown, hidden });
+                let now = e.slot();
+                e.instrs.push(Instr::Subjects { cards: shown, out: now, still_in: Some(Zone::Exile) });
+                binder.exiled_now.push(now);
             }
             Action::Reveal(objects) | Action::LookAt(objects) | Action::Exile(objects) => {
                 let [selector] = objects.items.as_slice() else { return unsupported("program: multiple revealed groups not lowered"); };
