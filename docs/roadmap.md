@@ -209,6 +209,11 @@ because it is what moves the deck count.
   before a resumable proposed turn. [#37](https://github.com/lfrati/karn.exe/issues/37) tracks
   retaining that candidate, competing skips and the follow-up in the next actual turn.
 
+- Oath of Druids: typed chooser/predicate lowering and an actor-owned optional reveal attempt
+  still stop at moving the matched creature and the other revealed cards to two destinations.
+  [#38](https://github.com/lfrati/karn.exe/issues/38) tracks the retained chooser/result partition;
+  incomplete experiments were removed.
+
 - Chain Lightning / Chain of Vapor: two narrowed copy probes still require optional
   copying, an explicit copy controller and one-target retargeting; existing stack-copy
   execution assigns the effect controller. Both complete cards remain refused.
