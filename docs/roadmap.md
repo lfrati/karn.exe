@@ -64,15 +64,19 @@ tests. Other historical predicates still need their own supported facts and prod
 Repeated matched release replay medians are 0.6–1.8% lower than the baseline; no speedup
 is claimed. The profiling task below retains these measurements.
 
-**Next: implement [#28, counter results and destination self-replacements](https://github.com/lfrati/karn.exe/issues/28),
-with Remand and Memory Lapse.** The coverage sequence is:
+Counter results and destination self-replacements now share the existing departure batch
+([#28](https://github.com/lfrati/karn.exe/issues/28)). Remand, Memory Lapse, Lapse of Certainty
+and Spell Crumple add four compiled whole cards without losses. Remand unlocks one roster
+main deck: Celso Zampere's 2006 BUG Control list. `make check` passes 4,780 rules tests and
+1,118 tooling tests. Matched release replay medians are 0.2–2.0% lower than the prior batch;
+the measurements remain evidence for #31. Hinder's library-position choice remains refused.
 
-1. [#28: counter results and destination self-replacements](https://github.com/lfrati/karn.exe/issues/28),
-   with Remand and Memory Lapse. Reuse the departure work from #6 where appropriate without
-   conflating their different replacement rules.
-2. [#29: granted alternative costs](https://github.com/lfrati/karn.exe/issues/29),
+**Next: implement [#29, granted alternative costs](https://github.com/lfrati/karn.exe/issues/29),
+with Snapcaster Mage.** The coverage sequence is:
+
+1. [#29: granted alternative costs](https://github.com/lfrati/karn.exe/issues/29),
    with Snapcaster Mage.
-3. [#30: typed coin results](https://github.com/lfrati/karn.exe/issues/30),
+2. [#30: typed coin results](https://github.com/lfrati/karn.exe/issues/30),
    with Mana Crypt.
 
 Re-rank coverage candidates against fresh blockers when the evidence justifies it. Trace

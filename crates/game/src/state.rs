@@ -2028,15 +2028,9 @@ impl Game {
     /// refunded (701.6b). A spell goes to its owner's graveyard, subject to replacements;
     /// an ability ceases to exist. Being uncounterable does not make it an illegal target.
     pub fn counter(&mut self, object: ObjId) -> bool {
-        self.counter_to(object,Zone::Graveyard)
-    }
-    /// A countering effect can replace the spell's destination (701.6a, 614.1a).
-    /// A prohibited counter changes nothing, including its destination.
-    pub(crate) fn counter_to(&mut self, object: ObjId, destination: Zone) -> bool {
         if !self.countered(object) { return false; }
         if self.obj(object).ability.is_none() {
-            if destination == Zone::Exile { self.exile_result(object); }
-            else { self.move_to(object, destination, self.controller(object)); }
+            self.move_to(object, Zone::Graveyard, self.controller(object));
         }
         true
     }

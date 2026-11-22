@@ -89,6 +89,11 @@ pub enum CounterRemoval {
     All,
 }
 
+/// A successful counter's destination, including its own self-replacement (614.15).
+/// Ordinary graveyard replacements are considered only after this policy is applied.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CounterDestination { Graveyard, Exile, Hand, Library(ir::action::LibraryPosition) }
+
 /// One ordinary action. What one action does, it does at once.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
@@ -97,7 +102,7 @@ pub enum Action {
     IncreaseSpeed { players: Operand },
     GetEmblem { players: Operand, definition: crate::ability::Template },
     Destroy { objects: Vec<Operand>, regenerable: bool },
-    Counter { objects: Vec<Operand>, exile: bool },
+    Counter { objects: Vec<Operand>, destination: CounterDestination },
     ExileUntil { objects: Vec<Operand> },
     /// `said`: whether the text says "return" or "put" (the rules treat them alike).
     Move { groups: Vec<(Vec<Operand>, Destination)>, said: ir::action::MoveVerb },
@@ -152,6 +157,7 @@ pub enum Action {
 /// Lowered keywords inherit this contract; the binder decides which words name it.
 #[derive(Debug, Clone, Copy)]
 pub(super) enum Output {
+    Countered,
     Destroyed,
     RemovedCounters,
     Created { max: u32 },
@@ -163,6 +169,7 @@ pub(super) enum Output {
 impl Output {
     pub(super) fn kind(self) -> super::Kind {
         match self {
+            Self::Countered => super::Kind::Subjects,
             Self::Destroyed => super::Kind::Destructions,
             Self::RemovedCounters => super::Kind::Removals,
             Self::Created { .. } => super::Kind::Subjects,
@@ -174,6 +181,7 @@ impl Output {
 
     pub(super) fn value(self, result: &mut crate::operation::Completed) -> super::Value {
         match self {
+            Self::Countered => super::Value::Subjects(std::mem::take(&mut result.countered).into_iter().map(Target::Object).collect()),
             Self::RemovedCounters => super::Value::Removals(std::mem::take(&mut result.removed)),
             Self::Destroyed => super::Value::Destructions(std::mem::take(&mut result.destroyed)),
             Self::Created { .. } => super::Value::Subjects(std::mem::take(&mut result.arrived).into_iter().map(Target::Object).collect()),
@@ -196,6 +204,7 @@ impl Output {
 impl Action {
     pub(super) fn output(&self) -> Option<Output> {
         match self {
+            Self::Counter { .. } => Some(Output::Countered),
             Self::Create { players, tokens, .. } => {
                 // Printed cardinality describes the noun, never the actual result group.
                 let max=if *players==Operand::Controller {tokens.iter().try_fold(0u32,|n,(_,amount,_)|n.checked_add(amount.as_constant()?))} else {None};
@@ -215,7 +224,7 @@ impl Action {
                     .filter(|first| groups.iter().all(|(_, to)| zone(to) == *first));
                 Some(Output::Moved { destination })
             }
-            Self::BecomeMonarch { .. } | Self::IncreaseSpeed { .. } | Self::GetEmblem { .. } | Self::Counter { .. }
+            Self::BecomeMonarch { .. } | Self::IncreaseSpeed { .. } | Self::GetEmblem { .. }
             | Self::ExileUntil { .. } | Self::Draw { .. } | Self::GainLife { .. }
             | Self::Tap { .. } | Self::Transform { .. } | Self::Level { .. } | Self::Unprepare { .. } | Self::Designate { .. } | Self::TurnFace { .. }
             | Self::Prevent { .. } | Self::PutCounters { .. } | Self::Regenerate { .. }
@@ -490,7 +499,7 @@ pub(super) fn evaluate(game: &Game, f: &Frame, action: &Action) -> crate::Res<pe
         Action::IncreaseSpeed { players: who } => perform::Action::IncreaseSpeed { players: players(game,f,who) },
         Action::GetEmblem { players: who, definition } => perform::Action::GetEmblem { players: players(game, f, who), definition: *definition },
         Action::Destroy { objects: on, regenerable } => perform::Action::Destroy { objects: objects(game, f, on), regenerable: *regenerable },
-        Action::Counter { objects: on, exile } => perform::Action::Counter { objects: objects(game, f, on), exile: *exile },
+        Action::Counter { objects: on, destination } => perform::Action::Counter { objects: objects(game, f, on), destination: *destination },
         Action::ExileUntil { objects: on } => perform::Action::ExileUntil { objects: objects(game, f, on), source: f.ctx.object_source(), ability: f.ctx.ability.clone(), generation: f.ctx.link_generation },
         Action::Move { groups, .. } => {
             // 400.7e/j: the triggering move or a paid cost supplies a specific public-zone

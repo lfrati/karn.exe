@@ -405,6 +405,12 @@ impl Condition {
     pub(super) fn outcome(paid: usize, possible: usize, outcome: ir::condition::Outcome) -> Self {
         Self(Asks::Outcome { paid, possible, outcome })
     }
+    /// The binder proved the queried object is this counter's sole input. Its retained
+    /// successful-result group is nonempty iff that counter actually happened (701.6a).
+    pub(super) fn countered(slot: usize) -> Self {
+        Self(Asks::Is { what: Thing::Named(expr::Subject::Local(slot)),
+            is: Is::Adjective(expr::Filter::All(Vec::new())), negated: false, past: false })
+    }
 
     /// The question this condition asks. A reference to a chosen value is bound by `bind`.
     pub(crate) fn compile(c: &ir::Condition, support: &Support<'_>, bind: Bind<'_>) -> Res<Condition> {

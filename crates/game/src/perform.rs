@@ -30,7 +30,7 @@ pub(crate) enum Action {
     IncreaseSpeed { players: Vec<PlayerId> },
     GetEmblem { players: Vec<PlayerId>, definition: crate::ability::Template },
     Destroy { objects: Vec<ObjId>, regenerable: bool },
-    Counter { objects: Vec<ObjId>, exile: bool },
+    Counter { objects: Vec<ObjId>, destination: crate::program::action::CounterDestination },
     ExileUntil { objects: Vec<ObjId>, source: ObjId, ability: Option<crate::binding::AbilityKey>, generation: Option<usize> },
     Move(Vec<Movement>),
     /// Each player in turn, in the order given.
@@ -162,13 +162,27 @@ pub(crate) fn run(game: &mut Game, action: Action) -> crate::Res<Result<Complete
             }
             if game.log.end() != first { game.finish_simultaneous(first, crate::layers::Working::before(Vec::new())); }
         },
-        Action::Counter { objects, exile: true } => { for object in objects { game.counter_to(object, Zone::Exile); } },
-        // the countered spells are put into their owners' graveyards at once, as replacement
-        // effects that apply to each have it (701.6a, 616.1)
-        Action::Counter { objects, exile: false } => {
-            let spells = objects.into_iter().filter(|o| game.countered(*o) && game.obj(*o).ability.is_none())
-                .map(|o| (o, crate::departure::Kind::RuleMove(Zone::Graveyard))).collect::<Vec<_>>();
-            return game.departure_batch(spells);
+        Action::Counter { objects, destination } => {
+            use crate::program::action::CounterDestination;
+            let countered: Vec<_> = objects.into_iter().filter(|o| game.countered(*o)).collect();
+            let spells = countered.iter().copied().filter(|o| game.obj(*o).ability.is_none());
+            let departures = if destination == CounterDestination::Graveyard {
+                crate::departure::Batch::new(game, spells.map(|o| (o, crate::departure::Kind::RuleMove(Zone::Graveyard))).collect())
+            } else {
+                let (zone, position) = match destination {
+                    CounterDestination::Exile => (Zone::Exile, None), CounterDestination::Hand => (Zone::Hand, None),
+                    CounterDestination::Library(position) => (Zone::Library, Some(position)),
+                    CounterDestination::Graveyard => unreachable!("ordinary destination handled above"),
+                };
+                // Self-replacement first (614.15, 616.1a). Flashback can still replace
+                // this departure to a hand/library; a graveyard-only redirect cannot.
+                crate::departure::Batch::destined(game, spells.map(|object| {
+                    let mut to = game.departure_destination(object, zone);
+                    if to.zone == Zone::Library { to.position = position; }
+                    (object, crate::departure::Kind::RuleMove(zone), to)
+                }).collect())
+            };
+            return game.run_operation(crate::operation::Operation::Counter { departures, countered });
         },
         Action::Players { kind: PlayerAction::Draw, players } => return game.draw_batch(players),
         // their top cards are milled at once, as one event (701.17a)

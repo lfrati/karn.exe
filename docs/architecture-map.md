@@ -48,6 +48,11 @@ using ordinary program slots and that incarnation's departure characteristics (6
 They do not follow the new object or infer an earlier time from an announced target alone.
 Other historical predicates remain refused unless their own producer supplies the facts.
 
+A counter operation retains its successful input identities while its departure batch
+collects destination and commander choices. Later “countered this way” conditions bind
+to that producer's result. A counter's own destination replacement applies before general
+graveyard redirects (614.15); flashback still replaces a departure to a hand or library.
+
 `Simulation` owns the gameplay boundary: correlated requests, chooser validation, accepted
 commands and viewer projections. `Game` also exposes low-level state access for fixtures and
 tooling; a direct state edit is not equivalent to a rules action. Player prompts expose only

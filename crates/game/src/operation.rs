@@ -157,9 +157,12 @@ impl EntryInventory {
     }
 }
 
-/// Identities created by the operation, delivered exactly once to its parent.
+/// Retained results of one operation, delivered exactly once to its parent.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct Completed {
+    /// Original identities successfully countered by this instruction (701.6a), including
+    /// abilities that ceased to exist. Empty when no counter succeeded.
+    pub countered: Vec<ObjId>,
     pub arrived: Vec<ObjId>,
     pub transitions: Vec<(ObjId, ObjId)>,
     pub destroyed: Vec<crate::binding::Destruction>,
@@ -321,6 +324,8 @@ impl Replaced for CounterEvent {
 pub(crate) enum Operation {
     Create { ordering:Ordering<crate::creation::Event>,entered:bool,result:Option<Completed> },
     Depart(crate::departure::Batch),
+    /// The successful counter's identities survive all destination/commander choices.
+    Counter { departures: crate::departure::Batch, countered: Vec<ObjId> },
     Draw(crate::draw::Drawing),
     /// Retained damage proposals, then frozen results and counter placements (120.4b/c).
     Damage(crate::damage::Dealing),
@@ -353,7 +358,7 @@ impl Operation {
     }
     pub(crate) fn waiting(&self) -> bool { match self {
         Self::Create {ordering,..} => ordering.waiting(),
-        Self::Depart(batch) => batch.waiting(),
+        Self::Depart(batch) | Self::Counter { departures: batch, .. } => batch.waiting(),
         Self::Draw(drawing) => drawing.waiting(),
         Self::Damage(damage) => damage.waiting(),
         Self::PutCounters { ordering, .. } => ordering.asked.is_some(),
@@ -363,7 +368,7 @@ impl Operation {
     pub(crate) fn public_choices(&self) -> impl Iterator<Item = &PublicChoice> {
         let primary: &[PublicChoice] = match self {
         Self::Create {ordering,..} => &ordering.choices,
-        Self::Depart(batch) => batch.choices(),
+        Self::Depart(batch) | Self::Counter { departures: batch, .. } => batch.choices(),
         Self::Draw(drawing) => &drawing.choices,
         Self::Damage(_) => &[],
         Self::PutCounters { ordering, .. } => &ordering.choices,
@@ -483,7 +488,7 @@ impl Game {
                     }
                 } else {None}
             },
-            Operation::Depart(batch) => batch.prepare(),
+            Operation::Depart(batch) | Operation::Counter { departures: batch, .. } => batch.prepare(),
             Operation::Draw(drawing) => drawing.advance(self)?,
             Operation::Damage(damage) => damage.advance(self)?,
             Operation::PutCounters { ordering, .. } => ordering.advance(self)?,
@@ -519,6 +524,11 @@ impl Game {
         Ok(match operation {
             Operation::Create {result,..} => Ok(result.expect("creation entry child completes once")),
             Operation::Depart(batch) => Ok(batch.commit(self)),
+            Operation::Counter { departures, countered } => {
+                let mut result = departures.commit(self);
+                result.countered = countered;
+                Ok(result)
+            },
             Operation::Draw(_) => Ok(Completed::default()),
             Operation::Damage(damage) => Ok(Completed { damage: damage.commit(self)?, ..Completed::default() }),
             Operation::PutCounters { ordering, .. } => {
@@ -587,7 +597,7 @@ impl Game {
         let mut operation = self.take_operation();
         self.decision = match &mut operation {
             Operation::Create {ordering,..} => ordering.answer(self,player,answer)?,
-            Operation::Depart(batch) => { batch.answer(answer); batch.prepare() },
+            Operation::Depart(batch) | Operation::Counter { departures: batch, .. } => { batch.answer(answer); batch.prepare() },
             Operation::Draw(drawing) => { drawing.answer(self, answer)?; None },
             Operation::Damage(damage) => damage.answer(self,player,answer)?,
             Operation::PutCounters { ordering, .. } => ordering.answer(self, player, answer)?,

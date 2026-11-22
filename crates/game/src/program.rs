@@ -412,6 +412,7 @@ fn close_branch(instrs: &mut [Instr], at: usize, inner: &Binder, outer: &mut Bin
     // what an instruction that was skipped did is nothing, and "this way" still names it
     outer.produced.extend(inner.produced.iter().filter(|p| produced_here(p.slot)).copied());
     outer.damage.extend(inner.damage.iter().filter(|slot| produced_here(**slot)).copied());
+    outer.countered.extend(inner.countered.iter().filter(|(_, slot)| produced_here(*slot)).cloned());
     outer.exiled_now.extend(inner.exiled_now.iter().filter(|slot| produced_here(**slot)).copied());
     skipped_values.extend(produced);
     // A skipped conditional payment did not begin. Export its explicit false
@@ -1208,6 +1209,9 @@ struct Binder {
     /// An instruction lowered before has players lose life: "the life lost this way".
     lost: Vec<Slot>,
     damage: Vec<Slot>,
+    /// A counter result belongs to its exact named input, never the latest counter in
+    /// the frame. Skipped instructions export an empty result like other producers.
+    countered: Vec<(action::Operand, Slot)>,
     /// A positive completed-damage condition supplies "that much" only in its branch.
     condition_amount: Option<expr::Amount>,
     /// Explicit opposing participants declared by earlier Fight instructions.
@@ -2449,16 +2453,43 @@ pub(crate) fn bars_regeneration(clause: &Clause, act: &ir::effect::Act) -> bool 
 }
 
 
-/// The exact paired rider that replaces a successful counter's graveyard destination.
-/// Reference identity is checked against the preceding counter by the binder.
-fn counter_exile_rider(condition: &ir::Condition, clause: &Clause, act: &ir::effect::Act) -> bool {
-    let ir::Condition::Happened { pattern, window: Some(ir::condition::Window::ThisWay), times: None, negated: false, .. }=condition else {return false};
-    pattern.subjects.len()==1 && !pattern.counted() && pattern.during.is_none()
+/// A singular named input whose own completed counter result the condition asks about.
+fn countered_subject(condition: &ir::Condition) -> Option<&Selector> {
+    let ir::Condition::Happened { pattern, window: Some(ir::condition::Window::ThisWay), times: None, negated: false, .. }=condition else {return None};
+    (pattern.subjects.len()==1 && matches!(pattern.subjects[0].quant,
+            Quant::Definite(Ref::Anaphor(ir::Anaphor::It | ir::Anaphor::That | ir::Anaphor::The {plural: false})))
+        && !pattern.counted() && pattern.during.is_none()
         && pattern.condition.is_none() && pattern.cause.is_none()
-        && matches!(pattern.actions.as_slice(),[ir::EventAction::Deed(d)] if d.verb==Verb::Counter && d.passive && d.args.is_empty())
-        && controller_only(clause.subject.as_ref()) && !clause.may && !clause.also && clause.rest.is_empty() && !act.may
-        && matches!(act.action,Action::Exile(_))
-        && matches!(act.mods.as_slice(),[ir::effect::Modifier::InsteadOf(ir::statics::Elsewhere::Graveyard(Some(Whose::Owner | Whose::Owners)))])
+        && matches!(pattern.actions.as_slice(),[ir::EventAction::Deed(d)] if d.verb==Verb::Counter && d.passive && d.args.is_empty()))
+        .then(|| &pattern.subjects[0])
+}
+
+/// The paired self-replacement, fused only after both references bind to the counter's input.
+fn counter_destination_rider<'a>(condition: &ir::Condition, clause: &Clause, act: &'a ir::effect::Act)
+    -> Option<(&'a ir::action::Coord<Selector>, action::CounterDestination)> {
+    countered_subject(condition)?;
+    if !controller_only(clause.subject.as_ref()) || clause.may || clause.also || !clause.rest.is_empty() || act.may { return None; }
+    let [ir::effect::Modifier::InsteadOf(ir::statics::Elsewhere::Graveyard(Some(owner)))] = act.mods.as_slice() else { return None };
+    // "that player's graveyard" is the owner just named by this destination. Other
+    // player references cannot silently become the countered spell's owner.
+    let explicit_owner = matches!(owner, Whose::Owner | Whose::Owners);
+    let owner = explicit_owner || matches!(owner, Whose::Player(player)
+        if player.quant == Quant::Definite(Ref::Anaphor(ir::Anaphor::That))
+            && player.set == ObjectSet::of(Domain::Player) && player.chooser.is_none() && player.random.is_none());
+    if !owner { return None; }
+    use action::CounterDestination as Destination;
+    match &act.action {
+        Action::Exile(objects) if explicit_owner => Some((objects, Destination::Exile)),
+        Action::Move { moves, from: None, .. } => match moves.as_slice() {
+            [(objects, ir::action::Destination::Hand(Whose::Owner | Whose::Owners))] => Some((objects, Destination::Hand)),
+            [(objects, ir::action::Destination::Library(place))] if matches!(place.library, Some(Whose::Owner | Whose::Owners)) && !place.back && place.order.is_none() => {
+                let ir::zone_move::Position::One(position) = place.position else { return None };
+                Some((objects, Destination::Library(position)))
+            }
+            _ => None,
+        },
+        _ => None,
+    }
 }
 
 
@@ -4038,6 +4069,12 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                     // than the library has can't be paid (701.17b): nothing is milled
                     if let Instr::Action { action: action::Action::Mill { .. }, attempt: Some(attempt), .. } = &mut e.instrs[*instruction] { attempt.cost = true; }
                     condition::Condition::outcome(*paid, *possible, *outcome)
+                } else if let Some(subject) = countered_subject(c) {
+                    let subject = e.operand(subject, support, &mut binder)?;
+                    let Some((_, slot)) = binder.countered.iter().rev().find(|(producer, _)| *producer == subject) else {
+                        return unsupported("counter outcome: no matching earlier counter producer");
+                    };
+                    condition::Condition::countered(*slot)
                 } else { condition::Condition::compile(c, support, &mut binder.scope(support))? };
                 let outcomes = if target_scope { condition.announced_outcomes() } else { (crate::announcement::ANY, crate::announcement::ANY) };
                 target_branches.push((e.announced_mask, outcomes));
@@ -5614,17 +5651,16 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 let objects=e.objects(objects,support,&mut binder)?;
                 // The replacement rider and this counter instruction have one owner;
                 // do not move to the graveyard and then try to find the spell again.
-                let mut exile=false;
+                let mut destination=action::CounterDestination::Graveyard;
                 if let Some([TextStep::If(condition, true),TextStep::Act(clause,rider,true),TextStep::EndIf])=acts.get(index+1..index+4)
-                    && counter_exile_rider(condition,clause,rider)
+                    && !matches!(acts.get(index+4), Some(TextStep::Otherwise | TextStep::Instead(_)))
+                    && let Some((named, to)) = counter_destination_rider(condition,clause,rider)
                 {
-                    let ir::Condition::Happened { pattern, .. }=condition else {unreachable!()};
-                    let Action::Exile(named)=&rider.action else {unreachable!()};
-                    let subject=e.operand(&pattern.subjects[0],support,&mut binder)?;
+                    let subject=e.operand(countered_subject(condition).expect("rider proved"),support,&mut binder)?;
                     let named=e.objects(named,support,&mut binder)?;
-                    if objects==[subject] && named==objects {exile=true;reach.skip_through=index+4;}
+                    if objects==[subject] && named==objects {destination=to;reach.skip_through=index+4;}
                 }
-                Some(action::Action::Counter { objects, exile })
+                Some(action::Action::Counter { objects, destination })
             }
             Action::Keyword(ir::action::KeywordAction::BecomeMonarch) => Some(action::Action::BecomeMonarch { players: e.clause_subject(clause, support, &mut binder)? }),
             // said of no subject: the speed of the player whose ability it is (702.179d)
@@ -6011,6 +6047,12 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             let times = act.mods.iter().find_map(|m| match m { ir::effect::Modifier::Times(Amount::Const(n)) => Some(*n), _ => None }).unwrap_or(1);
             let investigate = matches!(act.action, Action::Keyword(ir::KeywordAction::Investigate));
             let created = match instruction.output() {
+                Some(action::Output::Countered) => {
+                    let out = e.slot();
+                    let action::Action::Counter { objects, .. } = &instruction else { unreachable!("counter result producer") };
+                    if let [subject] = objects.as_slice() { binder.countered.push((subject.clone(), out)); }
+                    Some(out)
+                },
                 Some(action::Output::Damage) => { let out = e.slot(); binder.damage.push(out); Some(out) },
                 Some(action::Output::RemovedCounters) => { let out = e.slot(); binder.removed.push(out); Some(out) },
                 Some(action::Output::Destroyed) => {
