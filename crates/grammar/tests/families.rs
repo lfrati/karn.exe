@@ -153,3 +153,17 @@ fn r113_7a_ability_source_of() {
         declines(text);
     }
 }
+
+/// CR 119.1: ranking life totals and its tied case remain explicit.
+#[test]
+fn r119_1_life_rank_conditions() {
+    for text in [
+        "Whenever ~ attacks the player with the most life or tied for most life, create a 1/1 white Vampire creature token with lifelink.",
+        "Whenever ~ attacks while you have the most life or are tied for most life, you draw a card and you lose 1 life.",
+        "If you have the least life or are tied for least life, draw a card.",
+    ] {
+        let (value, _) = read(text);
+        assert!(serde_json::to_string(&value).unwrap().contains("MostOf"));
+    }
+    declines("If you have the most life or are tied for least life, draw a card.");
+}

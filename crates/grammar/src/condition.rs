@@ -989,6 +989,23 @@ fn damage_dealt() -> P<Condition> {
     alt("damage dealt", vec![damage_first, receiver_first])
 }
 
+/// Ranked player measures in conditions use the same metric as noun phrases (119.1).
+fn most_life() -> P<Condition> {
+    let rank = alt("life rank", vec![lit("most life").to(false), lit("least life").to(true)]);
+    let suffix = lit("the").then_keep(&rank)
+        .then(&lit("or are tied for").then_keep(&rank).opt()).map(
+            |(least, tied)| tied.is_none_or(|t| t == least).then_some((least, tied.is_some())),
+            |(least, tied): &(bool, bool)| Some((*least, tied.then_some(*least))),
+        );
+    subject_verb("have", "has", &suffix).map(
+        |(player, (least, tied))| Some(Condition::MostOf { player: Box::new(player), measure: Measure::Life, least, tied }),
+        |c| match c {
+            Condition::MostOf { player, measure: Measure::Life, least, tied } => Some(((**player).clone(), (*least, *tied))),
+            _ => None,
+        },
+    )
+}
+
 fn clause(e: &Events) -> P<Condition> {
     let s = selectors();
     let b = |s: Selector| Box::new(s);
@@ -1556,6 +1573,7 @@ fn clause(e: &Events) -> P<Condition> {
         vec![
             controls,
             controlled,
+            most_life(),
             more_than(),
             there_count,
             there_five,

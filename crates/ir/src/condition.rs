@@ -163,6 +163,8 @@ pub enum Condition {
     /// than you": `player`'s measure against each of `than`'s. `margin`: "at least two more
     /// lands than you", "at least 10 life more than your starting life total" (the difference
     /// is at least that, not just one); None is "more than".
+    /// A player ranks highest or lowest by this measure, with explicit treatment of ties (119.1).
+    MostOf { player: Box<Selector>, measure: Measure, least: bool, tied: bool },
     MoreThan {
         player: Box<Selector>,
         measure: Measure,
