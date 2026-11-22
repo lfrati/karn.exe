@@ -826,6 +826,7 @@ pub fn action(form: Form, plural: bool) -> P<EventAction> {
     }
     rules.extend(
         vec![
+            v("begins their turn", "begin your turn", "began their turn").to(EventAction::just(Verb::BeginTurn)).alias(),
             leaves_zone,
             put_into_gy,
             unit(

@@ -79,3 +79,16 @@ fn r107_4b_generic_mana_spending() {
         declines(text);
     }
 }
+
+/// CR 500.1 and 614.1a: replacing the beginning of a turn is distinct from an extra turn.
+#[test]
+fn r500_1_turn_begin_replacements() {
+    for text in [
+        "If you would begin your turn while ~ is tapped, you may skip that turn instead. If you do, untap ~.",
+        "If a player would begin a turn, that player skips that turn instead.",
+    ] {
+        let (value, _) = read(text);
+        assert!(serde_json::to_string(&value).unwrap().contains("BeginTurn"));
+    }
+    declines("If target creature would begin a turn, draw a card.");
+}

@@ -283,6 +283,7 @@ lexicon! {
     /// total is the player's (`Of`), the stat the permanent's (`With`).
     ExchangeLifeWithStat: "exchange", "701.12", Player, [Of => PLAYER, With => PERMANENT];
     /// A turn beyond the ones the turn order gives, as it begins.
+    BeginTurn: "begin a turn", "500.1", Player, [];
     BeginExtraTurn: "begin an extra turn", "500.7", Player, [];
     PayLife: "pay life", "119.4", Player, [];
     LoseGame: "lose the game", "104.3", Player, [];
