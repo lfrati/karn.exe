@@ -499,6 +499,7 @@ fn triggered(item: &ir::token::KeywordInstance) -> Option<&'static Ability> {
         "Battle Cry" => Some(battle_cry()),
         "Exalted" => Some(exalted()),
         "Flanking" => Some(flanking()),
+        "Evolve" => Some(evolve()),
         _ => None,
     }
 }
@@ -510,6 +511,25 @@ fn soulshift(item: &ir::token::KeywordInstance) -> Option<Ability> {
     let text = format!("When this permanent is put into a graveyard from the battlefield, you may return target Spirit card with mana value {n} or less from your graveyard to your hand.");
     Some(CardDef::new("Soulshift rule", "", "Creature", &text, None)
         .expect("the grammar reads rule 702.46a").abilities[0].clone())
+}
+
+/// 702.100a/c: both participants must have creature characteristics to compare them.
+/// The ordinary intervening-if is checked when triggering and again on resolution (603.4).
+fn evolve() -> &'static Ability {
+    static EVOLVE: OnceLock<Ability> = OnceLock::new();
+    crate::token::init(&EVOLVE, || {
+        let mut ability = CardDef::new("Evolve rule", "", "Creature",
+            "Whenever a creature you control enters, if that creature's power is greater than this creature's power or that creature's toughness is greater than this creature's toughness, put a +1/+1 counter on this creature.", None)
+            .expect("the grammar reads explicit comparisons of rule 702.100a").abilities[0].clone();
+        let Ability::Triggered { effect, .. } = &mut ability else { unreachable!("evolve triggers") };
+        let ir::Sentence::Led { lead: ir::Lead::Modifier(ir::Modifier::If(condition)), .. } = &mut effect.0[0] else { unreachable!("evolve has an intervening if") };
+        let creature = |reference| ir::Condition::Is {
+            what: Box::new(ir::Selector::new(ir::Quant::Definite(reference), ir::ObjectSet::of(ir::Domain::Permanent))),
+            pred: ir::Predicate::Adjective(ir::Filter::Atom(ir::Atom::Type(ir::CardType::Creature))), negated: false,
+        };
+        *condition = ir::Condition::And(vec![creature(ir::Ref::This), creature(ir::Ref::Anaphor(ir::Anaphor::That)), condition.clone()]);
+        ability
+    })
 }
 
 /// 702.108a-b: every printed instance is an ordinary independent cast trigger.

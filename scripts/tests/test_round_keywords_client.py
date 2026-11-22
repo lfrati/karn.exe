@@ -20,6 +20,16 @@ class RoundKeywordsClientTests(unittest.TestCase):
     step = Helpers.step
     advance = Helpers.advance
 
+    def test_evolve_trigger_uses_current_creature_sizes(self):
+        # 702.100a: matching power still evolves when the entering toughness is greater.
+        self.new([{"hand": ["Grizzly Bears"], "battlefield": ["Shambleshark", "Forest", "Forest"]}, {}])
+        source, = self.ids("Shambleshark", zone="battlefield")
+        self.cast("Grizzly Bears", mana=self.ids("Forest", controller=0), spend={"G": 2})
+        self.pass_round()
+        self.assertEqual(len(self.engine.state["stack"]), 1)
+        self.pass_round()
+        self.assertEqual(self.object(source)["counters"], {"+1/+1": 1})
+
     def test_soulshift_chooses_its_target_before_the_optional_return(self):
         # 702.46a: a Kindred instant with changeling is a Spirit card, not a creature.
         self.new([{"hand": ["Murder"], "battlefield": ["Venerable Kumo"] + ["Swamp"] * 3,

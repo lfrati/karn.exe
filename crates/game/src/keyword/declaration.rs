@@ -368,7 +368,7 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
         }
         // Ward is held, so effects can grant it (613.1f); its trigger goes with each grant
         // ([`crate::layers::granted_bound`]), and each instance triggers on its own.
-        "Exalted" | "Flanking" | "Bushido" => generated(ability(item)?, true, vec![Context::PermanentsOnly]),
+        "Exalted" | "Flanking" | "Bushido" | "Evolve" => generated(ability(item)?, true, vec![Context::PermanentsOnly]),
         "Ward" => generated(ability(item)?, true, vec![Context::PermanentsOnly]),
         // held as ward is: "gains firebending 4 until end of turn" grants the trigger (613.1f)
         "Firebending" => generated(ability(item)?, true, vec![Context::PermanentsOnly]),
