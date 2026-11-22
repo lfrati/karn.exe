@@ -411,9 +411,9 @@ impl Condition {
     pub(super) fn outcome(paid: usize, possible: usize, outcome: ir::condition::Outcome) -> Self {
         Self(Asks::Outcome { paid, possible, outcome })
     }
-    /// The binder proved the queried object is this counter's sole input. Its retained
-    /// successful-result group is nonempty iff that counter actually happened (701.6a).
-    pub(super) fn countered(slot: usize) -> Self {
+    /// A proved retained subject group contains an object. Empty successful-result
+    /// groups and their projections are false (701.6a, 608.2c).
+    pub(super) fn present(slot: usize) -> Self {
         Self(Asks::Is { what: Thing::Named(expr::Subject::Local(slot)),
             is: Is::Adjective(expr::Filter::All(Vec::new())), negated: false, past: false })
     }

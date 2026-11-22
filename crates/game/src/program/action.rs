@@ -38,6 +38,8 @@ pub enum Operand {
     /// Matching members of a retained group, queried as the action runs. A
     /// separate Capture freezes a condition's subset before its body.
     Matching(Matching),
+    /// Sources of retained stack abilities, preserving their exact incarnations (113.7a).
+    AbilitySources(Box<Operand>),
     ControllerOf(Box<Operand>),
     /// Distinct former controllers of qualified completed destruction records.
     FormerControllers(FormerControllers),
@@ -340,7 +342,7 @@ impl Operand {
     pub(super) fn scalars(&self) -> Vec<crate::binding::Scalar> {
         match self {
             Self::Reference(slot) => vec![crate::binding::Scalar::Local { slot: *slot, kind: crate::binding::Kind::Subjects }],
-            Self::ControllerOf(of) | Self::OwnerOf(of) => of.scalars(),
+            Self::ControllerOf(of) | Self::OwnerOf(of) | Self::AbilitySources(of) => of.scalars(),
             Self::Matching(Matching {of,filter,..}) => {let mut out=of.scalars();filter.scalars(&mut out);out},
             Self::FormerControllers(FormerControllers { slot, filter }) => {
                 let mut out = vec![crate::binding::Scalar::Local { slot: *slot, kind: crate::binding::Kind::Destructions }];
@@ -377,6 +379,17 @@ pub(super) fn named(game: &Game, f: &Frame, operand: &Operand) -> Vec<Target> {
         Operand::Reference(slot) => match f.slot(*slot) {
             Some(super::Value::Subjects(subjects)) => subjects.clone(),
             _ => unreachable!("the compiler validates reference producers"),
+        },
+        Operand::AbilitySources(of) => {
+            let mut sources = Vec::new();
+            for ability in named(game, f, of) {
+                let Target::Object(ability) = ability else { continue };
+                if let Some((Some(source), _)) = game.obj(ability).ability {
+                    let source = Target::Object(source);
+                    if !sources.contains(&source) { sources.push(source); }
+                }
+            }
+            sources
         },
         Operand::ControllerOf(of) | Operand::OwnerOf(of) => named(game, f, of).into_iter().filter_map(|t| match t {
             Target::Object(o) => Some(Target::Player(if matches!(operand, Operand::ControllerOf(_)) { game.controller(o) } else { game.obj(o).owner })),

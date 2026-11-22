@@ -212,7 +212,7 @@ mod tests;
 
 /// The supported durations of a resolving characteristic effect (611.2a–b).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Duration { Forever, Turn, SourceControlled }
+pub enum Duration { Forever, Turn, SourceControlled, SourcePresent }
 impl Duration {
     pub(crate) fn compile(mods: &[ir::effect::Modifier]) -> Res<Self> {
         use ir::{Condition, Quant, Ref};
@@ -220,12 +220,18 @@ impl Duration {
         let stated: Vec<_> = mods.iter().filter_map(|m| if let Modifier::Duration(d) = m { Some(d) } else { None }).collect();
         if stated.len() > 1 { return unsupported("multiple continuous-effect durations"); }
         if let Some(D::While(c)) = stated.first() {
+            if let Condition::Remains { what, pred: ir::Predicate::In(zone) } = c.as_ref()
+                && what.quant == Quant::Definite(Ref::This) && what.chooser.is_none() && what.random.is_none()
+                && what.set == ir::ObjectSet::of(ir::Domain::Permanent)
+                && zone.zones.items == [ir::Zone::Battlefield] && zone.owner.is_none() && zone.slice.is_none() {
+                return Ok(Self::SourcePresent);
+            }
             if let Condition::Controls { player, what, negated: false } = c.as_ref()
                 && player.quant == Quant::Definite(Ref::You)
                 && matches!(what.items.as_slice(), [s] if s.quant == Quant::Definite(Ref::This)) {
                 return Ok(Self::SourceControlled);
             }
-            return unsupported("continuous duration: a condition other than control of this source");
+            return unsupported("continuous duration: requires control or battlefield presence of this source");
         }
         Ok(if crate::layers::lasts(&[mods])? { Self::Turn } else { Self::Forever })
     }
@@ -234,6 +240,7 @@ impl Duration {
             Self::Forever => crate::layers::Lifetime::Forever,
             Self::Turn => crate::layers::Lifetime::Turn,
             Self::SourceControlled => crate::layers::Lifetime::Controlled { source: ctx.object_source(), player: ctx.controller },
+            Self::SourcePresent => crate::layers::Lifetime::SourcePresent { source: ctx.object_source() },
         }
     }
 }

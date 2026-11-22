@@ -1783,6 +1783,11 @@ impl Binder {
         // A qualified noun ("the creature an opponent controls") names the
         // matching earlier participant, not a different creature with the same type.
         if qualified_noun { narrow(&mut candidates, &|n| n.set == selector.set); }
+        // "That permanent" distinguishes an ability's named source from the
+        // earlier stack ability, even when the source was qualified by its types.
+        if matches!(selector.set.domain, Domain::Permanent | Domain::Ability | Domain::Spell) {
+            narrow(&mut candidates, &|n| n.set.domain == selector.set.domain);
+        }
         narrow(&mut candidates, &|n| n.set.domain == selector.set.domain && n.set.filter == selector.set.filter);
         narrow(&mut candidates, &|n| n.at.0 == self.at.0);
         // A body explicitly naming the attached creature supplies the pronoun's
@@ -2503,6 +2508,21 @@ fn countered_subject(condition: &ir::Condition) -> Option<&Selector> {
         && pattern.condition.is_none() && pattern.cause.is_none()
         && matches!(pattern.actions.as_slice(),[ir::EventAction::Deed(d)] if d.verb==Verb::Counter && d.passive && d.args.is_empty()))
         .then(|| &pattern.subjects[0])
+}
+
+/// "If an ability of an artifact ... is countered this way": its completed
+/// counter result supplies the ability, whose exact source is named in this branch.
+fn countered_ability_source(condition: &ir::Condition) -> Option<&ObjectSet> {
+    let ir::Condition::Happened { pattern, window: Some(ir::condition::Window::ThisWay), times: None, negated: false, .. } = condition else { return None };
+    if *pattern != ir::EventPattern::new(pattern.subjects.clone(), pattern.actions.clone()) { return None; }
+    let [ability] = pattern.subjects.as_slice() else { return None };
+    if ability.quant != Quant::Indefinite(Count::Exactly(Amount::Const(1))) || ability.chooser.is_some() || ability.random.is_some()
+        || !matches!(pattern.actions.as_slice(), [ir::EventAction::Deed(d)] if d.verb == Verb::Counter && d.passive && d.args.is_empty()) { return None; }
+    let ir::Filter::All(parts) = &ability.set.filter else { return None };
+    let [ir::Filter::Atom(ir::Atom::Source(source))] = parts.as_slice() else { return None };
+    let mut bare = ability.set.clone(); bare.filter = ir::Filter::any_object();
+    let mut plain_source = (**source).clone(); plain_source.filter = ir::Filter::any_object();
+    (bare == ObjectSet::of(Domain::Ability) && plain_source == ObjectSet::of(Domain::Permanent)).then_some(source)
 }
 
 /// The paired self-replacement, fused only after both references bind to the counter's input.
@@ -4206,12 +4226,27 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                     if !crate::select::is_you(player) { return unsupported("coin outcome: only the flipping controller's result is implemented"); }
                     let slot = binder.coin.ok_or_else(|| crate::Unsupported("coin outcome: no preceding local flip producer".into()))?;
                     condition::Condition::coin(slot, *won)
+                } else if let Some(source) = countered_ability_source(c) {
+                    let [(action::Operand::Reference(input), result)] = binder.countered.as_slice() else {
+                        return unsupported("countered ability source: one proven counter input required");
+                    };
+                    if !binder.subjects.iter().any(|named| named.slot == *input && named.target
+                        && named.bounds.1 <= 1 && named.set.domain == Domain::Ability) {
+                        return unsupported("countered ability source: a single ability target required");
+                    }
+                    let filter = expr::Filter::compile(&source.filter, support, &mut binder.scope(support))?;
+                    let source_operand = action::Operand::AbilitySources(Box::new(action::Operand::Reference(*result)));
+                    let subjects = e.slot();
+                    e.instrs.push(Instr::Capture { operand: action::Operand::Matching(action::Matching {
+                        of: Box::new(source_operand), filter: Box::new(filter), controller: None }), out: subjects });
+                    binder.name(subjects, source.clone(), (0, 1), false);
+                    condition::Condition::present(subjects)
                 } else if let Some(subject) = countered_subject(c) {
                     let subject = e.operand(subject, support, &mut binder)?;
                     let Some((_, slot)) = binder.countered.iter().rev().find(|(producer, _)| *producer == subject) else {
                         return unsupported("counter outcome: no matching earlier counter producer");
                     };
-                    condition::Condition::countered(*slot)
+                    condition::Condition::present(*slot)
                 } else { condition::Condition::compile(c, support, &mut binder.scope(support))? };
                 let outcomes = if target_scope { condition.announced_outcomes() } else { (crate::announcement::ANY, crate::announcement::ANY) };
                 target_branches.push((e.announced_mask, outcomes));
@@ -4958,7 +4993,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             let duration = change::Duration::compile(&duration_mods(clause, act, &durations))?;
             let turn = match duration {
                 change::Duration::Turn => true, change::Duration::Forever => false,
-                change::Duration::SourceControlled => return unsupported("resolved copy: conditional duration"),
+                change::Duration::SourceControlled | change::Duration::SourcePresent => return unsupported("resolved copy: conditional duration"),
             };
             e.instrs.push(Instr::Copy { objects, from, turn });
             e.end_act(false, optional_branch);

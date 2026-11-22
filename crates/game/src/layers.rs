@@ -317,10 +317,13 @@ pub enum Lifetime {
     Forever,
     Turn,
     Controlled { source: ObjId, player: crate::PlayerId },
+    /// Remains on the battlefield, regardless of later controller (611.2b).
+    SourcePresent { source: ObjId },
 }
 impl Lifetime {
     fn holds(self, game: &Game) -> bool {
         match self {
+            Self::SourcePresent { source } => game.get_object(source).is_some_and(|o| o.zone == Zone::Battlefield),
             Self::Controlled { source, player } => game.get_object(source).is_some_and(|o|
                 matches!(o.zone, Zone::Battlefield | Zone::Stack) && game.controller(source) == player),
             _ => true,
@@ -1271,7 +1274,7 @@ impl Game {
         }
     }
     pub(crate) fn end_control_durations(&mut self) {
-        if !self.continuous.iter().any(|c| matches!(c.lifetime, Lifetime::Controlled { .. })) { return; }
+        if !self.continuous.iter().any(|c| matches!(c.lifetime, Lifetime::Controlled { .. } | Lifetime::SourcePresent { .. })) { return; }
         let previous = self.control_snapshot();
         self.prune_control_durations();
         self.control_transitions(previous);
