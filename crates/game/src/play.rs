@@ -792,6 +792,7 @@ fn check_face_as(def: &CardDef, alternative: bool, r: &mut Refusals) -> Res<()> 
             },
             // a static ability that says what its subject gets or has (604.1, 611.3)
             _ if def.activation_modifier_ok(i).is_some() => { r.several(def.activation_modifier_ok(i).expect("an activation modifier"), stated(def, i), "instructions")?; },
+            _ if def.activation_timing_ok(i).is_some() => { r.several(def.activation_timing_ok(i).expect("a timing permission"), stated(def, i), "instructions")?; },
             _ if def.unused_permission_ok(i).is_some() => { r.several(def.unused_permission_ok(i).expect("an activation permission"), stated(def, i), "instructions")?; },
             _ if def.cost_change_ok(i).is_some() => { r.several(def.cost_change_ok(i).expect("a cost modifier"), stated(def, i), "instructions")?; },
             _ if def.characteristic_ok(i).is_some() => {

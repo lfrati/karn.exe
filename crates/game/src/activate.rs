@@ -12,6 +12,8 @@
 //! have priority or while casting a spell or activating an ability (605.3a). Complete payment
 //! plans resolve without intervening priority, trigger placement or state-based actions.
 
+pub(crate) mod timing;
+
 use crate::ability::Template;
 use crate::card::CardDef;
 use crate::event::Target;
@@ -542,7 +544,7 @@ impl Game {
         if cost.loyalty() {
             // A loyalty ability: as a sorcery could be cast, and only if no loyalty ability
             // of that permanent has been activated this turn, by any player (606.3).
-            if !self.sorcery_timing(player) {
+            if !self.sorcery_timing(player) && !self.instant_loyalty(player, source) {
                 return Err("a loyalty ability is activated in a main phase of your own turn with the stack empty (606.3)".into());
             }
             let before = self.activated.iter().any(|(o, key)| *o == source && self.ability_cost(*o, key.clone()).is_ok_and(|c| c.loyalty()));

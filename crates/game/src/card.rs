@@ -102,6 +102,7 @@ pub struct CardDef {
     /// Owned effects compiled once when this definition is loaded. Errors are admission
     /// results, not parse failures. Clones share immutable programs across games.
     pub(crate) activation_keywords: Vec<Option<ir::Keyword>>,
+    pub(crate) activation_timing: Vec<crate::program::registration::Registered<crate::activate::timing::Permission>>,
     pub(crate) activation_modifiers: Vec<crate::program::registration::Registered<crate::activate::Modifier>>,
     pub(crate) unused_permissions: Vec<crate::program::registration::Registered<crate::activate::UnusedPermission>>,
     /// Copiable semantic declarations, before executable lowering.
@@ -193,7 +194,7 @@ impl CardDef {
         let keyword_declarations = crate::keyword::declarations(&abilities);
         let keyword_abilities = crate::keyword::executable_in(&keyword_declarations);
         let opening = crate::start::compile(&abilities);
-        let mut def = CardDef { activation_modifiers: Vec::new(), unused_permissions: Vec::new(), declaration_abilities, activation_keywords, companion: None, cast_permissions: Vec::new(), library_permissions: Vec::new(), opening, back: None, modal: false, alternative_spell: None, prepare_spell: None, is_prepare_spell: false, front_mana_value: None, admission: Ok(()), costs: Default::default(), plot: None, keyword_declarations, keyword_abilities, keywords: Vec::new(), halves, name, cost, supertypes, types, subtypes, colors, text_colors, pt, loyalty, abilities, modes, programs: Vec::new(), links: crate::binding::Links::default(), functioning: Default::default(), cost_changes: Vec::new(), restrictions: Vec::new(), characteristics: Vec::new(), triggers: Vec::new(), trigger_modifiers: Vec::new(), replacements: Vec::new(), enchant: Ok(None), forms: Forms::default(), room: None, door: None };
+        let mut def = CardDef { activation_timing: Vec::new(), activation_modifiers: Vec::new(), unused_permissions: Vec::new(), declaration_abilities, activation_keywords, companion: None, cast_permissions: Vec::new(), library_permissions: Vec::new(), opening, back: None, modal: false, alternative_spell: None, prepare_spell: None, is_prepare_spell: false, front_mana_value: None, admission: Ok(()), costs: Default::default(), plot: None, keyword_declarations, keyword_abilities, keywords: Vec::new(), halves, name, cost, supertypes, types, subtypes, colors, text_colors, pt, loyalty, abilities, modes, programs: Vec::new(), links: crate::binding::Links::default(), functioning: Default::default(), cost_changes: Vec::new(), restrictions: Vec::new(), characteristics: Vec::new(), triggers: Vec::new(), trigger_modifiers: Vec::new(), replacements: Vec::new(), enchant: Ok(None), forms: Forms::default(), room: None, door: None };
         def.functioning = crate::functions::Functioning::compile(&def);
         def.links = crate::binding::compile(&def);
         def.keywords = crate::keyword::held(&def);
@@ -207,6 +208,7 @@ impl CardDef {
         def.cost_changes = crate::cost_change::registrations(&def);
         def.unused_permissions = crate::activate::unused_permissions(&def);
         def.activation_modifiers = crate::activate::modifiers(&def);
+        def.activation_timing = crate::activate::timing::registrations(&def);
         def.restrictions = crate::program::registration::restrictions(&def);
         def.characteristics = crate::program::registration::characteristics(&def);
         def.triggers = crate::trigger::templates(&def);
