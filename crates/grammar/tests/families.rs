@@ -734,3 +734,40 @@ fn r601_3_scoped_casting_restrictions_and_caps() {
         "You can cast only one more spell this turn.",
     ] { declines(text); }
 }
+
+/// CR 702.29a and 608.2i: alternative actions share one participant query and time window.
+#[test]
+fn r702_29_alternative_object_participant_histories() {
+    let (value, _) = read("~ costs {2} less to cast for each card you've cycled or discarded this turn.");
+    read("Cycling {2}");
+    let ir::Ability::Text(effect) = value else { panic!() };
+    let ir::Sentence::Do(body) = &effect.0[0] else { panic!() };
+    let [ir::Modifier::ForEach(ir::Amount::Participants { pattern, counted, when })] = body.first.first.mods.as_slice() else { panic!() };
+    assert_eq!(*counted, ir::amount::Role::Object);
+    assert_eq!(*when, ir::amount::When::ThisTurn);
+    assert_eq!(pattern.subjects, vec![ir::Selector::you()]);
+    assert_eq!(pattern.actions.len(), 2);
+    for (action, verb) in pattern.actions.iter().zip([ir::Verb::Cycle, ir::Verb::Discard]) {
+        let ir::EventAction::Deed(deed) = action else { panic!() };
+        assert_eq!(deed.verb, verb);
+        assert!(!deed.passive);
+        assert_eq!(deed.what().unwrap().set.domain, ir::Domain::Card);
+    }
+    for text in [
+        "Draw a card for each card you've drawn or discarded this turn.",
+        "Draw a card for each card that player has cycled or discarded this game.",
+        "Gain life equal to the number of cards cycled or discarded this turn.",
+        "Draw a card for each spell you've cast or copied this turn.",
+        "Draw a card for each artifact you've sacrificed or exiled this turn.",
+        "Gain life equal to the number of opponents you attacked this turn.",
+    ] { read(text); }
+    let (past, _) = read("Draw a card for each card you cycled or discarded this turn.");
+    let (perfect, _) = read("Draw a card for each card you've cycled or discarded this turn.");
+    assert_eq!(past, perfect);
+    for text in [
+        "Draw a card for each opponent you've cycled or discarded this turn.",
+        "Draw a card for each spell you've cycled or discarded this turn.",
+        "Draw a card for each card you've cycled and discarded this turn.",
+        "Draw a card for each card you've cycled or discarded.",
+    ] { declines(text); }
+}

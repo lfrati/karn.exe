@@ -267,6 +267,17 @@ pub(crate) fn own_rule(v: Verb) -> bool {
         )
 }
 
+/// Regular player actions with one object slot; By is an optional passive agent.
+/// Counts and literal limits use these same role signatures rather than separate verb lists.
+pub(crate) fn player_object_verbs() -> impl Iterator<Item = Verb> {
+    Verb::ALL.iter().copied().filter(|v| {
+        let e = v.entry();
+        !own_rule(*v) && v.tail().is_empty() && e.doer == ir::lexicon::Doer::Player
+            && e.roles.first().is_some_and(|(role, _)| *role == Role::What)
+            && e.roles.iter().skip(1).all(|(role, _)| *role == Role::By)
+    })
+}
+
 /// Does the verb take what it is done to as its object ("sacrifices a creature")?
 fn transitive(v: Verb) -> bool {
     v.subject() == ir::SubjectIs::Doer && v.entry().roles.iter().any(|(r, _)| *r == Role::What)

@@ -338,12 +338,8 @@ pub(crate) fn cant(form: Form) -> P<Action> {
     );
     // "can cast no more than two spells each turn" is the same prohibition as
     // "can't cast more than two spells each turn"; it grants no extra casting permission.
-    let verbs = crate::kernel::table("count-limited action", Verb::ALL.iter().copied().filter(|v| {
-        let e = v.entry();
-        !crate::event::own_rule(*v) && v.tail().is_empty() && e.doer == ir::lexicon::Doer::Player
-            && e.roles.first().is_some_and(|(role, _)| *role == ir::Role::What)
-            && e.roles.iter().skip(1).all(|(role, _)| *role == ir::Role::By)
-    }).map(|v| (v.head(ir::lexicon::Inflection::Base), v)).collect());
+    let verbs = crate::kernel::table("count-limited action", crate::event::player_object_verbs()
+        .map(|v| (v.head(ir::lexicon::Inflection::Base), v)).collect());
     let capped = lit("can").then_keep(&verbs).skip(&lit("no more than"))
         .then(&selectors().selector).skip(&lit("each turn")).map(
             |(verb, mut what)| {
