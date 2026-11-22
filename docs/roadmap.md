@@ -202,6 +202,10 @@ because it is what moves the deck count.
 
 *Skipped:*
 
+- Time Vault: direct replacement lowering and ordinary optional-skip composition both stop
+  before a resumable proposed turn. [#37](https://github.com/lfrati/karn.exe/issues/37) tracks
+  retaining that candidate, competing skips and the follow-up in the next actual turn.
+
 - Chain Lightning / Chain of Vapor: two narrowed copy probes still require optional
   copying, an explicit copy controller and one-target retargeting; existing stack-copy
   execution assigns the effect controller. Both complete cards remain refused.
