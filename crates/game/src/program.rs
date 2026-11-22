@@ -3601,6 +3601,33 @@ fn quantity_leads(effect: &mut Effect) -> Res<()> {
     Ok(())
 }
 
+/// An explicit move origin qualifies every targeted card of that instruction
+/// ("Return from your graveyard ... target creature cards"). It belongs on
+/// those selectors for both announcement and resolution legality (601.2c, 608.2b).
+fn targeted_move_origins(effect: &mut Effect) -> Res<()> {
+    fn sentence(said: &mut Sentence) -> Res<()> {
+        match said {
+            Sentence::Led { rest, .. } => sentence(rest)?,
+            Sentence::Do(body) => for act in acts_mut(body) {
+                let Action::Move { moves, from: Some(from), .. } = &mut act.action else { continue };
+                if from.zones.items != [ir::Zone::Graveyard] || from.slice.is_some()
+                    || !from.owner.as_deref().is_some_and(crate::select::is_you)
+                    || moves.iter().any(|(objects, _)| objects.items.is_empty() || objects.items.iter().any(|s|
+                        !matches!(s.quant, Quant::Target(_)) || s.set.domain != Domain::Card
+                            || s.set.zone.as_ref().is_some_and(|zone| zone != from))) {
+                    return unsupported("move origin: targeted cards in your graveyard required");
+                }
+                for (objects, _) in moves { for selector in &mut objects.items { selector.set.zone = Some(from.clone()); } }
+                if let Action::Move { from, .. } = &mut act.action { *from = None; }
+            },
+            _ => {},
+        }
+        Ok(())
+    }
+    for said in &mut effect.0 { sentence(said)?; }
+    Ok(())
+}
+
 /// Token anaphors describe the creating instruction's template (111.3), not the
 /// characteristics or existence of a token previously created. Bind only one explicit
 /// earlier template; conditional counts therefore reuse it without a runtime search.
@@ -3790,6 +3817,9 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             Sentence::Led { rest, .. } => needs_quantity_lead(rest),
             _ => false,
         }
+    }
+    if expanded.0.iter().flat_map(sentence_acts).any(|a| matches!(a.action, Action::Move { from: Some(_), .. })) {
+        targeted_move_origins(expanded.to_mut())?;
     }
     if expanded.0.iter().any(|s| matches!(s, Sentence::RoundEach { .. })) { rounding::apply(expanded.to_mut())?; }
     if expanded.0.iter().any(needs_quantity_lead) { quantity_leads(expanded.to_mut())?; }

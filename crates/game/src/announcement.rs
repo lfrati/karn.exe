@@ -48,7 +48,7 @@ pub(crate) fn announced(kicks: u32, promised: bool, optional_paid: bool) -> u8 {
 
 /// A collective restriction on the members of one target instance (601.2c).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TargetRelation { SameGraveyard, DifferentCreatureControllers }
+pub enum TargetRelation { SameGraveyard, DifferentCreatureControllers, DifferentManaValues }
 
 /// One declared target group, including relationships to earlier groups (115.1, 601.2c).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -109,7 +109,17 @@ impl TargetSpec {
                 _ => false,
             }
         }
+        fn extract_mana_values(filter: &mut ir::Filter) -> bool {
+            match filter {
+                ir::Filter::Atom(ir::Atom::Different(ir::Characteristic::ManaValue)) => {
+                    *filter = ir::Filter::All(Vec::new()); true
+                },
+                ir::Filter::All(items) => items.iter_mut().fold(false, |found, item| extract_mana_values(item) || found),
+                _ => false,
+            }
+        }
         let mut unary = selector.set.clone();
+        let different_mana_values = extract_mana_values(&mut unary.filter);
         let pair_filter = ir::Filter::All(vec![
             ir::Filter::Atom(ir::Atom::Type(ir::CardType::Creature)),
             ir::Filter::Atom(ir::Atom::Controllers { same: false }),
@@ -120,6 +130,12 @@ impl TargetSpec {
         {
             unary.filter = ir::Filter::All(vec![ir::Filter::Atom(ir::Atom::Type(ir::CardType::Creature))]);
             Some(TargetRelation::DifferentCreatureControllers)
+        } else if different_mana_values {
+            if extract(&mut unary.filter) || unary.domain != ir::Domain::Card || unary.zone.as_ref().is_none_or(|zone|
+                zone.zones.items != [ir::Zone::Graveyard] || zone.slice.is_some()) {
+                return crate::unsupported("different mana values: one explicit graveyard target group required");
+            }
+            Some(TargetRelation::DifferentManaValues)
         } else if extract(&mut unary.filter) {
             if unary.domain != ir::Domain::Card || unary.zone.as_ref().is_none_or(|zone|
                 zone.zones.items != [ir::Zone::Graveyard] || zone.slice.is_some()) {
@@ -146,6 +162,14 @@ impl TargetSpec {
             // (608.2b/h and Run Away Together rulings). Never follow a reentered card.
             return matches!(group, [crate::Target::Object(a), crate::Target::Object(b)]
                 if a != b && game.controller(*a) != game.controller(*b));
+        }
+        if self.relation == Some(TargetRelation::DifferentManaValues) {
+            let mut values = std::collections::BTreeSet::new();
+            return group.iter().copied().filter(|target| self.set.legal_target(game, ctx, locals, *target))
+                .all(|target| match target {
+                    crate::Target::Object(object) => values.insert(ctx.mana_value(game, object)),
+                    crate::Target::Player(_) => false,
+                });
         }
         let mut owner = None;
         for target in group.iter().copied().filter(|t| self.set.legal_target(game, ctx, locals, *t)) {

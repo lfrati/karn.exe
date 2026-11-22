@@ -1145,10 +1145,16 @@ impl Game {
                     }
                 },
                 (Choice::OptionalObjects { .. }, _) => return Err("decline without objects, or accept with the offered object selection (608.2d)".into()),
-                (Choice::ChangeTargets { object, original, slots, policy }, Answer::Targets(targets)) => self.legal_changed_targets(*object, original, slots, *policy, targets)?,
+                (Choice::ChangeTargets { object, original, slots, policy }, Answer::Targets(targets)) => {
+                    self.legal_changed_targets(*object, original, slots, *policy, targets)?;
+                    self.retained_target_relations(*object, original, targets)?;
+                },
                 (Choice::ChangeTargets { policy: crate::state::TargetPolicy::ChooseNew, .. }, Answer::No) => {},
                 (Choice::ChangeTargets { .. }, _) => return Err("choose targets according to the offered target-change policy (115.7)".into()),
-                (Choice::Retarget { copy, original, .. }, Answer::Targets(targets)) => self.legal_copy_targets(*copy, original, targets)?,
+                (Choice::Retarget { copy, original, .. }, Answer::Targets(targets)) => {
+                    self.legal_copy_targets(*copy, original, targets)?;
+                    self.retained_target_relations(*copy, original, targets)?;
+                },
                 (Choice::Retarget { .. }, Answer::No) => {},
                 (Choice::Retarget { .. }, _) => return Err("choose new targets or keep the original targets (707.10c)".into()),
                 (Choice::Cast { .. }, Answer::No) => {}
@@ -1591,7 +1597,11 @@ impl Game {
                 return Err(match slot.relation {
                     Some(crate::announcement::TargetRelation::DifferentCreatureControllers) =>
                         "two target creatures must have different controllers (601.2c)",
-                    _ => "targets for one group must be cards in a single graveyard (601.2c, 404.1)",
+                    Some(crate::announcement::TargetRelation::DifferentManaValues) =>
+                        "target cards must have different mana values (601.2c)",
+                    Some(crate::announcement::TargetRelation::SameGraveyard) =>
+                        "targets for one group must be cards in a single graveyard (601.2c, 404.1)",
+                    None => unreachable!("a unary target group has no collective failure"),
                 }.into());
             }
         }

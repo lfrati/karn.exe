@@ -98,6 +98,22 @@ impl Game {
         }
     }
 
+    /// The ordinary distinct-value relation is proved for graveyard targets.
+    /// Retaining an already-illegal member while changing its peers needs a
+    /// separate cross-target LKI proof; preserve the unchanged/decline route.
+    pub(crate) fn retained_target_relations(&self, object: ObjId, original: &[Vec<Target>], targets: &[Vec<Target>]) -> crate::Res<()> {
+        if original == targets { return Ok(()); }
+        let (specs, contexts) = self.stack_target_metadata(object);
+        for (index, ((spec, before), after)) in specs.iter().zip(original).zip(targets).enumerate() {
+            if before == after || spec.relation != Some(crate::announcement::TargetRelation::DifferentManaValues) { continue; }
+            let values = crate::announcement::TargetValues { parent: &self.obj(object).bound, chosen: original, base: spec.base };
+            if before.iter().zip(after).any(|(old, new)| old == new && !spec.set.legal_target(self, &contexts[index], &values, *old)) {
+                return crate::unsupported("different mana values: changing peers of a retained illegal target requires cross-target LKI support");
+            }
+        }
+        Ok(())
+    }
+
     /// Shared 115.7d-e validator, extracted from the existing 707.10c copy path. `counts` is
     /// why the answer's shape is refused: what keeps the number of targets differs for a copy.
     pub(crate) fn legal_new_targets(

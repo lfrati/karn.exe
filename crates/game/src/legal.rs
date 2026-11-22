@@ -22,6 +22,9 @@ pub struct Slot {
     pub same_graveyard: Option<Vec<Vec<Target>>>,
     /// Allowed two-creature pairs with distinct controllers (601.2c).
     pub controller_pairs: Option<Vec<[Target; 2]>>,
+    /// At most one card from each mana-value partition. Retained illegal targets
+    /// are outside these partitions and do not constrain new legal choices (115.7).
+    pub different_mana_values: Option<Vec<Vec<Target>>>,
     /// The amount divided or distributed among the chosen targets, announced with them
     /// ([`crate::Move::WithDivision`]): each gets at least one (601.2d).
     pub divide: Option<u32>,
@@ -34,7 +37,9 @@ pub struct DependentTargets {
 }
 impl Slot {
     pub fn allows_group(&self, group: &[Target]) -> bool {
-        self.controller_pairs.as_ref().is_none_or(|pairs| pairs.iter().any(|pair|
+        self.different_mana_values.as_ref().is_none_or(|partitions|
+            partitions.iter().all(|partition| group.iter().filter(|target| partition.contains(target)).count() <= 1))
+            && self.controller_pairs.as_ref().is_none_or(|pairs| pairs.iter().any(|pair|
             group.len() == 2 && group.contains(&pair[0]) && group.contains(&pair[1])))
             && (group.is_empty() || self.same_graveyard.as_ref().is_none_or(|partitions|
             partitions.iter().any(|partition| group.iter().all(|target| partition.contains(target)))))
@@ -93,7 +98,7 @@ fn combinations<T: Copy>(among: &[T], n: usize) -> Vec<Vec<T>> {
 /// Witness that required target-change slots admit a jointly legal assignment (115.7).
 /// Backtracking is necessary when an earlier broad group can consume a later narrow one.
 pub(crate) fn target_selection(slots: &[Slot]) -> Option<Vec<Vec<Target>>> {
-    if slots.iter().all(|s| s.distinct_from.is_empty() && s.dependent.is_none() && s.same_graveyard.is_none() && s.controller_pairs.is_none()) {
+    if slots.iter().all(|s| s.distinct_from.is_empty() && s.dependent.is_none() && s.same_graveyard.is_none() && s.controller_pairs.is_none() && s.different_mana_values.is_none()) {
         return slots.iter().map(|s| (s.min <= s.max && s.min as usize <= s.among.len())
             .then(|| s.among.iter().take(s.min as usize).copied().collect())).collect();
     }
@@ -239,7 +244,7 @@ impl Game {
     pub(crate) fn slot_with(&self, ctx: &Ctx, spec: &crate::announcement::TargetSpec, locals: &dyn crate::program::expr::Locals) -> Slot {
         let among = spec.set.targets(self, ctx, locals);
         let (min, max) = spec.limits(self, ctx);
-        Slot { max: max.min(among.len() as u32), min, among, distinct_from: spec.distinct_from.clone(), dependent:None, same_graveyard:None, controller_pairs:None, divide: spec.divided_total(self, ctx) }
+        Slot { max: max.min(among.len() as u32), min, among, distinct_from: spec.distinct_from.clone(), dependent:None, same_graveyard:None, controller_pairs:None, different_mana_values:None, divide: spec.divided_total(self, ctx) }
     }
 
     pub(crate) fn target_offers(&self,ctx:&Ctx,specs:&[crate::announcement::TargetSpec],locals:&dyn crate::program::expr::Locals)->Vec<Slot> {
@@ -279,6 +284,16 @@ impl Game {
                     if pairs.is_empty() { offer.max = 0; }
                     offer.controller_pairs = Some(pairs);
                 }
+                if spec.relation == Some(crate::announcement::TargetRelation::DifferentManaValues) {
+                    let mut partitions = std::collections::BTreeMap::<u32,Vec<Target>>::new();
+                    let mut illegal = 0;
+                    for target in &offer.among {
+                        if !spec.set.legal_target(self, ctx, locals, *target) { illegal += 1; continue; }
+                        if let Target::Object(object) = target { partitions.entry(ctx.mana_value(self, *object)).or_default().push(*target); }
+                    }
+                    offer.max = offer.max.min(partitions.len() as u32 + illegal);
+                    offer.different_mana_values = Some(partitions.into_values().collect());
+                }
                 offers.push(offer);continue
             };
             let group=spec.base+dependency;
@@ -292,7 +307,7 @@ impl Game {
                 options.push((*prior,candidates));
             }
             let (min,max)=spec.limits(self,ctx);
-            offers.push(Slot{max:max.min(among.len() as u32),min,among,distinct_from:spec.distinct_from.clone(),dependent:Some(DependentTargets{group,options}),same_graveyard:None, controller_pairs:None,divide:spec.divided_total(self,ctx)});
+            offers.push(Slot{max:max.min(among.len() as u32),min,among,distinct_from:spec.distinct_from.clone(),dependent:Some(DependentTargets{group,options}),same_graveyard:None, controller_pairs:None, different_mana_values:None,divide:spec.divided_total(self,ctx)});
         }
         offers
     }
@@ -434,8 +449,8 @@ fn r601_2c_joint_selection_backtracks_before_committing_a_broad_first_target() {
     let a = Target::Object(ObjId(1));
     let b = Target::Player(0);
     let slots = vec![
-        Slot { among: vec![a, b], min: 1, max: 1, distinct_from: vec![], dependent:None, same_graveyard:None, controller_pairs:None, divide: None },
-        Slot { among: vec![a], min: 1, max: 1, distinct_from: vec![0], dependent:None, same_graveyard:None, controller_pairs:None, divide: None },
+        Slot { among: vec![a, b], min: 1, max: 1, distinct_from: vec![], dependent:None, same_graveyard:None, controller_pairs:None, different_mana_values:None, divide: None },
+        Slot { among: vec![a], min: 1, max: 1, distinct_from: vec![0], dependent:None, same_graveyard:None, controller_pairs:None, different_mana_values:None, divide: None },
     ];
     // Uncited (implementation): a unit test of the target_selection search over synthetic slots; it must backtrack to the one assignment the distinct_from constraint allows.
     assert_eq!(target_selection(&slots), Some(vec![vec![b], vec![a]]));

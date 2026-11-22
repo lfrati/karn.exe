@@ -331,6 +331,9 @@ fn slot(s: &Slot) -> Value {
     if let Some(pairs) = &s.controller_pairs {
         value["controller_pairs"] = json!(pairs.iter().map(|pair| pair.iter().map(target).collect::<Vec<_>>()).collect::<Vec<_>>());
     }
+    if let Some(partitions) = &s.different_mana_values {
+        value["different_mana_values"] = json!(partitions.iter().map(|group| group.iter().map(target).collect::<Vec<_>>()).collect::<Vec<_>>());
+    }
     if let Some(partitions) = &s.same_graveyard {
         value["same_graveyard"] = json!(partitions.iter().map(|group| group.iter().map(target).collect::<Vec<_>>()).collect::<Vec<_>>());
     }
