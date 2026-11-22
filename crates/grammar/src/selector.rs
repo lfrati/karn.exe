@@ -1179,9 +1179,18 @@ fn post_filter(n: Number, sel: &P<Selector>) -> P<Filter> {
             lit("from it").to(Filter::Atom(Atom::FromIt)),
             pile_membership(),
             lit("dealt damage by").then_keep(sel).then(&lit("this turn").opt()).map(
-                |(s, this_turn)| Some(Filter::Atom(Atom::DealtDamageBy { by: Box::new(s), this_turn: this_turn.is_some() })),
+                |(s, this_turn)| ir::lexicon::fills(&s, ir::Verb::DealDamage, ir::Role::By)
+                    .then(|| Filter::Atom(Atom::DealtDamageBy { by: Box::new(s), this_turn: this_turn.is_some() })),
                 |f| match f {
-                    Filter::Atom(Atom::DealtDamageBy { by, this_turn }) => Some(((**by).clone(), this_turn.then_some(()))),
+                    Filter::Atom(Atom::DealtDamageBy { by, this_turn: false }) => Some(((**by).clone(), None)),
+                    _ => None,
+                },
+            ),
+            lit("dealt damage this turn by").then_keep(sel).map(
+                |s| ir::lexicon::fills(&s, ir::Verb::DealDamage, ir::Role::By)
+                    .then(|| Filter::Atom(Atom::DealtDamageBy { by: Box::new(s), this_turn: true })),
+                |f| match f {
+                    Filter::Atom(Atom::DealtDamageBy { by, this_turn: true }) => Some((**by).clone()),
                     _ => None,
                 },
             ),
@@ -3270,6 +3279,8 @@ fn ends_nested(p: &Post) -> bool {
     };
     match p {
         Post::With(Filter::Atom(Atom::Shares { with, .. })) if closed(with) => false,
+        Post::With(Filter::Atom(Atom::DealtDamageBy { by, .. })) if closed(by) => false,
+        Post::With(Filter::Atom(Atom::DealtDamageBy { .. })) => true,
         Post::With(Filter::Atom(Atom::MoreThan { than, .. })) if closed(than) => false,
         Post::With(Filter::Atom(Atom::Stat { value: Amount::Counters { on, .. }, .. })) if closed(on) => false,
         // "… the amount of life you gained this turn from your graveyard": the tally ends in

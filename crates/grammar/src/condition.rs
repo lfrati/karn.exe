@@ -459,7 +459,19 @@ fn happened(e: &Events) -> P<Condition> {
             |((x, t), w)| Some((x, (t, Some(w)))),
             |(x, (t, w)): &Said| w.clone().map(|w| ((x.clone(), t.clone()), w)),
         );
-        alt("history", vec![windowed, timeless]).map(
+        // A temporal adjunct may precede the passive's source. Keep it in the history
+        // window and print the ordinary source-before-window ordering.
+        let late_source = windowed.then(&lit("by").then_keep(&s.selector)).map(
+            |((mut pattern, when), source)| {
+                match pattern.actions.as_mut_slice() {
+                    [EventAction::IsDealtDamage { by, .. }] if by.is_empty()
+                        && ir::lexicon::fills(&source, ir::Verb::DealDamage, ir::Role::By) => by.push(source),
+                    _ => return None,
+                }
+                Some((pattern, when))
+            }, |_| None,
+        ).alias();
+        alt("history", vec![windowed, late_source, timeless]).map(
             move |(pattern, (times, window))| {
                 (!historical_excess(&pattern) && (window.is_some() || origin(&pattern)))
                     .then_some(Condition::Happened { pattern, window, times, tense, negated })

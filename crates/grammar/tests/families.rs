@@ -345,3 +345,22 @@ fn r110_2_passive_controller_relation() {
     assert_ne!(passive, past);
     read("At the beginning of your end step, gain control of target nonland permanent controlled by a player who was dealt combat damage by three or more Pirates this turn.");
 }
+
+/// CR 120.2 and 608.2i: the damage source and historical controller stay in the lookback.
+#[test]
+fn r608_2i_damage_time_before_source() {
+    let (past, _) = read("Destroy target creature dealt damage this turn by a source you controlled.");
+    let (present, _) = read("Destroy target creature dealt damage this turn by a source you control.");
+    assert_ne!(past, present);
+    // The old ordering also permits a trailing instruction duration; refuse to pick an AST.
+    assert!(matches!(abilities().ability.parse_all(&tokenize("Destroy target creature dealt damage by a red instant spell this turn.")), Outcome::Ambiguous(_)));
+    for text in [
+        "If a creature dealt damage this turn by a source you controlled would die, exile it instead.",
+        "Whenever another creature dealt damage this turn by a Spider you controlled dies, create a token that's a copy of that creature, except it's a Food artifact with \"{2}, {T}, Sacrifice this token: You gain 3 life,\" and it loses all other card types.",
+        "Cast ~ only if you were dealt damage this turn by a red instant or sorcery spell.",
+    ] { read(text); }
+    let (before, _) = read("Cast ~ only if you were dealt damage this turn by a red instant or sorcery spell.");
+    let (after, _) = read("Cast ~ only if you were dealt damage by a red instant or sorcery spell this turn.");
+    assert_eq!(before, after);
+    declines("Destroy target creature dealt damage this turn by target player.");
+}
