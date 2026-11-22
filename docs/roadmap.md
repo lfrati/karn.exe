@@ -77,12 +77,13 @@ git push origin HEAD:main
 A wrong-play defect met on the way is fixed if it is small. Otherwise it gets an issue with a
 reproduction, and the work goes on.
 
-The lane is finished when each of its listed targets is done or skipped. With time left,
-carry on from the blocker report as the lane describes.
+The listed targets are starting priorities. After they are done or skipped, carry on from the
+blocker report as the lane describes, in small coherent batches, until the user explicitly
+stops the builders.
 
 ### If you are doing the review pass
 
-Do it once the builders have finished, from the main checkout after `git pull`, in a session
+Do it once the user stops the builders, from the main checkout after `git pull`, in a session
 that wrote none of the round. The round began at the `round-start` tag.
 
 Read `round-start..origin/main` and fix what you find: duplicated mechanisms, patches for one
@@ -94,8 +95,8 @@ branch: `git worktree remove ~/git/karn-wt/<lane>` and `git branch -d <lane>`.
 ### If you were given the whole round
 
 Move the tag to where the round starts (`git tag -f round-start origin/main`), start one
-builder per lane as a subagent, and when they have finished run the review pass in a fresh
-one. If you cannot start subagents, take Lane 1 yourself.
+builder per lane as a subagent, keep them working until the user explicitly stops them, and
+then run the review pass in a fresh one. If you cannot start subagents, take Lane 1 yourself.
 
 ### This round
 

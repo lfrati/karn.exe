@@ -272,6 +272,8 @@ pub enum AbilityRule {
     CostChange { more: bool, by: ManaCost },
     /// "can be activated an additional time".
     AdditionalTimes(Amount),
+    /// The named ability family does not trigger (603.2).
+    DontTrigger,
 }
 
 /// Where an object would have gone, in "instead of putting it …" (614.1a: the act replaces that

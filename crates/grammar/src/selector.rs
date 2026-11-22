@@ -2307,6 +2307,9 @@ fn relation(base: &str, third: &str, past: Option<&str>, player_sg: &P<Selector>
         let any = alt("subject", vec![plural_subject.clone(), player_sg.clone()]);
         v.push(any.skip(&lit(past)).map(rel(false, true), unrel(false, true)));
         v.push(any.skip(&lit(&format!("didn't {base}"))).map(rel(true, true), unrel(true, true)));
+        // A passive modifier names the current holder: "controlled by target player".
+        // Canonical printing uses "target player controls", keeping historical control distinct.
+        v.push(lit(&format!("{past} by")).then_keep(&any).map(rel(false, false), |_| None).alias());
     }
     alt("controller", v)
 }

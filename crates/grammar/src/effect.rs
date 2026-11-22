@@ -101,9 +101,11 @@ fn subjects() -> Vec<(P<Option<Subject>>, Form)> {
     // follows only a definite member ("You and permanents you control")
     let not_all_sets = |items: &Vec<Subject>| {
         !items.iter().all(|m| matches!(m, Subject::Set(_)))
-            && items.windows(2).all(|w| {
-                !matches!(&w[1], Subject::Set(_))
-                    || matches!(&w[0], Subject::Selector(s) if matches!(s.quant, ir::Quant::Definite(_)))
+            && items.windows(2).all(|w| match &w[1] {
+                Subject::Set(set) => matches!(&w[0], Subject::Selector(s)
+                    if matches!(s.quant, ir::Quant::Definite(_))
+                        || (s.quant == ir::Quant::All && s.set.domain == ir::Domain::Player && set.domain != ir::Domain::Player)),
+                _ => true,
             })
     };
     let joint = member.list("and").then(&lit("each").opt()).map(

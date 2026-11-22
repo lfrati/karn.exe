@@ -263,3 +263,18 @@ fn r602_2b_activation_cost_source_alias() {
 fn r608_2c_role_local_pronouns_in_permissions() {
     read("{T}, Exile ~: Each player exiles the top seven cards of their library. Until your next turn, players may play cards they exiled this way, and they can't play cards from their hand. Activate only as a sorcery.");
 }
+
+/// CR 609.4 and 702.11: targetability can disregard an ability without removing it.
+#[test]
+fn r609_4_targetability_as_though() {
+    for text in [
+        "Creatures your opponents control can be the targets of spells and abilities as though they didn't have hexproof. Ward abilities of those creatures don't trigger.",
+        "Creatures your opponents control with hexproof can be the targets of spells and abilities you control as though they didn't have hexproof.",
+        "Your opponents and permanents your opponents control with hexproof can be the targets of spells and abilities you control as though they didn't have hexproof.",
+        "{1}, {T}: Until end of turn, your opponents and creatures your opponents control with hexproof can be the targets of spells and abilities you control as though they didn't have hexproof.",
+        "{G}: Until end of turn, ~ can be the target of spells and abilities controlled by target player as though it didn't have shroud.",
+    ] {
+        read(text);
+    }
+    declines("Target creature can be the target of creatures as though it didn't have hexproof.");
+}

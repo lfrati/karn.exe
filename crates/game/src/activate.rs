@@ -158,6 +158,7 @@ pub(crate) fn modifiers(def: &CardDef) -> Vec<crate::program::registration::Regi
                 },
                 AbilityRule::AdditionalTimes(n) => Modification::Additional(expr::Amount::compile(n, &support, &mut bind)?),
                 AbilityRule::CantBeActivated { .. } => unreachable!("prohibitions have their own owner"),
+                AbilityRule::DontTrigger => return crate::unsupported("trigger suppression: ability-family rule not implemented (603.2)"),
             };
             Ok(Modifier { keyword, sources, scope: def.scope(index).expect("a declared modifier")?, change })
         })();

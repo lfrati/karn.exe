@@ -416,7 +416,9 @@ fn can_as_though(form: Form) -> P<StaticAct> {
             matches!(e, EventAction::Attacks { .. } | EventAction::Blocks { .. } | EventAction::BecomesBlocked { .. })
                 || matches!(e.reading(), Some((Verb::Cast | Verb::Play, _)))
         });
-        combat_or_cast
+        let targetable = events.iter().all(|e| matches!(e, EventAction::BecomesTarget { .. }));
+        (combat_or_cast || targetable)
+            && events.iter().all(EventAction::roles_fit)
             && match x {
             Premise::Untapped => blocks,
             Premise::DidntHave(_) if blocked(events) => p,
@@ -1309,6 +1311,7 @@ fn activated_abilities() -> P<Static> {
                 },
             ),
             lit("can be activated an additional time").to(AbilityRule::AdditionalTimes(Amount::Const(1))),
+            lit("don't trigger").to(AbilityRule::DontTrigger),
             lit("cost").then_keep(&mana_cost()).then(&more).skip(&lit("to activate")).map(
                 |(by, more)| Some(AbilityRule::CostChange { more, by }),
                 |r| match r {
