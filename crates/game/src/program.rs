@@ -1318,6 +1318,11 @@ impl expr::Binding for Scoped<'_, '_> {
     }
     fn comparison_subject(&mut self, s: &Selector) -> Res<expr::Subject> {
         self.binder.check_alternative_reference(s)?;
+        // An explicit exile result or linked producer is already proven independently
+        // of clause possession; preserve that binding before ordinary anaphor lookup.
+        if matches!(s.quant, Quant::Definite(Ref::Anaphor(ir::Anaphor::TheParticiple { what: Verb::Exile, .. }))) {
+            return self.subject(s);
+        }
         match self.binder.referent(s, self.support, false)? {
             Referent::Local(slots) => match slots.as_slice() {
                 [slot] => Ok(expr::Subject::Local(self.binder.object(*slot))),
