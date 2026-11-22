@@ -436,6 +436,7 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if let Some(ability) = bloodthirst(item) { return Some(ability); }
     if let Some(ability) = fabricate(item) { return Some(ability); }
     if let Some(ability) = bushido(item) { return Some(ability); }
+    if let Some(ability) = afflict(item) { return Some(ability); }
     if let Some(ability) = soulshift(item) { return Some(ability); }
     if let Some(ability) = renown(item) { return Some(ability); }
     if let Some(ability) = annihilator(item) { return Some(ability); }
@@ -755,6 +756,14 @@ fn entry_counter_count(ability: &mut Ability, count: u32) {
     let ir::statics::StaticAct::Enters(arrivals) = action.as_mut() else { unreachable!("entry counters") };
     let [ir::statics::Arrival::Counters(on)] = arrivals.as_mut_slice() else { unreachable!("one counter kind") };
     on.counters.count = ir::Amount::Const(count);
+}
+
+/// 702.130a: the blocked occurrence retains its own defending player.
+fn afflict(item: &ir::token::KeywordInstance) -> Option<Ability> {
+    if item.keyword.name() != "Afflict" { return None; }
+    let KeywordParam::Number(ir::Amount::Const(n)) = item.param else { return None };
+    let text = format!("Whenever this creature becomes blocked, defending player loses {n} life.");
+    CardDef::new("Afflict rule", "", "Creature", &text, None).ok()?.abilities.into_iter().next()
 }
 
 /// 702.45a: becoming blocked is one event regardless of the number of blockers.
