@@ -1175,6 +1175,7 @@ fn post_filter(n: Number, sel: &P<Selector>) -> P<Filter> {
             lit("of the color of your choice").to(atom(Atom::OfChoice(Chosen::Color))),
             attached_to(sel),
             lit("from it").to(Filter::Atom(Atom::FromIt)),
+            pile_membership(),
             lit("dealt damage by").then_keep(sel).then(&lit("this turn").opt()).map(
                 |(s, this_turn)| Some(Filter::Atom(Atom::DealtDamageBy { by: Box::new(s), this_turn: this_turn.is_some() })),
                 |f| match f {
@@ -1514,6 +1515,30 @@ fn source(n: Number, sel: &P<Selector>) -> P<Filter> {
             _ => None,
         },
     )
+}
+
+/// Membership in a temporary pile is a predicate on its objects, not a pile object (700.3b).
+fn pile_membership() -> P<Filter> {
+    use ir::procedure::PileRef;
+    let named = alt("pile", vec![
+        lit("in that pile").to(PileRef::That),
+        lit("in the other pile").to(PileRef::TheOther),
+    ]).map(
+        |pile| Some(Filter::Atom(Atom::InPile { pile, chooser: None })),
+        |f| match f {
+            Filter::Atom(Atom::InPile { pile, chooser: None }) => Some(*pile),
+            _ => None,
+        },
+    );
+    let chosen = lit("in the pile of").then_keep(&crate::kernel::lazy("possessive", || selectors().possessive.clone()))
+        .skip(&lit("choice")).map(
+            |who| Some(Filter::Atom(Atom::InPile { pile: PileRef::One, chooser: Some(Box::new(who)) })),
+            |f| match f {
+                Filter::Atom(Atom::InPile { pile: PileRef::One, chooser: Some(who) }) => Some((**who).clone()),
+                _ => None,
+            },
+        );
+    alt("pile membership", vec![named, chosen])
 }
 
 /// "with mana cost {0} or {1}", "with mana cost {1}": the printed mana cost, exactly (202.1).
@@ -2162,6 +2187,7 @@ fn is_post_filter(f: &Filter) -> bool {
             | Atom::OutsideTheGame
             | Atom::AbleToBlock { .. }
             | Atom::FromIt
+            | Atom::InPile { .. }
             | Atom::DealtDamageBy { .. }
             | Atom::Shares { .. }
             | Atom::Targets { .. }

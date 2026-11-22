@@ -326,6 +326,8 @@ pub enum Atom {
     /// "a nonland card from it": a card in the hand or pile "it" names ("Target opponent
     /// reveals their hand. You choose a nonland card from it.").
     FromIt,
+    /// Objects in a previously made pile (700.3); `chooser` names whose pick it is.
+    InPile { pile: crate::procedure::PileRef, chooser: Option<Box<Selector>> },
     /// "dealt damage by ~ this turn"; without `this_turn`, "a permanent dealt damage by ~
     /// would die this turn", where the replacement's own "this turn" bounds it.
     DealtDamageBy { by: Box<Selector>, this_turn: bool },
