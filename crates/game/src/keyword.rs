@@ -411,6 +411,7 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if let Some(cost) = ward_cost(item) { return Some(ward_trigger(&cost)); }
     if let Some(ability) = crew(item) { return Some(ability); }
     if let Some(ability) = saddle(item) { return Some(ability); }
+    if let Some(ability) = bloodthirst(item) { return Some(ability); }
     if let Some(ability) = bushido(item) { return Some(ability); }
     if let Some(ability) = renown(item) { return Some(ability); }
     if let Some(ability) = annihilator(item) { return Some(ability); }
@@ -564,6 +565,14 @@ fn saddle(item: &ir::token::KeywordInstance) -> Option<Ability> {
     let text = format!("Tap any number of other untapped creatures you control with total power {n} or greater: This permanent becomes saddled until end of turn. Activate only as a sorcery.");
     let def = CardDef::new("Saddle rule", "", "Creature — Mount", &text, Some((0, 0))).expect("the grammar reads rule 702.171a");
     Some(def.abilities[0].clone())
+}
+
+/// 702.54a: the ordinary prospective-entry replacement checks damage history.
+fn bloodthirst(item: &ir::token::KeywordInstance) -> Option<Ability> {
+    if item.keyword.name() != "Bloodthirst" { return None; }
+    let KeywordParam::Number(ir::Amount::Const(n)) = item.param else { return None; };
+    let text = format!("If an opponent was dealt damage this turn, this permanent enters with {n} +1/+1 counter{} on it.", if n == 1 { "" } else { "s" });
+    CardDef::new("Bloodthirst rule", "", "Creature", &text, None).ok()?.abilities.into_iter().next()
 }
 
 /// 702.45a: becoming blocked is one event regardless of the number of blockers.

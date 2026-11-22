@@ -351,6 +351,7 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
         "Toxic" if matches!(item.param, KeywordParam::Number(ir::Amount::Const(_))) =>
             one(bf, Gives::Asked, vec![Context::PermanentsOnly]),
         "Undying" | "Persist" | "Extort" | "Living Weapon" | "Job Select" | "Prowess" | "Battle Cry" | "Renown" | "Annihilator" => generated(ability(item)?, true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
+        "Bloodthirst" => generated(ability(item)?, true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
         "Hideaway" => {
             let Some(ability) = hideaway(item) else { return refused(item) };
             generated(ability, true, vec![Context::PrintedOnly, Context::PermanentsOnly])
