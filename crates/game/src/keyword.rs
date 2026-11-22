@@ -666,14 +666,41 @@ fn bloodthirst(item: &ir::token::KeywordInstance) -> Option<Ability> {
     let mut ability = crate::token::init(&RULE, || CardDef::new("Bloodthirst rule", "", "Creature",
         "If an opponent was dealt damage this turn, this permanent enters with a +1/+1 counter on it.", None)
         .expect("the grammar reads rule 702.54a").abilities[0].clone()).clone();
-    let Ability::Text(ir::Effect(sentences)) = &mut ability else { unreachable!("bloodthirst is static") };
-    let ir::Sentence::Led { rest, .. } = &mut sentences[0] else { unreachable!("conditional entry") };
-    let ir::Sentence::Do(body) = rest.as_mut() else { unreachable!("entry statement") };
+    entry_counter_count(&mut ability, n);
+    Some(ability)
+}
+
+/// 702.63a/b: fixed entry counters and two ordinary triggered abilities. Bare
+/// vanishing has the triggers alone; zero is a supported fixed count, not a sentinel.
+fn vanishing(item: &ir::token::KeywordInstance) -> Option<Vec<Ability>> {
+    let count = match item.param {
+        KeywordParam::None => None,
+        KeywordParam::Number(ir::Amount::Const(n)) => Some(n),
+        _ => return None,
+    };
+    static RULE: OnceLock<Vec<Ability>> = OnceLock::new();
+    let rule = crate::token::init(&RULE, || CardDef::new("Vanishing rule", "", "Artifact",
+        "This permanent enters with a time counter on it.\nAt the beginning of your upkeep, if this permanent has a time counter on it, remove a time counter from this permanent.\nWhen the last time counter is removed from this permanent, sacrifice this permanent.", None)
+        .expect("the grammar reads rule 702.63a").abilities);
+    let mut abilities = rule[1..].to_vec();
+    if let Some(count) = count {
+        let mut entry = rule[0].clone();
+        entry_counter_count(&mut entry, count);
+        abilities.insert(0, entry);
+    }
+    Some(abilities)
+}
+
+/// Fixed counter entry replacements share the same ordinary typed arrival.
+fn entry_counter_count(ability: &mut Ability, count: u32) {
+    let Ability::Text(ir::Effect(sentences)) = ability else { unreachable!("entry rule is static") };
+    let mut sentence = &mut sentences[0];
+    while let ir::Sentence::Led { rest, .. } = sentence { sentence = rest; }
+    let ir::Sentence::Do(body) = sentence else { unreachable!("entry statement") };
     let ir::Action::Static(action) = &mut body.first.first.action else { unreachable!("entry statement") };
     let ir::statics::StaticAct::Enters(arrivals) = action.as_mut() else { unreachable!("entry counters") };
-    let [ir::statics::Arrival::Counters(on)] = arrivals.as_mut_slice() else { unreachable!("one kind") };
-    on.counters.count = ir::Amount::Const(n);
-    Some(ability)
+    let [ir::statics::Arrival::Counters(on)] = arrivals.as_mut_slice() else { unreachable!("one counter kind") };
+    on.counters.count = ir::Amount::Const(count);
 }
 
 /// 702.45a: becoming blocked is one event regardless of the number of blockers.
@@ -777,18 +804,17 @@ pub(crate) fn ninjutsu(def: &CardDef, index: usize) -> bool {
     made_by(def, index).is_some_and(|item| item.keyword.name() == "Ninjutsu")
 }
 
-/// The keyword that made this, of a card's abilities, if [`executable`] made it.
+/// Generated owner indices follow the cached declaration's exact ability order.
+fn generated_by(def: &CardDef) -> impl Iterator<Item = (usize, &Instance)> {
+    def.keyword_declarations.iter().flat_map(|instance| {
+        instance.declared.iter().flat_map(|d| &d.gives)
+            .filter_map(move |(_, gives)| matches!(gives, Gives::Ability(_)).then_some(instance))
+    }).enumerate().map(move |(offset, instance)| (def.abilities.len() + offset, instance))
+}
+
+/// The keyword that made this ability, in the same cached order as [`executable_in`].
 fn made_by(def: &CardDef, index: usize) -> Option<&ir::token::KeywordInstance> {
-    let mut made = def.abilities.len();
-    for a in &def.abilities {
-        let Ability::Keywords(items) = a else { continue };
-        for item in items {
-            if executable(item).is_none() { continue; }
-            if made == index { return Some(item); }
-            made += 1;
-        }
-    }
-    None
+    generated_by(def).find_map(|(made, instance)| (made == index).then_some(&instance.item))
 }
 
 /// The in-game ability of 702.124j. The setup API still accepts one commander per seat;
@@ -922,17 +948,9 @@ pub(crate) fn madness_cost(item: &ir::token::KeywordInstance) -> Option<ir::Cost
 /// ability has among the card's abilities (after the printed ones, in the order
 /// [`executable_in`] makes them).
 pub(crate) fn madness(def: &CardDef) -> Vec<(usize, ir::Cost, usize)> {
-    let mut found = Vec::new();
-    let mut made = def.abilities.len();
-    for (row, a) in def.abilities.iter().enumerate() {
-        let Ability::Keywords(items) = a else { continue };
-        for item in items {
-            if executable(item).is_none() { continue; }
-            if let Some(cost) = madness_cost(item) { found.push((row, cost, made)); }
-            made += 1;
-        }
-    }
-    found
+    generated_by(def).filter_map(|(made, instance)| {
+        madness_cost(&instance.item).map(|cost| (instance.row, cost, made))
+    }).collect()
 }
 
 /// The triggered ability of madness (702.35a): "When this card is exiled this way, its owner
@@ -1058,16 +1076,7 @@ fn gift_effect(of: &ir::token::GiftOf) -> Option<Ability> {
 /// The index of the gift ability among its card's abilities (after the printed ones, in the
 /// order [`executable_in`] makes them), when it has one the engine gives.
 pub(crate) fn gift_ability(def: &CardDef) -> Option<usize> {
-    let mut made = def.abilities.len();
-    for a in &def.abilities {
-        let Ability::Keywords(items) = a else { continue };
-        for item in items {
-            if executable(item).is_none() { continue; }
-            if gift_of(item).is_some() { return Some(made); }
-            made += 1;
-        }
-    }
-    None
+    generated_by(def).find_map(|(made, instance)| gift_of(&instance.item).is_some().then_some(made))
 }
 
 /// One supported kicker cost and whether it can be paid repeatedly (702.33a,c).

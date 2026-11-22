@@ -116,10 +116,17 @@ impl Declared {
 fn refused<T>(item: &KeywordInstance) -> Res<T> { unsupported(format!("keyword: {}", item.keyword.name())) }
 fn ability(item: &KeywordInstance) -> Res<Ability> { executable(item).ok_or_else(|| crate::Unsupported(format!("keyword: {}", item.keyword.name()))) }
 fn generated(ability: Ability, held: bool, needs: Vec<Context>) -> Res<Declared> {
-    let scope = crate::functions::scope(&ability, &[])?;
+    generated_many(vec![ability], held, needs)
+}
+fn generated_many(abilities: Vec<Ability>, held: bool, needs: Vec<Context>) -> Res<Declared> {
     let mut gives = Vec::new();
-    if held { gives.push((scope, Gives::Asked)); }
-    gives.push((scope, Gives::Ability(ability)));
+    for ability in abilities {
+        let scope = crate::functions::scope(&ability, &[])?;
+        if held && !gives.iter().any(|(s, g)| *s == scope && matches!(g, Gives::Asked)) {
+            gives.push((scope, Gives::Asked));
+        }
+        gives.push((scope, Gives::Ability(ability)));
+    }
     Ok(Declared::new(gives, needs))
 }
 /// Sole answer for row admission, contribution scopes and held meanings.
@@ -373,6 +380,8 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
         "Affinity" => generated(ability(item)?, false, vec![Context::PrintedOnly]),
         "Cumulative Upkeep" => generated(ability(item)?, true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
         "Bloodthirst" => generated(ability(item)?, true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
+        "Vanishing" => generated_many(vanishing(item).ok_or_else(|| crate::Unsupported("keyword: Vanishing".into()))?,
+            true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
         "Hideaway" => {
             let Some(ability) = hideaway(item) else { return refused(item) };
             generated(ability, true, vec![Context::PrintedOnly, Context::PermanentsOnly])
