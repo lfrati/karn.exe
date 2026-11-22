@@ -45,3 +45,11 @@ fn r702_28b_shadow_restricts_attackers_and_blockers_in_both_directions() {
     cite!(["702.28b"]; refused("Dauthi Mercenary has shadow (702.28b, 509.1b)"): declaration(shadow.clone(), oracle("Grizzly Bears")));
     cite!(["702.28b"]; refused("Dauthi Mercenary has shadow (702.28b, 509.1b)"): declaration(oracle("Grizzly Bears"), shadow));
 }
+
+#[test]
+fn r702_31b_horsemanship_only_restricts_what_can_block_its_holder() {
+    let horse = oracle("Wei Scout");
+    cite!(["702.31b"]; ok: declaration(horse.clone(), horse.clone()));
+    cite!(["702.31b"]; refused("Wei Scout has horsemanship (702.31b, 509.1b)"): declaration(horse.clone(), oracle("Storm Crow")));
+    cite!(["702.31b"]; ok: declaration(oracle("Grizzly Bears"), horse));
+}
