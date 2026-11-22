@@ -131,7 +131,7 @@ fn r702_49a_the_ninjutsu_ability_reads_as_its_rule_defines_it_in_the_prompt_and_
     // it is put onto the battlefield from the hand, tapped and attacking (702.49a) the
     // returned creature's defender (702.49c)
     let reads = |text: &str| text.strip_prefix(cost).is_some_and(|effect| effect.starts_with("Put Kaito, Bane of Nightmares ")
-        && ["onto the battlefield", "from your hand", "tapped", "attacking the same", "as that creature"].iter().all(|said| effect.contains(said)));
+        && ["onto the battlefield", "from your hand", "tapped", "attacking the same", "player", "planeswalker", "battle", "as that creature"].iter().all(|said| effect.contains(said)));
     begin(&mut g, vec![(a, Target::Player(2))]);
     unblock(&mut g);
     mana(&mut g);

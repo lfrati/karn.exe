@@ -11,7 +11,7 @@ use crate::support::{cite, oracle, paid, refused};
 use game::binding::AbilityKey;
 use game::operation::ReplacementId;
 use game::simulation::{ResponseError, Simulation};
-use game::start::ShuffleOrder;
+use game::start::{RandomOutcome, ShuffleOrder, ShuffleScope};
 use game::state::{Answer, Choice, Decision};
 use game::{Event, Game, Move, ObjId, Target, Zone};
 use ir::Verb;
@@ -108,6 +108,73 @@ fn shuffled(g: Game, answer: Answer, outcomes: Vec<Vec<ObjId>>) -> (Simulation, 
 #[test]
 fn every_card_of_the_tests_is_one_the_engine_runs() {
     let _ = game(&[]);
+}
+
+#[test]
+fn r701_24g_scoped_receipts_check_fixed_cards_at_consumption_after_zone_changes() {
+    let (mut g, cards) = game(&[COLOSSUS, PLAINS, ISLAND, FOREST, MOUNTAIN]);
+    let [colossus, plains, island, forest, mountain] = cards[..] else {unreachable!()};
+    cruel_truths(&mut g);
+    for position in [ir::action::LibraryPosition::Top, ir::action::LibraryPosition::FromTop(1)] {
+        let mut sim = Simulation::new(g.clone());
+        let request = sim.request().unwrap().unwrap().clone();
+        let outcome = RandomOutcome::ScopedShuffle {player:0, order:vec![island,colossus,mountain,forest],
+            scope:ShuffleScope {excluding:vec![], fixed:vec![(plains,position)]}};
+        sim.respond_with_random(request.id, 0, Move::Choose(Answer::Arrange {top:vec![plains],away:vec![colossus]}),
+            vec![outcome], false).unwrap();
+        let after = sim.game().unwrap();
+        cite!(["701.24g", "701.25a", "608.2c"]; assert_eq!(hand(after), ["Plains", "Island"]));
+        cite!(["701.24g"]; assert_eq!(library(after), ["Darksteel Colossus", "Mountain", "Forest"]));
+        cite!(["614.6"]; assert_eq!(graveyard(after), ["Cruel Truths"]));
+    }
+}
+
+#[test]
+fn r701_24g_bad_scope_preserves_the_game_and_does_not_satisfy_a_rules_refusal() {
+    let (mut g, cards) = game(&[COLOSSUS, PLAINS, ISLAND, FOREST, MOUNTAIN]);
+    let [colossus, plains, island, forest, mountain] = cards[..] else {unreachable!()};
+    cruel_truths(&mut g);
+    let source = *g.stack.last().unwrap();
+    let before = format!("{g:?}");
+    for fixed in [vec![(plains,ir::action::LibraryPosition::Bottom)],
+                  vec![(source,ir::action::LibraryPosition::Top)], vec![]] {
+        let mut sim = Simulation::new(g.clone());
+        let request = sim.request().unwrap().unwrap().clone();
+        let outcome = RandomOutcome::ScopedShuffle {player:0, order:vec![island,colossus,mountain,forest],
+            scope:ShuffleScope {excluding:vec![],fixed}};
+        let result = sim.respond_with_random(request.id, 0,
+            Move::Choose(Answer::Arrange {top:vec![plains],away:vec![colossus]}), vec![outcome], false);
+        // This is corrupt replay input, not a move Magic forbids.
+        assert!(matches!(result,Err(ResponseError::ReplayInput(_))), "{result:?}");
+        assert_eq!(format!("{:?}", sim.game().unwrap()), before);
+        assert_eq!(sim.request().unwrap(), Some(&request));
+        sim.respond_with_random(request.id, 0, Move::Choose(Answer::Arrange {top:vec![plains],away:vec![colossus]}),
+            vec![RandomOutcome::ScopedShuffle {player:0, order:vec![island,colossus,mountain,forest],
+                scope:ShuffleScope {excluding:vec![],fixed:vec![(plains,ir::action::LibraryPosition::Top)]}}], false).unwrap();
+        cite!(["701.24g"]; assert_eq!(hand(sim.game().unwrap()), ["Plains", "Island"]));
+    }
+}
+
+#[test]
+fn r400_7_unused_scope_rebinds_its_cards_and_keeps_its_original_input_index() {
+    let (mut g, cards) = game(&[COLOSSUS, PLAINS, ISLAND, FOREST, MOUNTAIN]);
+    let [colossus, plains, island, forest, mountain] = cards[..] else {unreachable!()};
+    cruel_truths(&mut g);
+    let physical = g.physical_card_identity(plains).unwrap();
+    let mut sim = Simulation::new(g);
+    let request = sim.request().unwrap().unwrap().clone();
+    let outcome = RandomOutcome::ScopedShuffle {player:0, order:vec![island,colossus,mountain,forest],
+        scope:ShuffleScope {excluding:vec![],fixed:vec![(plains,ir::action::LibraryPosition::Top)]}};
+    let unused = sim.respond_with_random(request.id, 0,
+        Move::Choose(Answer::Arrange {top:vec![plains],away:vec![colossus]}), vec![outcome.clone(),outcome], true).unwrap();
+    assert_eq!(unused.len(), 1);
+    assert_eq!(unused[0].input_index, 1);
+    let RandomOutcome::ScopedShuffle {scope,..} = &unused[0].outcome else {panic!("scope must survive")};
+    let (current,position) = scope.fixed[0];
+    assert_eq!(position, ir::action::LibraryPosition::Top);
+    cite!(["400.7"]; assert_ne!(current, plains));
+    cite!(["400.7"]; assert_eq!(sim.game().unwrap().physical_card_identity(current), Some(physical)));
+    cite!(["701.24g"]; assert_eq!(sim.game().unwrap().obj(current).zone, Zone::Hand));
 }
 
 #[test]

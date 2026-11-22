@@ -554,6 +554,10 @@ class KarnAdapter:
                 raise fault("random_missing", f"the start shuffles {seat}'s library (103.3) and the record has no outcome for it")
             if outcome.get("kind") != "shuffle" or outcome.get("seat") != seat or outcome.get("pile") is not None:
                 raise fault("random_mismatch", f"a shuffle of {seat}'s library was asked for")
+            if (scope := outcome.get("scope")) is not None:
+                if (not isinstance(scope, dict) or set(scope) - {"fixed", "excluding"}
+                        or scope.get("fixed") or scope.get("excluding")):
+                    raise fault("random_mismatch", "an initial shuffle includes the whole deck (103.3), without cards kept out")
             deck = self.decks[seat]
             if sorted(outcome.get("order", [])) != sorted(deck):
                 raise fault("random_mismatch", f"the shuffle outcome of {seat} does not list that seat's deck once each")
@@ -569,9 +573,6 @@ class KarnAdapter:
             request["commanders"] = [self._face_name(self._commander_of(seat)) for seat in self.seats]
         reply = self.engine.send(request)
         if not reply.get("ok"):
-            message = str(reply.get("error", ""))
-            if "companion" in message:
-                raise Refusal("illegal", "illegal_action", f"the reveal breaks 103.2b: {message}")
             raise self._setup_refusal(reply)
         self.used_outcomes.extend(outcomes)
         self.pregame = None
@@ -632,10 +633,7 @@ class KarnAdapter:
 
     @staticmethod
     def _setup_refusal(reply: dict) -> Refusal:
-        message = str(reply.get("error", ""))
-        if "unknown card" in message or "no card" in message or "not a card" in message or "no such card" in message:
-            return unsupported("unsupported_card", message, "cards")
-        return unsupported("unsupported_start", f"the engine refused the position: {message}", "start.state")
+        return engine_refusal(reply)
 
     def _face_name(self, record_id: str) -> str:
         """The name the engine knows a card by: its front face ("Hearth Elemental", not the Oracle
@@ -915,6 +913,14 @@ class KarnAdapter:
         self.unused_now = list(self.outcomes)
         self.outcomes = []
 
+    def _random_id(self, card: str) -> int:
+        try:
+            return self._engine_id(card)
+        except Refusal as refusal:
+            if refusal.class_ == "illegal" and refusal.code == "unknown_reference":
+                raise fault("random_mismatch", refusal.message) from refusal
+            raise
+
     def _engine_random_outcomes(self, move: dict | None = None) -> list[dict]:
         """The held outcomes in the engine's form: the recorded order as current object ids. The
         engine keeps the cards a search set aside (701.24b) at their positions when the order leaves
@@ -945,11 +951,19 @@ class KarnAdapter:
                     checked_coin = True
                 orders.append({"kind":"coin", "player":player, "result":face})
                 continue
-            if outcome.get("pile") is not None or (outcome.get("scope") or {}).get("fixed"):
-                raise unsupported("unsupported_random", "shuffles of piles and fixed positions are not consumed", "random")
-            native = {"kind": outcome["kind"], "order": [self._engine_id(card) for card in outcome["order"]]}
+            if outcome.get("pile") is not None:
+                raise unsupported("unsupported_random", "shuffles of piles are not consumed", "random")
+            native = {"kind": outcome["kind"], "order": [self._random_id(card) for card in outcome["order"]]}
             if outcome["kind"] == "shuffle":
                 native["player"] = self._player(outcome["seat"])
+                if (scope := outcome.get("scope")) is not None:
+                    if not isinstance(scope, dict) or set(scope) - {"fixed", "excluding"}:
+                        raise fault("random_mismatch", "shuffle scope names only fixed and excluding cards")
+                    native["scope"] = {}
+                    if "excluding" in scope:
+                        native["scope"]["excluding"] = [self._random_id(card) for card in scope["excluding"]]
+                    if "fixed" in scope:
+                        native["scope"]["fixed"] = [[self._random_id(card), deepcopy(position)] for card, position in scope["fixed"]]
             elif (outcome["kind"] != "random_order" or len(set(outcome["order"])) != len(outcome["order"])
                   or set(outcome["order"]) != set(outcome.get("objects", []))):
                 raise fault("random_mismatch", "random_order must be a permutation of its objects")
@@ -1814,12 +1828,9 @@ class KarnAdapter:
             if any(not option.get("modes") for option in asked.get("options", [])):
                 return {"kind": "targets", "targets": [], "modes": []}
             return None
+        if kind == "order_cards" and isinstance(asked.get("arrange"), dict):
+            return {"kind": "choose", "answer": {"objects": list(asked["cards"])}}
         if kind == "arrange":
-            asked = self.state.get("asked") or {}
-            if asked.get("kind") == "order_cards" and isinstance(asked.get("arrange"), dict):
-                if do.get("away"):
-                    raise Refusal("illegal", "illegal_action", "look-and-return arrangement puts every card back on top")
-                return {"kind":"choose", "answer":{"objects":[self._engine_id(o) for o in do.get("top", [])]}}
             return {"kind": "choose", "answer": {"top": list(asked.get("cards", [])), "away": []}}
         if kind == "pay":
             return {"kind": "choose", "answer": "no"}

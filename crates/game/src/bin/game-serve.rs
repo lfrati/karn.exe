@@ -64,6 +64,9 @@
 //!   top first, and issues a fresh request ID. Does not generate a shuffle event.
 //! - `act` optionally takes `"random_outcomes":[{"kind":"shuffle","player":0,"order":[...]}]`
 //!   or selected-card `{"kind":"random_order","order":[...]}` keyed by membership.
+//!   A shuffle may assert `"scope":{"fixed":[[id,"top"]],"excluding":[id,...]}`;
+//!   the order omits those cards. Scope and placement are checked at the actual shuffle
+//!   (701.24b/g), after earlier instructions, with identities bound before the response.
 //!   A called coin flip asks `coin_call`, answered with `{"kind":"choose","answer":{"call":"heads"}}`
 //!   (or `"tails"`) before consuming `{"kind":"coin","player":0,"result":"heads"}`.
 //!   Coin capture returns the same physical result shape; the completed event retains the call.
@@ -352,6 +355,22 @@ fn read_shuffles(value: &Value) -> Result<Vec<game::start::ShuffleOrder>, String
     }).collect()
 }
 
+fn read_shuffle_scope(value: &Value) -> Result<game::start::ShuffleScope,String> {
+    let fields=value.as_object().ok_or("shuffle scope is an object")?;
+    if fields.keys().any(|key| !matches!(key.as_str(),"excluding"|"fixed")) {
+        return Err("shuffle scope contains only excluding and fixed".into());
+    }
+    let excluding=value.get("excluding").map(read_library_order).transpose()?.unwrap_or_default();
+    let fixed=value.get("fixed").map(|value| -> Result<_,String> {
+        value.as_array().ok_or("fixed shuffle cards are a list")?.iter().map(|entry| {
+            let pair=entry.as_array().filter(|pair|pair.len()==2).ok_or("a fixed shuffle entry is [card, position]")?;
+            let position=if pair[1].is_string() {json!({"position":pair[1]})} else {pair[1].clone()};
+            Ok((read_id(&pair[0])?,read_library_position(&position)?))
+        }).collect()
+    }).transpose()?.unwrap_or_default();
+    Ok(game::start::ShuffleScope {excluding,fixed})
+}
+
 fn read_random_outcomes(value: &Value) -> Result<Vec<game::start::RandomOutcome>, String> {
     use game::start::{RandomKind, RandomOutcome};
     let read = || -> Result<Vec<RandomOutcome>, String> {
@@ -376,6 +395,11 @@ fn read_random_outcomes(value: &Value) -> Result<Vec<game::start::RandomOutcome>
                 _ => return Err("unsupported random outcome kind".into()),
             };
             let order = read_library_order(&item["order"])?;
+            if let Some(scope)=item.get("scope") {
+                if kind!=RandomKind::Shuffle {return Err("only a library shuffle has a shuffle scope".into());}
+                return Ok(RandomOutcome::ScopedShuffle {player:player.ok_or("shuffle outcome needs player")?,order,
+                    scope:read_shuffle_scope(scope)?});
+            }
             Ok(match kind {
                 RandomKind::Shuffle => RandomOutcome::Shuffle {player: player.ok_or("shuffle outcome needs player")?, order},
                 RandomKind::RandomOrder => RandomOutcome::RandomOrder {player, order},
@@ -402,6 +426,52 @@ fn random_outcome(kind: game::start::RandomKind, player: Option<usize>, position
         }
     }
     result
+}
+
+fn shuffle_scope_json(scope: game::start::ShuffleScope) -> Value {
+    let mut value=json!({});
+    if !scope.excluding.is_empty() {value["excluding"]=json!(ids(&scope.excluding));}
+    if !scope.fixed.is_empty() {value["fixed"]=json!(scope.fixed.into_iter().map(|(card,position)| {
+        let position=match position {
+            ir::action::LibraryPosition::Top=>json!("top"),
+            ir::action::LibraryPosition::Bottom=>json!("bottom"),
+            ir::action::LibraryPosition::FromTop(n)=>json!({"from_top":n}),
+        };
+        json!([card.0,position])
+    }).collect::<Vec<_>>());}
+    value
+}
+
+#[cfg(test)]
+mod shuffle_scope_wire_tests {
+    use super::*;
+    #[test]
+    fn scope_round_trips_all_references_and_position_forms() {
+        let input=json!({"kind":"shuffle","player":1,"order":[33,44],
+            "scope":{"excluding":[5],"fixed":[[17,"top"],[20,"bottom"],[30,{"from_top":2}]]}});
+        let mut outcomes=read_random_outcomes(&json!([input])).unwrap();
+        let game::start::RandomOutcome::ScopedShuffle {player,order,scope}=outcomes.remove(0) else {panic!("scope must survive decoding")};
+        assert_eq!(player,1);
+        assert_eq!(order,vec![ObjId(33),ObjId(44)]);
+        assert_eq!(scope.excluding,vec![ObjId(5)]);
+        assert_eq!(shuffle_scope_json(scope),input["scope"]);
+    }
+
+    #[test]
+    fn malformed_scope_is_replay_input_and_cannot_be_an_illegal_move() {
+        for input in [
+            json!({"kind":"shuffle","player":0,"order":[],"scope":{"other":[]}}),
+            json!({"kind":"shuffle","player":0,"order":[],"scope":{"fixed":[[1]]}}),
+            json!({"kind":"shuffle","player":0,"order":[],"scope":{"fixed":[[1,{"from_top":0}]]}}),
+            json!({"kind":"random_order","order":[],"scope":{"fixed":[]}}),
+            json!({"kind":"coin","player":0,"result":"heads","scope":{}}),
+        ] {
+            let error=Error::from(read_random_outcomes(&json!([input])).unwrap_err()).said();
+            assert_eq!(error["class"],"malformed","{error}");
+            assert_eq!(error["code"],"replay_input","{error}");
+            assert!(error.get("rules").is_none(),"{error}");
+        }
+    }
 }
 
 /// Mana as the letters of its symbols: `["R","G"]`.
@@ -2714,6 +2784,11 @@ fn dispatch(
                     random_outcomes_unused = Some(unused.into_iter().map(|unused| {
                         match unused.outcome {
                             game::start::RandomOutcome::Shuffle {player,order} => random_outcome(game::start::RandomKind::Shuffle,Some(player),None,"order",json!(order.iter().map(|id|id.0).collect::<Vec<_>>())),
+                            game::start::RandomOutcome::ScopedShuffle {player,order,scope} => {
+                                let mut outcome=random_outcome(game::start::RandomKind::Shuffle,Some(player),None,"order",json!(ids(&order)));
+                                outcome["scope"]=shuffle_scope_json(scope);
+                                outcome
+                            },
                             game::start::RandomOutcome::RandomOrder {player,order} => random_outcome(game::start::RandomKind::RandomOrder,player,None,"order",json!(order.iter().map(|id|id.0).collect::<Vec<_>>())),
                             game::start::RandomOutcome::Coin {player,face} => json!({"kind":"coin","player":player,"result":face.name()}),
                         }

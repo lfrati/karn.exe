@@ -97,7 +97,10 @@ fn entry(n: Number) -> P<Entry> {
             lit("tapped and attacking").to(Entry::TappedAndAttacking),
             lit("tapped and transformed").to(Entry::TappedAndTransformed),
             lit("tapped").to(Entry::Tapped),
-            lit("attacking the same player or planeswalker as").then_keep(&s.selector).map(
+            alt("the returned attacker's defender", vec![
+                lit("attacking the same player, planeswalker, or battle as"),
+                lit("attacking the same player or planeswalker as"),
+            ]).then_keep(&s.selector).map(
                 |s| Some(Entry::AttackingSameAs(Box::new(s))),
                 |e| match e { Entry::AttackingSameAs(s) => Some((**s).clone()), _ => None },
             ),

@@ -387,7 +387,7 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     static LEVEL_UP: OnceLock<Ability> = OnceLock::new();
     static NINJUTSU: OnceLock<Ability> = OnceLock::new();
     let (kept, type_line, rule, number) = match item.keyword.name() {
-        "Ninjutsu" => (&NINJUTSU, "Creature", "{0}, Reveal this card from your hand, Return an unblocked attacking creature you control to its owner's hand: Put this card from your hand onto the battlefield tapped attacking the same player or planeswalker as that creature.", "702.49a-c"),
+        "Ninjutsu" => (&NINJUTSU, "Creature", "{0}, Reveal this card from your hand, Return an unblocked attacking creature you control to its owner's hand: Put this card from your hand onto the battlefield tapped attacking the same player, planeswalker, or battle as that creature.", "702.49a-c"),
         "Equip" => (&EQUIP, "Artifact — Equipment", "{0}: Attach this permanent to target creature you control. Activate only as a sorcery.", "702.6a"),
         // "Level up [cost]" means "[Cost]: Put a level counter on this permanent. Activate
         // only as a sorcery." (702.87a)
@@ -562,7 +562,11 @@ fn firebending(item: &ir::token::KeywordInstance) -> Option<Ability> {
         .expect("the grammar reads rule 702.189a").abilities[0].clone()).clone();
     let Ability::Triggered { effect, .. } = &mut ability else { unreachable!("firebending triggers") };
     let ir::Sentence::Do(body) = &mut effect.0[0] else { unreachable!("firebending adds mana first") };
-    body.first.first.mods.push(ir::effect::Modifier::ForEach(n.clone()));
+    let red = ir::mana::ManaSymbol::Color(ir::Color::Red);
+    body.first.first.action = ir::Action::AddMana(match n {
+        ir::Amount::Const(n) => ir::mana::ManaSpec::Symbols(ir::mana::ManaCost(vec![red; *n as usize])),
+        _ => ir::mana::ManaSpec::AmountOf {symbol:red, amount:n.clone()},
+    });
     Some(ability)
 }
 
@@ -625,9 +629,9 @@ fn partner_with(name: &str) -> Ability {
     let Ability::Triggered { effect, .. } = &mut ability else { unreachable!("partner search is triggered") };
     let ir::Sentence::Do(body) = &mut effect.0[0] else { unreachable!("partner begins with a search") };
     let ir::Action::Search { what, .. } = &mut body.first.first.action else { unreachable!("partner begins with a search") };
-    what.items[0].set.filter = ir::Filter::Atom(ir::Atom::Named(ir::Coord {
-        items: vec![ir::selector::Name::Card(name.into())], conj: ir::Conj::Or,
-    }));
+    what.items[0].set.filter = ir::Filter::All(vec![ir::Filter::Atom(ir::Atom::Named(ir::Coord {
+        items: vec![ir::selector::Name::Card(name.into())], conj: ir::Conj::And,
+    }))]);
     ability
 }
 
@@ -1042,8 +1046,8 @@ fn replicate_trigger() -> Ability {
     // It never reparses a generated rule sentence or duplicates the copy executor.
     let source = Selector::new(Quant::Definite(Ref::This), ObjectSet::of(ir::Domain::Spell));
     let amount = Amount::Times { what: Box::new(source.clone()), fact: ir::amount::Occurrence::Replicated };
-    let sentence = |action, mods, may| Sentence::Do(Body { first: Clause {
-        subject: None, may, also: false, first: Act { action, mods, may: false }, rest: Vec::new(),
+    let sentence = |action, mods, may: bool| Sentence::Do(Body { first: Clause {
+        subject: may.then(|| ir::effect::Subject::Selector(Selector::you())), may, also: false, first: Act { action, mods, may: false }, rest: Vec::new(),
     }, rest: Vec::new() });
     let copies = Selector::new(Quant::Definite(Ref::Anaphor(ir::Anaphor::Copy { plural: true })), ObjectSet::of(ir::Domain::Object));
     Ability::Triggered {
@@ -1054,7 +1058,7 @@ fn replicate_trigger() -> Ability {
         }},
         effect: Effect(vec![
             Sentence::Led { lead: Lead::Modifier(Modifier::If(Condition::Compare { left: amount.clone(), cmp: ir::Cmp::Ge, right: Amount::Const(1) })),
-                rest: Box::new(sentence(Action::Copy(ir::Objects { items: vec![source], conj: ir::Conj::And }), vec![Modifier::Times(amount)], false)) },
+                rest: Box::new(sentence(Action::Copy(ir::Objects { items: vec![source], conj: ir::Conj::And }), vec![Modifier::ForEach(amount)], false)) },
             sentence(Action::ChooseNewTargets { for_: ir::Objects { items: vec![copies], conj: ir::Conj::And }, one: false }, Vec::new(), true),
         ]),
     }

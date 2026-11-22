@@ -3732,6 +3732,9 @@ fn specials(possessor: &P<Selector>) -> P<Selector> {
         vec![
             lit("you").to(Selector::you()),
             self_ref.to(def(Ref::This, Domain::Permanent)),
+            // Generated rules retain a typed spell source. "This spell" round-trips
+            // that type; "~" parses as a permanent selector.
+            lit("this spell").to(def(Ref::This, Domain::Spell)),
             // the ability whose text this is ("This ability costs {1} less to activate")
             lit("this ability").to(def(Ref::This, Domain::Ability)),
             granting.to(def(Ref::Granting, Domain::Permanent)),
@@ -4245,6 +4248,16 @@ mod tests {
         let Outcome::Accepted { value, .. } = selectors().set_pl.parse_all(&tokenize("prepared spells")) else { panic!("plural spell set") };
         assert_eq!(value, set);
         assert_eq!(selectors().set_pl.print_text(&value, false).as_deref(), Some("prepared spells"));
+    }
+
+    #[test]
+    fn typed_spell_self_reference_keeps_its_stack_spell_domain_when_printed() {
+        let selector = Selector::new(Quant::Definite(Ref::This), ObjectSet::of(Domain::Spell));
+        let rule = &selectors().selector;
+        let text = rule.print_text(&selector, false).unwrap();
+        assert_eq!(text, "this spell");
+        let Outcome::Accepted {value,..} = rule.parse_all(&tokenize(&text)) else {panic!("{text} must have one reading")};
+        assert_eq!(value, selector);
     }
 
     #[test]

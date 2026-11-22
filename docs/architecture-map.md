@@ -63,6 +63,10 @@ the cast announcement. An unqualified flashback route requires one distinct pric
 No-mana-cost recipients gain an unpayable ability. Literal granted flashback prices and
 MGN's representation of distinct price choices remain explicitly unsupported.
 
+Ninjutsu retains the returned attacker's defender. Its rules text includes battles under
+702.49c; execution supports players and planeswalkers. Battle combat and protectors (310.8)
+remain unsupported.
+
 A called coin flip suspends for its controller's heads/tails call before consuming a
 physical result from `start.rs`'s existing seeded/captured/replayed randomness. A typed
 frame slot retains that instruction's player, call and face; later win/loss conditions
@@ -71,6 +75,11 @@ Earlier instructions stay completed across the call and cloned continuations. Th
 supported producer is one unconditional called flip by the controller; optional,
 conditional, grouped, repeated and replacement flip variants remain refused. Face-only
 results have no winner or loser, but their card instructions are not implemented yet.
+
+Shuffle receipts can assert which physical cards stayed out of the random permutation
+and their fixed positions (701.24b/g). Object handles bind before execution; the existing
+shuffle operation checks the assertion against its actual retained cards when it consumes
+the receipt. Unused receipts keep their input indices and rebind to current objects.
 
 `Simulation` owns the gameplay boundary: correlated requests, chooser validation, accepted
 commands and viewer projections. `Game` also exposes low-level state access for fixtures and

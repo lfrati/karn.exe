@@ -182,6 +182,8 @@ runner starts it itself). What it does, and where it bridges the engine:
   identities zone by zone; a card keeps its id across zone changes (400.7 is
   the engine's business); a companion binds as the engine reveals it, and a
   copy of a spell as it is listed on the stack.
+  Native setup refusals keep their reported class through the same mapping as move
+  refusals; a message mentioning a companion does not make unsupported setup illegal.
 - **Decisions** translate to the engine's moves: ability references by the
   row the engine prints for that paragraph (a dual land's two intrinsic mana
   abilities told apart by the mana added, 305.6); payments as the engine's
@@ -202,6 +204,11 @@ runner starts it itself). What it does, and where it bridges the engine:
   completes the authored payment against the actual resulting pool. Evidence
   preserves the initial action and every continuation separately. No colour,
   later activation or spend is inferred on the player's behalf.
+  A look-and-return arrangement's null answer returns every looked-at card on top in
+  its current order (spec 5.6); pile separation has no null answer. Library shuffle
+  receipts carry `scope.fixed` and `scope.excluding` through to the engine's replay
+  validator, which checks the actual cards kept out and the fixed placements when the
+  shuffle occurs. Shuffles of non-library piles remain unsupported.
   The supported suspended path is a root spell payment whose immediate mana
   activation causes the choice. A later activation with nonempty authored
   payment needs its post-choice cost boundary; unfinished deeper ancestors

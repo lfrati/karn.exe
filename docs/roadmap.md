@@ -90,10 +90,18 @@ capability assertion. Matched release replay medians are 1.0–2.8% lower than t
 the raw results remain evidence for #31. Optional/conditional producers, grouped/repeated
 flips, face-only card instructions and coin replacements remain refused.
 
-**The core queue, four coverage mechanisms, grammar/pinning and native hosting repairs are
-implemented. Next are ability text [#2](https://github.com/lfrati/karn.exe/issues/2) and MGN
-repairs [#14](https://github.com/lfrati/karn.exe/issues/14).** The Commander corpus and
-profiling investigation also remain in the initial execution queue.
+**The core queue, four coverage mechanisms and interface repairs are implemented.**
+Generated firebending, casualty, replicate and partner-with triggers now have accurate text;
+ordinary waiting triggers use their captured definition after a source changes
+([#2](https://github.com/lfrati/karn.exe/issues/2)). Ninjutsu names all three defender kinds;
+battle combat remains explicitly unsupported. MGN setup preserves native refusal classes,
+scoped shuffles validate physical identity and fixed placement at consumption, and the
+look-and-return default preserves the current order
+([#14](https://github.com/lfrati/karn.exe/issues/14)). `make progress` passes 5,519 Rust tests
+(4,809 rules), 1,144 tooling tests and all seven grammar gates. The final execution-queue
+check remains due after the Commander corpus and profiling investigation. Matched release
+core rates are 0.4–1.0% higher; Bant JSON throughput is 0.7% lower with identical responses.
+No speedup is claimed, and all 32,872 admission rows remain unchanged.
 
 Re-rank coverage candidates against fresh blockers when the evidence justifies it. Trace
 the specific reference grammar, binding, lowering and runtime; identify Karn's missing

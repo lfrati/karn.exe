@@ -674,7 +674,12 @@ impl Game {
                 Some(program) if delayed => crate::program::keyword_delayed_text(program).map(str::to_string)
                     .or_else(|| crate::program::delayed_text(program).map(|said| named(&said, t.source.map_or("", |s| self.obj(s).chars.name.as_str()), &[]))),
                 _ if delayed => None,
-                _ => ability_text(self, t.source, key),
+                // Ordinary occurrences keep the definition that produced their program
+                // (113.7a), including while they wait for order or targets (603.3).
+                _ => captured.and_then(|c| t.source.and_then(|s| self.retained(s, c.program())))
+                    .and_then(|(def, index)| frozen_ability_text(def, index,
+                        t.source.map_or("", |s| self.obj(s).chars.name.as_str())))
+                    .or_else(|| (!matches!(key.origin, Origin::Own)).then(|| ability_text(self, t.source, key)).flatten()),
             },
             // the ability that created a delayed one (603.7): of a keyword's rule, that keyword
             // (702.88a, 702.185a), declared by its definition or given by an effect (613.1f);

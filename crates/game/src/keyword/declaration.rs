@@ -426,8 +426,8 @@ fn casualty_trigger() -> Ability {
     use ir::effect::{Act, Body, Clause};
     use ir::event::{Arg, Deed, EventPattern, TriggerWord};
     let source = Selector::new(Quant::Definite(Ref::This), ObjectSet::of(ir::Domain::Spell));
-    let sentence = |action, may| Sentence::Do(Body { first: Clause {
-        subject: None, may, also: false, first: Act { action, mods: Vec::new(), may: false }, rest: Vec::new(),
+    let sentence = |action, may: bool| Sentence::Do(Body { first: Clause {
+        subject: may.then(|| ir::effect::Subject::Selector(Selector::you())), may, also: false, first: Act { action, mods: Vec::new(), may: false }, rest: Vec::new(),
     }, rest: Vec::new() });
     let copy = Selector::new(Quant::Definite(Ref::Anaphor(ir::Anaphor::Copy { plural: false })), ObjectSet::of(ir::Domain::Object));
     let paid = Condition::CastWas { what: Box::new(source.clone()), fact: ir::condition::CastFact::CostPaid(Keyword::from_name("Casualty").expect("a keyword")), negated: false };
