@@ -29,6 +29,8 @@ pub enum Sentence {
     /// "X is the number of creatures you control.": what X is in the sentences before, said in
     /// a sentence of its own (107.3).
     XIs(Amount),
+    /// A trailing instruction rounds each fractional quantity in the preceding instructions (107.1a).
+    RoundEach { up: bool },
     /// "Activate only as a sorcery." (602.5)
     Restrictions(Vec<Restriction>),
     /// A sentence about the ability rather than an instruction; ability composition moves it to

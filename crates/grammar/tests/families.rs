@@ -108,3 +108,17 @@ fn r608_2d_choice_ellipsis() {
         declines(text);
     }
 }
+
+/// CR 107.1a: one trailing rounding instruction covers each fractional amount separately.
+#[test]
+fn r107_1a_round_each_amount() {
+    for text in [
+        "When you cast ~, you gain half X life and draw half X cards. Round down each time.",
+        "Target player draws cards equal to half the number of cards in their library and loses half their life. Round up each time.",
+        "Each player loses half their life, then discards half the cards in their hand, then sacrifices half the creatures they control of their choice. Round up each time.",
+    ] {
+        let (value, _) = read(text);
+        assert!(serde_json::to_string(&value).unwrap().contains("RoundEach"));
+    }
+    declines("Draw half X cards. Round sideways each time.");
+}

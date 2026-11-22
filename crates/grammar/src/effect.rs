@@ -1244,9 +1244,14 @@ fn build() -> Effects {
             _ => None,
         },
     );
+    let round_each = lit("round").then_keep(&alt("rounding", vec![lit("up").to(true), lit("down").to(false)]))
+        .skip(&lit("each time")).map(
+            |up| Some(Sentence::RoundEach { up }),
+            |s| match s { Sentence::RoundEach { up } => Some(*up), _ => None },
+        );
     let sentence = alt(
         "sentence",
-        vec![plain, led, restrictions, cast_restrictions, same_is_true, rider, choose_modes, additional, statics, x_is],
+        vec![plain, led, restrictions, cast_restrictions, same_is_true, rider, choose_modes, additional, statics, x_is, round_each],
     )
     .sentence();
     Effects { sentence, body }
