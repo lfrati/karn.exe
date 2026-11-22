@@ -156,11 +156,18 @@ Cumulative upkeep currently supports fixed generic mana only; colored, life and 
 
 #### Lane 2: deck closers (worktree `closers`)
 
+Current priority, in order: Liliana of the Veil; Atraxa, Grand Unifier; The Wandering
+Emperor; Jegantha, the Wellspring; Time Vault; Intuition; Hydroid Krasis; Once Upon a Time;
+Tishana's Tidebinder; Preacher of the Schism; Agadeem's Awakening; Sylvan Library; Oath of
+Druids; Heart of Kiran. These newly readable cards need engine consumers. Then take the
+report's blocker families ranked by decks completed (`sole_decks`), continuing until the
+user explicitly says stop. Publish coherent completed batches along the way.
+
 Mechanisms in the program and binding owner (`crates/game/src/program.rs` and `program/`),
 each the last thing keeping several roster decks from running. One builder: these all meet in
 the same files.
 
-Start with two short pieces of work:
+Completed foundations:
 
 - [#33](https://github.com/lfrati/karn.exe/issues/33): copy exceptions discard a Room's
   halves. This is known wrong play.

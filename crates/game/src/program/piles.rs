@@ -82,3 +82,23 @@ impl crate::Game {
             && resolving.program_frame().is_some_and(super::Frame::separating)
     }
 }
+
+/// A whole pile reference, without silently dropping object constraints.
+pub(super) fn reference(selector: &ir::Selector) -> Option<(ir::procedure::PileRef, Option<&ir::Selector>)> {
+    if !matches!(selector.quant, ir::Quant::All | ir::Quant::Each) || selector.chooser.is_some() || selector.random.is_some()
+        || selector.set.controller.is_some() || selector.set.owner.is_some() || selector.set.caster.is_some()
+        || selector.set.zone.is_some() || selector.set.other { return None; }
+    let ir::Filter::All(parts) = &selector.set.filter else { return None };
+    let [ir::Filter::Atom(ir::Atom::InPile { pile, chooser })] = parts.as_slice() else { return None };
+    Some((*pile, chooser.as_deref()))
+}
+
+/// The chooser named by the following whole-pile instruction, before its selection runs.
+pub(super) fn chooser(action: &ir::Action) -> Option<&ir::Selector> {
+    let objects = match action {
+        ir::Action::Sacrifice(objects) | ir::Action::Destroy(objects) | ir::Action::Exile(objects) => objects,
+        _ => return None,
+    };
+    let [selector] = objects.items.as_slice() else { return None };
+    reference(selector)?.1
+}

@@ -329,9 +329,9 @@ pub enum Instr {
     /// What is left of `of`, still in `still_in`, after the groups in `minus`.
     Remainder { of: Slot, minus: Vec<Slot>, still_in: Zone, out: Slot },
     /// Those of a group still where it was are separated into two piles, by the controller
-    /// or by an opponent the controller chooses, and the controller chooses one pile
+    /// or by an opponent the controller chooses, and the stated player chooses one pile
     /// (700.3). `one`: the pile chosen; `other`: the pile that was not.
-    Piles { from: Slot, still_in: Zone, opponent: bool, one: Slot, other: Slot },
+    Piles { from: Slot, still_in: Zone, opponent: bool, chooser: action::Operand, one: Slot, other: Slot },
     /// Move a group to a zone, by the existing movement code (400.7, 401.4).
     Move { src: Slot, to: Dest, by: Who, when: Option<condition::Condition> },
     /// One put instruction partitions fixed inputs between destinations. Every
@@ -890,8 +890,9 @@ impl Program {
                     }
                     make(&mut kinds, *out, Kind::Cards)?;
                 }
-                Instr::Piles { from, one, other, .. } => {
+                Instr::Piles { from, chooser, one, other, .. } => {
                     need(&kinds, *from, Kind::Cards)?;
+                    for scalar in chooser.scalars() { if let Scalar::Local { slot, kind } = scalar { need(&kinds, slot, kind)?; } }
                     make(&mut kinds, *one, Kind::Cards)?;
                     make(&mut kinds, *other, Kind::Cards)?;
                 }
@@ -1005,8 +1006,8 @@ impl fmt::Display for Instr {
                 let minus: Vec<String> = minus.iter().map(|m| format!("s{m}")).collect();
                 write!(f, "s{out} = remainder of s{of} minus [{}]", minus.join(", "))
             }
-            Instr::Piles { from, opponent, one, other, .. } => {
-                write!(f, "s{one}, s{other} = the pile chosen and the other of s{from}, separated by {}", if *opponent { "an opponent" } else { "the controller" })
+            Instr::Piles { from, opponent, chooser, one, other, .. } => {
+                write!(f, "s{one}, s{other} = the pile chosen by {chooser:?} and the other of s{from}, separated by {}", if *opponent { "an opponent" } else { "the controller" })
             }
             Instr::MoveTogether { parts, entered } => write!(f, "move partitions {parts:?} together; entry results {entered:?}"),
             Instr::Move { src, to, by, when } => write!(f, "move s{src} to {to:?} by {by:?}, when {when:?}"),
@@ -2568,7 +2569,8 @@ impl Emit {
             let instruction = if matches!(act.action, Action::Sacrifice(_)) && selector.quant == Quant::Definite(Ref::This) {
                 binder.source_named = Some(binder.at);
                 choice::Action::sacrifice_source(players.clone())
-            } else if matches!(act.action, Action::Sacrifice(_)) && matches!(selector.quant, Quant::Definite(_)) {
+            } else if matches!(act.action, Action::Sacrifice(_))
+                && (matches!(selector.quant, Quant::Definite(_)) || piles::reference(selector).is_some()) {
                 choice::Action::sacrifice_named(players.clone(), vec![self.operand(selector, support, binder)?])
             } else if matches!(act.action, Action::Discard(_)) && matches!(selector.quant, Quant::Definite(_)) {
                 choice::Action::discard_named(players.clone(), vec![self.operand(selector, support, binder)?])
@@ -2794,6 +2796,24 @@ impl Emit {
                     if matches!(args.as_slice(),[(ir::Role::What,ir::Arg::Noun(noun))] if noun.quant==Quant::Definite(Ref::This) && noun.set==ObjectSet::of(Domain::Permanent) && noun.chooser.is_none() && noun.random.is_none()))))
         {return Ok(Operand::Convoked);}
 
+        if let Some((pile, chooser)) = piles::reference(s) {
+            let (one, other, zone) = binder.piles.ok_or_else(|| crate::Unsupported("pile reference: no preceding separation".into()))?;
+            if !matches!((&s.set.domain, zone), (Domain::Permanent, Zone::Battlefield) | (Domain::Card, Zone::Library | Zone::Graveyard | Zone::Exile)) {
+                return unsupported("pile reference: object domain does not match its producer");
+            }
+            if let Some(chooser) = chooser {
+                let requested = self.operand(chooser, support, binder)?;
+                let stated = self.instrs.iter().find_map(|i| match i {
+                    Instr::Piles { one: produced, chooser, .. } if *produced == one => Some(chooser),
+                    _ => None,
+                });
+                if stated != Some(&requested) { return unsupported("pile reference: chooser differs from its separation"); }
+            }
+            let cards = if pile == ir::procedure::PileRef::TheOther { other } else { one };
+            let out = self.slot();
+            self.instrs.push(Instr::Subjects { cards, out, still_in: Some(zone) });
+            return Ok(Operand::Reference(out));
+        }
         if s.chooser.is_some() || s.random.is_some() { return unsupported("selection: chooser or random selection not lowered"); }
         // "Each of them" and "each of one or two targets" distribute the action over
         // the whole named group. "Targets" without a noun has the damage-target sort (115.4).
@@ -6303,11 +6323,9 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             continue;
         }
         // "An opponent separates those cards into two piles.": the cards of the group the
-        // text made, where they are (700.3c). The pile then chosen is the controller's pick.
+        // text made, where they are (700.3c). An explicit whole-pile chooser overrides the controller.
         if let Action::SeparateIntoPiles { what, piles: ir::procedure::Piles::Count(Amount::Const(2)) } = &act.action
             && let [selector] = what.items.as_slice()
-            && matches!(selector.quant, Quant::Definite(Ref::Anaphor(ir::Anaphor::Those | ir::Anaphor::Them)))
-            && selector.set.filter == ir::Filter::All(Vec::new())
         {
             if optional || !durations.is_empty() || !act.mods.is_empty() || binder.piles.is_some() { return Err(not_lowered(&act.action)); }
             let opponent = match clause.subject.as_ref() {
@@ -6315,11 +6333,29 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 subject if controller_only(subject) => false,
                 _ => return unsupported("piles: separated by other than the controller or an opponent"),
             };
-            let group = binder.resolve(&UnresolvedRef::cards(RefForm::Anaphor))?;
-            let (from, still_in) = (group.slot, group.zone);
+            let (from, still_in, retained) = if matches!(selector.quant, Quant::Definite(Ref::Anaphor(ir::Anaphor::Those | ir::Anaphor::Them)))
+                && selector.set.filter == ir::Filter::All(Vec::new()) {
+                let group = binder.resolve(&UnresolvedRef::cards(RefForm::Anaphor))?;
+                (group.slot, group.zone, true)
+            } else if matches!(selector.quant, Quant::All | Quant::Each) && selector.set.domain == Domain::Permanent {
+                let objects = e.operand(selector, support, &mut binder)?;
+                let from = e.slot();
+                e.instrs.push(Instr::Gather { objects, out: from });
+                (from, Zone::Battlefield, false)
+            } else { return unsupported("piles: a retained card group or a whole permanent group required"); };
+            let chooser = match acts.get(index + 1) {
+                Some(TextStep::Act(_, next, _)) if piles::chooser(&next.action).is_some() => {
+                    let chooser = piles::chooser(&next.action).expect("a stated chooser");
+                    if chooser.set.domain != Domain::Player || !matches!(chooser.quant, Quant::Definite(_)) {
+                        return unsupported("piles: one named player's choice required");
+                    }
+                    e.operand(chooser, support, &mut binder)?
+                },
+                _ => action::Operand::Controller,
+            };
             let (one, other) = (e.slot(), e.slot());
-            group.taken.extend([one, other]);
-            e.instrs.push(Instr::Piles { from, still_in, opponent, one, other });
+            if retained { binder.resolve(&UnresolvedRef::cards(RefForm::Anaphor))?.taken.extend([one, other]); }
+            e.instrs.push(Instr::Piles { from, still_in, opponent, chooser, one, other });
             binder.piles = Some((one, other, still_in));
             e.end_act(false, optional_branch);
             continue;
@@ -7730,7 +7766,7 @@ fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt> {
             let rest = f.cards(*of).into_iter().filter(|c| still_there(game, *c, *still_in) && !taken.contains(c)).collect();
             f.slots[*out] = Some(Value::Cards(rest));
         }
-        Instr::Piles { from, still_in, opponent, one, other } => {
+        Instr::Piles { from, still_in, opponent, chooser, one, other } => {
             let pending = match f.pending.take() {
                 Some(Pending::Piles(pending)) => pending,
                 None => {
@@ -7738,7 +7774,16 @@ fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt> {
                     let (controller, n) = (f.ctx.controller, game.players.len());
                     // the opponents, in turn order from the controller
                     let among = if *opponent { (1..n).map(|i| (controller + i) % n).filter(|p| !game.players[*p].lost).collect() } else { vec![controller] };
-                    piles::Pending::new(cards, controller, among)
+                    let players = action::players(game, f, chooser);
+                    let [chooser] = players.as_slice() else {
+                        if players.is_empty() {
+                            f.slots[*one] = Some(Value::Cards(Vec::new()));
+                            f.slots[*other] = Some(Value::Cards(Vec::new()));
+                            return Ok(());
+                        }
+                        return Err(crate::Unsupported("piles: one chooser required".into()).into());
+                    };
+                    piles::Pending::new(cards, *chooser, among)
                 }
                 _ => unreachable!("instruction resumes its own procedure"),
             };
