@@ -199,11 +199,9 @@ fn rad_boundary_through_references() {
     }
 }
 
-/// This mixed-holder phrase is outside the current grammar, so it is not evidence
-/// about the compiler's player-kind admission boundary.
+/// A mixed holder domain still includes a player, whose rad upkeep is unsupported.
 #[test]
-fn creature_or_player_counter_phrase_is_a_grammar_limit() {
-    // Uncited (grammar): the mixed holder phrase is unavailable before rad admission.
-    crate::support::refused(CardDef::new("Probe", "{0}", "Sorcery",
-        "Put a rad counter on target creature or player.", None), "text the grammar does not read");
+fn creature_or_player_counter_phrase_keeps_the_player_rad_boundary() {
+    let d = def("Probe", "Sorcery", "Put a rad counter on target creature or player.", None);
+    crate::support::refused(admitted(&d), "player counter: rad upkeep trigger (122.1i) is not implemented");
 }
