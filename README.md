@@ -19,18 +19,18 @@ rejected with a reason.
 ## Where it stands
 
 <!-- implementation-progress:start -->
-<!-- Measurement inputs: d1eafce87fedc1f78f2920cbaf5830b3ae4d1a06a4e16d69f0aa82e989906f8d -->
+<!-- Measurement inputs: c0673f39393a77ece7c1d3e29b66aa1a801bb5838e51aa1025b5d5254c2008ef -->
 Snapshot: 2026-11-22. Card corpus dated 2026-10-11; deck roster dated 2026-10-08.
 
 | Goal | Measure | Count |
 | --- | --- | ---: |
 | Read every card | Cards in the pinned corpus | 32,018 |
-| | Cards the grammar reads, every face | 29,995 |
-| Run most of Magic | Cards the engine runs, every face | 19,119 |
+| | Cards the grammar reads, every face | 30,038 |
+| Run most of Magic | Cards the engine runs, every face | 19,654 |
 | | Published decks in the roster | 2,012 |
-| | Decks whose main deck is read in full | 1,147 |
-| | Decks whose main deck runs in full | 84 |
-| | Decks that run in full with their sideboard | 22 |
+| | Decks whose main deck is read in full | 1,366 |
+| | Decks whose main deck runs in full | 121 |
+| | Decks that run in full with their sideboard | 35 |
 
 Commander corpus (dated 2026-11-22): **3 authored lists**,
 **0 read in full**, **0 compiled in full**, including
@@ -135,7 +135,7 @@ Rules, Oracle text, rulings and the published deck lists are checked into
 ## Testing
 
 <!-- testing-inventory:start -->
-Repository inventory: **3,856 rule-cited tests**,
+Repository inventory: **3,900 rule-cited tests**,
 **55 active MGN scenarios or game prefixes**, and
 **3 complete MGN game recordings**. These are counts of tests
 and recordings, not current test results or a measure of coverage.
