@@ -1943,6 +1943,14 @@ fn death_filter(filter: &ir::Filter) -> Option<ir::Filter> {
     }
 }
 
+/// The unrestricted participant count whose pre-cast value can be reconstructed from the
+/// source spell's ordered cast receipt. Other fixed-at-cast amounts remain refused.
+fn all_casts_this_turn(amount: &ir::Amount) -> bool {
+    let ir::Amount::Participants { pattern, counted: ir::amount::Role::Object, when: ir::amount::When::ThisTurn } = amount else { return false; };
+    let one = |domain| ir::Selector::new(Quant::Indefinite(Count::Exactly(ir::Amount::Const(1))), ir::ObjectSet::of(domain));
+    **pattern == ir::EventPattern::new(vec![one(ir::Domain::Player)], vec![ir::EventAction::does(ir::Verb::Cast, one(ir::Domain::Spell))])
+}
+
 /// A number the text says, as it is computed. Values within calculations and comparisons
 /// stay signed (107.1b): a negative component still contributes to a total, and a negative
 /// threshold is not replaced with zero.
@@ -1997,6 +2005,8 @@ pub(crate) enum Number {
     /// "Each time it was kicked": how many times what is named was (702.33d).
     Kicked(Subject),
     Replicated(Subject),
+    /// An unrestricted cast count fixed immediately before this source was cast.
+    EarlierCasts(Subject),
     /// X in an enters-the-battlefield ability of a permanent: the X of the spell it was as
     /// that spell resolved, or 0 when it was no such spell (107.3m).
     SpellX,
@@ -2043,7 +2053,7 @@ impl Number {
             Number::Colors(among) | Number::CardTypes(among) | Number::Count(among) | Number::CountersAmong(among,_) => set(among),
             Number::CountZone(zone) => filter(&zone.cards.filter),
             Number::Const(_) | Number::X | Number::SpellX | Number::EventAmount | Number::ManaColorsSpent | Number::LifeLost(_) | Number::Damage { .. } | Number::ResultCount(_) | Number::RemovedCount { .. }
-                | Number::Counters(_,_) | Number::PlayerCounters(_,_) | Number::Life(_) | Number::Speed(_) | Number::Kicked(_) | Number::Replicated(_) => false,
+                | Number::Counters(_,_) | Number::PlayerCounters(_,_) | Number::Life(_) | Number::Speed(_) | Number::Kicked(_) | Number::Replicated(_) | Number::EarlierCasts(_) => false,
         }
     }
 
@@ -2051,7 +2061,7 @@ impl Number {
     /// not described: an identity reads none of them.
     pub(crate) fn reads(&self) -> Reads {
         match self {
-            Number::ManaColorsSpent => Reads::HISTORY,
+            Number::ManaColorsSpent | Number::EarlierCasts(_) => Reads::HISTORY,
             Number::FilteredResultCount { filter, .. } | Number::DeathCount { filter, .. } | Number::DeathCountByActor { filter, .. } | Number::Members { filter, .. } => filter.reads(),
             Number::Happened(_) => Reads::ALL,
             Number::Half { of, .. } => of.reads(),
@@ -2210,6 +2220,7 @@ impl Number {
             ir::Amount::Speed(who) => Number::Speed(Subject::compile(who, bind)?),
             // an ability that asks whether its object was kicked is linked to that object's
             // kicker ability and refers to nothing else (702.33e): "it" is its source
+            ir::Amount::AsOf { amount, moment: ir::amount::Moment::Casting } if all_casts_this_turn(amount) => Number::EarlierCasts(Subject::Source),
             ir::Amount::Times { what, fact: ir::amount::Occurrence::Replicated } if matches!(what.quant, Quant::Definite(Ref::This)) => Number::Replicated(Subject::Source),
             ir::Amount::Times { what, fact: ir::amount::Occurrence::Kicked } if matches!(what.quant, Quant::Definite(Ref::This | Ref::Anaphor(_))) => Number::Kicked(Subject::Source),
             ir::Amount::Aggregate { agg, stat, among } => {
@@ -2303,6 +2314,7 @@ impl Number {
             Number::Life(who) => who.players(game, ctx, locals).map(|p| i64::from(game.players[p].life)).sum(),
             Number::Speed(who) => who.players(game, ctx, locals).map(|p| i64::from(game.speed(p))).sum(),
             Number::Replicated(what) => what.objects(game, ctx, locals).map(|o| i64::from(game.obj(o).replicated)).sum(),
+            Number::EarlierCasts(what) => what.objects(game, ctx, locals).map(|o| i64::from(game.casts_before_this_turn(o))).sum(),
             Number::Kicked(what) => what.objects(game, ctx, locals).map(|o| i64::from(game.obj(o).kicked)).sum(),
             Number::Aggregate(agg, stat, among) => {
                 let values = objects(among).map(|o| stat.value(game, ctx, o));
@@ -2322,7 +2334,7 @@ impl Number {
                 count.cards.filter.scalars(out);
             }
             Number::Colors(set) | Number::CardTypes(set) | Number::Count(set) | Number::CountersAmong(set, _) | Number::Aggregate(_, _, set) => set.collect(out),
-            Number::Stat(subject, _) | Number::Counters(subject, _) | Number::PlayerCounters(subject, _) | Number::Life(subject) | Number::Speed(subject) | Number::Kicked(subject) | Number::Replicated(subject) => subject.scalars(out),
+            Number::Stat(subject, _) | Number::Counters(subject, _) | Number::PlayerCounters(subject, _) | Number::Life(subject) | Number::Speed(subject) | Number::Kicked(subject) | Number::Replicated(subject) | Number::EarlierCasts(subject) => subject.scalars(out),
             Number::Half { of, .. } => of.scalars(out),
             Number::Happened(_) => {}
             Number::Product(a, b) | Number::Sum(a,b) | Number::Difference(a,b) => { a.scalars(out); b.scalars(out); }

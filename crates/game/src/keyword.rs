@@ -1141,13 +1141,25 @@ pub(crate) fn replicate_cost(item: &ir::token::KeywordInstance) -> Option<&ir::m
 pub(crate) fn replicate(def: &CardDef) -> Option<&ir::mana::ManaCost> { of_items(def).find_map(replicate_cost) }
 pub(crate) fn replicate_count(def: &CardDef) -> usize { contributions(def).filter(|(_, g)| matches!(g, Gives::Additional { then: Paid::Replicated, .. })).count() }
 fn replicate_trigger() -> Ability {
+    let source = ir::Selector::new(ir::Quant::Definite(ir::Ref::This), ir::ObjectSet::of(ir::Domain::Spell));
+    spell_copy_trigger(ir::Amount::Times { what: Box::new(source), fact: ir::amount::Occurrence::Replicated })
+}
+/// 702.40a: every player's earlier casts count, and later casts do not.
+fn storm_trigger() -> Ability {
+    let one = |domain| ir::Selector::new(ir::Quant::Indefinite(ir::Count::Exactly(ir::Amount::Const(1))), ir::ObjectSet::of(domain));
+    let amount = ir::Amount::Participants {
+        pattern: Box::new(ir::EventPattern::new(vec![one(ir::Domain::Player)], vec![ir::EventAction::does(ir::Verb::Cast, one(ir::Domain::Spell))])),
+        counted: ir::amount::Role::Object, when: ir::amount::When::ThisTurn,
+    };
+    spell_copy_trigger(ir::Amount::AsOf { amount: Box::new(amount), moment: ir::amount::Moment::Casting })
+}
+fn spell_copy_trigger(amount: ir::Amount) -> Ability {
     use ir::{Action, Amount, Condition, Effect, Lead, Modifier, ObjectSet, Quant, Ref, Selector, Sentence};
     use ir::effect::{Act, Body, Clause};
     use ir::event::{Arg, Deed, EventPattern, TriggerWord};
     // 702.56a expands into ordinary typed trigger, condition, quantity and copy actions.
     // It never reparses a generated rule sentence or duplicates the copy executor.
     let source = Selector::new(Quant::Definite(Ref::This), ObjectSet::of(ir::Domain::Spell));
-    let amount = Amount::Times { what: Box::new(source.clone()), fact: ir::amount::Occurrence::Replicated };
     let sentence = |action, mods, may: bool| Sentence::Do(Body { first: Clause {
         subject: may.then(|| ir::effect::Subject::Selector(Selector::you())), may, also: false, first: Act { action, mods, may: false }, rest: Vec::new(),
     }, rest: Vec::new() });

@@ -299,6 +299,7 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
                 None => Ok(Declared::new(vec![], vec![Context::GiftOnSpell, Context::Unavailable])),
             }
         }
+        "Storm" if plain => one(stack, Gives::Ability(storm_trigger()), vec![Context::PrintedOnly]),
         "Replicate" => {
             let Some(cost) = replicate_cost(item) else { return refused(item) };
             Ok(Declared::new(vec![

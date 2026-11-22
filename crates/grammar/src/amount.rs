@@ -1176,7 +1176,13 @@ fn for_each() -> P<Amount> {
     let mut v = vec![each, beyond, and_each, of, colors, party, votes, unspent_mana(), kinds_on, kinds_among, flips_won, flips_lost, graveyards_with];
     v.extend(tallies_for_each());
     // "investigate once for each nontoken attacking creature"
-    alt("for each", vec![lit("for each"), lit("once for each").alias()]).then_keep(&alt("for each", v))
+    let plain = alt("for each", vec![lit("for each"), lit("once for each").alias()]).then_keep(&alt("for each", v));
+    let source = leaf("~", |k| matches!(k, Kind::SelfRef).then_some(()), |()| Some(Kind::SelfRef));
+    let casting = plain.skip(&lit("as you cast")).skip(&source).map(
+        |amount| Some(Amount::AsOf { amount: Box::new(amount), moment: Moment::Casting }),
+        |a| match a { Amount::AsOf { amount, moment: Moment::Casting } => Some((**amount).clone()), _ => None },
+    );
+    alt("for each", vec![casting, plain])
 }
 
 #[cfg(test)]
@@ -1193,6 +1199,13 @@ mod tests {
                 value
             }
             other => panic!("{text}: {other:#?}"),
+        }
+    }
+
+    #[test]
+    fn for_each_can_fix_a_count_at_casting() {
+        for text in ["for each spell cast this turn as you cast ~", "for each artifact you control as you cast ~"] {
+            assert!(matches!(rt(&amounts().for_each, text), Amount::AsOf { moment: Moment::Casting, .. }));
         }
     }
 

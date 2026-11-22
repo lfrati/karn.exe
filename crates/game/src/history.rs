@@ -284,6 +284,18 @@ impl Game {
             }))
     }
 
+    /// All players' casts before this source spell, excluding later casts even when its
+    /// trigger resolves later. Before its announcement commits, every noted cast precedes it.
+    pub(crate) fn casts_before_this_turn(&self, source: ObjId) -> u32 {
+        let mut count = 0u32;
+        for fact in self.facts_of(Turn::This) {
+            if fact.verb() != Verb::Cast { continue; }
+            if fact.role(ir::Role::What) == Some(crate::Target::Object(source)) { break; }
+            count = count.saturating_add(1);
+        }
+        count
+    }
+
     /// An existence predicate needs one matching occurrence, independent of how
     /// many events any individual player produced. Keep exact counts separate.
     pub(crate) fn has_happened(&self, ctx: &Ctx, pattern: &Pattern, turn: Turn) -> bool {

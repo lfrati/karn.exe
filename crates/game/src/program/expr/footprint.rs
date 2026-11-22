@@ -109,6 +109,7 @@ impl Number {
             Self::Life(of) => of.inputs() | I::at(D::Players, P::LIFE),
             Self::Speed(of) => of.inputs() | I::at(D::Players, P::PLAYER_STATUS),
             Self::Aggregate(_, stat, s) => s.inputs() | I::at(D::Objects, stat.inputs()),
+            Self::EarlierCasts(of) => of.inputs() | I::at(D::Context, P::HISTORY | P::TURN),
             Self::Kicked(of) | Self::Replicated(of) => of.inputs() | I::at(D::Objects, P::BINDINGS),
             // the X kept on the source permanent from the spell it was (107.3m)
             Self::SpellX | Self::ManaColorsSpent => context(P::BINDINGS) | I::at(D::Objects, P::BINDINGS),
