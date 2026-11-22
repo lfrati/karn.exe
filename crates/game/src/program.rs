@@ -369,7 +369,7 @@ impl Instr {
         }
         match self {
             Instr::Search { out, .. } | Instr::CopyStack { out, .. } => Some((*out, Value::Subjects(Vec::new()))),
-            Instr::Select { out, .. } => Some((*out, Value::Cards(Vec::new()))),
+            Instr::Select { out, .. } | Instr::Observe { out, .. } | Instr::Show { out, .. } => Some((*out, Value::Cards(Vec::new()))),
             Instr::ExtraTurns { out, .. } => Some((*out,Value::CreatedTurns(Vec::new()))),
             Instr::Subjects { out, still_in: Some(_), .. } => Some((*out, Value::Subjects(Vec::new()))),
             Instr::Action { action, created: Some(out), .. } => action.output().map(|result| (*out, result.empty())),
@@ -5366,7 +5366,13 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             } else {
                 e.instrs.push(Instr::Observe { objects: action::Operand::Union(operands), by: binder.actor.map_or(Who::Controller, Who::Of), out });
             }
-            if let Some(zone) = zone { binder.groups.push(Group { slot: out, paragraph: binder.paragraph(), by: if looking { Verb::LookAt } else { Verb::Reveal }, zone, taken: Vec::new() }); }
+            let by = if looking { Verb::LookAt } else { Verb::Reveal };
+            if let Some(zone) = zone { binder.groups.push(Group { slot: out, paragraph: binder.paragraph(), by, zone, taken: Vec::new() }); }
+            // An observation of a previously bound object is a producer just as an
+            // observation of the library top is. Declining an optional reveal
+            // initializes its skipped result to an empty group.
+            binder.produced.push(Produced { slot: out, verb: by, shape: expr::Shape::Cards,
+                yours: controller_only(clause.subject.as_ref()), into: None });
             e.end_act(false, optional_branch);
             continue;
         }
