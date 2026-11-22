@@ -614,6 +614,13 @@ impl Filter {
                 }
                 // "Choose a card name. Search … for … cards with that name" (201.4): the name
                 // chosen before it
+                ir::Atom::ThatType => {
+                    let scalar = bind.scalar(&UnresolvedRef::choice(Kind::Type))?;
+                    if !matches!(scalar.clone().kind(), Kind::CardType | Kind::CreatureType) {
+                        return unsupported("description: that type, of no chosen type");
+                    }
+                    Atom::Chosen(scalar)
+                }
                 ir::Atom::ThatName => {
                     let r = UnresolvedRef { expected: Kind::CardName, form: RefForm::Choice, qualifiers: Vec::new() };
                     let scalar = bind.scalar(&r)?;
