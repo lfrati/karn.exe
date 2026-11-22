@@ -226,6 +226,8 @@ struct Part {
     selection: Option<crate::cost::Selection>,
     chooser: PlayerId,
     among: Vec<ObjId>,
+    /// The unfiltered choice pool contains identities concealed from another player.
+    private_pool: bool,
     /// None: all of it.
     count: Option<usize>,
     chosen: Option<Vec<ObjId>>,
@@ -235,8 +237,11 @@ struct Part {
 impl Part {
     /// Is there something to choose: more than the action asks for?
     fn open(&self) -> bool {
-        self.chosen.is_none() && (self.selection.is_some() && !self.among.is_empty() || self.count.is_some_and(|n| n > 0 && self.among.len() > n))
+        self.chosen.is_none() && (self.selection.is_some() && (!self.among.is_empty() || self.private_pool)
+            || self.count.is_some_and(|n| n > 0 && (self.among.len() > n || self.private_pool)))
     }
+
+    fn needed(&self) -> usize { self.count.unwrap_or(0).min(self.among.len()) }
 
     fn short(&self) -> bool {
         match &self.selection {
@@ -325,6 +330,13 @@ impl Pending {
         // each chooses in turn order (101.4)
         let parts = action::players(game, f, &action.players).into_iter().map(|player| {
             let actor = expr::Actor { parent: f, player };
+            let private_pool = match &action.of {
+                Of::Cards(cards) | Of::Either(cards, _) => cards.has_quality()
+                    && f.concealed_pool(game, player, game.players[player].hand.iter().copied()),
+                Of::Objects(set) => set.has_quality() && f.concealed_pool(game, player, set.unfiltered().members(game, ctx, f).into_iter()
+                    .filter_map(|t| if let Target::Object(o) = t { Some(o) } else { None })),
+                _ => false,
+            };
             let pool: Vec<ObjId> = match &action.of {
                 Of::Together(_) | Of::Alternatives(_) => unreachable!("coordinated parts were expanded above"),
                 Of::Cards(cards) => game.players[player].hand.iter().copied().filter(|o| cards.contains(game, ctx, f, *o)).collect(),
@@ -353,7 +365,7 @@ impl Pending {
             } else if let Count::UpTo(n) = &action.count {
                 Some(crate::cost::Selection::UpTo((n.evaluate(game, ctx, f) as usize).min(among.len())))
             } else { None };
-            Part { player, verb: action.verb, selection, chooser, among, count, chosen: None, consent: None }
+            Part { player, verb: action.verb, selection, chooser, among, private_pool, count, chosen: None, consent: None }
         }).collect();
         Pending { alternatives: None, compound: false, verb: action.verb, parts, done: false, optional: false, payment: false, started: false, source: f.ctx.object_source(), controller: f.ctx.controller, ability: f.ctx.ability.clone(), generation: f.ctx.link_generation, transitions: Vec::new(), actual: Vec::new(), waiting: false, completed: None }
     }
@@ -369,6 +381,11 @@ impl Pending {
     pub(super) fn possible(&self) -> bool { self.alternatives.as_ref().map_or_else(|| !self.parts.is_empty() && !self.short(), |choices| choices.iter().any(Self::possible)) }
     pub(super) fn started(&self) -> bool { self.started }
 
+    fn private_pool(&self) -> bool {
+        self.alternatives.as_ref().map_or_else(|| self.parts.iter().any(|p| p.private_pool),
+            |alternatives| alternatives.iter().any(Self::private_pool))
+    }
+
     /// Go on: the decision it waits for, the same one until it is answered; or, when every
     /// choice is made, do all of it at once and return None. Once done, nothing more happens.
     pub fn advance(&mut self, game: &mut Game) -> crate::Res<Option<Decision>> {
@@ -378,7 +395,7 @@ impl Pending {
                 let part = &p.parts[0];
                 crate::state::ActionOption { index: i, body: crate::state::ActionOptionBody::Objects { verb: p.verb.said(), among: part.among.clone(), count: part.count.unwrap_or(part.among.len()) } }
             }).collect();
-            if among.is_empty() { self.done = true; return Ok(None); }
+            if among.is_empty() && !(self.optional && self.private_pool()) { self.done = true; return Ok(None); }
             return Ok(Some(Decision::Choose { player: self.parts[0].player, choice: Choice::Alternative { among, optional: self.optional } }));
         }
         if self.waiting {
@@ -394,7 +411,9 @@ impl Pending {
             return Ok(None);
         }
         if !self.optional { self.started = true; }
-        if self.optional && self.compound && self.short() {
+        let compound_short = self.compound && self.short();
+        let compound_private = self.compound && self.private_pool();
+        if self.optional && compound_short && !compound_private {
             for part in &mut self.parts { part.consent = Some(false); }
         }
         let mut chosen_before = Vec::new();
@@ -402,9 +421,10 @@ impl Pending {
             // Each affected player decides before the shared action commits (608.2e).
             // One impossible or declined payment must not suppress another player's choice.
             if self.optional {
-                if part.short() { part.consent = Some(false); }
+                let possible = !part.short() && !compound_short;
+                if !possible && !(part.private_pool || compound_private) { part.consent = Some(false); }
                 match part.consent {
-                    None => return Ok(Some(Decision::Choose { player: part.player, choice: Choice::May })),
+                    None => return Ok(Some(Decision::Choose { player: part.player, choice: Choice::May { possible } })),
                     Some(false) => { part.chosen = Some(Vec::new()); continue; }
                     Some(true) => { self.started = true; }
                 }
@@ -414,7 +434,7 @@ impl Pending {
             if part.open() {
                 let choice = if let Some(selection) = &part.selection {
                     Choice::ConstrainedObjects { verb: part.verb.said(), among: part.among.clone(), selection: selection.clone() }
-                } else { Choice::Objects { verb: part.verb.said(), to: part.verb.to(), among: part.among.clone(), count: part.count.unwrap_or(0) } };
+                } else { Choice::Objects { verb: part.verb.said(), to: part.verb.to(), among: part.among.clone(), count: part.needed() } };
                 return Ok(Some(Decision::Choose { player: part.chooser, choice }));
             }
             // with no more than is asked for, what there is (609.3)
@@ -509,7 +529,7 @@ impl Pending {
         }
         let Some(part) = self.parts.iter_mut().find(|part| part.open()) else { return };
         if let Answer::Objects(chosen) = answer
-            && part.selection.as_ref().map_or(Some(chosen.len()) == part.count, |s| s.accepts(&chosen))
+            && part.selection.as_ref().map_or(chosen.len() == part.needed(), |s| s.accepts(&chosen))
             && chosen.iter().enumerate().all(|(i, o)| part.among.contains(o) && !chosen[..i].contains(o))
         {
             part.chosen = Some(chosen);

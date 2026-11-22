@@ -37,7 +37,7 @@ fn settle(g: &mut Game, n: usize) -> usize {
     let mut resolved = 0;
     for _ in 0..4 * n + 8 {
         match g.decision.clone() {
-            Some(Decision::Choose { player, choice: Choice::May }) => g.act(player, Move::Choose(Answer::No)).unwrap(),
+            Some(Decision::Choose { player, choice: Choice::May { possible: true } }) => g.act(player, Move::Choose(Answer::No)).unwrap(),
             Some(d) => panic!("{d:?}"),
             None if g.stack.is_empty() => return resolved,
             None => { if g.stack.len() == 1 { resolved += 1; } g.act(g.priority, Move::Pass).unwrap(); }

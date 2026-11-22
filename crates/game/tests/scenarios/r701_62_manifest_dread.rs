@@ -220,7 +220,7 @@ fn hauntwoods_shrieker_asks_to_turn_up_only_a_creature_card() {
         t.g.act(0, crate::support::paid("CG", Move::Activate { source: shrieker, ability: 1, targets: vec![vec![Target::Object(theirs)]], paying: vec![] })).unwrap();
         while t.g.decision.is_none() && !t.g.stack.is_empty() { t.g.act(t.g.priority, Move::Pass).unwrap(); }
         if creature {
-            cite!(["608.2c"]; case: card; assert!(matches!(t.g.decision, Some(Decision::Choose { player: 0, choice: Choice::May })), "{:?}", t.g.decision));
+            cite!(["608.2c"]; case: card; assert!(matches!(t.g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } })), "{:?}", t.g.decision));
             t.g.act(0, Move::Choose(Answer::Yes)).unwrap();
             cite!(["608.2c"]; case: card; assert_eq!(t.g.obj(theirs).chars.name, "Grizzly Bears"));
         } else {

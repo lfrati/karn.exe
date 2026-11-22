@@ -61,7 +61,7 @@ fn r608_2c_liliana_s_spoils_them_is_what_its_own_paragraph_looked_at() {
     cast(&mut g, SPOILS, Target::Player(1), "BBBB");
     let Some(Decision::Choose { player: 1, .. }) = g.decision.clone() else { panic!("the opponent discards: {:?}", g.decision) };
     g.act(1, Move::Choose(Answer::Objects(vec![discarded[0]]))).unwrap();
-    let Some(Decision::Choose { player: 0, choice: Choice::May }) = g.decision.clone() else { panic!("you may reveal: {:?}", g.decision) };
+    let Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } }) = g.decision.clone() else { panic!("you may reveal: {:?}", g.decision) };
     g.act(0, Move::Choose(Answer::Yes)).unwrap();
     // the black card among the five looked at, not the discarded one
     let mut among = match g.decision.clone() {

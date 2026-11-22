@@ -133,7 +133,7 @@ fn r118_12_an_optional_payment_resumes_between_consent_and_selection_without_rep
     let spell = g.put(0, 0, Zone::Hand);
     g.act(0, Move::Cast { card: spell, targets: vec![] }).unwrap();
     resolve(&mut g);
-    cite!(["118.12"]; assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May })));
+    cite!(["118.12"]; assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } })));
     let mut declined = g.clone();
     declined.act(0, Move::Choose(Answer::No)).unwrap();
     cite!(["118.12"]; assert_eq!(declined.players[0].life, 21));

@@ -275,7 +275,7 @@ fn put_no_cards_this_way_is_the_empty_group() {
         cast(&mut g, NO_PUT, vec![], "");
         pass(&mut g);
         cite!(["404.3"]; ok: g.act(0,Move::Choose(Answer::Objects(incoming))));
-        if g.decision == Some(Decision::Choose { player: 0, choice: Choice::May }) {
+        if g.decision == Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } }) {
             choose(&mut g, if put { Answer::Yes } else { Answer::No });
             // a single creature card milled is the one put, with nothing left to choose
             if let Some(among) = offered(&g) { choose(&mut g, Answer::Objects(among)); }

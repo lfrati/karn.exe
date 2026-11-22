@@ -36,7 +36,7 @@ fn ranger(g: &mut Game, mill: bool) -> ObjId {
     g.act(0, crate::support::paid("CGG", Move::Cast { card, targets: vec![] })).unwrap();
     for _ in 0..40 {
         match g.decision.clone() {
-            Some(Decision::Choose { player: 0, choice: Choice::May }) => g.act(0, Move::Choose(if mill { Answer::Yes } else { Answer::No })).unwrap(),
+            Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } }) => g.act(0, Move::Choose(if mill { Answer::Yes } else { Answer::No })).unwrap(),
             Some(d) => panic!("{d:?}"),
             None if g.stack.is_empty() => break,
             None => g.act(g.priority, Move::Pass).unwrap(),

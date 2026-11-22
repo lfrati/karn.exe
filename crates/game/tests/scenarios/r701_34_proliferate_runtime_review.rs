@@ -40,7 +40,7 @@ fn you_may_proliferate_asks_first_and_declining_asks_no_holders() {
     let bear = g.put(1, 2, Zone::Battlefield);
     g.put_counters(bear, "+1/+1", 1);
     cast(&mut g, 0);
-    cite!(["608.2d"]; assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May })));
+    cite!(["608.2d"]; assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } })));
     let mut yes = g.clone();
     g.act(0, Move::Choose(Answer::No)).unwrap();
     assert!(g.decision.is_none() && g.stack.is_empty());

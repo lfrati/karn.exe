@@ -103,7 +103,7 @@ fn settle(g: &mut Game) -> Vec<ObjId> {
         pass(g);
         match &g.decision {
             None => return seen,
-            Some(Decision::Choose { choice: Choice::May, .. }) => choose(g, Answer::Yes),
+            Some(Decision::Choose { choice: Choice::May { possible: true }, .. }) => choose(g, Answer::Yes),
             Some(Decision::Choose { choice: Choice::Objects { among, .. }, .. }) => {
                 seen.extend(among.iter().copied());
                 let first = among[0];

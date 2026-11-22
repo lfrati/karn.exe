@@ -39,7 +39,7 @@ fn game(text: &str) -> Game {
 fn settle(g: &mut Game, accept: bool) {
     for _ in 0..40 {
         match g.decision.clone() {
-            Some(Decision::Choose { choice: Choice::May, .. }) => g.act(0, Move::Choose(if accept { Answer::Yes } else { Answer::No })).unwrap(),
+            Some(Decision::Choose { choice: Choice::May { possible: true }, .. }) => g.act(0, Move::Choose(if accept { Answer::Yes } else { Answer::No })).unwrap(),
             Some(Decision::Choose { choice: Choice::Objects { among, .. }, .. }) => g.act(0, Move::Choose(Answer::Objects(vec![among[0]]))).unwrap(),
             Some(other) => panic!("not asked here: {other:?}"),
             None if g.stack.is_empty() => return,

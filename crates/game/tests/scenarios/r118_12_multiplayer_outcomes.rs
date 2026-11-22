@@ -20,19 +20,19 @@ fn end(g:&mut Game) {
     }
     for _ in 0..g.players.len(){g.act(g.priority,Move::Pass).unwrap();}
 }
-fn may(g:&Game,p:usize) {assert!(matches!(g.decision,Some(Decision::Choose{player,choice:Choice::May}) if player==p),"{:?}",g.decision);}
+fn may(g:&Game,p:usize) {assert!(matches!(g.decision,Some(Decision::Choose{player,choice:Choice::May { possible: true }}) if player==p),"{:?}",g.decision);}
 #[test]
 fn mixed_opponents_choose_before_sacrifice_and_each_failure_loses_life() {
     let mut g=game(4);g.put(0,0,Zone::Battlefield);g.put(0,2,Zone::Graveyard);g.put(0,2,Zone::Graveyard);
     let a=g.put(1,1,Zone::Battlefield);g.put(1,1,Zone::Battlefield);let b=g.put(2,1,Zone::Battlefield);end(&mut g);
-    cite!(["101.4","608.2e"]; assert!(matches!(g.decision,Some(Decision::Choose{player:1,choice:Choice::May})),"{:?}",g.decision));crate::support::refused(g.act(2,Move::Choose(Answer::Yes)), "that decision is another player's");
+    cite!(["101.4","608.2e"]; assert!(matches!(g.decision,Some(Decision::Choose{player:1,choice:Choice::May { possible: true }})),"{:?}",g.decision));crate::support::refused(g.act(2,Move::Choose(Answer::Yes)), "that decision is another player's");
     g.act(1,Move::Choose(Answer::Yes)).unwrap();
     assert!(matches!(g.decision,Some(Decision::Choose{player:1,choice:Choice::Objects{..}})));
     let before=format!("{g:?}");
     cite!(["608.2d"]; refused("choose exactly 1 of the offered objects to sacrifice (608.2d)"): g.act(1,Move::Choose(Answer::Yes)));
     crate::support::refused(g.act(2,Move::Choose(Answer::Objects(vec![a]))), "that decision is another player's");
     assert_eq!(format!("{g:?}"),before,"refused answers preserve both consent and selection progress");
-    g.act(1,Move::Choose(Answer::Objects(vec![a]))).unwrap();cite!(["101.4"]; assert!(matches!(g.decision,Some(Decision::Choose{player:2,choice:Choice::May})),"{:?}",g.decision));
+    g.act(1,Move::Choose(Answer::Objects(vec![a]))).unwrap();cite!(["101.4"]; assert!(matches!(g.decision,Some(Decision::Choose{player:2,choice:Choice::May { possible: true }})),"{:?}",g.decision));
     cite!(["101.4","608.2e"]; assert!(g.battlefield.contains(&a),"all selections precede mutation"));
     let mut copy=g.clone();
     for game in [&mut g,&mut copy] {
@@ -47,7 +47,7 @@ fn impossible_first_opponent_does_not_suppress_later_choice_and_tokens_are_exclu
     let mut g=game(3);g.put(0,0,Zone::Battlefield);g.put(0,2,Zone::Graveyard);
     let original=g.put(1,1,Zone::Hand);let chars=g.obj(original).chars.clone();
     let token=g.create_token(1,chars,false);let b=g.put(2,1,Zone::Battlefield);end(&mut g);
-    cite!(["608.2d"]; assert!(matches!(g.decision,Some(Decision::Choose{player:2,choice:Choice::May})),"{:?}",g.decision));g.act(2,Move::Choose(Answer::Yes)).unwrap();
+    cite!(["608.2d"]; assert!(matches!(g.decision,Some(Decision::Choose{player:2,choice:Choice::May { possible: true }})),"{:?}",g.decision));g.act(2,Move::Choose(Answer::Yes)).unwrap();
     assert!(g.battlefield.contains(&token));assert!(!g.battlefield.contains(&b));
     cite!(["118.12"]; assert_eq!(g.players[1].life,18));assert_eq!(g.players[2].life,20);
 }

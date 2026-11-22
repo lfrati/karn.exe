@@ -50,7 +50,7 @@ fn object_choice_refusal(text: &str, setup: &dyn Fn(&mut Game) -> game::ObjId) -
     g.act(0, Move::Cast { card: spell, targets: vec![] }).unwrap();
     for _ in 0..10 {
         match g.decision.clone() {
-            Some(Decision::Choose { player, choice: Choice::May }) => g.act(player, Move::Choose(Answer::Yes)).unwrap(),
+            Some(Decision::Choose { player, choice: Choice::May { possible: true } }) => g.act(player, Move::Choose(Answer::Yes)).unwrap(),
             Some(Decision::Choose { player, choice: Choice::Objects { .. } }) => {
                 return g.act(player, Move::Choose(Answer::Objects(vec![wrong]))).unwrap_err();
             }

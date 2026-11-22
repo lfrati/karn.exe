@@ -277,7 +277,7 @@ fn r603_7_a_delayed_program_retains_its_local_choice_after_the_parent_frame_ends
     assert_eq!(g.obj(bear).zone, Zone::Gone);
     assert_eq!(g.stack.len(), 1);
     for _ in 0..2 { g.act(g.priority, Move::Pass).unwrap(); }
-    assert!(matches!(g.decision, Some(Decision::Choose { choice: Choice::May, .. })));
+    assert!(matches!(g.decision, Some(Decision::Choose { choice: Choice::May { possible: true }, .. })));
     let mut declined = g.clone();
     g.act(0, Move::Choose(Answer::Yes)).unwrap();
     declined.act(0, Move::Choose(Answer::No)).unwrap();

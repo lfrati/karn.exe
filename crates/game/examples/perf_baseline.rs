@@ -153,7 +153,7 @@ fn paused(base: &Game) -> Game {
     g.act(0, Move::Cast { card, targets: vec![] }).unwrap();
     g.act(0, Move::Pass).unwrap();
     g.act(1, Move::Pass).unwrap();
-    assert!(matches!(g.decision, Some(Decision::Choose { choice: Choice::May, .. })));
+    assert!(matches!(g.decision, Some(Decision::Choose { choice: Choice::May { possible: true }, .. })));
     assert_eq!(g.players[0].life, 20);
     g
 }

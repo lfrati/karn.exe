@@ -40,7 +40,7 @@ fn sarkhan(t: &mut T) {
 
 /// Is its controller asked whether to behold?
 fn asks_may(t: &T) -> bool {
-    matches!(t.g.decision, Some(Decision::Choose { player: 0, choice: Choice::May }))
+    matches!(t.g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } }))
 }
 
 /// "you may behold a Dragon. If you do, create a Treasure token." A Dragon card in the hand is
@@ -55,7 +55,8 @@ fn r701_4a_sarkhan_beholds_a_dragon_card_revealed_to_every_seat() {
     refused(t.answer(1, Answer::Yes), "that decision is another player's");
     assert!(revealed(&t, 1).is_empty() && treasures(&t) == 0, "nothing is beheld before the choice");
     t.answer(0, Answer::Yes).unwrap();
-    // the only Dragon card or permanent is what is beheld
+    // A private qualifying identity is selected explicitly, even when it is the only one.
+    t.answer(0, Answer::Objects(vec![dragon])).unwrap();
     assert!(t.g.decision.is_none() && t.g.stack.is_empty(), "{:?}", t.g.decision);
     cite!(["118.12"]; assert_eq!(treasures(&t), 1));
     cite!(["701.20b"]; assert_eq!(t.g.obj(dragon).zone, Zone::Hand));
@@ -106,7 +107,10 @@ fn r118_12_declining_or_having_nothing_to_behold_creates_no_treasure() {
     let mut t = Board::new(2).hand(0, &["Sarkhan, Dragon Ascendant", "Iron-Shield Elf"]).graveyard(0, &["Rapacious Dragon"])
         .battlefield(1, &["Rapacious Dragon"]).hand(1, &["Rapacious Dragon"]).build();
     sarkhan(&mut t);
-    cite!(["118.3", "701.4a"]; assert!(t.g.decision.is_none() && t.g.stack.is_empty(), "{:?}", t.g.decision));
+    cite!(["402.3"]; assert!(matches!(t.g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: false } }))));
+    cite!(["118.3", "608.2d", "701.4a"]; refused("that option is impossible (608.2d)"): t.answer(0, Answer::Yes));
+    t.answer(0, Answer::No).unwrap();
+    assert!(t.g.decision.is_none() && t.g.stack.is_empty());
     cite!(["118.12"]; assert_eq!(treasures(&t), 0));
     assert!(revealed(&t, 1).is_empty() && beheld(&t).is_empty());
 }
@@ -165,9 +169,16 @@ fn r701_4a_elven_passage_untaps_the_land_it_found_only_if_an_elf_is_beheld() {
         let land = (case != Case::NotFound).then(|| t.find_in(0, Zone::Battlefield, "Forest"));
         if let Some(land) = land { cite!(["701.26a"]; case: named; assert!(t.g.obj(land).tapped, "put onto the battlefield tapped")); }
         match case {
-            Case::NoElf => cite!(["118.3", "701.4a"]; assert!(t.g.decision.is_none(), "{:?}", t.g.decision)),
+            Case::NoElf => {
+                cite!(["402.3"]; assert!(matches!(t.g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: false } }))));
+                t.answer(0, Answer::No).unwrap();
+            }
             Case::Declined => { cite!(["608.2c", "118.12"]; case: named; assert!(asks_may(&t), "{:?}", t.g.decision)); t.answer(0, Answer::No).unwrap(); }
             _ => { cite!(["608.2c", "118.12"]; case: named; assert!(asks_may(&t), "{:?}", t.g.decision)); t.answer(0, Answer::Yes).unwrap(); }
+        }
+        if matches!(case, Case::HandElf | Case::NotFound) {
+            let elf = t.find_in(0, Zone::Hand, "Iron-Shield Elf");
+            t.answer(0, Answer::Objects(vec![elf])).unwrap();
         }
         assert!(t.g.decision.is_none() && t.g.stack.is_empty(), "{named}: {:?}", t.g.decision);
         match case {
@@ -245,8 +256,8 @@ fn r614_12a_theorists_sanctum_beholds_the_jace_token_another_sanctum_empowered()
     assert!(revealed(&t, 1).is_empty());
 }
 
-/// "If you don't, this land enters tapped": declined, or with no Jace to behold, when no
-/// question is asked (118.3).
+/// "If you don't, this land enters tapped": declined, including when the concealed hand
+/// contains no Jace. The question must not disclose the hand's qualities (402.3).
 #[test]
 fn r614_1c_theorists_sanctum_enters_tapped_unless_a_jace_is_beheld() {
     let mut t = Board::new(2).hand(0, &[SANCTUM, "Jace Beleren"]).build();
@@ -259,7 +270,8 @@ fn r614_1c_theorists_sanctum_enters_tapped_unless_a_jace_is_beheld() {
     let mut t = Board::new(2).hand(0, &[SANCTUM, "Eye of Jace"]).hand(1, &["Jace Beleren"])
         .battlefield(1, &["Jace Beleren"]).counters("Jace Beleren", "loyalty", 3).build();
     play(&mut t, SANCTUM);
-    cite!(["118.3", "614.12a"]; assert!(t.g.decision.is_none(), "{:?}", t.g.decision));
+    cite!(["402.3"]; assert!(offered(&t).is_empty()));
+    t.answer(0, Answer::Objects(vec![])).unwrap();
     cite!(["614.1c", "614.1d"]; assert!(t.g.obj(t.find_in_battlefield(SANCTUM)).tapped));
     assert!(revealed(&t, 1).is_empty() && beheld(&t).is_empty());
 }

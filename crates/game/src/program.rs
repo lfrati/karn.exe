@@ -5480,7 +5480,9 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                         let s = &objects.items[0];
                         let set = expr::Set::compile(&s.set, support, &mut binder.scope(support))?;
                         let (from, selected, subjects, paid, possible) = (e.slot(), e.slot(), e.slot(), e.slot(), e.slot());
-                        e.instrs.push(Instr::Gather { objects: action::Operand::All(set.clone()), out: from });
+                        // Keep the hand pool until Select: its existence is public, its
+                        // qualifying identities are not (402.3).
+                        e.instrs.push(Instr::Gather { objects: action::Operand::All(set.unfiltered()), out: from });
                         binder.outcome = Some((action::Operand::Controller, paid, possible, e.instrs.len()));
                         e.instrs.push(Instr::Select { from, set: SelectionFilter::Action { set, verb: Verb::Move, role: ir::Role::What, enters: true },
                             pick: Pick::Optional { count: 1, paid, possible }, chooser: Who::Controller, gate: None, still_in: Zone::Hand, out: selected });
@@ -6517,6 +6519,9 @@ impl expr::Locals for Frame {
 }
 
 impl Frame {
+    fn concealed_pool(&self, game: &Game, chooser: PlayerId, cards: impl IntoIterator<Item = ObjId>) -> bool {
+        game.concealed_pool(chooser, cards.into_iter().filter(|o| !expr::Locals::revealed(self, *o)))
+    }
     pub fn new(program: Arc<Program>, ctx: Ctx<'static>) -> Frame {
         Frame { cast_results: Vec::new(), cast_origins: Vec::new(), occurrence: None, occurrence_base: 0, produced_mana: false, event_amount: None, inputs: Vec::new(), transitions: Vec::new(), slots: vec![None; program.slots], program, pc: 0, base_x: ctx.x, ctx, targets: Vec::new(), division: Vec::new(), pending: None, open: None, shown: Vec::new(), choices: Vec::new() }
     }
@@ -6621,7 +6626,7 @@ impl Frame {
         match &self.pending {
             Some(Pending::Explore(procedure)) if procedure.revealed().is_some() =>
                 Some((ir::Verb::Move, Some(Placement::Zone(Zone::Graveyard)))),
-            Some(Pending::Answer { decision: Decision::Choose { choice: Choice::May, .. }, answer: None }) => {
+            Some(Pending::Answer { decision: Decision::Choose { choice: Choice::May { .. }, .. }, answer: None }) => {
                 let Some(Instr::Gate { out: consent, .. }) = instrs.get(self.pc) else { return None };
                 match instrs.iter().enumerate().skip(self.pc + 1).find_map(|(i, instr)| match instr {
                     Instr::Select { gate: Some(gate), out, .. } if gate == consent => Some((i, *out)),
@@ -6835,7 +6840,7 @@ fn offer(game: &Game, f: &mut Frame, attempt: Option<&Attempt>, created: Option<
                     None => {
                         let player = players[cursor];
                         f.pending = Some(Pending::Attempt { request: Box::new(request), players, accepted, cursor, answer: None });
-                        return Err(Halt::Ask(Decision::Choose { player, choice: attempt.count.as_ref().map_or(Choice::May, |c| Choice::Number { min: 0, max: c.max }) }));
+                        return Err(Halt::Ask(Decision::Choose { player, choice: attempt.count.as_ref().map_or(Choice::May { possible: true }, |c| Choice::Number { min: 0, max: c.max }) }));
                     }
                 }
             }
@@ -7402,23 +7407,29 @@ fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt> {
                 f.slots[*out] = Some(Value::Consent(false));
                 return Ok(());
             };
+            let mut feasible = true;
             if let Some(slot) = possible { f.slots[*slot] = Some(Value::Consent(true)); }
             if let Some(p) = probe {
                 let ctx = Ctx { controller: player, ..f.ctx.clone() };
+                let cards = f.cards(p.from);
+                let private = f.concealed_pool(game, player, cards.iter().copied().filter(|o| still_there(game, *o, p.still_in)));
                 let mut fitting = 0;
-                for card in f.cards(p.from) {
+                for card in cards {
                     if still_there(game, card, p.still_in) && p.set.contains(game, &ctx, f, card) {
                         fitting += 1;
                     }
                 }
                 // a player can't choose an option that is impossible (608.2d)
-                if fitting < p.count.evaluate(game, &f.ctx, f) as usize {
+                feasible = fitting >= p.count.evaluate(game, &f.ctx, f) as usize;
+                if !feasible {
                     if let Some(slot) = possible { f.slots[*slot] = Some(Value::Consent(false)); }
-                    f.slots[*out] = Some(Value::Consent(false));
-                    return Ok(());
+                    if !private {
+                        f.slots[*out] = Some(Value::Consent(false));
+                        return Ok(());
+                    }
                 }
             }
-            let yes = f.ask(player, Choice::May)? == Answer::Yes;
+            let yes = f.ask(player, Choice::May { possible: feasible })? == Answer::Yes;
             f.slots[*out] = Some(Value::Consent(yes));
         }
         Instr::Select { from, set, pick, chooser, gate, still_in, out } => {
@@ -7443,8 +7454,11 @@ fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt> {
                     (_, Some(purpose)) => purpose,
                     _ => (Verb::Choose, None),
                 };
+                let cards = f.cards(*from);
+                let private = matches!(pick, Pick::Optional { .. } | Pick::AnyNumber | Pick::UpTo(_))
+                    && f.concealed_pool(game, player, cards.iter().copied().filter(|o| still_there(game, *o, *still_in)));
                 let mut fitting = Vec::new();
-                for card in f.cards(*from) {
+                for card in cards {
                     if still_there(game, card, *still_in) && set.contains(game, &ctx, f, card) {
                         fitting.push(card);
                     }
@@ -7458,18 +7472,18 @@ fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt> {
                     Pick::Optional { count, paid, possible } => {
                         let feasible = fitting.len() >= *count;
                         f.slots[*possible] = Some(Value::Consent(feasible));
-                        if feasible {
+                        if feasible || private {
                             let Answer::OptionalObjects(answer) = f.ask(player, Choice::OptionalObjects { verb, to, among: fitting, count: *count })?
                                 else { unreachable!("validated optional objects"); };
                             f.slots[*paid] = Some(Value::Consent(answer.is_some()));
                             answer.unwrap_or_default()
                         } else { Vec::new() }
                     },
-                    Pick::AnyNumber if !fitting.is_empty() => match f.ask(player, Choice::Select { min: 0, max: fitting.len(), among: fitting })? {
+                    Pick::AnyNumber if !fitting.is_empty() || private => match f.ask(player, Choice::Select { min: 0, max: fitting.len(), among: fitting })? {
                         Answer::Objects(cards) => cards,
                         _ => unreachable!("validated subset selection"),
                     },
-                    Pick::UpTo(n) if *n > 0 && !fitting.is_empty() => match f.ask(player, Choice::Select { min: 0, max: (*n).min(fitting.len()), among: fitting })? {
+                    Pick::UpTo(n) if *n > 0 && (!fitting.is_empty() || private) => match f.ask(player, Choice::Select { min: 0, max: (*n).min(fitting.len()), among: fitting })? {
                         Answer::Objects(cards) => cards,
                         _ => unreachable!("validated bounded selection"),
                     },

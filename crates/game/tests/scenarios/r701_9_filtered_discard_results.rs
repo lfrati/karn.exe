@@ -93,7 +93,7 @@ fn completed_original_cards_survive_later_payment_suspension_and_clone(){
 fn declined_optional_discard_exports_an_empty_filtered_result(){
  let mut g=Game::new(defs("You may discard a card. For each nonland card discarded this way, create a 1/1 red Elemental creature token."),2,20);
  let card=g.put(0,1,Zone::Hand);cast(&mut g);
- cite!(["608.2d"]; assert!(matches!(g.decision,Some(Decision::Choose{player:0,choice:Choice::May}))));
+ cite!(["608.2d"]; assert!(matches!(g.decision,Some(Decision::Choose{player:0,choice:Choice::May { possible: true }}))));
  g.act(0,Move::Choose(Answer::No)).unwrap();assert!(g.players[0].hand.contains(&card));cite!(["608.2c"]; assert_eq!(tokens(&g),0));
 }
 #[test]

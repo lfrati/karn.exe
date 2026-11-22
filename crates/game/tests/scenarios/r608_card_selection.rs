@@ -83,7 +83,7 @@ fn r609_3_sleight_handles_short_and_empty_libraries() {
 fn r701_20_stirrings_reveals_only_the_selected_colorless_card_and_orders_the_rest() {
     let mut g = game(STIRRINGS, &[1, 3, 2, 3, 3, 3]);
     cast(&mut g);
-    assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May })));
+    assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } })));
     cite!(["701.20e"]; assert!(g.observations(1).is_empty()));
     g.act(0, Move::Choose(Answer::Yes)).unwrap();
     let (among, count) = choice(&g);
@@ -110,12 +110,16 @@ fn r701_20_stirrings_reveals_only_the_selected_colorless_card_and_orders_the_res
 }
 
 #[test]
-fn r608_2d_stirrings_decline_keeps_every_looked_at_card_and_no_eligible_card_skips_the_offer() {
-    for (cards, offers) in [(vec![1,3,2],true), (vec![3,3],false), (vec![],false)] {
+fn r608_2d_stirrings_decline_keeps_every_looked_at_card_without_disclosing_qualification() {
+    for (cards, possible) in [(vec![1,3,2],true), (vec![3,3],false), (vec![],false)] {
         let mut g = game(STIRRINGS, &cards);
         cast(&mut g);
-        if offers {
-            assert!(matches!(g.decision, Some(Decision::Choose { choice: Choice::May, .. })));
+        if !cards.is_empty() {
+            cite!(["402.3", "701.20e"]; assert!(matches!(g.decision,
+                Some(Decision::Choose { choice: Choice::May { possible: actual }, .. }) if actual == possible)));
+            if !possible {
+                cite!(["608.2d"]; refused("that option is impossible (608.2d)"): g.act(0, Move::Choose(Answer::Yes)));
+            }
             g.act(0, Move::Choose(Answer::No)).unwrap();
         }
         if cards.len() > 1 {
@@ -191,7 +195,7 @@ fn r609_3_hand_selection_moves_as_many_as_exist_without_inventing_cards() {
 fn r608_2d_stirrings_one_eligible_card_still_allows_declining_but_needs_no_selection() {
     let mut g = game(STIRRINGS, &[1,3]);
     cast(&mut g);
-    assert!(matches!(g.decision, Some(Decision::Choose { choice: Choice::May, .. })));
+    assert!(matches!(g.decision, Some(Decision::Choose { choice: Choice::May { possible: true }, .. })));
     g.act(0, Move::Choose(Answer::Yes)).unwrap();
     cite!(["608.2d"]; assert_eq!(hand(&g), vec![1]));
     assert_eq!(library(&g), vec![3]);

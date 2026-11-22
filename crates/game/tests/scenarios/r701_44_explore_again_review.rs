@@ -35,7 +35,7 @@ fn settle(g: &mut Game, holders: &mut dyn FnMut(&[Target]) -> Vec<Target>, targe
     let mut asked = 0;
     for _ in 0..60 {
         match g.decision.clone() {
-            Some(Decision::Choose { player, choice: Choice::May }) => g.act(player, Move::Choose(Answer::No)).unwrap(),
+            Some(Decision::Choose { player, choice: Choice::May { possible: true } }) => g.act(player, Move::Choose(Answer::No)).unwrap(),
             Some(Decision::Choose { player, choice: Choice::Holders { among, .. } }) => { asked += 1; g.act(player, Move::Choose(Answer::Holders(holders(&among)))).unwrap(); }
             Some(Decision::Targets { player, .. }) => g.act(player, Move::ChooseTargets(targets.clone())).unwrap(),
             Some(Decision::Order { player, abilities }) => g.act(player, Move::Order((0..abilities.len()).collect())).unwrap(),

@@ -48,7 +48,7 @@ fn cast(g: &mut Game, def: usize) -> ObjId {
 }
 fn targets(g: &mut Game, object: ObjId) { g.act(0, Move::ChooseTargets(vec![vec![Target::Object(object)]])).unwrap(); }
 fn answer(g: &mut Game, yes: bool) {
-    assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May })));
+    assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } })));
     g.act(0, Move::Choose(if yes { Answer::Yes } else { Answer::No })).unwrap();
 }
 fn search(g: &Game) -> (Vec<ObjId>, usize, usize) {

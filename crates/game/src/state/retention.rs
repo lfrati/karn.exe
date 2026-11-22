@@ -243,7 +243,7 @@ impl Trace for Choice {
             Choice::Pile { piles } => { for pile in piles { pile.trace(visit); } },
             Choice::Alternative { among, .. } => { for option in among { match &option.body { super::ActionOptionBody::Objects { among, .. } => among.trace(visit), super::ActionOptionBody::Counters { on,.. } => on.trace(visit), _ => {} } } },
             Choice::LibraryDestination { cards, .. } => cards.trace(visit),
-            Choice::May | Choice::Mana { .. } | Choice::Value(_) | Choice::Name(_) | Choice::Number { .. } | Choice::Player { .. } | Choice::Skip { .. } => {},
+            Choice::May { .. } | Choice::Mana { .. } | Choice::Value(_) | Choice::Name(_) | Choice::Number { .. } | Choice::Player { .. } | Choice::Skip { .. } => {},
         }
     }
 }

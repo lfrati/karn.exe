@@ -32,7 +32,7 @@ fn r614_12a_the_type_is_chosen_then_the_life_paid_and_it_enters_untapped() {
     cite!(["305.6"]; refused("choose a basic land type (305.6)"): g.act(0, Move::Choose(Answer::Value(Value::CreatureType(Subtype::from_name("Elf").unwrap())))));
     cite!(["305.6"]; refused("choose a basic land type (305.6)"): g.act(0, Move::Choose(Answer::Value(Value::Color(ir::Color::Blue)))));
     g.act(0, Move::Choose(Answer::Value(land("Island")))).unwrap();
-    cite!(["614.12a"]; assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May }), "then the life"));
+    cite!(["614.12a"]; assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } }), "then the life"));
     g.act(0, Move::Choose(Answer::Yes)).unwrap();
     assert!(g.decision.is_none());
     let o = passage(&g);

@@ -25,7 +25,7 @@ fn enter(g: &mut Game, index: usize, target: usize) {
     let name=["Alisaie Leveilleur","Alphinaud Leveilleur"][index];
     cite!(["115.1"]; refused(&format!("an illegal target, {name}: it isn't a player (115.1)")): g.act(0,Move::ChooseTargets(vec![vec![Target::Object(g.battlefield[0])]])));
     g.act(0,Move::ChooseTargets(vec![vec![Target::Player(target)]])).unwrap();pass(g);
-    assert_eq!(g.decision,Some(Decision::Choose{player:target,choice:Choice::May}));
+    assert_eq!(g.decision,Some(Decision::Choose{player:target,choice:Choice::May { possible: true }}));
 }
 
 #[test]

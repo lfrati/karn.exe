@@ -39,7 +39,7 @@ fn resolve(g: &mut Game, to: Option<ObjId>) {
         match g.decision.clone() {
             None if g.stack.is_empty() => return,
             None => g.act(g.priority, Move::Pass).unwrap(),
-            Some(Decision::Choose { player, choice: Choice::May }) => g.act(player, Move::Choose(Answer::Yes)).unwrap(),
+            Some(Decision::Choose { player, choice: Choice::May { possible: true } }) => g.act(player, Move::Choose(Answer::Yes)).unwrap(),
             Some(Decision::Choose { player, choice: Choice::ChangeTargets { .. } | Choice::Retarget { .. } }) =>
                 g.act(player, Move::Choose(Answer::Targets(vec![vec![Target::Object(to.expect("a new target"))]]))).unwrap(),
             Some(Decision::Order { player, abilities }) => g.act(player, Move::Order((0..abilities.len()).collect())).unwrap(),

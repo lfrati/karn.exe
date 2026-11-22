@@ -34,7 +34,7 @@ fn settle(g: &mut Game) {
     for _ in 0..30 {
         match g.decision.clone() {
             Some(Decision::Targets{player,..})=>g.act(player,Move::ChooseTargets(vec![vec![Target::Player(player)]])).unwrap(),
-            Some(Decision::Choose{player,choice:Choice::May})=>g.act(player,Move::Choose(Answer::No)).unwrap(),
+            Some(Decision::Choose{player,choice:Choice::May { possible: true }})=>g.act(player,Move::Choose(Answer::No)).unwrap(),
             None if g.stack.is_empty()=>return,
             None=>pass(g),other=>panic!("unexpected: {other:?}"),
         }

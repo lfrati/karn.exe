@@ -152,7 +152,7 @@ fn settle_the_wreckage_counts_an_attacking_token_exiled() {
     g.players[1].pool.colors = [4, 0, 0, 0, 0];
     g.act(1, paid("WWWW", Move::Cast { card: settle, targets: vec![vec![Target::Player(0)]] })).unwrap();
     while !g.stack.is_empty() && g.decision.is_none() { g.act(g.priority, Move::Pass).unwrap(); }
-    if matches!(g.decision, Some(Decision::Choose { choice: Choice::May, .. })) { g.act(0, Move::Choose(Answer::Yes)).unwrap(); }
+    if matches!(g.decision, Some(Decision::Choose { choice: Choice::May { possible: true }, .. })) { g.act(0, Move::Choose(Answer::Yes)).unwrap(); }
     let Some(Decision::Choose { player, choice: Choice::Search { max, .. } }) = g.decision.clone() else { panic!("{:?}", g.decision) };
     cite!(["608.2c"]; assert_eq!((player, max), (0, 2), "two attacking creatures exiled, one a token"));
     // the caster doesn't see the library searched by its owner

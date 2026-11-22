@@ -81,10 +81,10 @@ fn r122_1i_rad_rule_consequences_remain_explicitly_refused() {
 fn r122_1_optional_player_counters_collect_consent_before_placement() {
     let mut g=Game::new(vec![spell("Each opponent may get a poison counter.")],3,20);
     cast(&mut g,vec![]);
-    cite!(["101.4"]; assert!(matches!(g.decision,Some(game::state::Decision::Choose{player:1,choice:game::state::Choice::May}))));
+    cite!(["101.4"]; assert!(matches!(g.decision,Some(game::state::Decision::Choose{player:1,choice:game::state::Choice::May { possible: true }}))));
     g.act(1,Move::Choose(game::state::Answer::No)).unwrap();
     cite!(["101.4"]; assert!(g.players.iter().all(|p|p.counters.is_empty())));
-    cite!(["101.4"]; assert!(matches!(g.decision,Some(game::state::Decision::Choose{player:2,choice:game::state::Choice::May}))));
+    cite!(["101.4"]; assert!(matches!(g.decision,Some(game::state::Decision::Choose{player:2,choice:game::state::Choice::May { possible: true }}))));
     g.act(2,Move::Choose(game::state::Answer::Yes)).unwrap();
     assert!(g.counters(Target::Player(1)).is_empty());
     cite!(["608.2d"]; assert_eq!(g.counters(Target::Player(2))["poison"],1));

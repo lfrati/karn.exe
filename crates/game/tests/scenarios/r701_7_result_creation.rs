@@ -31,7 +31,7 @@ fn finish_ordered(g: &mut Game, trigger_targets: &[Target], consent: bool, order
     for _ in 0..30 {
         match &g.decision {
             Some(Decision::Targets { .. }) => g.act(0,Move::ChooseTargets(vec![trigger_targets.to_vec()])).unwrap(),
-            Some(Decision::Choose { player, choice: Choice::May, .. }) => g.act(*player, Move::Choose(if consent {Answer::Yes} else {Answer::No})).unwrap(),
+            Some(Decision::Choose { player, choice: Choice::May { possible: true }, .. }) => g.act(*player, Move::Choose(if consent {Answer::Yes} else {Answer::No})).unwrap(),
             Some(Decision::Choose {player,choice:Choice::OrderCards{..}}) => {
                 let (owner,cards)=orders.next().expect("an authored incoming order");assert_eq!(player,owner);
                 cite!(["404.3"]; ok: g.act(*player,Move::Choose(Answer::Objects(cards.clone()))));
@@ -73,7 +73,7 @@ fn destruction_order_suspension_clones_and_delivers_creation_once() {
     for _ in 0..20 {
         match &g.decision {
             Some(Decision::Targets { .. }) => g.act(0,Move::ChooseTargets(vec![vec![a.into(),b.into(),artifact.into()]])).unwrap(),
-            Some(Decision::Choose { choice:Choice::May, .. }) => g.act(0,Move::Choose(Answer::Yes)).unwrap(),
+            Some(Decision::Choose { choice:Choice::May { possible: true }, .. }) => g.act(0,Move::Choose(Answer::Yes)).unwrap(),
             Some(Decision::Choose { player:1,choice:Choice::OrderCards{..},.. }) => break,
             Some(d)=>panic!("unexpected {d:?}"),
             None=>g.act(g.priority,Move::Pass).unwrap(),

@@ -44,16 +44,20 @@ pass landed in [6e28b7b](https://github.com/lfrati/karn.exe/commit/6e28b7b).
 [95ffdc3](https://github.com/lfrati/karn.exe/commit/95ffdc3), retaining created groups,
 preceding quantified sets and occurrence-specific public-zone successors.
 
-**Next: fix [#3, hidden optional-choice disclosure](https://github.com/lfrati/karn.exe/issues/3).**
-The core correctness queue then proceeds through:
+[#3, hidden optional-choice disclosure](https://github.com/lfrati/karn.exe/issues/3), is
+implemented: concealed qualification no longer suppresses optional prompts, and impossible
+affirmative answers are refused. Six paired full-card client regressions and the full
+repository check pass.
 
-1. [#4: Room copiable values and doors](https://github.com/lfrati/karn.exe/issues/4).
-2. [#5: conditional self-flash](https://github.com/lfrati/karn.exe/issues/5).
-3. [#6: Adventure replacement choice and permission](https://github.com/lfrati/karn.exe/issues/6).
-4. [#7: cost-reveal lifetime](https://github.com/lfrati/karn.exe/issues/7).
+**Next: fix [#4, Room copiable values and doors](https://github.com/lfrati/karn.exe/issues/4).**
+The remaining core correctness queue then proceeds through:
+
+1. [#5: conditional self-flash](https://github.com/lfrati/karn.exe/issues/5).
+2. [#6: Adventure replacement choice and permission](https://github.com/lfrati/karn.exe/issues/6).
+3. [#7: cost-reveal lifetime](https://github.com/lfrati/karn.exe/issues/7).
 
 Fix these shared mechanisms or explicitly refuse the unsupported behavior before adding
-coverage. The local bounded-choice work does not resolve #3.
+coverage.
 
 The next coverage candidates are:
 

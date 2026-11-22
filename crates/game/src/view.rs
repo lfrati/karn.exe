@@ -5,6 +5,16 @@
 use crate::state::{Choice, Decision, Game, ObjId, PlayerId, Zone};
 
 impl Game {
+    /// Whether a choice's unfiltered pool contains an identity hidden from another
+    /// player. Public emptiness can skip a choice; private qualification cannot.
+    pub(crate) fn concealed_pool(&self, chooser: PlayerId, cards: impl IntoIterator<Item = ObjId>) -> bool {
+        cards.into_iter().any(|o| {
+            let object = self.obj(o);
+            (matches!(object.zone, Zone::Hand | Zone::Library)
+                || object.zone == Zone::Exile && object.hidden.is_some())
+                && self.players.iter().enumerate().any(|(seat, p)| seat != chooser && !p.lost && !self.sees(seat, o))
+        })
+    }
     /// What the "may" asked now lets its player do, when the instruction says (608.2d): the
     /// action and, for a zone change, where to ([`crate::program::Frame::optional`]).
     /// Whether the text says "return" or "put" of the objects a pending choice is of.
@@ -20,7 +30,7 @@ impl Game {
     }
 
     pub fn optional(&self) -> Option<(ir::Verb, Option<crate::state::Placement>)> {
-        if !matches!(self.decision, Some(Decision::Choose { choice: Choice::May, .. })) { return None; }
+        if !matches!(self.decision, Some(Decision::Choose { choice: Choice::May { .. }, .. })) { return None; }
         // "As this land enters, you may pay 2 life" (614.12a): yes pays it
         if let Some(crate::replace::Asks::Life { .. }) = self.operation().and_then(|op| op.entry_asks()) {
             return Some((ir::Verb::PayLife, None));

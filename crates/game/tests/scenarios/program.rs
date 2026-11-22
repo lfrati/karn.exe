@@ -163,7 +163,7 @@ fn r701_20b_mulch_an_empty_or_partial_library_runs_and_an_empty_group_is_a_value
 fn r608_2d_salvage_asks_whether_then_which_and_a_refusal_keeps_everything_in_place() {
     let library=[FOREST,SHOCK,BEARS,FOREST,SHOCK,BEARS];
     let mut g=routed(SALVAGE,&library);
-    assert_eq!(g.decision,Some(Decision::Choose{player:0,choice:Choice::May}));
+    assert_eq!(g.decision,Some(Decision::Choose{player:0,choice:Choice::May { possible: true }}));
     g.act(0,game::Move::Choose(Answer::Yes)).unwrap();
     let Some(Decision::Choose{choice:Choice::Objects{among,count:1,..},..})=g.decision.clone() else {panic!("{:?}",g.decision)};
     cite!(["608.2d"]; assert_eq!(names(&g,&among),["Forest","Grizzly Bears","Grizzly Bears"]));

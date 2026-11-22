@@ -213,7 +213,7 @@ fn r701_17_cards_from_among_them_are_only_the_cards_milled() {
     // CR404.3: explicitly authored owner order, separate from selection.
     assert_eq!(g.decision, Some(game::state::Decision::Choose { player: 0, choice: game::state::Choice::OrderCards { to: game::state::Placement::Zone(Zone::Graveyard), cards: top.clone() } }));
     g.act(0, Move::Choose(game::state::Answer::Objects(vec![top[3],top[2],top[1],top[0]]))).unwrap();
-    assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May }));
+    assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } }));
     g.act(0, Move::Choose(Answer::Yes)).unwrap();
     let Some(Decision::Choose { player: 0, choice: Choice::Objects { among, .. } | Choice::Search { among, .. } }) = g.decision.clone() else { panic!("{:?}", g.decision) };
     cite!(["701.17a"]; assert_eq!(among.len(), 4));

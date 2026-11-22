@@ -206,7 +206,7 @@ fn r616_1_you_may_put_a_counter_asks_whether_and_then_which_replacement() {
     let card = g.put(0, BLADEMASTER, Zone::Hand);
     g.act(0, paid("WW", Move::Cast { card, targets: vec![] })).unwrap();
     pass(&mut g);
-    assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May })), "{:?}", g.decision);
+    assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } })), "{:?}", g.decision);
     g.act(0, Move::Choose(Answer::Yes)).unwrap();
     let (player, blademaster, count, among) = question(&g);
     cite!(["616.1"]; assert_eq!((player, count, among), (0, 1, vec![effect(scales), effect(evolution)])));

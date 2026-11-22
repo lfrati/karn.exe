@@ -163,7 +163,7 @@ fn r608_2d_a_card_is_chosen_from_among_those_revealed() {
     let mut g = game(&library);
     let original = g.players[0].library.clone();
     cast(&mut g, SALVAGE, &[SWAMP, FOREST], "BG");
-    assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May }));
+    assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } }));
     g.act(0, Move::Choose(Answer::Yes)).unwrap();
     let Some(Decision::Choose { player: 0, choice: Choice::Objects { among, count: 1, .. } }) = g.decision.clone() else {
         panic!("not asked which card: {:?}", g.decision)

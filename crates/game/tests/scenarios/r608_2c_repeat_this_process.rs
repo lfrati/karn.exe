@@ -88,7 +88,7 @@ fn settle(g: &mut Game) {
     for _ in 0..200 {
         match g.decision.clone() {
             Some(Decision::Order { .. }) => { order(g); continue }
-            Some(Decision::Choose { player, choice: Choice::May }) => { g.act(player, Move::Choose(Answer::No)).unwrap(); continue }
+            Some(Decision::Choose { player, choice: Choice::May { possible: true } }) => { g.act(player, Move::Choose(Answer::No)).unwrap(); continue }
             Some(other) => panic!("asked {other:?}"),
             None => {}
         }

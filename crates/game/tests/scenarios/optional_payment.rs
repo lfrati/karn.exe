@@ -59,7 +59,7 @@ fn died() -> (Game, ObjId, ObjId) {
 fn r118_12_exiling_it_is_what_if_you_do_asks() {
     let (mut g, seal, buried) = died();
     pass_all(&mut g);
-    assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May }));
+    assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } }));
     g.act(0, Move::Choose(Answer::Yes)).unwrap();
     cite!(["118.12"]; assert_eq!(g.obj(buried).zone, Zone::Gone, "exiled before the search"));
     assert_eq!(g.exile.iter().filter(|o| g.obj(**o).card == Some(RECTOR)).count(), 1);

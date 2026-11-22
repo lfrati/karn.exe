@@ -498,6 +498,9 @@ pub(crate) enum Filter {
 }
 
 impl Filter {
+    fn has_quality(&self) -> bool {
+        !matches!(self, Self::All(parts) if parts.iter().all(|p| !p.has_quality()))
+    }
     /// What deciding whether it describes something can read ([`Reads`]). A power or
     /// toughness is neither an ability nor a status, whatever number it is held against reads.
     pub(crate) fn reads(&self) -> Reads {
@@ -1215,6 +1218,21 @@ fn linked_exile_filter_bound(filter: &ir::Filter, bind: Bind<'_>) -> Res<Option<
 }
 
 impl Set {
+    pub(crate) fn has_quality(&self) -> bool {
+        self.filter.has_quality() || matches!(&self.domain, Domain::Union(arms) if arms.iter().any(Self::has_quality))
+    }
+    /// The zone/domain pool before identity-dependent quality tests. Used only to
+    /// decide whether skipping a choice would disclose a hidden qualification.
+    pub(crate) fn unfiltered(&self) -> Self {
+        let mut pool = self.clone();
+        pool.filter = Filter::All(Vec::new());
+        pool.other = false;
+        pool.other_than = None;
+        if let Domain::Union(arms) = &mut pool.domain {
+            for arm in arms { *arm = arm.unfiltered(); }
+        }
+        pool
+    }
     /// A compiler-proven root exclusion; an explicit comparison already in the text wins.
     pub(crate) fn excluding(mut self, subject: Subject) -> Self {
         if self.other && self.other_than.is_none() { self.other_than = Some(subject); }
@@ -1686,6 +1704,7 @@ pub struct Cards {
 }
 
 impl Cards {
+    pub(crate) fn has_quality(&self) -> bool { self.filter.has_quality() }
     pub(super) fn any_card() -> Self {Self {filter: Filter::All(Vec::new())}}
     pub(crate) fn compile(set: &ir::ObjectSet, support: &Support<'_>, bind: Bind<'_>) -> Res<Cards> {
         if set.domain != ir::Domain::Card || set.controller.is_some() || set.owner.is_some() || set.caster.is_some() || set.zone.is_some() {

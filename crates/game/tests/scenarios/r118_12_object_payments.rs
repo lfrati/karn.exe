@@ -81,7 +81,7 @@ fn r118_12a_waterspout_djinn_returns_an_untapped_island_its_controller_chooses()
     let islands = [g.put(0, 1, Zone::Battlefield), g.put(0, 1, Zone::Battlefield)];
     let theirs = g.put(1, 1, Zone::Battlefield);
     upkeep(&mut g);
-    cite!(["118.12a"]; assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May })), "{:?}", g.decision));
+    cite!(["118.12a"]; assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } })), "{:?}", g.decision));
     answer(&mut g, 0, Answer::Yes);
     let Some(Decision::Choose { player: 0, choice: Choice::Objects { among, count: 1, .. } }) = g.decision.clone() else { panic!("{:?}", g.decision) };
     cite!(["608.2d"]; assert_eq!(among, islands.to_vec(), "only untapped Islands its controller controls"));
@@ -121,7 +121,7 @@ fn r118_12a_command_bridge_taps_another_untapped_permanent_or_is_sacrificed() {
         pass(&mut g);
         match forest {
             Some(forest) => {
-                cite!(["118.12a"]; assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May })), "{:?}", g.decision));
+                cite!(["118.12a"]; assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } })), "{:?}", g.decision));
                 answer(&mut g, 0, Answer::Yes);
                 assert!(g.obj(forest).tapped);
                 cite!(["118.12a"]; assert!(g.battlefield.contains(&bridge)));
@@ -146,7 +146,7 @@ fn r118_12a_rotting_giant_exiles_a_card_from_its_controllers_graveyard() {
         g.act(0, Move::Attack(vec![(giant, Target::Player(1))])).unwrap();
         pass(&mut g);
         if let Some(card) = card {
-            cite!(["118.12a"]; case: format!("cards {cards}, pay {pay}"); assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May })), "{:?}", g.decision));
+            cite!(["118.12a"]; case: format!("cards {cards}, pay {pay}"); assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } })), "{:?}", g.decision));
             answer(&mut g, 0, if pay { Answer::Yes } else { Answer::No });
             assert_eq!(g.players[0].graveyard.contains(&card), !pay);
         }
@@ -160,14 +160,15 @@ fn r118_12a_rotting_giant_exiles_a_card_from_its_controllers_graveyard() {
 fn r118_12a_thirst_for_identity_discards_a_creature_card_or_two_cards() {
     for pay in [false, true] {
         let mut g = game(&["Thirst for Identity", "Grizzly Bears", "Island"]);
-        g.put(0, 1, Zone::Hand);
+        let creature = g.put(0, 1, Zone::Hand);
         let card = g.put(0, 0, Zone::Hand);
         g.players[0].pool.colors[ir::Color::Blue as usize] = 3;
         g.act(0, paid("UUU", Move::Cast { card, targets: vec![] })).unwrap();
         pass(&mut g);
         cite!(["118.12a"]; assert_eq!(g.players[0].hand.len(), 4));
-        assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May })), "{:?}", g.decision);
+        assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } })), "{:?}", g.decision);
         answer(&mut g, 0, if pay { Answer::Yes } else { Answer::No });
+        if pay { answer(&mut g, 0, Answer::Objects(vec![creature])); }
         if !pay {
             let Some(Decision::Choose { choice: Choice::Objects { count: 2, .. }, .. }) = g.decision.clone() else { panic!("{:?}", g.decision) };
             let two = g.players[0].hand[..2].to_vec();
@@ -178,12 +179,14 @@ fn r118_12a_thirst_for_identity_discards_a_creature_card_or_two_cards() {
         cite!(["118.12a"]; case: format!("pay {pay}"); assert_eq!(g.players[0].hand.len(), if pay { 3 } else { 2 }));
         if pay { cite!(["400.7"]; assert!(g.players[0].graveyard.iter().any(|&c| g.obj(c).card == Some(1)), "the creature card, as a new object (400.7)")); }
     }
-    // no creature card: not offered
+    // No creature card: the hidden qualification cannot suppress the optional boundary.
     let mut g = game(&["Thirst for Identity", "Island"]);
     let card = g.put(0, 0, Zone::Hand);
     g.players[0].pool.colors[ir::Color::Blue as usize] = 3;
     g.act(0, paid("UUU", Move::Cast { card, targets: vec![] })).unwrap();
     pass(&mut g);
+    cite!(["402.3"]; assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: false } }))));
+    answer(&mut g, 0, Answer::No);
     cite!(["118.3", "118.12a"]; assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::Objects { count: 2, .. } })), "{:?}", g.decision));
 }
 

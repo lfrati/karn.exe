@@ -46,7 +46,7 @@ fn r608_2h_named_controller_owns_optional_search_after_destruction_with_clone_an
  let (mut g,source,target)=setup();g.players[0].pool.colors[4]=1;g.players[0].pool.colorless=1;
  let dual=g.put(2,2,Zone::Library);let wastes=g.put(2,3,Zone::Library);let other=g.put(2,5,Zone::Library);
  g.act(0,channel(source,target,"CG")).unwrap();resolve(&mut g);
- assert_eq!(g.players[2].graveyard.len(),1);cite!(["608.2h"]; assert!(matches!(g.decision,Some(Decision::Choose{player:2,choice:Choice::May}))));
+ assert_eq!(g.players[2].graveyard.len(),1);cite!(["608.2h"]; assert!(matches!(g.decision,Some(Decision::Choose{player:2,choice:Choice::May { possible: true }}))));
  crate::support::refused(g.act(0,Move::Choose(Answer::Yes)), "that decision is another player's");crate::support::refused(g.act(2,Move::Pass), "a decision is pending: a choice of the effect being applied (608.2d)");
  let mut no=g.clone();no.act(2,Move::Choose(Answer::No)).unwrap();assert_eq!(no.players[2].library.len(),3);
  g.act(2,Move::Choose(Answer::Yes)).unwrap();

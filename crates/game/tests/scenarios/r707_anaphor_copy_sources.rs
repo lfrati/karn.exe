@@ -35,7 +35,7 @@ fn play_to(g: &mut Game, until: Part, target: Option<ObjId>, may: bool) {
                 let t = target.map(|t| vec![Target::Object(t)]).unwrap_or_default();
                 g.act(player, Move::ChooseTargets(vec![t])).unwrap();
             }
-            Some(Decision::Choose { player, choice: Choice::May }) =>
+            Some(Decision::Choose { player, choice: Choice::May { possible: true } }) =>
                 g.act(player, Move::Choose(if may { Answer::Yes } else { Answer::No })).unwrap(),
             Some(d) => panic!("{d:?}"),
             None if g.part == until && g.stack.is_empty() => return,
@@ -130,7 +130,7 @@ fn supplant_form_copies_the_creature_as_it_last_existed() {
     g.act(0, paid("CCCU", Move::Cast { card: clone, targets: vec![] })).unwrap();
     for _ in 0..20 {
         match g.decision.clone() {
-            Some(Decision::Choose { player, choice: Choice::May }) => g.act(player, Move::Choose(Answer::Yes)).unwrap(),
+            Some(Decision::Choose { player, choice: Choice::May { possible: true } }) => g.act(player, Move::Choose(Answer::Yes)).unwrap(),
             Some(Decision::Choose { player, .. }) => g.act(player, Move::Choose(Answer::Objects(vec![bear]))).unwrap(),
             Some(d) => panic!("{d:?}"),
             None if g.stack.is_empty() => break,

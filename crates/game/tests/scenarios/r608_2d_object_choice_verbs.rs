@@ -117,7 +117,7 @@ fn r608_2d_malevolent_rumble_asks_for_a_card_to_put_into_the_hand() {
     let mut asked_may = false;
     for _ in 0..10 {
         match g.decision.clone() {
-            Some(Decision::Choose { player, choice: Choice::May }) => {
+            Some(Decision::Choose { player, choice: Choice::May { possible: true } }) => {
                 // what is optional: putting a card into the hand
                 assert_eq!(g.optional(), Some((Verb::Move, Some(Placement::Zone(Zone::Hand)))));
                 asked_may = true;

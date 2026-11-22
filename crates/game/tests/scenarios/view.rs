@@ -113,7 +113,7 @@ fn r701_20a_a_revealed_card_is_shown_to_all_players_while_the_effect_needs_it() 
     g.act(1, Move::Pass).unwrap();
     // "Reveal the top five cards of your library. You may put …": the effect waits for the
     // choice with the five revealed; the sixth card from the top is not
-    assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May }));
+    assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } }));
     for viewer in [0, 1] {
         cite!(["701.20a"]; case: viewer; assert!(library[1..].iter().all(|c| g.sees(viewer, *c))));
         cite!(["401.2"]; case: viewer; assert!(!g.sees(viewer, library[0])));

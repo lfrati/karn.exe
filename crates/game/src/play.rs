@@ -1100,8 +1100,9 @@ impl Game {
                 (Choice::Attach { .. }, _) => return Err("choose a legal attachment (303.4f)".into()),
                 (Choice::CommandZone { .. }, Answer::Yes | Answer::No) => {}
                 (Choice::CommandZone { .. }, _) => return Err("return the commander to the command zone: yes or no (903.9)".into()),
-                (Choice::May, Answer::Yes | Answer::No) => {}
-                (Choice::May, _) => return Err("the choice is whether to do it: yes or no (608.2d)".into()),
+                (Choice::May { .. }, Answer::No) | (Choice::May { possible: true }, Answer::Yes) => {}
+                (Choice::May { possible: false }, Answer::Yes) => return Err("that option is impossible (608.2d)".into()),
+                (Choice::May { .. }, _) => return Err("the choice is whether to do it: yes or no (608.2d)".into()),
                 (Choice::OptionalObjects { .. }, Answer::OptionalObjects(None)) => {},
                 (Choice::OptionalObjects { verb, among, count, .. }, Answer::OptionalObjects(Some(chosen))) => {
                     if chosen.iter().any(|o| !among.contains(o)) {

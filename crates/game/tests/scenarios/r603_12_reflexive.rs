@@ -43,7 +43,7 @@ fn full_glorifier_actual_sacrifice_source_departure_and_no_legal_payment(){
  for prevented in [false,true]{let mut g=setup("You gain 1 life.");let a=(!prevented).then(||g.put(0,1,Zone::Battlefield));let b=(!prevented).then(||g.put(0,1,Zone::Battlefield));
   if prevented{g.put(0,6,Zone::Battlefield);}g.players[0].pool.colors[0]=3;let c=g.put(0,3,Zone::Hand);g.act(0,paid("WWW",Move::Cast{card:c,targets:vec![]})).unwrap();pass(&mut g);pass(&mut g);
   if prevented{assert!(g.decision.is_none());assert!(g.stack.is_empty());continue;}
-  assert!(matches!(g.decision,Some(Decision::Choose{choice:Choice::May{..},..})));yes(&mut g);
+  assert!(matches!(g.decision,Some(Decision::Choose{choice:Choice::May { .. },..})));yes(&mut g);
   g.act(0,Move::Choose(Answer::Objects(vec![a.unwrap()]))).unwrap();assert!(matches!(g.decision,Some(Decision::Targets{..})));
   let source=*g.battlefield.last().unwrap();g.move_object(source,Zone::Graveyard);let mut clone=g.clone();
   for g in [&mut g,&mut clone]{targets(g,vec![vec![Target::Object(b.unwrap())]]);assert_eq!(g.obj(b.unwrap()).counters.get("+1/+1"),None);pass(g);cite!(["603.12", "113.7a"]; assert_eq!(g.obj(b.unwrap()).counters.get("+1/+1"),Some(&1)));}

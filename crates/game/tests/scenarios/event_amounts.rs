@@ -105,7 +105,7 @@ fn r608_2d_a_paused_and_cloned_optional_trigger_keeps_its_event_amount() {
     cast(&mut g, 2, Some(memory));
     pass(&mut g);
     pass(&mut g);
-    cite!(["603.5"]; assert!(matches!(g.decision, Some(Decision::Choose { choice: Choice::May, .. }))));
+    cite!(["603.5"]; assert!(matches!(g.decision, Some(Decision::Choose { choice: Choice::May { possible: true }, .. }))));
     let mut declined = g.clone();
     g.act(0, Move::Choose(Answer::Yes)).unwrap();
     declined.act(0, Move::Choose(Answer::No)).unwrap();

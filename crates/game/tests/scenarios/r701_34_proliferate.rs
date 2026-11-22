@@ -276,7 +276,7 @@ fn full_anatomist_if_you_do_and_saga_chapter() {
         g.put_counters(saga, "lore", 1);
         resolve(&mut g);
         cast(&mut g, 0, vec![], "WWWU");
-        assert!(matches!(g.decision, Some(Decision::Choose { choice: Choice::May, .. })));
+        assert!(matches!(g.decision, Some(Decision::Choose { choice: Choice::May { possible: true }, .. })));
         g.act(0, Move::Choose(if accept { Answer::Yes } else { Answer::No })).unwrap();
         resolve(&mut g);
         if accept {

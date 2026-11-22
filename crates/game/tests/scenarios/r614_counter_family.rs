@@ -57,7 +57,7 @@ fn r614_1a_a_subtype_union_replaces_only_counters_on_its_controller_matching_cre
 fn r614_1a_a_creature_or_vehicle_replacement_includes_a_noncreature_vehicle() {
     let mut g = game();
     cast(&mut g, 1, vec![], "GGGW");
-    assert!(matches!(g.decision, Some(Decision::Choose { choice: Choice::May, .. })));
+    assert!(matches!(g.decision, Some(Decision::Choose { choice: Choice::May { possible: true }, .. })));
     g.act(0, Move::Choose(Answer::No)).unwrap();
     for (def, expected) in [(6,2),(10,2),(11,1)] {
         let on = g.put(0, def, Zone::Battlefield);

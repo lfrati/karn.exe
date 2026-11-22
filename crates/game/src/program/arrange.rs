@@ -76,7 +76,7 @@ impl Pending {
             Stage::Deciding => {}
         }
         if let Some(part) = self.parts.iter().find(|p| p.consent.is_none()) {
-            return Ok(Some(Decision::Choose { player: part.player, choice: Choice::May }));
+            return Ok(Some(Decision::Choose { player: part.player, choice: Choice::May { possible: true } }));
         }
         for part in &mut self.parts {
             if part.consent == Some(false) { continue; }

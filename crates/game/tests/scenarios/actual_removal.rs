@@ -261,7 +261,7 @@ fn optional_removal_cannot_pay_with_fewer_counters_than_requested() {
         let relic=g.put(0,1,Zone::Battlefield);g.put_counters(relic,"charge",have);
         let card=g.put(0,0,Zone::Hand);g.act(0,Move::Cast{card,targets:vec![vec![relic.into()]]}).unwrap();
         for _ in 0..2 {g.act(g.priority,Move::Pass).unwrap();}
-        if have==2 {assert!(matches!(g.decision,Some(Decision::Choose{choice:Choice::May,..})));g.act(0,Move::Choose(Answer::Yes)).unwrap();}
+        if have==2 {assert!(matches!(g.decision,Some(Decision::Choose{choice:Choice::May { possible: true },..})));g.act(0,Move::Choose(Answer::Yes)).unwrap();}
         else {cite!(["118.12", "118.3"]; case: format!("{have}"); assert!(g.decision.is_none(),"no impossible removal choice"));}
         finish(&mut g);cite!(["118.12"]; case: format!("{have}"); assert_eq!(g.players[0].life,if have==2{23}else{20}));
         assert_eq!(g.counters(relic).get("charge").copied().unwrap_or(0),if have==2{0}else{have});

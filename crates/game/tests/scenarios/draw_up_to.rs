@@ -114,7 +114,7 @@ fn target_player_and_zero_bound_use_the_same_numeric_policy() {
 fn ordinary_optional_draw_keeps_yes_no_and_numeric_does_not_admit_prohibitions() {
     for yes in [true,false] {
         let mut g=setup("Each player may draw a card.",2);for p in 0..2 {library(&mut g,p,2);}start(&mut g);
-        for p in 0..2 {cite!(["101.4"]; case: p; assert_eq!(g.decision,Some(Decision::Choose{player:p,choice:Choice::May})));
+        for p in 0..2 {cite!(["101.4"]; case: p; assert_eq!(g.decision,Some(Decision::Choose{player:p,choice:Choice::May { possible: true }})));
             g.act(p,Move::Choose(if yes {Answer::Yes}else{Answer::No})).unwrap();}
         assert_eq!(draws(&g),if yes{vec![0,1]}else{vec![]});
     }

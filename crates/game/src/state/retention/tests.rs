@@ -165,7 +165,7 @@ fn r608_2_suspended_procedures_keep_all_payloads_until_they_resume() {
     let spell = game.put(0, 0, Zone::Hand);
     game.act(0, Move::Cast { card: spell, targets: vec![vec![Target::Object(creature)]] }).unwrap();
     resolve(&mut game);
-    assert!(matches!(game.decision, Some(Decision::Choose { choice: Choice::May, .. })));
+    assert!(matches!(game.decision, Some(Decision::Choose { choice: Choice::May { possible: true }, .. })));
     assert!(!game.procedures.is_empty());
     let count = game.object_count();
     assert_eq!(collect(&mut game), 0);

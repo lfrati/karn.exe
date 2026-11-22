@@ -26,7 +26,7 @@ fn settle(g: &mut Game, attackers: &[ObjId], payment: Option<&str>) {
     let mut payment = payment;
     for _ in 0..60 {
         match g.decision.clone() {
-            Some(Decision::Choose { player, choice: Choice::May }) => g.act(player, Move::Choose(Answer::Yes)).unwrap(),
+            Some(Decision::Choose { player, choice: Choice::May { possible: true } }) => g.act(player, Move::Choose(Answer::Yes)).unwrap(),
             Some(Decision::Choose { player, choice: Choice::Pay { .. } }) => g.act(player, Move::Choose(Answer::Pay { plan: vec![], with: Some(mana_pool(payment.take().expect("caller-authored optional payment"))), tapped: vec![] })).unwrap(),
             Some(Decision::Attackers { player }) => g.act(player, Move::Attack(attackers.iter().map(|a| (*a, Target::Player(1))).collect())).unwrap(),
             Some(Decision::Blockers { player }) => g.act(player, Move::Block(vec![])).unwrap(),

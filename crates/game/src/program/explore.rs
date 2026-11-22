@@ -85,7 +85,7 @@ impl Pending {
                 Step::Ask => {
                     let (card,_)=current.revealed.unwrap();
                     if game.obj(card).zone!=Zone::Library || game.players[player].lost {current.step=Step::Done;continue;}
-                    return Ok(Some(Decision::Choose{player,choice:Choice::May}));
+                    return Ok(Some(Decision::Choose{player,choice:Choice::May { possible: true }}));
                 }
                 Step::Asked(into_graveyard) => {
                     current.step=if into_graveyard {Step::Move} else {Step::Done};

@@ -351,7 +351,7 @@ fn r608_flamekin_private_selection_filter_and_short_library() {
         resolve(&mut g);
         cite!(["701.20e"]; assert!(g.sees(0,island)&&!g.sees(1,island)&&!g.sees(0,tail)));
         // Optional reveal is a may decision, followed by a constrained object choice.
-        if matches!(g.decision, Some(Decision::Choose { choice: Choice::May, .. })) {
+        if matches!(g.decision, Some(Decision::Choose { choice: Choice::May { possible: true }, .. })) {
             g.act(0, Move::Choose(if decline { Answer::No } else { Answer::Yes })).unwrap();
         }
         if !decline {
@@ -440,7 +440,7 @@ fn r609_flamekin_empty_and_single_elemental_red_payment() {
         cast(&mut g, 0, vec![], "CRR");
         resolve(&mut g);
         resolve(&mut g);
-        if let Some(Decision::Choose { player: 0, choice: Choice::May }) = g.decision {
+        if let Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } }) = g.decision {
             g.act(0, Move::Choose(Answer::Yes)).unwrap();
         }
         if let Some(Decision::Choose { player: 0, choice: Choice::Objects { among, .. } }) = g.decision.clone() {

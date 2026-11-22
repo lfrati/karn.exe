@@ -61,7 +61,7 @@ fn r701_44a_a_nonland_gives_a_counter_and_may_be_milled() {
         let card = g.put(0, SPELL, Zone::Library);
         cast(&mut g, PROBE, vec![vec![Target::Object(bear)]]);
         pass(&mut g);
-        assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May })), "{:?}", g.decision);
+        assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } })), "{:?}", g.decision);
         cite!(["701.44a"]; refused("that decision is another player's"): g.act(1, Move::Choose(Answer::Yes)));
         g.act(0, Move::Choose(if mill { Answer::Yes } else { Answer::No })).unwrap();
         cite!(["701.44a"]; case: format!("mill={mill}"); assert_eq!(plus(&g, bear), 1));
@@ -101,7 +101,7 @@ fn r701_44c_a_permanent_gone_still_explores_and_its_own_trigger_sees_it() {
     assert!(!g.battlefield.contains(&scout));
     pass(&mut g);
     // it explored as it last existed: the card was revealed, no counter could be put
-    cite!(["701.44c"]; assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May })), "{:?}", g.decision));
+    cite!(["701.44c"]; assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } })), "{:?}", g.decision));
     g.act(0, Move::Choose(Answer::No)).unwrap();
     assert_eq!(explored(&g), 1);
     cite!(["701.44c"]; assert!(g.log.iter().any(|e| matches!(e, Event::Explored { object, player: 0 } if *object == scout))));

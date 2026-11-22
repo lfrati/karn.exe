@@ -25,7 +25,7 @@ fn r712_11_12_full_sink_offers_spell_and_land_faces_with_distinct_legality() {
 fn r614_12_soporific_optional_life_entry_suspends_clones_and_consumes_land_play_once() {
     for pay in [false,true] {
         let mut g=setup();let card=g.put(0,0,Zone::Hand);land(&mut g,card);
-        cite!(["614.1c"]; assert!(matches!(g.decision,Some(Decision::Choose{player:0,choice:Choice::May}))));
+        cite!(["614.1c"]; assert!(matches!(g.decision,Some(Decision::Choose{player:0,choice:Choice::May { possible: true }}))));
         assert!(g.players[0].hand.contains(&card));assert_eq!(g.def(card).unwrap().name(),"Sink into Stupor");
         crate::support::refused(g.act(1,Move::Choose(Answer::No)), "that decision is another player's");crate::support::refused(g.act(0,Move::Choose(Answer::Objects(vec![]))), "the choice is whether to do it: yes or no (608.2d)");
         assert!(g.players[0].hand.contains(&card));assert!(!g.players[0].land_played);

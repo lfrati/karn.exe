@@ -218,7 +218,7 @@ fn r603_12_bullseye_sacrifices_an_artifact_or_discards_a_nonland_card() {
     let mut g = game();
     let card = g.put(0, BULLSEYE, Zone::Hand);
     g.put(0, RELIC, Zone::Battlefield);
-    g.put(0, BEAR, Zone::Hand);
+    let bear = g.put(0, BEAR, Zone::Hand);
     g.put(0, WASTES, Zone::Hand);
     g.players[0].pool.colorless = 10; g.players[0].pool.colors = [2; 5];
     g.act(0, paid("CCB",Move::Cast { card, targets: vec![] })).unwrap();
@@ -227,6 +227,7 @@ fn r603_12_bullseye_sacrifices_an_artifact_or_discards_a_nonland_card() {
     let Some(Decision::Choose { player: 0, choice: Choice::Alternative { among, optional: true } }) = &g.decision else { panic!("{:?}", g.decision) };
     cite!(["608.2d"]; assert_eq!(among.len(), 2));
     g.act(0, Move::Choose(Answer::Alternative(1))).unwrap();
+    g.act(0, Move::Choose(Answer::Objects(vec![bear]))).unwrap();
     cite!(["603.12"]; assert!(matches!(g.decision, Some(Decision::Targets { player: 0, .. }))));
     g.act(0, Move::ChooseTargets(vec![vec![Target::Player(1)]])).unwrap();
     resolve(&mut g);

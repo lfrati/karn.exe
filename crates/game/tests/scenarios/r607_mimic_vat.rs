@@ -25,7 +25,7 @@ fn kill(g: &mut Game, object: ObjId) {
 }
 fn accept(g: &mut Game, player: usize, yes: bool) {
     pass(g);
-    assert!(matches!(g.decision, Some(Decision::Choose { choice: Choice::May, .. })));
+    assert!(matches!(g.decision, Some(Decision::Choose { choice: Choice::May { possible: true }, .. })));
     g.act(player, Move::Choose(if yes { Answer::Yes } else { Answer::No })).unwrap();
 }
 fn imprint(g: &mut Game, owner: usize) -> ObjId {

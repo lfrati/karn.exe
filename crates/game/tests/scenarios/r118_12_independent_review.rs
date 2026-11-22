@@ -51,7 +51,7 @@ fn r118_3_hecatomb_requires_four_creatures_not_a_partial_sacrifice() {
             pass(&mut g);
             pass(&mut g);
             if n >= 4 {
-                cite!(["118.12a"]; case: format!("{n} creatures, pay {pay}"); assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May }))));
+                cite!(["118.12a"]; case: format!("{n} creatures, pay {pay}"); assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } }))));
                 answer(&mut g, 0, if pay { Answer::Yes } else { Answer::No });
                 if pay && n > 4 {
                     answer(&mut g, 0, Answer::Objects(creatures[..4].to_vec()));
@@ -80,7 +80,7 @@ fn r118_12a_reality_smasher_asks_the_spell_controller_not_its_own() {
         g.players[1].pool.colors[ir::Color::Red as usize] = 1;
         g.act(1, paid("R", Move::Cast { card: bolt, targets: vec![vec![Target::Object(smasher)]] })).unwrap();
         pass(&mut g);
-        cite!(["118.12a"]; case: format!("pay {pay}"); assert!(matches!(g.decision, Some(Decision::Choose { player: 1, choice: Choice::May })), "{:?}", g.decision));
+        cite!(["118.12a"]; case: format!("pay {pay}"); assert!(matches!(g.decision, Some(Decision::Choose { player: 1, choice: Choice::May { possible: true } })), "{:?}", g.decision));
         cite!(["118.12a"]; refused("that decision is another player's"): g.act(0, Move::Choose(Answer::Yes)));
         answer(&mut g, 1, if pay { Answer::Yes } else { Answer::No });
         if pay {
@@ -187,7 +187,7 @@ fn r118_12a_return_payment_sends_a_borrowed_island_to_its_owner() {
     pass(&mut g);
     assert_eq!(g.controller(island), 0);
     for _ in 0..300 {
-        if matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May })) {
+        if matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } })) {
             break;
         }
         match g.decision.clone() {

@@ -17,7 +17,7 @@ fn activate(g:&mut Game,land:ObjId,ability:usize){g.act(0,Move::Activate{source:
 #[test]
 fn r607_2a_labyrinth_selects_matching_hand_card_then_mana_and_return_read_the_same_link(){
  let mut g=Game::new(defs(),3,20);let a=g.put(0,1,Zone::Hand);let b=g.put(0,1,Zone::Hand);g.put(0,2,Zone::Hand);g.put(0,3,Zone::Hand);
- let land=enter(&mut g);assert!(matches!(g.decision,Some(Decision::Choose{player:0,choice:Choice::May})));
+ let land=enter(&mut g);assert!(matches!(g.decision,Some(Decision::Choose{player:0,choice:Choice::May { possible: true }})));
  crate::support::refused(g.act(1,Move::Choose(Answer::Yes)), "that decision is another player's");cite!(["608.2d"]; refused("a decision is pending: a choice of the effect being applied (608.2d)"): g.act(0,Move::Pass));
  g.act(0,Move::Choose(Answer::Yes)).unwrap();
  assert!(matches!(&g.decision,Some(Decision::Choose{choice:Choice::Objects{verb:ir::Verb::Exile,among,count:1,..},..})if *among==vec![a,b]),"{:?}",g.decision);
@@ -32,23 +32,27 @@ fn r607_2a_labyrinth_selects_matching_hand_card_then_mana_and_return_read_the_sa
 }
 #[test]
 fn r607_2a_another_labyrinth_and_a_new_incarnation_cannot_read_the_old_exile(){
- let mut g=Game::new(defs(),2,20);g.put(0,1,Zone::Hand);let land=enter(&mut g);g.act(0,Move::Choose(Answer::Yes)).unwrap();
+ let mut g=Game::new(defs(),2,20);let card=g.put(0,1,Zone::Hand);let land=enter(&mut g);g.act(0,Move::Choose(Answer::Yes)).unwrap();
+ g.act(0,Move::Choose(Answer::Objects(vec![card]))).unwrap();
  let other=g.put(0,0,Zone::Battlefield);activate(&mut g,other,1);cite!(["607.1"]; assert_eq!(g.players[0].pool.colorless,1));
  activate(&mut g,land,1);assert_eq!(g.players[0].pool.colorless,3);
  g.move_object(land,Zone::Graveyard);let old=g.players[0].graveyard[0];g.move_object(old,Zone::Battlefield);let new=*g.battlefield.last().unwrap();
  activate(&mut g,new,2);resolve(&mut g);cite!(["400.7","607.2a"]; assert_eq!(g.exile.len(),1,"same physical card is a new ability-link source"));
 }
 #[test]
-fn r118_12_optional_hand_exile_is_not_offered_when_impossible_and_declining_exiles_nothing(){
+fn r118_12_optional_hand_exile_decline_does_not_disclose_qualification(){
  for valid in [false,true]{let mut g=Game::new(defs(),2,20);g.put(0,if valid{1}else{2},Zone::Hand);let land=enter(&mut g);
- if valid {g.act(0,Move::Choose(Answer::No)).unwrap();}else{cite!(["608.2d"]; assert!(g.decision.is_none()));}
- // Uncited (card text): "you may exile" was declined; with no qualifying card the impossible option can't be chosen (608.2d, above).
+ cite!(["402.3"]; assert!(matches!(g.decision,Some(Decision::Choose{player:0,choice:Choice::May { possible }} ) if possible == valid)));
+ if !valid {cite!(["608.2d"]; refused("that option is impossible (608.2d)"): g.act(0,Move::Choose(Answer::Yes)));}
+ g.act(0,Move::Choose(Answer::No)).unwrap();
+ // Uncited (card text): "you may exile" was declined.
  assert!(g.exile.is_empty());activate(&mut g,land,1);cite!(["607.2a"]; case: format!("valid={valid}"); assert_eq!(g.players[0].pool.colorless,1));
  }
 }
 #[test]
 fn r608_2h_leaving_before_the_trigger_resolves_still_exiles_for_that_old_source(){
- let mut g=Game::new(defs(),2,20);g.put(0,1,Zone::Hand);let card=g.put(0,0,Zone::Hand);g.act(0,Move::PlayLand(card)).unwrap();let land=g.battlefield[0];
- assert_eq!(g.stack.len(),1);g.move_object(land,Zone::Graveyard);resolve(&mut g);g.act(0,Move::Choose(Answer::Yes)).unwrap();cite!(["113.7a"]; assert_eq!(g.exile.len(),1));
+ let mut g=Game::new(defs(),2,20);let large=g.put(0,1,Zone::Hand);let card=g.put(0,0,Zone::Hand);g.act(0,Move::PlayLand(card)).unwrap();let land=g.battlefield[0];
+ assert_eq!(g.stack.len(),1);g.move_object(land,Zone::Graveyard);resolve(&mut g);g.act(0,Move::Choose(Answer::Yes)).unwrap();
+ g.act(0,Move::Choose(Answer::Objects(vec![large]))).unwrap();cite!(["113.7a"]; assert_eq!(g.exile.len(),1));
  assert!(!g.is(Target::Object(land),ir::Sort::Permanent));
 }

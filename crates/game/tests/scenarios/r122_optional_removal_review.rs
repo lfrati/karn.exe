@@ -25,7 +25,7 @@ fn island() -> CardDef { CardDef::new("Island", "", "Basic Land — Island", "",
 /// An authored response to the optional counter-removal question. Impossible
 /// removal is skipped by the procedure (608.2d), never retried with another answer.
 fn say(g: &mut Game, yes: bool) {
-    let Some(Decision::Choose { player: 0, choice: game::state::Choice::May }) = g.decision else {
+    let Some(Decision::Choose { player: 0, choice: game::state::Choice::May { possible: true } }) = g.decision else {
         panic!("expected player 0's optional removal: {:?}", g.decision);
     };
     g.act(0, Move::Choose(if yes { Answer::Yes } else { Answer::No })).unwrap();

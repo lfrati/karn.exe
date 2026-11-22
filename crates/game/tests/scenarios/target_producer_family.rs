@@ -210,7 +210,7 @@ fn r603_native_daretti_targets_before_optional_sacrifice() {
         cite!(["603.3d"]; assert!(matches!(g.decision,Some(Decision::Targets {player:0,..}))));
         assert!(g.battlefield.contains(&payment));
         g.act(0,Move::ChooseTargets(one(target))).unwrap(); pass(&mut g);
-        cite!(["608.2d"]; assert!(matches!(g.decision,Some(Decision::Choose {player:0,choice:Choice::May {..}}))));
+        cite!(["608.2d"]; assert!(matches!(g.decision,Some(Decision::Choose {player:0,choice:Choice::May { .. }}))));
         g.act(0,Move::Choose(if pay {Answer::Yes} else {Answer::No})).unwrap();
         if pay {
             g.act(0,Move::Choose(Answer::Objects(vec![payment]))).unwrap();

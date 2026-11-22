@@ -32,7 +32,7 @@ fn asked(mut g: Game, targets: Vec<Vec<Target>>) -> (PlayerId, Option<(Verb, Opt
     let card = g.put(0, PROBE, Zone::Hand);
     g.act(0, Move::Cast { card, targets }).unwrap();
     for _ in 0..2 { g.act(g.priority, Move::Pass).unwrap(); }
-    let Some(Decision::Choose { player, choice: Choice::May }) = g.decision.clone() else { panic!("a \"may\" is asked: {:?}", g.decision) };
+    let Some(Decision::Choose { player, choice: Choice::May { possible: true } }) = g.decision.clone() else { panic!("a \"may\" is asked: {:?}", g.decision) };
     let mut sim = Simulation::new(g);
     let prompt = sim.prompt(player).unwrap();
     (player, prompt.decision.expect("the asked player is shown the question").optional)
@@ -119,7 +119,7 @@ fn r614_12a_a_may_as_a_land_enters_says_yes_pays_the_life() {
     while g.part != Part::PrecombatMain { g.act(g.priority, Move::Pass).unwrap(); }
     let land = g.put(0, 0, Zone::Hand);
     g.act(0, Move::PlayLand(land)).unwrap();
-    assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May })), "{:?}", g.decision);
+    assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } })), "{:?}", g.decision);
     let mut sim = Simulation::new(g);
     let decision = sim.prompt(0).unwrap().decision.unwrap();
     cite!(["614.12a", "119.4"]; assert_eq!(decision.optional, Some((Verb::PayLife, None))));
@@ -135,7 +135,7 @@ fn triggered(defs: Vec<CardDef>, library: usize, mut on: impl FnMut(&mut Game) -
     let cast = on(&mut g);
     g.act(0, cast).unwrap();
     while g.decision.is_none() { g.act(g.priority, Move::Pass).unwrap(); }
-    assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May })), "{:?}", g.decision);
+    assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } })), "{:?}", g.decision);
     let optional = Simulation::new(g.clone()).prompt(0).unwrap().decision.expect("the controller is shown the question").optional;
     (g, optional)
 }

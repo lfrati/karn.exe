@@ -40,7 +40,8 @@ fn r614_12a_entry_reveal_offers_only_qualifying_cards_in_the_controllers_hand() 
 fn r614_12a_declining_or_having_no_qualifying_card_enters_tapped_without_disclosure() {
     for hand in [&["Choked Estuary","Island"][..],&["Choked Estuary","Plains"][..]] {
         let mut t=Board::new(2).hand(0,hand).build();play(&mut t,"Choked Estuary");
-        if t.g.decision.is_some() {assert_eq!(choices(&t).len(),1);t.choose(0,&[]).unwrap();}
+        cite!(["402.3"]; assert_eq!(choices(&t).len(),usize::from(hand[1] == "Island")));
+        t.choose(0,&[]).unwrap();
         cite!(["614.1d"]; assert!(tapped(&t,"Choked Estuary")));assert!(t.g.observations(1).is_empty());
     }
 }

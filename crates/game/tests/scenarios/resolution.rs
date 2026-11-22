@@ -218,7 +218,7 @@ fn cast(g: &mut Game, def: usize, land: usize, lands: usize, targets: Vec<Vec<Ta
 }
 
 fn may(player: usize) -> Option<Decision> {
-    Some(Decision::Choose { player, choice: Choice::May })
+    Some(Decision::Choose { player, choice: Choice::May { possible: true } })
 }
 
 fn which(player: usize, verb: Verb, among: Vec<ObjId>, count: usize) -> Option<Decision> {

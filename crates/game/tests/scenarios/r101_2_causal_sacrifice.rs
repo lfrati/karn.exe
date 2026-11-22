@@ -98,7 +98,7 @@ fn r118_12_impossible_mandatory_payment_takes_the_cannot_branch(){
 #[test]
 fn r118_12_own_optional_sacrifice_still_offers_payment_and_branches_on_actual_payment(){
     let (mut g,_,bear)=game(card("Offer","Instant","You may sacrifice a creature. If you do, you gain 3 life.",None),2);
-    cast(&mut g,0,vec![]);pass(&mut g);assert_eq!(g.decision,Some(Decision::Choose{player:0,choice:Choice::May}));
+    cast(&mut g,0,vec![]);pass(&mut g);assert_eq!(g.decision,Some(Decision::Choose{player:0,choice:Choice::May { possible: true }}));
     let mut declined=g.clone();declined.act(0,Move::Choose(Answer::No)).unwrap();cite!(["118.12"]; assert_eq!(declined.players[0].life,20));
     g.act(0,Move::Choose(Answer::Yes)).unwrap();g.act(0,Move::Choose(Answer::Objects(vec![bear]))).unwrap();
     cite!(["118.12"]; assert_eq!(g.players[0].life,23));assert_eq!(sacrificed(&g,0),vec![bear]);

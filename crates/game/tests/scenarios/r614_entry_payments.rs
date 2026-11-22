@@ -35,7 +35,7 @@ fn cast(g: &mut Game, def: usize, targets: Vec<Vec<Target>>, spending: &str) {
 }
 
 fn offered(g: &Game, player: usize) {
-    assert_eq!(g.decision, Some(Decision::Choose { player, choice: Choice::May }));
+    assert_eq!(g.decision, Some(Decision::Choose { player, choice: Choice::May { possible: true } }));
 }
 
 fn answer(g: &mut Game, player: usize, yes: bool) {

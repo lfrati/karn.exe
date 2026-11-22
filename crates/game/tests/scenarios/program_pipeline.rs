@@ -131,7 +131,7 @@ fn r113_7a_trigger_frame_survives_its_source_and_retains_its_controller() {
     assert_eq!((g.obj(source).owner, g.controller(source)), (1, 0));
     g.move_object(source, Zone::Graveyard);
     for player in 0..3 { g.act(player,Move::Pass).unwrap(); }
-    cite!(["113.7a"]; assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May })));
+    cite!(["113.7a"]; assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } })));
     assert!(g.resolving().unwrap().program_frame().is_some());
     g.act(0,Move::Choose(Answer::Yes)).unwrap();
     let cards=among(&g);

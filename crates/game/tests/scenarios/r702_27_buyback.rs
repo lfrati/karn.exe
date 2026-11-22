@@ -117,7 +117,7 @@ fn r702_88a_capsize_removing_rebound_grant_during_body_has_only_buyback() {
 fn r707_10_copy_retains_buyback_paid_without_creating_another_real_card() {
     for paid in [false,true] {let mut g=setup();let card=g.put(0,WHISPERS,Zone::Hand);blue(&mut g,8);cast(&mut g,card,paid,if paid { "UUUUUU" } else { "U" },vec![]);
         let twin=g.put(0,TWINCAST,Zone::Hand);g.act(0,crate::support::paid("UU",Move::Cast{card:twin,targets:vec![vec![Target::Object(g.stack[0])]]})).unwrap();pass(&mut g);
-        if matches!(g.decision,Some(Decision::Choose{choice:Choice::May{..},..})) {g.act(0,Move::Choose(Answer::No)).unwrap();}
+        if matches!(g.decision,Some(Decision::Choose{choice:Choice::May { .. },..})) {g.act(0,Move::Choose(Answer::No)).unwrap();}
         assert_eq!(g.stack.len(),2);let copy=g.stack[1];cite!(["707.10"]; assert_eq!(g.obj(copy).buyback_paid,paid));let clone=g.clone();
         let audit=g.audit_game_objects();
         assert_eq!(audit["objects"][g.stack[0].0.to_string()]["announced"]["costs"]["buyback"],paid);
@@ -138,7 +138,7 @@ fn r702_27a_full_reiterate_copies_body_and_buys_back_itself() {
     let mut g=setup();let whisper=g.put(0,WHISPERS,Zone::Hand);blue(&mut g,1);cast(&mut g,whisper,false,"U",vec![]);
     let original=g.stack[0];let card=g.put(0,REITERATE,Zone::Hand);g.players[0].pool.colors[3]=6;
     cast(&mut g,card,true,"RRRRRR",vec![vec![Target::Object(original)]]);pass(&mut g);
-    if matches!(g.decision,Some(Decision::Choose{choice:Choice::May{..},..})) {g.act(0,Move::Choose(Answer::No)).unwrap();}
+    if matches!(g.decision,Some(Decision::Choose{choice:Choice::May { .. },..})) {g.act(0,Move::Choose(Answer::No)).unwrap();}
     assert_eq!(g.players[0].hand.len(),1);cite!(["702.27a"]; assert_eq!(g.obj(g.players[0].hand[0]).card,Some(REITERATE)));pass(&mut g);pass(&mut g);
     cite!(["707.10"]; assert_eq!(g.players[0].hand.len(),3));
 }
@@ -148,7 +148,7 @@ fn r702_34a_buyback_flashback_exiles_and_the_copy_does_not_inherit_flashback() {
     for paid in [false,true] {let mut defs=setup().defs.as_ref().clone();defs.push(def.clone());let mut g=Game::new(defs,2,20);for p in 0..2 {for _ in 0..24 {g.put(p,LAND,Zone::Library);}}let card=g.put(0,g.defs.len()-1,Zone::Graveyard);blue(&mut g,4);
         g.act(0,crate::support::paid(if paid { "UU" } else { "U" },Move::CastVia(game::announcement::CastRoute::Flashback,Box::new(Move::WithBuyback(paid,Box::new(Move::Cast{card,targets:vec![]})))))).unwrap();let original=g.stack[0];
         let twin=g.put(0,TWINCAST,Zone::Hand);g.act(0,crate::support::paid("UU",Move::Cast{card:twin,targets:vec![vec![Target::Object(original)]]})).unwrap();pass(&mut g);
-        if matches!(g.decision,Some(Decision::Choose{choice:Choice::May{..},..})) {g.act(0,Move::Choose(Answer::No)).unwrap();}
+        if matches!(g.decision,Some(Decision::Choose{choice:Choice::May { .. },..})) {g.act(0,Move::Choose(Answer::No)).unwrap();}
         pass(&mut g);pass(&mut g);cite!(["702.34a"]; assert_eq!(g.exile.len(),1));assert_eq!(g.players[0].hand.len(),2);
         cite!(["702.34a"]; assert_eq!(g.players[0].hand.iter().filter(|o|g.obj(**o).card==Some(g.defs.len()-1)).count(),0));}
 }

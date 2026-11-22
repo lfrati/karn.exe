@@ -180,7 +180,7 @@ fn r101_4b_an_until_return_exposes_its_attachment_answer_before_the_next_entry_c
     pass(&mut g);
     let entering_aura = g.entering_card().unwrap();
     g.act(0, Move::Choose(Answer::Attach(Target::Object(bear)))).unwrap();
-    cite!(["614.12a"]; assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May })));
+    cite!(["614.12a"]; assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } })));
     cite!(["614.12a"]; assert_eq!(g.obj(entering_aura).zone, Zone::Exile));
     cite!(["101.4b"]; assert_eq!(g.public_choices().cloned().collect::<Vec<_>>(), vec![game::state::PublicChoice::Entry {
         player: 0, card: entering_aura, answer: Answer::Attach(Target::Object(bear)),

@@ -120,7 +120,7 @@ fn r701_24b_found_cards_remain_set_aside_while_the_rest_of_the_library_is_shuffl
     cite!(["701.24b"]; assert_eq!(g.players[0].library[7], cards[7]));
     assert_ne!(g.players[0].library, cards);
     assert_eq!(g.players[0].library, clone.players[0].library);
-    assert!(matches!(g.decision, Some(Decision::Choose { choice: Choice::May, .. })));
+    assert!(matches!(g.decision, Some(Decision::Choose { choice: Choice::May { possible: true }, .. })));
     assert!(g.sees(0, cards[7]));
     assert!(!g.sees(1, cards[7]));
     g.act(0, Move::Choose(Answer::Yes)).unwrap();

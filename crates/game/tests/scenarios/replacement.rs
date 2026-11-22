@@ -154,7 +154,7 @@ fn r614_1d_a_permanent_that_enters_tapped_was_never_untapped_on_the_battlefield(
 #[test]
 fn r614_12a_a_choice_of_how_a_permanent_enters_is_made_before_it_enters() {
     // "As this land enters, you may pay 2 life. If you don't, it enters tapped."
-    let asked = |g: &Game| matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May }));
+    let asked = |g: &Game| matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } }));
     // paid: 2 life, and it enters untapped
     let mut g = game();
     let tomb = g.put(0, TOMB, Zone::Hand);

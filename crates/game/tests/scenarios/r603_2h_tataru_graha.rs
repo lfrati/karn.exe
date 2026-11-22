@@ -39,7 +39,7 @@ fn tataru_entry_controller_draw_precedes_target_opponents_optional_draw(){
     assert!(matches!(g.decision,Some(Decision::Targets{player:0,..})));
     g.act(0,Move::ChooseTargets(vec![vec![Target::Player(1)]])).unwrap();pass(&mut g);
     assert_eq!(g.players[0].hand.len(),1);
-    cite!(["608.2c"]; assert!(matches!(g.decision,Some(Decision::Choose{player:1,choice:Choice::May}))));
+    cite!(["608.2c"]; assert!(matches!(g.decision,Some(Decision::Choose{player:1,choice:Choice::May { possible: true }}))));
     let mut clone=g.clone();
     for game in [&mut g,&mut clone]{game.act(1,Move::Choose(Answer::No)).unwrap();assert_eq!(game.players[0].hand.len(),1);assert!(game.players[1].hand.is_empty());}
 }

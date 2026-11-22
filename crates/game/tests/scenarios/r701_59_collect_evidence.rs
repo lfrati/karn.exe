@@ -43,7 +43,7 @@ fn r701_59b_impossible_optional_collection_is_not_offered_or_paid() {
 fn r701_59a_zero_collection_is_an_occurrence_but_declining_is_not() {
     for consent in [false,true] {
         let mut g=setup("You may collect evidence 0. If you do, you gain 3 life.");g.put(0,4,Zone::Battlefield);start(&mut g);
-        cite!(["701.59a","118.12"];assert!(matches!(g.decision,Some(Decision::Choose{choice:Choice::May,..}))));
+        cite!(["701.59a","118.12"];assert!(matches!(g.decision,Some(Decision::Choose{choice:Choice::May { possible: true },..}))));
         g.act(0,Move::Choose(if consent{Answer::Yes}else{Answer::No})).unwrap();
         cite!(["701.59a","118.12"];assert_eq!(evidence(&g),if consent{vec![0]}else{vec![]}));
         cite!(["118.12"];assert_eq!(g.players[0].life,if consent{23}else{20}));
@@ -174,7 +174,7 @@ fn r118_3_projection_uses_changed_eligibility_after_the_required_prefix() {
     for d in &defs {game::play::check(d).unwrap_or_else(|e|panic!("{}: {}",d.name(),e.0));}
     let mut g=Game::new(defs,2,20);let ban=g.put(0,1,Zone::Battlefield);let four=g.put(0,2,Zone::Graveyard);let spell=g.put(0,0,Zone::Hand);
     g.act(0,Move::Cast{card:spell,targets:vec![vec![game::Target::Object(ban)]]}).unwrap();pass(&mut g);
-    cite!(["118.3","608.2c"];assert!(matches!(g.decision,Some(Decision::Choose{choice:Choice::May,..}))));
+    cite!(["118.3","608.2c"];assert!(matches!(g.decision,Some(Decision::Choose{choice:Choice::May { possible: true },..}))));
     g.act(0,Move::Choose(Answer::Yes)).unwrap();cite!(["118.3"];assert_eq!(g.obj(ban).zone,Zone::Battlefield));
     choose(&mut g,vec![four]);cite!(["118.12"];assert_eq!(g.players[0].life,23));
     cite!(["701.59a"];assert_eq!(evidence(&g),vec![0]));

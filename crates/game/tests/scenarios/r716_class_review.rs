@@ -34,7 +34,7 @@ fn resolve(g: &mut Game, at: Option<ObjId>) {
             None => g.act(g.priority, Move::Pass).unwrap(),
             Some(Decision::Order { player, abilities }) => g.act(player, Move::Order((0..abilities.len()).collect())).unwrap(),
             Some(Decision::Targets { player, .. }) => g.act(player, Move::ChooseTargets(vec![vec![Target::Object(at.expect("a target"))]])).unwrap(),
-            Some(Decision::Choose { player, choice: Choice::May }) => g.act(player, Move::Choose(Answer::Yes)).unwrap(),
+            Some(Decision::Choose { player, choice: Choice::May { possible: true } }) => g.act(player, Move::Choose(Answer::Yes)).unwrap(),
             Some(d) => panic!("{d:?}"),
         }
     }

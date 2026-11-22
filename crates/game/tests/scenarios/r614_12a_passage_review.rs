@@ -66,7 +66,7 @@ fn r614_12a_passages_put_onto_the_battlefield_together_each_choose() {
                 asked.push("type");
                 g.act(0, Move::Choose(Answer::Value(land(pick)))).unwrap();
             }
-            Some(Decision::Choose { player: 0, choice: Choice::May }) => { asked.push("life"); g.act(0, Move::Choose(Answer::Yes)).unwrap(); }
+            Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } }) => { asked.push("life"); g.act(0, Move::Choose(Answer::Yes)).unwrap(); }
             Some(d) => panic!("{d:?}"),
             None => break,
         }

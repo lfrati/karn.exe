@@ -31,7 +31,7 @@ fn payer_chooses_before_controller_may_draw_and_payment_stops_draw() {
 fn declined_payment_then_optional_draw_can_each_be_declined_or_accepted() {
     for draw in [false,true] {
         let mut g=setup(true);g.act(1,Move::Choose(Answer::No)).unwrap();
-        cite!(["118.12a"]; assert!(matches!(g.decision,Some(Decision::Choose{player:0,choice:Choice::May}))));
+        cite!(["118.12a"]; assert!(matches!(g.decision,Some(Decision::Choose{player:0,choice:Choice::May { possible: true }}))));
         crate::support::refused(g.act(1,Move::Choose(Answer::Yes)), "that decision is another player's");
         let mut copy=g.clone();
         for game in [&mut g,&mut copy] {
@@ -47,7 +47,7 @@ fn declined_unaffordable_payment_still_allows_the_optional_draw() {
     cite!(["118.3"]; refused("that mana is not in your mana pool"): g.act(1,Move::Choose(Answer::Pay { plan: vec![], with: Some(mana_pool("G")), tapped: vec![] })));
     assert_eq!(format!("{g:?}"), before);
     g.act(1,Move::Choose(Answer::No)).unwrap();
-    cite!(["118.3","118.12a"]; assert!(matches!(g.decision,Some(Decision::Choose{player:0,choice:Choice::May}))));
+    cite!(["118.3","118.12a"]; assert!(matches!(g.decision,Some(Decision::Choose{player:0,choice:Choice::May { possible: true }}))));
     g.act(0,Move::Choose(Answer::No)).unwrap();assert!(g.players[0].hand.is_empty());
 }
 #[test]

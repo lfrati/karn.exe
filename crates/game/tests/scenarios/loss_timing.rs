@@ -27,7 +27,7 @@ fn r104_3b_a_player_at_zero_or_negative_life_may_recover_before_resolution_finis
             cast(&mut g, vec![]);
             assert_eq!(g.players[0].life, 20 - amount);
             cite!(["104.3b"]; case: format!("{amount} {recover}"); assert!(!g.players[0].lost));
-            assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May }));
+            assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } }));
             g.act(0, Move::Choose(if recover { Answer::Yes } else { Answer::No })).unwrap();
             cite!(["104.3b", "704.5a"]; case: format!("{amount} {recover}"); assert_eq!(g.players[0].lost, !recover));
             assert_eq!(g.players[0].life, if recover { 20 } else { 20 - amount });
@@ -47,7 +47,7 @@ fn r104_3c_refilling_a_library_does_not_undo_an_earlier_failed_draw() {
     assert_eq!(g.players[0].library.len(), 1, "the later instruction refilled the library");
     assert_eq!(g.obj(g.players[0].library[0]).chars.name, "Bear");
     assert!(!g.players[0].lost, "resolution has not finished");
-    assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May }));
+    assert_eq!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } }));
     g.act(0, Move::Choose(Answer::No)).unwrap();
     cite!(["104.3c", "704.5b"]; assert!(g.players[0].lost));
     assert_eq!(g.priority, 1);

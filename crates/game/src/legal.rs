@@ -384,7 +384,7 @@ impl Game {
             Some(Decision::Choose { player, choice: Choice::ChangeTargets { object, original, slots, policy } }) => (player, Asked::ChangeTargets { object, original, slots, policy }),
             Some(Decision::Choose { player, choice: Choice::Retarget { copy, original, slots } }) => (player, Asked::Retarget { copy, original, slots }),
             Some(Decision::Choose { player, choice: Choice::CommandZone { object } }) => (player, Asked::CommandZone { object }),
-            Some(Decision::Choose { player, choice: Choice::May }) => (player, Asked::May),
+            Some(Decision::Choose { player, choice: Choice::May { .. } }) => (player, Asked::May),
             Some(Decision::Choose { player, choice: Choice::OptionalObjects { verb, to, among, count } }) => (player, Asked::OptionalObjects { verb, to, among, count }),
             Some(Decision::Choose { player, choice: Choice::Cast { cards } }) => {
                 (player, Asked::Cast { cards })

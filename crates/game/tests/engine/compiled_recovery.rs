@@ -140,7 +140,7 @@ fn r608_2e_optional_player_actions_collect_consent_before_performing_the_action(
         g.act(0,Move::Cast{card:c,targets:vec![]}).unwrap();
         for p in 0..3 {g.act(p,Move::Pass).unwrap();}
         for p in 0..3 {
-            cite!(["101.4"]; assert_eq!(g.decision,Some(Decision::Choose{player:p,choice:Choice::May})));
+            cite!(["101.4"]; assert_eq!(g.decision,Some(Decision::Choose{player:p,choice:Choice::May { possible: true }})));
             cite!(["101.4"]; assert!(g.players.iter().all(|p|p.hand.is_empty())));
             assert!(!g.log.iter().any(|e|matches!(e,game::Event::Arranged{..})));
             if p==1 {crate::support::refused(g.act(0,Move::Choose(Answer::Yes)), "that decision is another player's");}
@@ -203,7 +203,7 @@ fn r118_12_an_opponent_owns_the_optional_payment_and_its_object_choice() {
     let bears:Vec<_>=(0..2).map(|_|g.put(1,1,Zone::Battlefield)).collect();
     g.put(0,1,Zone::Library); let card=g.put(0,0,Zone::Hand);
     g.act(0,Move::Cast{card,targets:vec![vec![Target::Player(1)]]}).unwrap(); pass(&mut g);
-    assert_eq!(g.decision,Some(Decision::Choose{player:1,choice:Choice::May}));
+    assert_eq!(g.decision,Some(Decision::Choose{player:1,choice:Choice::May { possible: true }}));
     crate::support::refused(g.act(0,Move::Choose(Answer::Yes)), "that decision is another player's");
     let mut declined=g.clone(); declined.act(1,Move::Choose(Answer::No)).unwrap();
     cite!(["118.12"]; assert_eq!(declined.players[0].hand.len(),1)); assert_eq!(declined.battlefield,bears);

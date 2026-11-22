@@ -90,7 +90,7 @@ fn r400_3_the_looked_at_card_goes_to_its_owners_graveyard() {
         let mut g = game();
         g.put(1, SPELL, Zone::Library);
         cast(&mut g, EYE_SPY, vec![vec![Target::Player(1)]], "U");
-        assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May })), "{:?}", g.decision);
+        assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } })), "{:?}", g.decision);
         g.act(0, Move::Choose(if yes { Answer::Yes } else { Answer::No })).unwrap();
         settle(&mut g);
         cite!(["400.3"]; case: format!("yes {yes}"); assert_eq!(has(&g, &g.players[1].graveyard, SPELL), yes as usize));
@@ -111,7 +111,7 @@ fn r400_3_jace_puts_the_top_card_on_the_bottom_of_that_players_library() {
     g.put(1, SPELL, Zone::Library);
     g.act(0, Move::Activate { source: j, ability: 0, targets: vec![vec![Target::Player(1)]], paying: vec![] }).unwrap();
     settle(&mut g);
-    assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May })), "{:?}", g.decision);
+    assert!(matches!(g.decision, Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } })), "{:?}", g.decision);
     g.act(0, Move::Choose(Answer::Yes)).unwrap();
     settle(&mut g);
     cite!(["400.3"]; assert_eq!(bottom(&g, 1), SPELL));

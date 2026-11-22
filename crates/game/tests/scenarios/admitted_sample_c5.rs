@@ -375,7 +375,7 @@ fn r701_daggerfang_optional_mill_requires_two_cards() {
         pass(&mut g);
         pass(&mut g);
         if n >= 2 {
-            cite!(["701.17b"]; assert!(matches!(g.decision,Some(Decision::Choose{player:0,choice:Choice::May}))));
+            cite!(["701.17b"]; assert!(matches!(g.decision,Some(Decision::Choose{player:0,choice:Choice::May { possible: true }}))));
             g.act(0, Move::Choose(if accept { Answer::Yes } else { Answer::No })).unwrap();
             if accept { cite!(["404.3"]; ok: g.act(0, Move::Choose(Answer::Objects(milled.clone())))); }
         } else {

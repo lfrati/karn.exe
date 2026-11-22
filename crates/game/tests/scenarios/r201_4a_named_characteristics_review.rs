@@ -42,7 +42,7 @@ fn settle(g: &mut Game) {
         match g.decision.clone() {
             None if g.stack.is_empty() => return,
             None => g.act(g.priority, Move::Pass).unwrap(),
-            Some(Decision::Choose { player, choice: Choice::May }) => g.act(player, Move::Choose(Answer::Yes)).unwrap(),
+            Some(Decision::Choose { player, choice: Choice::May { possible: true } }) => g.act(player, Move::Choose(Answer::Yes)).unwrap(),
             Some(d) => panic!("{d:?}"),
         }
     }

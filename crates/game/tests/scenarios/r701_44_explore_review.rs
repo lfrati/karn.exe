@@ -42,7 +42,7 @@ fn r701_44d_the_next_explorer_is_chosen_in_apnap_from_a_nonzero_active_player() 
     cite!(["701.44d"]; assert_eq!(among, vec![p1a, p1b]));
     g.act(1, Move::Choose(Answer::Objects(vec![p1b]))).unwrap();
     for player in [1, 1, 2, 0] {
-        cite!(["701.44a", "701.44d"]; case: format!("chooser {player}"); assert!(matches!(g.decision, Some(Decision::Choose { player: chooser, choice: Choice::May }) if chooser == player), "{:?}", g.decision));
+        cite!(["701.44a", "701.44d"]; case: format!("chooser {player}"); assert!(matches!(g.decision, Some(Decision::Choose { player: chooser, choice: Choice::May { possible: true } }) if chooser == player), "{:?}", g.decision));
         g.act(player, Move::Choose(Answer::No)).unwrap();
     }
     cite!(["701.44d"]; assert_eq!(explore_events(&g), vec![(p1b, 1), (p1a, 1), (p2, 2), (p0, 0)]));

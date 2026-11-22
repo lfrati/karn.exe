@@ -30,7 +30,7 @@ fn game() -> Game {
 fn resolve(g: &mut Game) {
     for _ in 0..30 {
         match g.decision.clone() {
-            Some(Decision::Choose { player: 0, choice: Choice::May }) => g.act(0, Move::Choose(Answer::No)).unwrap(),
+            Some(Decision::Choose { player: 0, choice: Choice::May { possible: true } }) => g.act(0, Move::Choose(Answer::No)).unwrap(),
             Some(d) => panic!("{d:?}"),
             None if g.stack.is_empty() => return,
             None => g.act(g.priority, Move::Pass).unwrap(),

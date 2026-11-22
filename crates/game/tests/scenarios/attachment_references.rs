@@ -33,7 +33,7 @@ fn r608_2k_attaching_this_aura_does_not_replace_the_creature_named_by_the_trigge
         let new = *g.battlefield.last().unwrap();
         assert_ne!(old, new);
         resolve(&mut g);
-        assert!(matches!(g.decision, Some(Decision::Choose { choice: Choice::May, .. })));
+        assert!(matches!(g.decision, Some(Decision::Choose { choice: Choice::May { possible: true }, .. })));
         g.act(0, Move::Choose(if accept { Answer::Yes } else { Answer::No })).unwrap();
         cite!(["608.2k", "701.3a"]; case: format!("{accept}"); assert_eq!(g.attached_to(aura), Some(Target::Object(if accept { new } else { old }))));
         assert_eq!(g.has(new, "Indestructible"), accept);

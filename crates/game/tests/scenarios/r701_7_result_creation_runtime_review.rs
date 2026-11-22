@@ -26,7 +26,7 @@ fn run(text: &str, kind: &str, targets: &dyn Fn(&[ObjId]) -> Vec<Vec<Target>>, c
     }
     for _ in 0..30 {
         match &g.decision {
-            Some(Decision::Choose { player, choice: Choice::May, .. }) => { let p = *player; g.act(p, Move::Choose(if consent { Answer::Yes } else { Answer::No })).unwrap(); }
+            Some(Decision::Choose { player, choice: Choice::May { possible: true }, .. }) => { let p = *player; g.act(p, Move::Choose(if consent { Answer::Yes } else { Answer::No })).unwrap(); }
             Some(Decision::Choose { player: 1, choice: Choice::OrderCards { to: game::state::Placement::Zone(Zone::Graveyard), cards } }) => {
                 assert!(text.starts_with("Destroy all creatures target player controls."));
                 assert_eq!(cards, &vec![ids[1],ids[2]]);

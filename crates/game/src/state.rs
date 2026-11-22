@@ -447,8 +447,9 @@ pub enum Choice {
     /// planeswalker one controls (508.4). This does not target. `nth` of `of`: which of the
     /// creatures entering attacking together this is for, from 1.
     Defender { among: Vec<Target>, nth: usize, of: usize },
-    /// "You may …": whether to do it.
-    May,
+    /// "You may …": whether to do it. A private, impossible action still asks,
+    /// with only a decline legal, so the question does not disclose hidden qualities.
+    May { possible: bool },
     /// Consent and the conditional object selection for one optional action (608.2d).
     OptionalObjects { verb: Verb, to: Option<Placement>, among: Vec<ObjId>, count: usize },
     /// "You may cast it without paying its mana cost" (608.2g): cast one of these cards now,

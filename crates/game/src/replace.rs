@@ -785,10 +785,10 @@ pub(crate) struct Entering {
 pub(crate) enum Asks {
     /// Whether to pay this much life, and how it enters if they don't.
     Life { life: u32, otherwise: Vec<Enters> },
-    Reveal { among: Vec<ObjId>, otherwise: Vec<Enters> },
+    Reveal { among: Vec<ObjId>, private: bool, otherwise: Vec<Enters> },
     /// Which of these cards of the hand and permanents to behold (701.4a), if any, and how it
     /// enters if none.
-    Behold { among: Vec<ObjId>, otherwise: Vec<Enters> },
+    Behold { among: Vec<ObjId>, private: bool, otherwise: Vec<Enters> },
     Copy { effect: crate::copy::Entry, among: Vec<ObjId> },
     /// A typed choice for this producer (105.1, 205.3m, 607.2d); `then`: what the same
     /// replacement asks next, once this is answered.
@@ -801,8 +801,9 @@ impl Asks {
     pub fn choice(&self, game: &Game, player: PlayerId, payments: &EntryPayments) -> Option<Choice> {
         match self {
             Asks::Copy { effect, among } => Some(Choice::Select { among: among.clone(), min: usize::from(!effect.optional && !among.is_empty()), max: usize::from(!among.is_empty()) }),
-            Asks::Life { life, .. } => payments.can_reserve(game, player, *life).then_some(Choice::May),
-            Asks::Reveal { among, .. } | Asks::Behold { among, .. } => (!among.is_empty()).then(|| Choice::Select { among: among.clone(), min: 0, max: 1 }),
+            Asks::Life { life, .. } => payments.can_reserve(game, player, *life).then_some(Choice::May { possible: true }),
+            Asks::Reveal { among, private, .. } | Asks::Behold { among, private, .. } =>
+                (*private || !among.is_empty()).then(|| Choice::Select { among: among.clone(), min: 0, max: 1 }),
             Asks::Value { kind, .. } => Some(kind.choice()),
         }
     }
@@ -830,18 +831,18 @@ impl Asks {
             (Asks::Life { life, otherwise, .. }, None) if !payments.can_reserve(game, player, *life) => {
                 chosen.arrivals.extend(otherwise.clone());
             }
-            (Asks::Reveal { among, otherwise }, Some(Answer::Objects(objects))) if objects.len() <= 1
+            (Asks::Reveal { among, otherwise, .. }, Some(Answer::Objects(objects))) if objects.len() <= 1
                 && objects.iter().all(|o| among.contains(o)) => {
                 if let Some(card) = objects.first() { payments.reveal(player, *card); }
                 else { chosen.arrivals.extend(otherwise.clone()); }
             }
-            (Asks::Reveal { among, otherwise }, None) if among.is_empty() => chosen.arrivals.extend(otherwise.clone()),
-            (Asks::Behold { among, otherwise }, Some(Answer::Objects(objects))) if objects.len() <= 1
+            (Asks::Reveal { among, private: false, otherwise }, None) if among.is_empty() => chosen.arrivals.extend(otherwise.clone()),
+            (Asks::Behold { among, otherwise, .. }, Some(Answer::Objects(objects))) if objects.len() <= 1
                 && objects.iter().all(|o| among.contains(o)) => {
                 if let Some(beheld) = objects.first() { payments.behold(player, *beheld); }
                 else { chosen.arrivals.extend(otherwise.clone()); }
             }
-            (Asks::Behold { among, otherwise }, None) if among.is_empty() => chosen.arrivals.extend(otherwise.clone()),
+            (Asks::Behold { among, private: false, otherwise }, None) if among.is_empty() => chosen.arrivals.extend(otherwise.clone()),
             (Asks::Value { kind, link, then }, Some(Answer::Value(value))) if crate::binding::accepts(*kind, &value) => {
                 chosen.values.push(Record { link: link.clone(), chooser: player, value });
                 chosen.then = then.as_deref().cloned();
@@ -1072,6 +1073,7 @@ impl Game {
                 Asked::ValueThenLife { kind, life, otherwise } => Asks::Value { kind: *kind, link: LinkId(key.clone()),
                     then: Some(Box::new(Asks::Life { life: life.evaluate(self, &ctx.clone().with_key(key), &NoLocals), otherwise: otherwise.clone() })) },
                 Asked::Reveal { card: filter, otherwise } => Asks::Reveal {
+                    private: self.concealed_pool(player, self.players[player].hand.iter().copied().filter(|o| *o != card)),
                     among: self.players[player].hand.iter().copied().filter(|on| *on != card
                         && filter.contains(self, &ctx.clone().with_key(key.clone()), &NoLocals, Target::Object(*on))
                         && self.takes(ir::Verb::Reveal, ir::Role::What, Target::Object(*on))).collect(),
@@ -1082,6 +1084,7 @@ impl Game {
                 Asked::Behold { cards, permanents, otherwise } => {
                     let ctx = ctx.clone().with_key(key.clone());
                     Asks::Behold {
+                        private: self.concealed_pool(player, self.players[player].hand.iter().copied().filter(|o| *o != card)),
                         among: self.players[player].hand.iter().copied().filter(|on| *on != card && cards.contains(self, &ctx, &NoLocals, *on))
                             .chain(self.battlefield.iter().copied().filter(|on| self.controller(*on) == player && permanents.contains(self, &ctx, &NoLocals, Target::Object(*on))))
                             .filter(|on| self.can(ir::Verb::Behold, player, Target::Object(*on))).collect(),
