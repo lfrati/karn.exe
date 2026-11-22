@@ -49,6 +49,11 @@ class CastRouteTests(unittest.TestCase):
         self.assertEqual(self.a._move({'kind': 'cast', 'card': 'c3'})['route'], 'normal')
         self.assertEqual(self.a._cast_from_announced(following['audit']['objects']['4'], 'c3'), {'cost': do['cost']})
 
+    def test_distinct_flashback_cost_choice_is_refused_instead_of_lost(self):
+        following = self.frame({'kind': 'flashback', 'cost_index': 1})
+        self.refuses_atomically({'kind': 'cast', 'card': 3, 'route': 'flashback'}, following,
+                                'distinct native flashback cost choices have no MGN representation')
+
     def test_convoke_pairs_each_actual_creature_with_its_colored_or_generic_payment(self):
         # CR 702.51a/b: same-color creatures may be assigned to different requirements.
         following = self.frame({'kind': 'normal'}, [{'object': 1, 'color': 'B'}, {'object': 2, 'color': None}])

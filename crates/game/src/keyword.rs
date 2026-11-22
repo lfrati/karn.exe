@@ -157,6 +157,21 @@ pub struct Held {
 }
 
 impl Held {
+    /// A paired cost definition gives this instance the recipient spell's own mana cost.
+    /// Keep the definition, rather than freezing mana value or one face's cost at grant time.
+    pub(crate) fn flashback_at_mana_cost() -> Self {
+        use crate::functions::Scope;
+        static DECLARED: OnceLock<Arc<Declared>> = OnceLock::new();
+        let declared = crate::token::init(&DECLARED, || Arc::new(Declared {
+            gives: vec![(Scope::In(crate::Zone::Graveyard), Gives::Route {
+                route: crate::announcement::CastRoute::Flashback, cost: RouteCost::ManaCost,
+            }), (Scope::In(crate::Zone::Stack), Gives::Destination { when: Departure::Any, to: crate::Zone::Exile, then: None })],
+            needs: vec![],
+        })).clone();
+        Self { keyword: Keyword::from_name("Flashback").expect("a keyword"), param: KeywordParam::None,
+            landwalk: None, protection: None, declared }
+    }
+
     /// A keyword ability with no parameter. Counters and definition-less objects can hold
     /// unsupported keywords; retain their identity without inventing executable meaning.
     pub(crate) fn plain(keyword: Keyword) -> Held {

@@ -387,7 +387,10 @@ impl Game {
         let Some(announcement) = &self.obj(source).cast_announcement else { return Value::Null };
         let route = match announcement.route {
             CastRoute::Normal => json!({"kind":"normal"}),
-            CastRoute::Flashback => json!({"kind":"flashback"}),
+            CastRoute::Flashback => match announcement.flashback_cost {
+                Some(index) => json!({"kind":"flashback","cost_index":index}),
+                None => json!({"kind":"flashback"}),
+            },
             CastRoute::Retrace => json!({"kind":"retrace"}),
             CastRoute::Escape => json!({"kind":"escape"}),
             CastRoute::Foretell => json!({"kind":"foretell"}),

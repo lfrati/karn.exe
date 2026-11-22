@@ -71,13 +71,18 @@ main deck: Celso Zampere's 2006 BUG Control list. `make check` passes 4,780 rule
 1,118 tooling tests. Matched release replay medians are 0.2–2.0% lower than the prior batch;
 the measurements remain evidence for #31. Hinder's library-position choice remains refused.
 
-**Next: implement [#29, granted alternative costs](https://github.com/lfrati/karn.exe/issues/29),
-with Snapcaster Mage.** The coverage sequence is:
+Granted flashback now uses ordinary continuous keyword changes and the existing cost
+compiler ([#29](https://github.com/lfrati/karn.exe/issues/29)). Snapcaster Mage, Past in Flames
+and eight other whole cards now compile, with no losses. Snapcaster unlocks three roster
+main decks: Sammy Tukeman's UWR Control, Jason Chung's Blue Moon and Alex Mitas's Jeskai
+Control lists. The batch passes `make check`: 4,792 rules tests and 1,122 tooling tests.
+Matched release replay medians are 0.2–1.0% lower than the previous batch; no speedup is
+claimed. Literal granted flashback prices remain refused. Distinct prices require an
+explicit native choice; MGN's missing representation is tracked independently in
+[#34](https://github.com/lfrati/karn.exe/issues/34).
 
-1. [#29: granted alternative costs](https://github.com/lfrati/karn.exe/issues/29),
-   with Snapcaster Mage.
-2. [#30: typed coin results](https://github.com/lfrati/karn.exe/issues/30),
-   with Mana Crypt.
+**Next: [#30, typed coin results](https://github.com/lfrati/karn.exe/issues/30), with Mana
+Crypt.** This is the last of the initial four coverage mechanisms.
 
 Re-rank coverage candidates against fresh blockers when the evidence justifies it. Trace
 the specific reference grammar, binding, lowering and runtime; identify Karn's missing

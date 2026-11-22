@@ -2668,6 +2668,8 @@ class KarnAdapter:
             raise unsupported("unsupported_fact", "accepted casting route is unavailable", f"objects.{record_id}.cast")
         route = retained["route"]
         kind = route.get("kind")
+        if kind == "flashback" and "cost_index" in route:
+            raise unsupported("unsupported_fact", "distinct native flashback cost choices have no MGN representation", f"objects.{record_id}.cast.cost")
         out: dict = {}
         if kind in ("flashback", "escape", "foretell", "harmonize"):
             out["cost"] = {"kind": "alternative", "keyword": kind}

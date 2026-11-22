@@ -53,6 +53,16 @@ collects destination and commander choices. Later “countered this way” condi
 to that producer's result. A counter's own destination replacement applies before general
 graveyard redirects (614.15); flashback still replaces a departure to a hand or library.
 
+A resolved flashback grant is an ordinary continuous keyword change, tied to its
+recipients and duration. Its adjacent mana-cost definition is bound to those recipients;
+casting reads the chosen spell's mana cost, including X and the selected split half.
+The existing cost compiler adds mandatory additional costs. Distinct effective flashback
+prices require an explicit `CastCost::Flashback(index)` choice (native
+`"cost":{"flashback":index}` with `"route":"flashback"`); the accepted index survives in
+the cast announcement. An unqualified flashback route requires one distinct price.
+No-mana-cost recipients gain an unpayable ability. Literal granted flashback prices and
+MGN's representation of distinct price choices remain explicitly unsupported.
+
 `Simulation` owns the gameplay boundary: correlated requests, chooser validation, accepted
 commands and viewer projections. `Game` also exposes low-level state access for fixtures and
 tooling; a direct state edit is not equivalent to a rules action. Player prompts expose only

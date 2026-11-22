@@ -15,13 +15,17 @@ pub enum CastRoute { #[default] Normal, Flashback, Retrace, Escape, Foretell, Pe
 /// Which cost a spell is cast for (601.2b, 601.2f): its mana cost, or an alternative cost
 /// its card prints (118.9), named by the row of the ability that states it. At most one
 /// alternative cost is paid (118.9a); flashback, the alternative cost of casting it from a
-/// graveyard (702.34a), is selected by [`CastRoute::Flashback`]. An additional cost is not this
+/// graveyard (702.34a), is selected by [`CastRoute::Flashback`], with an index when the
+/// card has distinct flashback costs (113.2c). An additional cost is not this
 /// choice (118.8), nor is which face or half is cast ([`crate::card::CastAs`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum CastCost {
     #[default]
     Mana,
     Alternative(usize),
+    /// One of the distinct effective flashback costs, in keyword order (113.2c).
+    /// An unqualified flashback route is sufficient only when that cost is unique.
+    Flashback(usize),
 }
 
 /// The announcements a spell's text can make a target depend on (601.2c), each a bit of a

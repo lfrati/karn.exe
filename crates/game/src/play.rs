@@ -1711,6 +1711,7 @@ impl Game {
         // where something would let it be cast: otherwise for what refuses any card there.
         // Flashback changes the cost and departure destination; ordinary permission does not.
         let flashback = route == CastRoute::Flashback;
+        let flashback_costs = if flashback { self.flashback_costs(player, card, cast_as) } else { Vec::new() };
         let def = match route {
             CastRoute::Escape if self.escape_of(player, card, cast_as) => self.def(card).ok_or("not a card")?,
             CastRoute::Escape => return Err("that card cannot be cast using escape (702.138a)".into()),
@@ -1725,7 +1726,7 @@ impl Game {
             CastRoute::Foretell => return Err("only a card you foretold is cast for its foretell cost, after the turn it was foretold (702.143a)".into()),
             CastRoute::Permission { source, ability } if self.casting_permission(player,card,cast_as,x,source,ability).is_some() => { self.not_hidden(card)?; self.def(card).ok_or("not a card")? }
             CastRoute::Permission { .. } => return Err("that casting permission is unavailable (601.3)".into()),
-            CastRoute::Flashback if self.flashback_of(player, card, cast_as).is_some() => self.def(card).ok_or("not a card")?,
+            CastRoute::Flashback if !flashback_costs.is_empty() => self.def(card).ok_or("not a card")?,
             CastRoute::Flashback => return Err("that card cannot be cast using flashback (702.34a)".into()),
             CastRoute::Retrace if self.retrace_of(player, card, cast_as) => self.def(card).ok_or("not a card")?,
             CastRoute::Retrace => return Err("that card cannot be cast using retrace (702.81a)".into()),
@@ -1756,6 +1757,7 @@ impl Game {
         let ceiling = permit.and_then(|p| p.ceiling);
         let library_life=self.top_life_cost(route);
         let free = costs == Costs::Free || library_life;
+        if flashback && free { return Err("only one alternative cost is paid for a spell (118.9a)".into()); }
         // an instant any time its player has priority, anything else in a main phase of their
         // turn with the stack empty (117.1a), unless it has flash (702.8a); a spell an effect
         // has its player cast as it is applied ignores that timing (608.2g)
@@ -1792,8 +1794,23 @@ impl Game {
             costs.iter().find(|(at, _)| *at == row).map(|(_, plan)| plan)
         }
         let cost = match chosen {
+            CastCost::Mana | CastCost::Flashback(_) if flashback => {
+                let index = match chosen {
+                    CastCost::Flashback(index) => index,
+                    _ if flashback_costs.len() == 1 => 0,
+                    _ => return Err("multiple flashback costs are available; say which flashback cost is paid (113.2c, 601.2b)".into()),
+                };
+                let cost = flashback_costs.get(index).ok_or("that flashback cost is unavailable (702.34a)")?
+                    .as_ref().ok_or("that card has no mana cost (202.1b)")?;
+                // Retain the definition-time plan for a printed cost. Newly granted
+                // prices use the existing given-cost compiler, including additional costs.
+                if crate::keyword::flashback(def).as_ref() == Some(cost) {
+                    def.costs.flashback.as_ref().expect("a printed flashback cost has a compiled plan").clone()?
+                } else { def.costs.given(def, cost)? }
+            },
+            CastCost::Flashback(_) => return Err("a flashback cost is selected only with the flashback route (702.34a)".into()),
             CastCost::Mana if library_life && def.costs.normal.is_none() => crate::cost::Plan::default().kicked(&ir::mana::ManaCost(Vec::new()),1).plus(def.costs.additional.as_ref().map_err(|u|u.0.clone())?),
-            CastCost::Mana => if flashback { def.costs.flashback.as_ref() } else if route == CastRoute::Escape { def.costs.escape.as_ref() } else if matches!(route, CastRoute::Harmonize { .. }) { def.costs.harmonize.as_ref() } else if route == CastRoute::Foretell { def.costs.foretell.as_ref() } else { def.costs.normal.as_ref() }
+            CastCost::Mana => if route == CastRoute::Escape { def.costs.escape.as_ref() } else if matches!(route, CastRoute::Harmonize { .. }) { def.costs.harmonize.as_ref() } else if route == CastRoute::Foretell { def.costs.foretell.as_ref() } else { def.costs.normal.as_ref() }
                 .ok_or("that card has no mana cost (202.1b)")?.clone()?,
             CastCost::Alternative(_) if flashback || matches!(route, CastRoute::Escape | CastRoute::Foretell | CastRoute::Harmonize { .. }) || free => return Err("only one alternative cost is paid for a spell (118.9a)".into()),
             CastCost::Alternative(row) if self.face_down(card) => self.face_down_cast(card, row)
@@ -1952,7 +1969,7 @@ impl Game {
         let rows = crate::keyword::alternative_rows(def, ir::Keyword::from_name("Mayhem").expect("a keyword"));
         let mayhem = match chosen {
             Some(crate::announcement::CastCost::Alternative(row)) => rows.contains(&row),
-            Some(crate::announcement::CastCost::Mana) => false,
+            Some(crate::announcement::CastCost::Mana | crate::announcement::CastCost::Flashback(_)) => false,
             None => !rows.is_empty(),
         };
         mayhem && check(whole).is_ok()
@@ -1966,21 +1983,28 @@ impl Game {
             && check(whole).is_ok()
     }
 
-    /// The flashback cost of a card in this player's graveyard that has flashback and is an
-    /// instant or sorcery the engine runs (702.34a).
-    pub(crate) fn flashback_of(&self, player: PlayerId, card: ObjId, cast_as: CastAs) -> Option<ir::Cost> {
-        if !self.players[player].graveyard.contains(&card) {
-            return None;
+    /// Effective costs of a card in its owner's graveyard (702.34a, 113.2c). Equal prices have
+    /// the same casting behavior. None is an actual, unpayable mana cost, not {0}.
+    pub(crate) fn flashback_costs(&self, player: PlayerId, card: ObjId, cast_as: CastAs) -> Vec<Option<ir::Cost>> {
+        if !self.players[player].graveyard.contains(&card) || cast_as == CastAs::Fused { return Vec::new(); }
+        let Some(whole) = self.def(card) else { return Vec::new() };
+        let Ok(def) = whole.spell(cast_as) else { return Vec::new() };
+        if !(def.is(CardType::Instant) || def.is(CardType::Sorcery)) || check(whole).is_err() { return Vec::new(); }
+        let Some(seen) = self.cast_seen(card, cast_as) else { return Vec::new() };
+        let mut costs = Vec::new();
+        for held in &seen.keywords {
+            for (scope, gives) in held.contributions() {
+                let crate::keyword::Gives::Route { route: CastRoute::Flashback, cost } = gives else { continue };
+                if !scope.contains(Zone::Graveyard) { continue; }
+                let cost = match cost {
+                    crate::keyword::RouteCost::Alternative(cost) => Some(cost.clone()),
+                    crate::keyword::RouteCost::ManaCost => def.cost().cloned().map(|mana| ir::Cost(vec![ir::CostPart::Mana(mana)])),
+                    crate::keyword::RouteCost::Additional => continue,
+                };
+                if !costs.contains(&cost) { costs.push(cost); }
+            }
         }
-        if cast_as == CastAs::Fused { return None; }
-        let whole = self.def(card)?;
-        let def = whole.spell(cast_as).ok()?;
-        let cost = crate::keyword::contributions(def).find_map(|(scope, gives)| match gives {
-            crate::keyword::Gives::Route { route: CastRoute::Flashback, cost: crate::keyword::RouteCost::Alternative(cost) } if scope.contains(self.obj(card).zone) => Some(cost.clone()),
-            _ => None,
-        })?;
-        let spell = def.is(CardType::Instant) || def.is(CardType::Sorcery);
-        (spell && check(whole).is_ok() && self.cast_seen(card, cast_as).is_some_and(|s| s.base_abilities)).then_some(cost)
+        costs
     }
 
     /// Announce the supplied spell before producing mana (601.2a–g). `face_down`:
@@ -1988,7 +2012,9 @@ impl Game {
     pub(crate) fn announce_spell(&mut self, player: PlayerId, card: ObjId, cast_as: CastAs, route: CastRoute, modes: &[usize], targets: Vec<Vec<Target>>, x: Option<u32>, kicks: u32, buyback: bool, optional: bool, entwine: bool, face_down: Option<crate::face::Concealment>) -> ActionResult<ObjId> {
         let flashback = route == CastRoute::Flashback || matches!(route, CastRoute::Harmonize { .. });
         let def = self.def(card).ok_or("not a card")?.spell(cast_as)?;
-        let departure = if flashback {
+        let departure = if route == CastRoute::Flashback {
+            Some((crate::functions::Scope::In(Zone::Stack), Zone::Exile))
+        } else if flashback {
             crate::keyword::contributions(def).find_map(|(scope, gives)| match gives {
                 crate::keyword::Gives::Destination { when: crate::keyword::Departure::Any, to, .. } => Some((scope, *to)),
                 _ => None,
@@ -2022,7 +2048,7 @@ impl Game {
         self.obj_mut(spell).optional_paid = optional;
         self.obj_mut(spell).entwined = entwine;
         self.obj_mut(spell).cast_by = Some(player);
-        self.obj_mut(spell).cast_announcement = Some(Box::new(crate::state::CastAnnouncement { route, permission: None, payment: None, given_alternative: None }));
+        self.obj_mut(spell).cast_announcement = Some(Box::new(crate::state::CastAnnouncement { route, flashback_cost: None, permission: None, payment: None, given_alternative: None }));
         self.capture_spell(spell);
         self.targeting_events(spell);
         Ok(spell)
@@ -2116,6 +2142,9 @@ impl Game {
             _ => None,
         };
         let spell = proposed.announce_spell(player, card, cast_as, route, modes, targets, x, kicks, buyback, optional, entwine, face_down)?;
+        proposed.obj_mut(spell).cast_announcement.as_mut().unwrap().flashback_cost = match chosen {
+            crate::announcement::CastCost::Flashback(index) => Some(index), _ => None,
+        };
         proposed.obj_mut(spell).cast_announcement.as_mut().unwrap().permission = permission_owner;
         proposed.obj_mut(spell).cast_announcement.as_mut().unwrap().given_alternative = given.map(std::sync::Arc::new);
         // the opponent its gift is promised to, chosen as an additional cost (702.174a)

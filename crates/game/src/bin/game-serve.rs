@@ -1550,13 +1550,19 @@ fn read_move_at_pools(v: &Value, pool: &Pool, offered: &[game::operation::Replac
         mv = Move::WithKicks(kicks, Box::new(mv));
     }
     // a cast with `"cost":{"alternative":0}` is cast for the alternative cost its card prints
-    // in that row rather than its mana cost (118.9); `"cost":"mana"` or none, its mana cost
+    // in that row rather than its mana cost (118.9); a flashback route can select one of
+    // its effective costs with `"cost":{"flashback":0}` (113.2c).
     if let Some(cost) = v.get("cost").filter(|c| !c.is_null()) {
         if v["kind"] != "cast" { return Err("the cost a spell is cast for is said with a cast (601.2b)".into()); }
         let cost = match cost {
             Value::String(s) if s == "mana" => game::announcement::CastCost::Mana,
-            _ => game::announcement::CastCost::Alternative(cost.get("alternative").and_then(Value::as_u64)
-                .ok_or("a cost is \"mana\" or {\"alternative\": the row of the ability that states it}")? as usize),
+            Value::Object(object) if object.len() == 1 && object.contains_key("flashback") =>
+                game::announcement::CastCost::Flashback(object["flashback"].as_u64()
+                    .and_then(|n| usize::try_from(n).ok()).ok_or("a flashback cost is a nonnegative cost index")?),
+            Value::Object(object) if object.len() == 1 && object.contains_key("alternative") =>
+                game::announcement::CastCost::Alternative(object["alternative"].as_u64()
+                    .and_then(|n| usize::try_from(n).ok()).ok_or("an alternative cost is a nonnegative ability row")?),
+            _ => return Err("a cost is \"mana\", {\"alternative\": an ability row}, or {\"flashback\": a cost index}".into()),
         };
         mv = Move::CastFor(cost, Box::new(mv));
     }
@@ -5290,7 +5296,7 @@ fn r118_9_an_alternative_cost_option_is_sent_back_as_the_move_that_casts_for_it(
     assert_eq!(g.stack.len(), 1);
     // the mana cost said outright is the default; another word is refused
     assert!(matches!(read_move(&json!({"kind":"cast", "card": blast.0, "cost": "mana"}), &Pool::default()).unwrap(), Move::CastFor(game::announcement::CastCost::Mana, _)));
-    assert_eq!(read_move(&json!({"kind":"cast", "card": blast.0, "cost": "free"}), &Pool::default()), Err("a cost is \"mana\" or {\"alternative\": the row of the ability that states it}".into()));
+    assert_eq!(read_move(&json!({"kind":"cast", "card": blast.0, "cost": "free"}), &Pool::default()), Err("a cost is \"mana\", {\"alternative\": an ability row}, or {\"flashback\": a cost index}".into()));
     assert_eq!(read_move(&json!({"kind":"pass", "cost": {"alternative": 0}}), &Pool::default()), Err("a pass move has no \"cost\"; it says nothing more".into()));
 }
 

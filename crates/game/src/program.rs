@@ -2040,7 +2040,9 @@ enum TextStep<'a> { Reflexive(&'a Sentence, &'a [Sentence], Option<&'a ir::Event
     CastRider(&'a ir::statics::Static),
     /// "If that creature would die this turn, exile it instead.": a replacement kept for the
     /// objects it names (614.1a).
-    ExiledInstead(&'a Selector) }
+    ExiledInstead(&'a Selector),
+    /// A keyword cost defined by the recipient's own mana cost (702.34a).
+    KeywordCost(ir::Keyword, &'a Selector) }
 
 /// "If an instant or sorcery spell cast this way would be put into your graveyard, exile it
 /// instead": the card types of the spells cast under the offer before it that are exiled
@@ -2334,6 +2336,10 @@ fn text_steps<'a>(effect: &'a Effect, support: &Support<'_>) -> Res<Vec<TextStep
             // exile it instead.": said of the cast the sentence before offers
             Sentence::Static(rule) if cast_rider(rule).is_some() => out.push(TextStep::CastRider(rule)),
             Sentence::Static(rule) if crate::restrict::Rule::exiled_instead_of_dying(rule).is_some() => out.push(TextStep::ExiledInstead(crate::restrict::Rule::exiled_instead_of_dying(rule).expect("read as one"))),
+            Sentence::Static(rule) if matches!(rule.as_ref(), ir::statics::Static::KeywordCost { .. }) => {
+                let ir::statics::Static::KeywordCost { keyword, of } = rule.as_ref() else { unreachable!("matched") };
+                out.push(TextStep::KeywordCost(*keyword, of));
+            }
             _ => return unsupported("program: control flow not lowered"),
         }
         Ok(())
@@ -3591,7 +3597,7 @@ impl TextStep<'_> {
     fn instructions(&self) -> (usize, usize) {
         let all = |rest: &Sentence, more: &[Sentence]| instructions(std::slice::from_ref(rest)) + instructions(more);
         match self {
-            TextStep::Act(..) | TextStep::Rule(_) | TextStep::CastRider(_) | TextStep::ExiledInstead(_) => (1, 0),
+            TextStep::Act(..) | TextStep::Rule(_) | TextStep::CastRider(_) | TextStep::ExiledInstead(_) | TextStep::KeywordCost(..) => (1, 0),
             TextStep::Alternative(clause) => (1 + clause.rest.len(), 0),
             TextStep::Reflexive(rest, more, _, _) | TextStep::Later(_, _, rest, more, _) => (0, all(rest, more)),
             TextStep::Delayed(_, _, _, rest, _) | TextStep::ManaSpent(_, rest, _) => (0, all(rest, &[])),
@@ -4278,6 +4284,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 e.end_act(true, None);
                 continue;
             }
+            TextStep::KeywordCost(..) => return unsupported("keyword cost definition: no matching preceding grant"),
             TextStep::Act(clause, act, alone) => (clause, act, alone),
         };
         if std::ptr::eq(act, &clause.first) && heads.iter().any(|h| std::ptr::eq(*h, clause)) { e.sentence_targets = e.targets.len(); }
@@ -4854,7 +4861,23 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             // what gives itself an ability: its name there is it (201.5a)
             if e.captured_source.is_some_and(|out| objects == [action::Operand::Reference(out)])
                 && let Some(own) = granted_to_itself(chosen.as_ref().unwrap_or(&act.action)) { chosen = Some(own); }
-            let mut changes = change::Change::compile(chosen.as_ref().unwrap_or(&act.action), support, &mut binder.scope(support))?;
+            let mut changes = if let Some(TextStep::KeywordCost(keyword, of)) = acts.get(index + 1) {
+                // The bare possessive in a keyword's adjacent definition names that
+                // grant's recipient, distributively for an Each/All subject (611.2c).
+                // An explicit different possessor or an unpaired cost remains refused.
+                let own = (of.quant == Quant::Definite(Ref::Anaphor(ir::Anaphor::It)) && of.set == ObjectSet::of(Domain::Object))
+                    || (of.quant == Quant::Definite(Ref::Anaphor(ir::Anaphor::That)) && of.set == ObjectSet::of(Domain::Card)
+                        && matches!(subject, Subject::Selector(s) if s.set.domain == Domain::Card
+                            && s.quant == Quant::Target(Count::Exactly(Amount::Const(1)))));
+                if !matches!(&act.action, Action::Gains(granted) if matches!(granted.as_slice(), [ir::action::Granted::Keyword(item)]
+                    if item.keyword == *keyword && item.param == ir::token::KeywordParam::None))
+                    || !own
+                    || of.chooser.is_some() || of.random.is_some() || keyword.name() != "Flashback" {
+                    return unsupported("keyword cost definition: only the granted flashback's own mana cost is implemented");
+                }
+                reach.skip_through = index + 2;
+                vec![change::Change::Fixed(crate::layers::Change::Gains(vec![crate::keyword::Held::flashback_at_mana_cost()]))]
+            } else { change::Change::compile(chosen.as_ref().unwrap_or(&act.action), support, &mut binder.scope(support))? };
             if changes.iter().any(|change| matches!(change, change::Change::Fixed(crate::layers::Change::Inherits(_)))) {
                 return unsupported("inherited abilities: only continuous battlefield static acquisition is modeled");
             }

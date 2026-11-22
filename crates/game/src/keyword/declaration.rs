@@ -30,7 +30,9 @@ pub(crate) enum Departure { Any, Resolution }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Then { Rebound }
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum RouteCost { Alternative(ir::Cost), Additional }
+pub(crate) enum RouteCost { Alternative(ir::Cost), Additional,
+    /// The selected spell's mana cost, including its announced X (702.34a).
+    ManaCost }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Substitution { Delve, Convoke }
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -77,9 +79,15 @@ impl Declared {
     /// Is it an ability its permanent is asked to have: "a creature with flying", "target
     /// creature with a morph ability"?
     pub(super) fn held(&self) -> bool {
-        self.gives.iter().any(|(_, gives)| matches!(gives, Gives::Rule(_) | Gives::Asked | Gives::Characteristic | Gives::FaceDown { .. }))
+        self.gives.iter().any(|(_, gives)| matches!(gives, Gives::Rule(_) | Gives::Asked | Gives::Characteristic | Gives::FaceDown { .. }
+            | Gives::Route { route: crate::announcement::CastRoute::Flashback, .. }))
     }
-    pub(super) fn grantable(&self) -> bool { self.held() && !self.needs.contains(&Context::PrintedOnly) }
+    pub(super) fn grantable(&self) -> bool {
+        // Literal granted flashback costs can refer to the granting ability's choices.
+        // Only the paired recipient-mana-cost definition is lowered for now.
+        self.held() && !self.needs.contains(&Context::PrintedOnly)
+            && !self.gives.iter().any(|(_, gives)| matches!(gives, Gives::Route { route: crate::announcement::CastRoute::Flashback, .. }))
+    }
     fn context_ok(&self, def: &CardDef, item: &KeywordInstance) -> Res<()> {
         let spell = def.is(ir::CardType::Instant) || def.is(ir::CardType::Sorcery);
         // what a printed protection says is lowered as its definition is loaded ([`held`]),

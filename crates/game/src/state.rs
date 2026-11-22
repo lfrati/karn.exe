@@ -27,6 +27,8 @@ pub struct ObjId(pub u64);
 #[derive(Debug, Clone)]
 pub(crate) struct CastAnnouncement {
     pub route: crate::announcement::CastRoute,
+    /// Explicit choice among distinct effective flashback costs (113.2c).
+    pub flashback_cost: Option<usize>,
     pub permission: Option<(crate::cast_permission::Use, Option<crate::ability::FrozenDefinition>)>,
     pub payment: Option<CastPayment>,
     /// The keyword ability an effect gave the card in a hand (613.1f) whose alternative cost
