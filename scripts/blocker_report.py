@@ -10,7 +10,7 @@ DIR is durable evidence, not Git:
 
   admission.jsonl          the full snapshot (when the engine is run)
   deck-labels.jsonl        one line per blocker label: the roster decks it keeps from running
-                           and those it alone does, most decks first (see `deck_report`)
+                           and those it alone does, most completed decks first (see `deck_report`)
   standard-blockers.jsonl  one line per refused face of a legal card: its blockers in the order
                            admission meets them, the first its admission's refusal
   standard-labels.jsonl    one line per blocker label (the reason; of a text row the grammar
@@ -158,10 +158,19 @@ def deck_report(snapshot: list[dict], roster: list[dict], corpus: list[dict]) ->
     main-deck cards with the label among their blockers; `decks` naming one of them; `sole_decks`,
     whose cards the engine does not run have no other known blocker, so that removing the label
     alone would run the deck; and `sole_fully_analyzed_decks`, those of them of whose cards
-    nothing was left unanalyzed. Most decks first, then most sole decks.
+    nothing was left unanalyzed. `corpus_cards` and `sole_corpus_cards` count
+    whole physical cards over the complete corpus, including cards in no roster deck.
+    Most sole decks first, then the number of decks touched.
     """
     by_name, refused = card_blockers(snapshot, corpus)
     names = {oracle_id: name for name, oracle_id in by_name.items()}
+    corpus_counts = collections.defaultdict(lambda: [0, 0])
+    for oracle_id, card in refused.items():
+        if names[oracle_id] in MELD_RESULTS:
+            continue
+        for label in card["labels"]:
+            corpus_counts[label][0] += 1
+            corpus_counts[label][1] += len(card["labels"]) == 1
     labels = collections.defaultdict(lambda: {
         "stage": None, "cards": set(), "decks": 0, "sole_decks": 0, "sole_fully_analyzed_decks": 0})
     totals = {"decks": len(roster), "unresolved_decks": 0, "main_decks_read": 0, "main_decks_that_run": 0,
@@ -189,8 +198,9 @@ def deck_report(snapshot: list[dict], roster: list[dict], corpus: list[dict]) ->
             labels[label]["sole_fully_analyzed_decks"] += all(card["fully_analyzed"] for card in missing.values())
     counted = [{"label": label, "stage": e["stage"], "cards": len(e["cards"]), "decks": e["decks"],
                 "sole_decks": e["sole_decks"], "sole_fully_analyzed_decks": e["sole_fully_analyzed_decks"],
+                "corpus_cards": corpus_counts[label][0], "sole_corpus_cards": corpus_counts[label][1],
                 "examples": sorted(names[i] for i in e["cards"])[:5]} for label, e in labels.items()]
-    counted.sort(key=lambda e: (-e["decks"], -e["sole_decks"], -e["cards"], e["label"]))
+    counted.sort(key=lambda e: (-e["sole_decks"], -e["decks"], -e["sole_corpus_cards"], e["label"]))
     stages = collections.Counter(card["stage"] for card in missing_cards.values())
     totals.update(missing_cards=len(missing_cards), missing_cards_by_stage={"parse": stages["parse"], "engine": stages["engine"]},
                   distinct_labels=len(counted))
@@ -269,7 +279,7 @@ def main(argv=None) -> int:
     (args.out / "summary.json").write_text(json.dumps(summary, indent=1) + "\n")
     print(json.dumps(deck_totals))
     for label in deck_labels[:15]:
-        print(f"{label['decks']:5} decks  {label['sole_decks']:4} alone  {label['cards']:5} cards  {label['label']}")
+        print(f"{label['sole_decks']:4} decks completed  {label['decks']:5} touched  {label['sole_corpus_cards']:5} corpus cards alone  {label['label']}")
     print(json.dumps(totals))
     for label in labels[:15]:
         print(f"{label['cards']:5} cards  {label['sole_cards']:4} sole  {label['first_cards']:4} first  {label['label']}")

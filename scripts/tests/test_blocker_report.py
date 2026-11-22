@@ -103,7 +103,7 @@ class DeckReportTests(unittest.TestCase):
         by = {label["label"]: label for label in labels}
         of = 'text the grammar does not read: at "of"'
         self.assertEqual([label["label"] for label in labels],
-                         ["defense", of, "program: action not lowered: TapOrUntap"], "most decks first, then most sole decks")
+                         ["defense", of, "program: action not lowered: TapOrUntap"], "most sole decks first, then decks touched")
         self.assertEqual({k: by["defense"][k] for k in ("stage", "cards", "decks", "sole_decks", "sole_fully_analyzed_decks")},
                          {"stage": "engine", "cards": 2, "decks": 4, "sole_decks": 2, "sole_fully_analyzed_decks": 2})
         self.assertEqual(by["defense"]["examples"], ["B", "C"])
@@ -115,6 +115,18 @@ class DeckReportTests(unittest.TestCase):
             "decks": 6, "unresolved_decks": 1, "main_decks_read": 4, "main_decks_that_run": 1,
             "decks_one_label_away": 3, "missing_cards": 3, "missing_cards_by_stage": {"parse": 1, "engine": 2},
             "distinct_labels": 3})
+
+    def test_rank_by_decks_completed_and_count_whole_corpus_cards(self):
+        roster = [deck(f"touches {i}", {"B": 1}) for i in range(4)]
+        roster += [deck("readable", {"D": 1}), deck("defense alone", {"C": 1})]
+        labels, _ = blocker_report.deck_report(SNAPSHOT, roster, CORPUS)
+        by = {label["label"]: label for label in labels}
+        self.assertEqual([label["sole_decks"] for label in labels], [1, 1, 0])
+        self.assertEqual(labels[0]["label"], "defense")
+        # Z occurs in no deck; B has two labels, while C and Z have defense alone.
+        self.assertEqual((by["defense"]["cards"], by["defense"]["corpus_cards"],
+                          by["defense"]["sole_corpus_cards"]), (2, 3, 2))
+        self.assertEqual(by["program: action not lowered: TapOrUntap"]["sole_corpus_cards"], 0)
 
     def test_a_meld_component_needs_the_card_it_melds_into(self):
         snapshot = [row("rats", 0, "admitted", name="Graf Rats"), row("scavengers", 0, "admitted", name="Midnight Scavengers"),
