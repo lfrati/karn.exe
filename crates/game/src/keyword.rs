@@ -25,6 +25,7 @@ const SENTENCES: &[(&str, &str, &str)] = &[
     ("Horsemanship", "702.31b", "This creature can't be blocked except by creatures with horsemanship."),
     ("Fear", "702.36b", "This creature can't be blocked except by artifact creatures and/or black creatures."),
     ("Flying", "702.9b", "This creature can't be blocked except by creatures with flying and/or reach."),
+    ("Skulk", "702.118b", "This creature can't be blocked by creatures with power greater than this creature's power."),
     ("Menace", "702.111b", "This creature can't be blocked except by two or more creatures."),
     ("Indestructible", "702.12b", "This permanent can't be destroyed."),
     ("Hexproof", "702.11b", "This permanent can't be the target of spells or abilities your opponents control."),
