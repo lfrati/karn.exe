@@ -20,7 +20,7 @@ use ir::event::{Arg, CounterNth, Deed, During, Quantity, Tense, Time, ZoneArg};
 use ir::lexicon::{Inflection, Role, Verb};
 use ir::selector::{Anaphor, Status};
 use ir::{
-    Condition, Domain, ObjectSet, Predicate, Ref, Amount, Count, DamageKind, EventAction, EventCause, EventPattern, Quant, Selector, Step, StepOwner, Trigger, TriggerWord, Zone,
+    Condition, Domain, ObjectSet, Predicate, Ref, Atom, Filter, Amount, Count, DamageKind, EventAction, EventCause, EventPattern, Quant, Selector, Step, StepOwner, Trigger, TriggerWord, Zone,
     ZoneSpec,
 };
 
@@ -332,6 +332,30 @@ fn only_object(a: &EventAction) -> Option<(Verb, &Selector)> {
     }
 }
 
+/// Both ways of naming one source's ability share the existing activation-event value (602.2).
+fn deed_with_object(verb: Verb, what: Selector) -> EventAction {
+    if verb == Verb::Activate
+        && what.quant == Quant::Indefinite(Count::Exactly(Amount::Const(1)))
+        && what.chooser.is_none() && what.random.is_none()
+        && what.set == (ObjectSet { filter: what.set.filter.clone(), ..ObjectSet::of(Domain::Ability) })
+    {
+        let source = match &what.set.filter {
+            Filter::All(parts) => match parts.as_slice() {
+                [Filter::Atom(Atom::Source(source))] => Some((false, source)),
+                [Filter::Atom(Atom::AbilityKind(ir::selector::AbilityKind::Loyalty)), Filter::Atom(Atom::Source(source))] => Some((true, source)),
+                _ => None,
+            },
+            _ => None,
+        };
+        if let Some((loyalty, source)) = source {
+            return EventAction::ActivatesAbilityOf {
+                loyalty, of: Box::new(Selector::new(what.quant, (**source).clone())),
+            };
+        }
+    }
+    EventAction::does(verb, what)
+}
+
 /// What a die roll shows (706.2): "a natural 20" (the number on the die, before modifiers), "a 4
 /// or higher" (the result, after them), "a die's highest natural result" (its number of sides,
 /// 706.1a).
@@ -381,7 +405,7 @@ fn deeds(form: Form, object: &P<Selector>) -> Vec<P<EventAction>> {
     let heads = |keep: fn(Verb) -> bool| table("verb", regular().filter(|v| keep(*v)).map(|v| (v.head(f), v)).collect());
     let with_object = heads(plain)
         .then(object)
-        .map(|(verb, what)| Some(EventAction::does(verb, what)), |a| only_object(a).map(|(v, what)| (v, what.clone())));
+        .map(|(verb, what)| Some(deed_with_object(verb, what)), |a| only_object(a).map(|(v, what)| (v, what.clone())));
     // the object stands inside the verb: "taps a land for mana"
     let around = regular().filter(|v| transitive(*v) && !v.tail().is_empty()).map(|verb| {
         lit(&verb.head(f)).then_keep(object).skip(&lit(verb.tail())).map(

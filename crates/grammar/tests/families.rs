@@ -227,3 +227,23 @@ fn r118_9_keyword_cost_substitution() {
         declines(text);
     }
 }
+
+/// CR 602.2: an activated ability's source does not create a second interpretation of the event.
+#[test]
+fn r602_2_activation_source_alias() {
+    let (of, _) = read("Whenever you activate an ability of an artifact, draw a card.");
+    let (from, _) = read("Whenever you activate an ability from an artifact, draw a card.");
+    assert_eq!(of, from);
+    read("If you haven't activated a loyalty ability of a planeswalker this turn, draw a card.");
+}
+
+/// CR 700.2: the bare choice header remains modal, with or without its trailing dash.
+#[test]
+fn r700_2_choice_header_is_not_object_ellipsis() {
+    for text in ["Choose one —", "Choose one."] {
+        let (value, _) = read(text);
+        assert!(serde_json::to_string(&value).unwrap().contains("ChooseModes"));
+    }
+    read("An opponent chooses one —");
+    declines("You choose one —");
+}

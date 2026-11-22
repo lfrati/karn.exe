@@ -86,6 +86,10 @@ fn slot_one(one: &P<Selector>, verb: Verb, role: Role) -> P<Selector> {
 pub(crate) fn does(subject: Option<&Selector>, a: &Action) -> bool {
     let fits = ir::lexicon::can_do(a.doer(), subject);
     match (a, subject) {
+        // Bare "Choose one" is a mode header. Object ellipsis states its player (608.2d).
+        (Action::Choose(ir::Choice::Objects(objects)), None)
+            if matches!(objects.items.as_slice(), [one] if matches!(one.quant,
+                Quant::Definite(ir::Ref::Anaphor(ir::Anaphor::One)))) => false,
         // what a prohibition forbids is an event of the subject: "~ can't be countered", never
         // "target player can't be countered"
         // Ability activation prohibitions belong to the activation-family rule grammar,

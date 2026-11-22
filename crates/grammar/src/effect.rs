@@ -1788,7 +1788,8 @@ mod tests {
             }
         }
         // "Target opponent chooses one" without the dash chooses one of the objects named before
-        for text in ["You choose one —", "An opponent chooses one at random —", "Target creature chooses one —", "Each opponent chooses one —", "Target opponent chooses one", "~'s controller chooses one —", "Defending player chooses one —"] {
+        assert!(matches!(s.parse_all(&tokenize("Target opponent chooses one")), Outcome::Accepted { value: Sentence::Do(_), .. }));
+        for text in ["You choose one —", "An opponent chooses one at random —", "Target creature chooses one —", "Each opponent chooses one —", "~'s controller chooses one —", "Defending player chooses one —"] {
             assert!(!matches!(s.parse_all(&tokenize(text)), Outcome::Accepted { .. }), "{text} must not read");
         }
     }
