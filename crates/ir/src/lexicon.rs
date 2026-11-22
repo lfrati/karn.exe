@@ -282,8 +282,9 @@ lexicon! {
     /// A player's life total and a permanent's power or toughness exchanged (701.12g): the life
     /// total is the player's (`Of`), the stat the permanent's (`With`).
     ExchangeLifeWithStat: "exchange", "701.12", Player, [Of => PLAYER, With => PERMANENT];
-    /// A turn beyond the ones the turn order gives, as it begins.
+    /// Any turn as it begins, before replacement effects can skip it.
     BeginTurn: "begin a turn", "500.1", Player, [];
+    /// A turn beyond the ones the turn order gives, as it begins.
     BeginExtraTurn: "begin an extra turn", "500.7", Player, [];
     PayLife: "pay life", "119.4", Player, [];
     LoseGame: "lose the game", "104.3", Player, [];

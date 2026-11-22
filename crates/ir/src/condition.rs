@@ -158,13 +158,13 @@ pub enum Condition {
         won: bool,
         contest: Option<Contest>,
     },
+    /// A player ranks highest or lowest by this measure, with explicit treatment of ties (119.1).
+    MostOf { player: Box<Selector>, measure: Measure, least: bool, tied: bool },
     /// "an opponent controls more lands than you", "you have more cards in hand than each
     /// opponent", "you control fewer creatures than each opponent", "an opponent has more life
     /// than you": `player`'s measure against each of `than`'s. `margin`: "at least two more
     /// lands than you", "at least 10 life more than your starting life total" (the difference
     /// is at least that, not just one); None is "more than".
-    /// A player ranks highest or lowest by this measure, with explicit treatment of ties (119.1).
-    MostOf { player: Box<Selector>, measure: Measure, least: bool, tied: bool },
     MoreThan {
         player: Box<Selector>,
         measure: Measure,
@@ -218,11 +218,11 @@ pub enum Condition {
     NthCombatPhase {
         n: u32,
     },
+    /// The named spell is the n-th matching spell "you" have cast this game (608.2i).
+    NthCastThisGame { what: Box<Selector>, n: u32, set: ObjectSet },
     /// "it's the second creature spell you cast this turn": the spell whose casting is being
     /// spoken of is the n-th such spell that player has cast in the turn (a look back at the
     /// turn, CR 608.2i).
-    /// The named spell is the n-th matching spell its controller has cast this game (608.2i).
-    NthCastThisGame { what: Box<Selector>, n: u32, set: ObjectSet },
     NthCastThisTurn {
         n: u32,
         set: ObjectSet,
