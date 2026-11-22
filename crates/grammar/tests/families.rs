@@ -470,3 +470,13 @@ fn r608_2c_named_complementary_group() {
     declines("If you do, ~ is no longer suspected.");
     declines("You may cast the other players without paying their mana costs.");
 }
+
+/// CR 608.2i: an action's player stays an active relative unless its lexicon declares By.
+#[test]
+fn r608_2i_passive_agents_need_declared_role() {
+    for text in [
+        "Each player discards their hand, then draws cards equal to the greatest number of cards a player discarded this way.",
+        "Exile an artifact or creature card with mana value 1 you discarded this way.",
+        "Return the creature you sacrificed this way to the battlefield.",
+    ] { read(text); }
+}

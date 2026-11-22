@@ -1311,8 +1311,8 @@ fn participle_phrase() -> P<Deed> {
     };
     let done_by = words.skip(&lit("by")).then(&selectors().selector).map(
         move |(verb, who)| with_agent(verb, who),
-        |d: &Deed| match (d.passive, d.args.as_slice()) {
-            (true, [(Role::By, Arg::Noun(who))]) => Some((d.verb, who.clone())),
+        move |d: &Deed| match (d.passive, d.args.as_slice()) {
+            (true, [(Role::By, Arg::Noun(who))]) if with_agent(d.verb, who.clone()).is_some() => Some((d.verb, who.clone())),
             _ => None,
         },
     );
