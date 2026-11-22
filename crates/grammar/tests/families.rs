@@ -790,6 +790,7 @@ fn r608_2c_instruction_followed_by_replacement() {
     assert_eq!(body.first.first.mods, vec![ir::Modifier::Duration(ir::Duration::ThisTurn)]);
     assert!(matches!(&**rest, ir::Static::Replacement(_)));
     read("Target creature gains trample until end of turn, and the next time it would die this turn, exile it instead.");
+    read("If a spell or ability an opponent controls causes you to discard a card, you may reveal that card and put it on top of your library instead of putting it anywhere else.");
     declines("It can't be regenerated this turn, and if it would die this turn.");
     declines("Target player can't be regenerated this turn, and if it would die this turn, exile it instead.");
 }
