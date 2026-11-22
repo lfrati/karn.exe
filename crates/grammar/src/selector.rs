@@ -2611,13 +2611,18 @@ fn event_relative(n: Number, sel: &P<Selector>) -> P<Post> {
     let reduced_then = done
         .then(&alt("window", vec![lit("this turn").to(When::ThisTurn), lit("this game").to(When::ThisGame)]))
         .map(
-            // the other participles with a window are counts of their own ("each spell cast this turn")
             |(action, when)| {
-                matches!(action, EventAction::PutIntoGraveyard { .. } | EventAction::Deed(Deed { verb: Verb::Draw, passive: true, .. })).then(|| Post::Event { who: false, filter: event_filter(action, when, false) })
+                matches!(action, EventAction::PutIntoGraveyard { .. } | EventAction::Deed(Deed { verb: Verb::Draw, passive: true, .. }))
+                    .then(|| Post::Event { who: false, filter: event_filter(action, when, false) })
             },
-            |_| None,
-        )
-        .alias();
+            |p| {
+                let Post::Event { who: false, filter } = p else { return None };
+                let (action, when, negated) = unevent_filter(filter)?;
+                (!negated && matches!(when, When::ThisTurn | When::ThisGame)
+                    && matches!(action, EventAction::Deed(Deed { verb: Verb::Draw, passive: true, .. })))
+                    .then_some((action, when))
+            },
+        );
     // "cards exiled this way", "a card put into your hand this way"
     let reduced_done = done.skip(&this_way).map(move |a| Some(event(false, a)), move |p| unevent(p, false));
     // "cards that weren't cast this way", "creatures not chosen this way"
@@ -3241,10 +3246,11 @@ fn ends_nested(p: &Post) -> bool {
     // "it", "them" and "~" take nothing after them, so what follows belongs to the outer phrase:
     // "a spell that shares a card type with it from your hand"
     let closed = |s: &Selector| {
-        matches!(s.quant, Quant::Definite(Ref::Anaphor(Anaphor::It | Anaphor::Them) | Ref::This)) && s.set == ObjectSet::of(s.set.domain.clone())
+        matches!(s.quant, Quant::Definite(Ref::Anaphor(Anaphor::It | Anaphor::Them | Anaphor::They) | Ref::This)) && s.set == ObjectSet::of(s.set.domain.clone())
     };
     match p {
         Post::With(Filter::Atom(Atom::Shares { with, .. })) if closed(with) => false,
+        Post::With(Filter::Atom(Atom::MoreThan { than, .. })) if closed(than) => false,
         Post::With(Filter::Atom(Atom::Stat { value: Amount::Counters { on, .. }, .. })) if closed(on) => false,
         // "… the amount of life you gained this turn from your graveyard": the tally ends in
         // its window
