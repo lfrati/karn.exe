@@ -141,7 +141,7 @@ and Nightbound need larger machinery and can wait.
 Some tests use today's refusals as examples: `crates/game/tests/engine/admission_blockers.rs`
 expects `keyword: Fear`. When a keyword lands, point them at one that is still refused.
 
-*Skipped:* none yet.
+*Skipped:* Echo: both the direct rule expansion and a control-history condition stop at the missing since-last-upkeep history window; turn-only control duration is insufficient for repeated upkeeps.
 
 #### Lane 2: deck closers (worktree `closers`)
 
