@@ -415,6 +415,7 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if let Some(ability) = cumulative_upkeep(item) { return Some(ability); }
     if let Some(ability) = bloodthirst(item) { return Some(ability); }
     if let Some(ability) = bushido(item) { return Some(ability); }
+    if let Some(ability) = soulshift(item) { return Some(ability); }
     if let Some(ability) = renown(item) { return Some(ability); }
     if let Some(ability) = annihilator(item) { return Some(ability); }
     if let Some(ability) = station(item) { return Some(ability.clone()); }
@@ -497,6 +498,15 @@ fn triggered(item: &ir::token::KeywordInstance) -> Option<&'static Ability> {
         "Flanking" => Some(flanking()),
         _ => None,
     }
+}
+
+/// 702.46a-b: an ordinary dies trigger, with its target chosen before the optional return.
+fn soulshift(item: &ir::token::KeywordInstance) -> Option<Ability> {
+    if item.keyword.name() != "Soulshift" { return None; }
+    let KeywordParam::Number(ir::Amount::Const(n)) = item.param else { return None; };
+    let text = format!("When this permanent is put into a graveyard from the battlefield, you may return target Spirit card with mana value {n} or less from your graveyard to your hand.");
+    Some(CardDef::new("Soulshift rule", "", "Creature", &text, None)
+        .expect("the grammar reads rule 702.46a").abilities[0].clone())
 }
 
 /// 702.108a-b: every printed instance is an ordinary independent cast trigger.

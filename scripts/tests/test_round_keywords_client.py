@@ -20,6 +20,22 @@ class RoundKeywordsClientTests(unittest.TestCase):
     step = Helpers.step
     advance = Helpers.advance
 
+    def test_soulshift_chooses_its_target_before_the_optional_return(self):
+        # 702.46a: a Kindred instant with changeling is a Spirit card, not a creature.
+        self.new([{"hand": ["Murder"], "battlefield": ["Venerable Kumo"] + ["Swamp"] * 3,
+                   "graveyard": ["Crib Swap"]}, {}])
+        kumo, = self.ids("Venerable Kumo", zone="battlefield")
+        spirit, = self.engine.state["players"][0]["graveyard"]
+        self.cast("Murder", [[{"object": kumo}]], mana=self.ids("Swamp", controller=0), spend={"B": 3})
+        self.pass_round()
+        self.assertEqual((self.engine.state["asked"]["kind"], self.engine.state["asked"]["player"]), ("targets", 0))
+        self.reject(1, {"kind": "targets", "targets": [[{"object": spirit}]]})
+        self.engine.act({"kind": "targets", "targets": [[{"object": spirit}]]})
+        self.pass_round()
+        self.assertEqual(self.engine.state["asked"]["kind"], "may")
+        self.choose("yes")
+        self.assertTrue(any(self.object(o)["name"] == "Crib Swap" for o in self.hand(0)))
+
     def test_bloodthirst_enters_with_counters_after_real_player_damage(self):
         # 702.54a: damage to an opponent enables the entry replacement.
         self.new([{"hand": ["Lightning Bolt", "Bloodscale Prowler"], "battlefield": ["Mountain"] * 4}, {}])
