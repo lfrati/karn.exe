@@ -56,3 +56,20 @@ fn r702_25_flanking_binds_each_blocker_and_ignores_other_flankers() {
     cite!(["702.25a"]; assert_eq!((g.power(bear), g.toughness(bear)), (Some(1), Some(1))));
     cite!(["702.25a"]; assert_eq!((g.power(flanker), g.toughness(flanker)), (Some(2), Some(2))));
 }
+
+#[test]
+fn r702_45_bushido_triggers_once_when_blocked_by_multiple_creatures_and_when_blocking() {
+    let mut g = fixture(vec![oracle("Jade Avenger"), oracle("Grizzly Bears")]);
+    let avenger = g.put(0, 0, Zone::Battlefield);
+    let a = g.put(1, 1, Zone::Battlefield);
+    let b = g.put(1, 1, Zone::Battlefield);
+    attack(&mut g, &[avenger]);
+    blockers(&mut g, vec![(a, avenger), (b, avenger)]);
+    cite!(["702.45a", "509.5c"]; assert_eq!((g.power(avenger), g.toughness(avenger)), (Some(4), Some(4))));
+    let mut g = fixture(vec![oracle("Jade Avenger"), oracle("Grizzly Bears")]);
+    let bear = g.put(0, 1, Zone::Battlefield);
+    let avenger = g.put(1, 0, Zone::Battlefield);
+    attack(&mut g, &[bear]);
+    blockers(&mut g, vec![(avenger, bear)]);
+    cite!(["702.45a"]; assert_eq!(g.power(avenger), Some(4)));
+}

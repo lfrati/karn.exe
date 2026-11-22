@@ -390,6 +390,7 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if let Some(cost) = ward_cost(item) { return Some(ward_trigger(&cost)); }
     if let Some(ability) = crew(item) { return Some(ability); }
     if let Some(ability) = saddle(item) { return Some(ability); }
+    if let Some(ability) = bushido(item) { return Some(ability); }
     if let Some(ability) = renown(item) { return Some(ability); }
     if let Some(ability) = annihilator(item) { return Some(ability); }
     if let Some(ability) = station(item) { return Some(ability.clone()); }
@@ -542,6 +543,16 @@ fn saddle(item: &ir::token::KeywordInstance) -> Option<Ability> {
     let text = format!("Tap any number of other untapped creatures you control with total power {n} or greater: This permanent becomes saddled until end of turn. Activate only as a sorcery.");
     let def = CardDef::new("Saddle rule", "", "Creature — Mount", &text, Some((0, 0))).expect("the grammar reads rule 702.171a");
     Some(def.abilities[0].clone())
+}
+
+/// 702.45a: becoming blocked is one event regardless of the number of blockers.
+fn bushido(item: &ir::token::KeywordInstance) -> Option<Ability> {
+    if item.keyword.name() != "Bushido" { return None; }
+    let KeywordParam::Number(ir::Amount::Const(n)) = item.param else { return None; };
+    if n > i32::MAX as u32 { return None; }
+    let text = format!("Whenever this creature blocks or becomes blocked, it gets +{n}/+{n} until end of turn.");
+    Some(CardDef::new("Bushido rule", "", "Creature", &text, None)
+        .expect("the grammar reads rule 702.45a").abilities[0].clone())
 }
 
 /// "Renown N" means "When this creature deals combat damage to a player, if it isn't renowned,
