@@ -699,3 +699,38 @@ fn r702_30_control_acquisition_history() {
         "If ~ came under your control, draw a card.",
     ] { declines(text); }
 }
+
+/// CR 601.3: casting restrictions retain the spell description and actor's timing.
+#[test]
+fn r601_3_scoped_casting_restrictions_and_caps() {
+    let (fires, _) = read("You can cast spells only during your turn and you can cast no more than two spells each turn. You may cast spells with mana value less than or equal to the number of lands you control without paying their mana costs.");
+    let json = serde_json::to_string(&fires).unwrap();
+    assert!(json.contains("CastOnly") && json.contains("During") && json.contains("EachTurn"));
+    read("Players can cast spells only during their own turns.");
+    let (teferi, _) = read("Each opponent can cast spells only any time they could cast a sorcery.");
+    let (sorcery, _) = read("Each opponent can cast spells only as a sorcery.");
+    assert_eq!(teferi, sorcery);
+    for (capped, forbidden) in [
+        ("You can cast no more than two spells each turn.", "You can't cast more than two spells each turn."),
+        ("Each player can draw no more than two cards each turn.", "Each player can't draw more than two cards each turn."),
+        ("You can activate no more than one ability each turn.", "You can't activate more than one ability each turn."),
+    ] {
+        let (a, _) = read(capped);
+        let (b, _) = read(forbidden);
+        assert_eq!(a, b);
+    }
+    let (restricted, _) = read("You can cast noncreature spells only during your turn.");
+    let ir::Ability::Text(effect) = restricted else { panic!() };
+    let ir::Sentence::Do(body) = &effect.0[0] else { panic!() };
+    let ir::Action::Static(rule) = &body.first.first.action else { panic!() };
+    let ir::StaticAct::CastOnly { what, restrictions } = &**rule else { panic!() };
+    assert_eq!(what.domain, ir::Domain::Spell);
+    assert!(!matches!(&what.filter, ir::Filter::All(v) if v.is_empty()));
+    assert_eq!(*restrictions, vec![ir::Restriction::During(ir::event::During::Turn(Box::new(ir::Selector::you())))]);
+    for text in [
+        "Creatures can cast spells only during your turn.",
+        "You can cast creatures only during your turn.",
+        "Target creature can draw no more than two cards each turn.",
+        "You can cast only one more spell this turn.",
+    ] { declines(text); }
+}

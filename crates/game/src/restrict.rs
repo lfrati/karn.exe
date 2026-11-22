@@ -408,7 +408,10 @@ impl Rule {
                 // is this rule's controller (702.11c, 702.18a), so reuse the exact existing
                 // keyword prohibition; ordinary object grants retain their layer path.
                 StaticAct::Has(granted) => Self::player_keyword(granted, support, bind)?.0,
-                StaticAct::CastOnlyAsSorcery => Says::CastOnlyAsSorcery,
+                StaticAct::CastOnly { what, restrictions }
+                    if *what == ObjectSet::of(Domain::Spell) && restrictions.as_slice() == [ir::Restriction::Sorcery] =>
+                        Says::CastOnlyAsSorcery,
+                StaticAct::CastOnly { .. } => return unsupported("casting restriction: only all spells at sorcery timing are lowered"),
                 StaticAct::CastAsThoughFlash { what, .. } => {
                     let ir::Who::Set(set) = what else {
                         return unsupported("flash permission: only described spells");
@@ -637,7 +640,7 @@ pub(crate) fn spells_cant_be_cast(statement: &Statement<'_>) -> Option<(ir::Subj
 /// Is this act a restriction or a requirement? "Doesn't untap during its controller's untap
 /// step" is one: an effect that keeps a permanent from untapping (502.3).
 fn rule(a: &Action) -> bool {
-    matches!(a, Action::Cant(_) | Action::DoesntUntap { .. } | Action::KeepMana { mana: ir::mana::Pooled::Unspent(Some(_)), phases: true }) || matches!(a, Action::Static(s) if matches!(**s, StaticAct::CastOnlyAsSorcery | StaticAct::CastAsThoughFlash { .. } | StaticAct::NoMaximumHandSize | StaticAct::IfAble { .. } | StaticAct::CanBlockAdditional { .. } | StaticAct::CanBlockOnly(_) | StaticAct::SaddlesAndCrews(_) | StaticAct::CrewsAsThoughGreater(_)))
+    matches!(a, Action::Cant(_) | Action::DoesntUntap { .. } | Action::KeepMana { mana: ir::mana::Pooled::Unspent(Some(_)), phases: true }) || matches!(a, Action::Static(s) if matches!(**s, StaticAct::CastOnly { .. } | StaticAct::CastAsThoughFlash { .. } | StaticAct::NoMaximumHandSize | StaticAct::IfAble { .. } | StaticAct::CanBlockAdditional { .. } | StaticAct::CanBlockOnly(_) | StaticAct::SaddlesAndCrews(_) | StaticAct::CrewsAsThoughGreater(_)))
 }
 
 /// How long an act that is a rule lasts, when the engine keeps it: "this turn", "until end of

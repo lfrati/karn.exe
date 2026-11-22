@@ -12,7 +12,7 @@
 
 use crate::action::{Action, Becoming, Delta, Granted, Prevention, Whose};
 use crate::amount::Amount;
-use crate::condition::Condition;
+use crate::condition::{Condition, Restriction};
 use crate::effect::Body;
 use crate::event::{EventAction, EventPattern};
 use crate::lexicon::Verb;
@@ -470,8 +470,9 @@ pub enum StaticAct {
     /// "cast ~ as though it had flash", "cast creature spells this turn as though they had
     /// flash" (601.3b, 609.4).
     CastAsThoughFlash { what: Who, this_turn: bool },
-    /// Casting requires priority, own main phase and an empty stack (307.5).
-    CastOnlyAsSorcery,
+    /// The subject may cast matching spells only under these restrictions (601.3).
+    /// Sorcery timing requires priority, their own main phase and an empty stack (307.5).
+    CastOnly { what: ObjectSet, restrictions: Vec<Restriction> },
     /// "gets an additional +1/+1" (613.4c, on top of another change the text makes).
     GetsAdditional { power: Delta, toughness: Delta },
     /// "control enchanted creature" (613.1b: a control-changing effect).

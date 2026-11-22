@@ -329,13 +329,34 @@ fn forbidden(form: Form) -> P<Forbidden> {
 /// "can't attack", "can't attack or block", "can't be blocked by creatures with flying", "can't
 /// cast noncreature spells": a prohibition (101.2) on events with the clause's subject.
 pub(crate) fn cant(form: Form) -> P<Action> {
-    lit("can't").then_keep(&one_or_list(&forbidden(form), "or")).map(
+    let plain = lit("can't").then_keep(&one_or_list(&forbidden(form), "or")).map(
         |v| Some(Action::Cant(v)),
         |a| match a {
             Action::Cant(v) => Some(v.clone()),
             _ => None,
         },
-    )
+    );
+    // "can cast no more than two spells each turn" is the same prohibition as
+    // "can't cast more than two spells each turn"; it grants no extra casting permission.
+    let verbs = crate::kernel::table("count-limited action", Verb::ALL.iter().copied().filter(|v| {
+        let e = v.entry();
+        !crate::event::own_rule(*v) && v.tail().is_empty() && e.doer == ir::lexicon::Doer::Player
+            && e.roles.first().is_some_and(|(role, _)| *role == ir::Role::What)
+            && e.roles.iter().skip(1).all(|(role, _)| *role == ir::Role::By)
+    }).map(|v| (v.head(ir::lexicon::Inflection::Base), v)).collect());
+    let capped = lit("can").then_keep(&verbs).skip(&lit("no more than"))
+        .then(&selectors().selector).skip(&lit("each turn")).map(
+            |(verb, mut what)| {
+                let Quant::Indefinite(ir::Count::Exactly(Amount::Const(n))) = what.quant else { return None };
+                if what.chooser.is_some() || what.random.is_some() || !ir::lexicon::fills(&what, verb, ir::Role::What) {
+                    return None;
+                }
+                what.quant = Quant::Indefinite(ir::Count::AtLeast(Amount::Const(n.checked_add(1)?)));
+                Some(Action::Cant(vec![Forbidden { event: EventAction::does(verb, what), within: Some(Within::EachTurn) }]))
+            },
+            |_: &Action| None,
+        ).alias();
+    alt("prohibition", vec![plain, capped])
 }
 
 /// What a losing effect takes away: "all abilities", "all other card types and abilities", "all
@@ -844,7 +865,16 @@ pub fn static_act(form: Form) -> P<Action> {
             unblocked,
             look,
             flash,
-            lit("can cast spells only any time they could cast a sorcery").to(StaticAct::CastOnlyAsSorcery),
+            lit("can cast spells only any time they could cast a sorcery").to(StaticAct::CastOnly {
+                what: ObjectSet::of(Domain::Spell), restrictions: vec![ir::Restriction::Sorcery],
+            }),
+            lit("can cast").then_keep(&s.set_pl).then(&crate::kernel::lazy("casting restrictions", || conditions().restrictions.clone())).map(
+                |(what, restrictions)| (what.domain == Domain::Spell).then_some(StaticAct::CastOnly { what, restrictions }),
+                |a| match a {
+                    StaticAct::CastOnly { what, restrictions } if what.domain == Domain::Spell => Some((what.clone(), restrictions.clone())),
+                    _ => None,
+                },
+            ),
             spend,
             has,
             loses,

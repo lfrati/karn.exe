@@ -1832,6 +1832,10 @@ pub fn during() -> P<During> {
     );
     let other_turns = lit("turns other than yours").to(During::NotTurn(Box::new(Selector::you())));
     // "each of your turns" counts the same turns as "your turn"
+    let own_turns = selectors().possessive.skip(&lit("own"))
+        .skip(&alt("turn", vec![lit("turn"), lit("turns")])).map(
+            |p| Some(During::Turn(Box::new(p))), |_| None,
+        ).alias();
     let each_of = lit("each of")
         .then_keep(&selectors().possessive)
         .skip(&lit("turns"))
@@ -1845,7 +1849,7 @@ pub fn during() -> P<During> {
             _ => None,
         },
     );
-    alt("during", vec![turn, each_of, other_turns, lit("combat").to(During::Combat), step, turn_when])
+    alt("during", vec![turn, own_turns, each_of, other_turns, lit("combat").to(During::Combat), step, turn_when])
 }
 
 /// "during your turn", "during combat", "any time a sorcery couldn't have been cast".

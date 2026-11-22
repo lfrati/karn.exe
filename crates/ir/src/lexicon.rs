@@ -658,7 +658,7 @@ impl Action {
             | Action::Is(_)
             | Action::Cant(_)
             | Action::DoesntUntap { .. } => Doer::Named,
-            Action::Static(s) if matches!(**s, crate::StaticAct::CastOnlyAsSorcery | crate::StaticAct::CastAsThoughFlash { .. }) => Doer::Player,
+            Action::Static(s) if matches!(**s, crate::StaticAct::CastOnly { .. } | crate::StaticAct::CastAsThoughFlash { .. }) => Doer::Player,
             Action::Keyword(_) | Action::Numbered(..) | Action::Static(_) | Action::LifeTotalBecomes(_) => Doer::Any,
             _ => Doer::Player,
         }
