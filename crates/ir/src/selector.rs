@@ -275,6 +275,8 @@ pub enum Atom {
     KeywordWith(Box<KeywordInstance>),
     /// A player who is an opponent of the ability's controller ("opponent", CR 102.3).
     Opponent,
+    /// Opponent of the named player, rather than of this ability's controller (102.3).
+    OpponentOf(Box<Selector>),
     /// "named ~", "named Relentless Rats", "named Bogbrew Witch or Festering Newt" (CR 201.2).
     /// "or" / "and/or": the object has any of the names. "and" ("artifacts you control named A
     /// and B"): the set holds one object for each name, so no single object satisfies it.
@@ -659,6 +661,8 @@ pub enum Anaphor {
     One,
     /// "both creatures": a soulbond pair (702.95).
     BothPaired,
+    /// The n-th participant named by the instruction ("the first player", 608.2c).
+    Ordinal { n: u32 },
     /// "itself": the subject of its own clause ("Each creature deals damage to itself").
     Itself,
 }

@@ -199,3 +199,31 @@ fn r608_2i_drawn_card_history() {
     }
     declines("Choose two players drawn this turn.");
 }
+
+/// CR 102.3 and 608.2c: a relative opponent and the first instructed player keep distinct references.
+#[test]
+fn r608_2c_ordered_players_and_relative_opponents() {
+    for text in [
+        "At the beginning of each player's upkeep, that player chooses target player who controls more creatures than they do and is their opponent. The first player may reveal cards from the top of their library until they reveal a creature card. If the first player does, that player puts that card onto the battlefield and all other cards revealed this way into their graveyard.",
+        "The second player draws a card.",
+        "Target player who is your opponent draws a card.",
+    ] {
+        read(text);
+    }
+    declines("The first creature who is your opponent draws a card.");
+}
+
+/// CR 118.9 and 702.122: the substituted keyword cost and its source remain explicit.
+#[test]
+fn r118_9_keyword_cost_substitution() {
+    for text in [
+        "You may remove a loyalty counter from a planeswalker you control rather than pay ~'s crew cost.",
+        "You may discard a card rather than pay its equip cost.",
+    ] {
+        let (value, _) = read(text);
+        assert!(serde_json::to_string(&value).unwrap().contains("AlternativeKeywordCost"));
+    }
+    for text in ["You may discard a card rather than pay its flying cost.", "You may discard a card rather than pay target player's crew cost."] {
+        declines(text);
+    }
+}

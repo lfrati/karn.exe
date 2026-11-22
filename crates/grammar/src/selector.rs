@@ -1390,7 +1390,9 @@ fn player_measures(n: Number, sel: &P<Selector>) -> P<Filter> {
     let set_pl = crate::kernel::lazy("plural set", || selectors().set_pl.clone());
     let (controls, has) = if sg { ("who controls", "who has") } else { ("who control", "who have") };
     let more = alt("more", vec![lit("more").to(false), lit("fewer").to(true)]);
-    let than = lit("than").then_keep(sel);
+    let than = lit("than").then_keep(&alt("comparison player", vec![
+        sel.clone(), lit("they").to(Selector::new(Quant::Definite(Ref::Anaphor(Anaphor::They)), ObjectSet::of(Domain::Player))),
+    ])).skip(&alt("comparison ellipsis", vec![empty(), lit("do").alias()]));
     let more_than = alt(
         "more than",
         vec![
@@ -1464,6 +1466,13 @@ fn player_measures(n: Number, sel: &P<Selector>) -> P<Filter> {
             _ => None,
         },
     );
+    let opponent_of = alt("opponent relative", vec![
+        lit(if sg { "who is" } else { "who are" }),
+        lit(if sg { "and is" } else { "and are" }).alias(),
+    ]).then_keep(&crate::kernel::lazy("possessive", || selectors().possessive.clone())).skip(&lit("opponent")).map(
+        |player| Some(Filter::Atom(Atom::OpponentOf(Box::new(player)))),
+        |f| match f { Filter::Atom(Atom::OpponentOf(player)) => Some((**player).clone()), _ => None },
+    );
     // "each opponent who does", "each player who can't"
     let (does, doesnt) = if sg { ("who does", "who doesn't") } else { ("who do", "who don't") };
     let did_so = alt(
@@ -1492,7 +1501,7 @@ fn player_measures(n: Number, sel: &P<Selector>) -> P<Filter> {
         );
     alt(
         "player measure",
-        vec![more_than, controls_most, most_life, has_most, controls_what, controls_not, did_so, player_counters],
+        vec![more_than, controls_most, most_life, has_most, controls_what, controls_not, opponent_of, did_so, player_counters],
     )
 }
 
@@ -1609,6 +1618,7 @@ fn is_player_filter(f: &Filter) -> bool {
             a,
             Atom::MoreThan { .. }
                 | Atom::MostOf { .. }
+                | Atom::OpponentOf(_)
                 | Atom::Did { .. }
                 | Atom::Controls(_)
                 | Atom::Attacking(_)
@@ -2226,6 +2236,7 @@ fn is_post_filter(f: &Filter) -> bool {
             | Atom::Source(_)
             | Atom::MoreThan { .. }
             | Atom::MostOf { .. }
+            | Atom::OpponentOf(_)
             | Atom::Controls(_)
             | Atom::DidSo(_)
             | Atom::ThatName
@@ -3781,6 +3792,14 @@ fn specials(possessor: &P<Selector>) -> P<Selector> {
         "special",
         vec![
             lit("you").to(Selector::you()),
+            lit("they").to(def(Ref::Anaphor(Anaphor::They), Domain::Player)),
+            lit("the").then_keep(&crate::event::ordinal()).skip(&lit("player")).map(
+                |n| Some(Selector::new(Quant::Definite(Ref::Anaphor(Anaphor::Ordinal { n })), ObjectSet::of(Domain::Player))),
+                |s| match s.quant {
+                    Quant::Definite(Ref::Anaphor(Anaphor::Ordinal { n })) if s.set == ObjectSet::of(Domain::Player) => Some(n),
+                    _ => None,
+                },
+            ),
             self_ref.to(def(Ref::This, Domain::Permanent)),
             // Generated rules retain a typed spell source. "This spell" round-trips
             // that type; "~" parses as a permanent selector.
