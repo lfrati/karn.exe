@@ -212,6 +212,8 @@ pub enum Modifier {
     /// "for each creature you control": the action's amount is multiplied (or the action
     /// repeated) by the count.
     ForEach(Amount),
+    /// Iterate the values of a class, binding "that type/color" for each (608.2c, 205.2a).
+    ForEachValue(crate::action::ValueKind),
     /// ", where X is …": X for this sentence (107.3).
     WhereX(Amount),
     /// "unless its controller pays {2}", "unless you sacrifice a creature": the action happens

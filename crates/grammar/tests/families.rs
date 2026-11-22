@@ -34,3 +34,20 @@ fn r700_3b_pile_membership() {
         declines(text);
     }
 }
+
+/// CR 205.2a and 608.2c: iterate card types, retaining which type each instruction names.
+#[test]
+fn r205_2a_iterate_value_classes() {
+    for text in [
+        "When ~ enters, reveal the top ten cards of your library. For each card type, you may put a card of that type from among the revealed cards into your hand. Put the rest on the bottom of your library in a random order.",
+        "Reveal the top X cards of your library. For each card type, you may exile a card of that type from among them. Put the rest into your graveyard.",
+        "For each color, add one mana of that color.",
+        "For each basic land type, choose a land of the chosen type.",
+    ] {
+        let (value, _) = read(text);
+        assert!(serde_json::to_string(&value).unwrap().contains("ForEachValue"));
+    }
+    for text in ["For each card, draw a card.", "For each card types, draw a card.", "For each power, draw a card."] {
+        declines(text);
+    }
+}

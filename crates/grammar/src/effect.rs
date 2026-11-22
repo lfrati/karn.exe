@@ -263,6 +263,13 @@ fn build_modifiers() -> Modifiers {
             _ => None,
         },
     );
+    let for_each_value = lit("for each").then_keep(&crate::choice::value_class(crate::words::Number::Sg)).map(
+        |kind| Some(Modifier::ForEachValue(kind)),
+        |m| match m {
+            Modifier::ForEachValue(kind) => Some(kind.clone()),
+            _ => None,
+        },
+    );
     let where_x = lit(", where X is").then_keep(&a.amount).map(
         |n| Some(Modifier::WhereX(n)),
         |m| match m {
@@ -352,6 +359,7 @@ fn build_modifiers() -> Modifiers {
             if_.clone(),
             duration.clone(),
             for_each.clone(),
+            for_each_value.clone(),
             at.clone(),
             at_end_of_combat.clone(),
             as_long_as.clone(),
@@ -364,6 +372,7 @@ fn build_modifiers() -> Modifiers {
         "modifier",
         vec![
             for_each,
+            for_each_value,
             where_x,
             unless,
             at,

@@ -12,7 +12,7 @@
 //! always a [`Choice::Value`], "black or red" always a [`Choice::Among`].
 
 use crate::kernel::{P, alt, lit, table};
-use crate::words::{digits, number_words, plural};
+use crate::words::{Number, digits, number_words, plural};
 use ir::action::{Exclusion, Options, ValueKind};
 use ir::vocab::SubtypeKind;
 use ir::{Amount, CardType, Choice, Color, Modes, ObjectSet, Objects, Subtype};
@@ -33,10 +33,9 @@ fn at_random() -> P<bool> {
     lit("at random").opt().map(|o| Some(o.is_some()), |b| Some(b.then_some(())))
 }
 
-pub(crate) fn choice(objects: &P<Objects>, modes: &P<Modes>, set_sg: &P<ObjectSet>) -> P<Choice> {
-    let article = alt("a", vec![lit("a"), lit("an").alias()]);
-    let random = at_random();
-    let classes: [(&str, ValueKind); 6] = [
+/// Finite or rules-defined value classes (105.1, 205.2a, 205.3): shared by choosing and iteration.
+pub(crate) fn value_class(number: Number) -> P<ValueKind> {
+    let classes = [
         ("color", ValueKind::Color),
         ("creature type", ValueKind::CreatureType),
         ("card type", ValueKind::CardType),
@@ -44,8 +43,16 @@ pub(crate) fn choice(objects: &P<Objects>, modes: &P<Modes>, set_sg: &P<ObjectSe
         ("land type", ValueKind::LandType),
         ("planeswalker type", ValueKind::PlaneswalkerType),
     ];
-    let singular = table("class", classes.iter().map(|(w, k)| (w.to_string(), k.clone())).collect());
-    let plurals = table("classes", classes.iter().map(|(w, k)| (plural(w), k.clone())).collect());
+    table("value class", classes.into_iter().map(|(word, kind)| {
+        (if number == Number::Pl { plural(word) } else { word.to_owned() }, kind)
+    }).collect())
+}
+
+pub(crate) fn choice(objects: &P<Objects>, modes: &P<Modes>, set_sg: &P<ObjectSet>) -> P<Choice> {
+    let article = alt("a", vec![lit("a"), lit("an").alias()]);
+    let random = at_random();
+    let singular = value_class(Number::Sg);
+    let plurals = value_class(Number::Pl);
     let card_name = set_sg.skip(&lit("name")).map(|set| Some(ValueKind::CardName(set)), |k| match k {
         ValueKind::CardName(set) => Some(set.clone()),
         _ => None,
