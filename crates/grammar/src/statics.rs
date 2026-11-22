@@ -1032,9 +1032,10 @@ pub fn sentence(body: &P<Body>) -> P<Static> {
             _ => None,
         },
     );
-    // what may go on from a clause before it: "its activated abilities can't be activated", "mana
-    // of any type can be spent to cast it", "the damage can't be prevented"
-    let following = alt("following", vec![activated_abilities(), any_type, unpreventable()]);
+    // A following rule may refer to the preceding clause, or replace an event that
+    // happens later. It retains the surrounding sentence's leads and conditions.
+    let replacement = replacement(body);
+    let following = alt("following", vec![activated_abilities(), any_type, unpreventable(), replacement.clone()]);
     let after = body.then(&join).then(&following).map(
         |((body, join), rest)| Some(Static::After { body, join, rest: Box::new(rest) }),
         |x| match x {
@@ -1213,7 +1214,7 @@ pub fn sentence(body: &P<Body>) -> P<Static> {
             pt(),
             alternative_cost(),
             alternative_keyword_cost(),
-            replacement(body),
+            replacement,
             redirect,
             x_limit(),
             keyword_cost(),

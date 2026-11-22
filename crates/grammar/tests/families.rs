@@ -772,6 +772,29 @@ fn r702_29_alternative_object_participant_histories() {
     ] { declines(text); }
 }
 
+/// CR 608.2c and 614.1a: a coordinated replacement stays inside its whole sentence's gate.
+#[test]
+fn r608_2c_instruction_followed_by_replacement() {
+    let (value, _) = read("~ deals X damage to any target. If it's a creature, it can't be regenerated this turn, and if it would die this turn, exile it instead.");
+    read("~ deals 3 damage to any target. If it's a creature, it can't be regenerated this turn, and if it would die this turn, exile it instead.");
+    read("Kicker {R}");
+    read("~ deals 2 damage to any target. If this spell was kicked, that creature can't be regenerated this turn and if it would die this turn, exile it instead.");
+    read("When you unlock this door, you may cast spells from your graveyard this turn, and if a card would be put into your graveyard from anywhere this turn, exile it instead.");
+    let ir::Ability::Text(effect) = value else { panic!() };
+    let ir::Sentence::Led { lead: ir::Lead::Modifier(ir::Modifier::If(condition)), rest } = &effect.0[1] else { panic!() };
+    assert!(matches!(condition, ir::Condition::Is { negated: false, .. }));
+    let ir::Sentence::Static(rule) = &**rest else { panic!() };
+    let ir::Static::After { body, join, rest } = &**rule else { panic!() };
+    assert_eq!(*join, ir::Join::CommaAnd);
+    assert!(matches!(body.first.first.action, ir::Action::Cant(_)));
+    assert_eq!(body.first.first.mods, vec![ir::Modifier::Duration(ir::Duration::ThisTurn)]);
+    assert!(matches!(&**rest, ir::Static::Replacement(_)));
+    read("Target creature gains trample until end of turn, and the next time it would die this turn, exile it instead.");
+    declines("It can't be regenerated this turn, and if it would die this turn.");
+    declines("Target player can't be regenerated this turn, and if it would die this turn, exile it instead.");
+}
+
+
 /// CR 608.2i: a source-free passive does not require any player to have caused the event.
 #[test]
 fn r608_2i_passive_participants_keep_actor_unbound() {
