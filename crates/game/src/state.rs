@@ -2311,11 +2311,12 @@ impl Game {
         let counters = self.counters_mut(from);
         let left = counters.get_mut(kind).unwrap();
         *left -= removed;
-        if *left == 0 {
+        let remaining = *left;
+        if remaining == 0 {
             counters.remove(kind);
             if let Target::Object(object) = from { self.counter_fields_mut(object).1.remove(kind); }
         }
-        self.event_log_mut().push(Event::CountersRemoved { from, kind: kind.to_string(), count: removed });
+        self.event_log_mut().push(Event::CountersRemoved { from, kind: kind.to_string(), count: removed, remaining });
         removed
     }
 

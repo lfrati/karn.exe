@@ -90,7 +90,7 @@ fn full_coalition_relic_zero_small_and_large_choices() {
         }
         finish(&mut g);
         cite!(["106.4"]; case: format!("{n}"); assert_eq!(g.players[0].pool.colors.iter().sum::<u32>(), n));
-        assert_eq!(g.log.iter().filter(|e|matches!(e,Event::CountersRemoved{from,kind,count} if *from==relic.into() && kind=="charge" && *count==n)).count(),usize::from(n>0));
+        assert_eq!(g.log.iter().filter(|e|matches!(e,Event::CountersRemoved{from,kind,count,..} if *from==relic.into() && kind=="charge" && *count==n)).count(),usize::from(n>0));
         assert_eq!(g.log.iter().filter(|e| matches!(e, Event::ManaAdded { .. })).count(), usize::from(n > 0));
     }
 }

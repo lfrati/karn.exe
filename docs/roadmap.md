@@ -40,7 +40,7 @@ The record is the commit log and the README counts; nothing else needs writing u
 
 ### If you are a builder
 
-Work in your lane's worktree (`keywords`, `closers` or `grammar`). Make it if it is missing:
+Work in your lane's worktree (`keywords`, `closers`, `grammar` or `mechanisms`). Make it if it is missing:
 
 ```sh
 git fetch origin
@@ -231,6 +231,15 @@ method and the tool that finds the families. Cards no roster deck names still co
 the first goal: a family's rule covers them too.
 
 *Skipped:* none yet.
+
+#### Lane 4: mechanisms (worktree `mechanisms`)
+
+Take Suspend, Cascade, Echo, Miracle, Bestow, Overload and Unearth, in that order.
+Read each mechanism in the pinned Ironsmith checkout before designing it, then build the
+missing capability named in Lane 1's skip notes. The two-attempt skip rule does not apply:
+stay with each mechanism until actual Oracle cards run with tested behavior. Publish useful
+steps that pass `make check`, continuing immediately after a structural step while its cards
+remain refused. Continue until the user explicitly stops the builders.
 
 #### Not this round
 

@@ -20,7 +20,7 @@ fn hub() -> CardDef {
 }
 fn activate(source: ObjId, ability: usize) -> Move { Move::Activate { source, ability, targets: vec![], paying: vec![] } }
 fn removals(g: &Game, player: usize) -> Vec<u32> {
-    g.log.iter().filter_map(|e| match e { Event::CountersRemoved { from: Target::Player(p), kind, count } if *p == player && kind == "energy" => Some(*count), _ => None }).collect()
+    g.log.iter().filter_map(|e| match e { Event::CountersRemoved { from: Target::Player(p), kind, count, .. } if *p == player && kind == "energy" => Some(*count), _ => None }).collect()
 }
 fn resolve(g: &mut Game) { for _ in 0..2 { g.act(g.priority, Move::Pass).unwrap(); } }
 #[test]

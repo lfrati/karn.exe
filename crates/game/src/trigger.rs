@@ -48,6 +48,8 @@ pub(crate) struct Fact {
     counters: Option<(String, u32)>,
     /// Of counters put: how many of that kind it had before (714.2b).
     had: Option<u32>,
+    /// Of a removal: counters of its named kind left immediately afterward.
+    remaining: Option<u32>,
     /// Of a permanent's level becoming a number: that number (716.2a).
     level: Option<u32>,
     /// Of unlocking: the Room and which of its halves (709.5h).
@@ -70,7 +72,7 @@ impl Fact {
     pub(crate) fn verb(&self) -> Verb { self.verb }
     pub(crate) fn doer(&self) -> Option<Target> { self.doer }
     pub(crate) fn new(verb: Verb, doer: Option<Target>, roles: Vec<(Role, Target)>) -> Fact {
-        Fact { verb, activation: None, doer, roles, was: None, last_known: None, combat: None, excess: false, amount: None, zones: None, ordinal: None, in_draw_step: None, counters: None, had: None, level: None, door: None, attackers: None, at: None, entered_face_down: None, entered_as: None, counter_recipient: None }
+        Fact { verb, activation: None, doer, roles, was: None, last_known: None, combat: None, excess: false, amount: None, zones: None, ordinal: None, in_draw_step: None, counters: None, had: None, remaining: None, level: None, door: None, attackers: None, at: None, entered_face_down: None, entered_as: None, counter_recipient: None }
     }
 
     /// Counter-placement proposal, distinct from its eventual committed event.
@@ -136,7 +138,7 @@ impl Fact {
 
 impl crate::retention::Trace for Fact {
     fn trace(&self, visit: &mut dyn FnMut(ObjId)) {
-        let Self { activation: _, doer, roles, was, last_known, verb: _, combat: _, excess: _, amount: _, zones: _, ordinal: _, in_draw_step: _, counters: _, had: _, level: _, door, attackers, at: _, entered_face_down: _, entered_as: _, counter_recipient: _ } = self;
+        let Self { activation: _, doer, roles, was, last_known, verb: _, combat: _, excess: _, amount: _, zones: _, ordinal: _, in_draw_step: _, counters: _, had: _, remaining: _, level: _, door, attackers, at: _, entered_face_down: _, entered_as: _, counter_recipient: _ } = self;
         doer.trace(visit);
         attackers.trace(visit);
         for (_, t) in roles { t.trace(visit); }
@@ -229,7 +231,9 @@ pub(crate) fn facts(game: &Game, e: &Event) -> Vec<Fact> {
             counter_recipient: recipient.clone(),
             last_known: match on { O(o) => Some(*o), P(_) => None },
             ..Fact::new(Verb::PutCounters, Some(P(*by)), vec![(Role::On, *on)]) }],
-        Event::CountersRemoved { from, .. } => vec![Fact::new(Verb::RemoveCounters, None, vec![(Role::From, *from)])],
+        Event::CountersRemoved { from, kind, count, remaining } => vec![Fact {
+            counters: Some((kind.clone(), *count)), remaining: Some(*remaining),
+            ..Fact::new(Verb::RemoveCounters, None, vec![(Role::From, *from)]) }],
         // to create a token is to put it onto the battlefield (701.7a): it enters
         Event::Created { token } => {
             let controller = P(game.controller(*token));
@@ -345,6 +349,7 @@ const WATCHED: &[Verb] = &[
     // only ever turned face up: no event says a permanent was turned face down
     Verb::TurnFace,
     Verb::PutCounters,
+    Verb::RemoveCounters,
     Verb::Create,
     Verb::Cast,
     Verb::Activate,
@@ -451,7 +456,8 @@ fn plain(a: &EventAction) -> bool {
         E::PutsCounters { .. } => true,
         // "the fourth plan counter is put on ~" (122.7): not watched
         E::CountersPut { nth, .. } => nth.is_none(),
-        E::CountersRemoved { nth, .. } => nth.is_none(),
+        E::CountersRemoved { kind, nth, .. } => nth.is_none()
+            || (*nth == Some(ir::event::CounterNth::Last) && kind.is_some()),
         _ => true,
     }
 }
@@ -472,7 +478,8 @@ struct Action {
     /// What every such event says that the phrase leaves [`unsaid`], in order.
     unsaid: Vec<Option<Role>>,
     zone_change: Option<ZoneChange>,
-    counters: Option<(Option<String>, bool)>,
+    /// Kind, whether one batch is one occurrence, and whether it must remove the last.
+    counters: Option<(Option<String>, bool, bool)>,
     attacking: Option<Attacking>,
     /// "becomes level 2": the level it must become (716.2a).
     level: Option<u32>,
@@ -586,7 +593,9 @@ impl Action {
         };
         let unsaid = unsaid(a, subject_named).into_iter().map(|(role, _)| role).collect();
         let counters = match a {
-            EventAction::CountersPut { kind, one_or_more, .. } | EventAction::PutsCounters { kind, one_or_more, .. } => Some((kind.as_ref().map(|k| k.0.clone()), *one_or_more)),
+            EventAction::CountersPut { kind, one_or_more, .. } | EventAction::PutsCounters { kind, one_or_more, .. } => Some((kind.as_ref().map(|k| k.0.clone()), *one_or_more, false)),
+            EventAction::CountersRemoved { kind, one_or_more, nth } =>
+                Some((kind.as_ref().map(|k| k.0.clone()), *one_or_more, *nth == Some(ir::event::CounterNth::Last))),
             _ => None,
         };
         let level = match a { EventAction::BecomesLevel(n) => Some(*n), _ => None };
@@ -661,11 +670,14 @@ impl Action {
             let door = game.def(source)?.door_of(ctx.ability.clone()?.index)?;
             if f.door != Some((source, door)) { return None; }
         }
-        let times = if let Some((wanted, together)) = &self.counters {
+        let times = if let Some((wanted, together, last)) = &self.counters {
             let (kind, count) = f.counters.as_ref()?;
             if *count == 0 || wanted.as_ref().is_some_and(|w| w != kind) { return None; }
+            // The last counter is one occurrence, even when several leave together; its
+            // event-time remainder cannot be reconstructed from the current counter map.
+            if *last && f.remaining != Some(0) { return None; }
             // 603.2c: "a counter" is an occurrence per counter; "one or more" is one batch.
-            if *together { 1 } else { *count }
+            if *together || *last { 1 } else { *count }
         } else { 1 };
         let said = filled.len();
         Some(Matched { subject, participants: filled, times, group: group.flatten(), action: 0, said })
@@ -850,7 +862,7 @@ impl Pattern {
         // Several counter kinds in one placement are still one "one or more" event.
         // The named recipient remains in the grouping key, so different recipients
         // each trigger; commitment preserves distinct placement instructions (603.2c).
-        let grouped = grouped_subject || actions.iter().any(|a| a.counters.as_ref().is_some_and(|(_, together)| *together));
+        let grouped = grouped_subject || actions.iter().any(|a| a.counters.as_ref().is_some_and(|(_, together, _)| *together));
         let subjects = p.subjects.iter().map(|s| {
             let mut one = s.clone();
             if grouped_subject { one.quant = Quant::Indefinite(Count::Exactly(Amount::Const(1))); }

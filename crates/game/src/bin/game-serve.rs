@@ -804,7 +804,7 @@ fn event(g: &Game, viewer: Option<usize>, e: &Event) -> Value {
         Event::TurnedFaceUp { object } => ("turned_face_up", json!({ "object": o(object) })),
         Event::TurnedFaceDown { object } => ("turned_face_down", json!({ "object": o(object) })),
         Event::CountersPut { on, kind, count, by, .. } => ("counters", json!({ "on": target(on), "counter": kind, "count": count, "by": pid(*by) })),
-        Event::CountersRemoved { from, kind, count } => ("counters_removed", json!({ "from": target(from), "counter": kind, "count": count })),
+        Event::CountersRemoved { from, kind, count, .. } => ("counters_removed", json!({ "from": target(from), "counter": kind, "count": count })),
         Event::EmblemCreated { object } => ("emblem_created", json!({ "object": o(object) })),
         Event::Created { token } => ("created", json!({ "token": o(token) })),
         Event::AbilityCopied { original, copy, by } => ("ability_copied", json!({ "original": o(original), "copy": o(copy), "player": pid(*by) })),

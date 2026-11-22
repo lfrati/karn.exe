@@ -33,7 +33,7 @@ fn cast(g: &mut Game, targets: Vec<Target>) -> ObjId {
 fn removed(g: &Game, holder: ObjId) -> BTreeMap<String, u32> {
     let mut counts = BTreeMap::new();
     for e in g.log.iter() {
-        if let Event::CountersRemoved { from: Target::Object(o), kind, count } = e {
+        if let Event::CountersRemoved { from: Target::Object(o), kind, count, .. } = e {
             if *o == holder {
                 assert!(counts.insert(kind.clone(), *count).is_none(), "duplicate removal event for {kind}");
             }
@@ -163,12 +163,12 @@ fn r122_2_target_departure_drops_counters_without_removal_and_new_incarnation_is
 }
 
 #[test]
-fn r122_1_unsupported_selective_count_among_and_removal_watchers_remain_refused() {
+fn r122_1_unsupported_selective_count_among_and_ordinal_removal_watchers_remain_refused() {
     for text in [
         "Remove a counter from target creature.",
         "Remove up to three counters from target creature.",
         "Remove three counters from among creatures you control.",
-        "Whenever one or more counters are removed from this creature, you gain 1 life.",
+        "Whenever the third time counter is removed from this creature, you gain 1 life.",
         "Remove all counters from this creature: You gain 1 life.",
     ] {
         let permanent = text.starts_with("Whenever") || text.contains(":");
@@ -312,7 +312,7 @@ fn r122_1_explicit_player_holder_removes_each_existing_kind_and_empty_inventory_
             .log
             .iter()
             .filter_map(|e| match e {
-                Event::CountersRemoved { from: Target::Player(1), kind, count } => Some((kind.as_str(), *count)),
+                Event::CountersRemoved { from: Target::Player(1), kind, count, .. } => Some((kind.as_str(), *count)),
                 _ => None,
             })
             .collect();

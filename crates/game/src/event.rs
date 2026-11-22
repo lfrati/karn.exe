@@ -114,7 +114,8 @@ pub enum Event {
     CountersPut { on: Target, kind: String, count: u32, before: u32, by: crate::PlayerId,
         /// Recipient as the counters were put, for immediate matching and lookbacks (608.2i).
         recipient: Option<Box<crate::layers::Seen>> },
-    CountersRemoved { from: Target, kind: String, count: u32 },
+    /// Remaining counters of this kind at the removal event, before later instructions.
+    CountersRemoved { from: Target, kind: String, count: u32, remaining: u32 },
     Created { token: ObjId },
     /// A player gets an emblem in the command zone (114.2).
     EmblemCreated { object: ObjId },
