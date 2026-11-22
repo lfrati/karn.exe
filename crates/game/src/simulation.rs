@@ -333,7 +333,10 @@ impl Simulation {
                                                 orders: Vec<crate::start::ShuffleOrder>)
         -> Result<Vec<crate::start::ShuffleOrder>, ResponseError> {
         self.respond_with_random(id, player, action, orders.into_iter().map(Into::into).collect(), true)
-            .map(|orders| orders.into_iter().map(|unused| crate::start::ShuffleOrder { player: unused.outcome.player.expect("shuffle owner"), order: unused.outcome.order }).collect())
+            .map(|orders| orders.into_iter().map(|unused| {
+                let crate::start::RandomOutcome::Shuffle {player, order} = unused.outcome else { unreachable!("only shuffle receipts were supplied") };
+                crate::start::ShuffleOrder {player, order}
+            }).collect())
     }
 
     /// Explicit random outcomes, scoped to one response and its rules continuations.

@@ -23,6 +23,7 @@ pub enum Value {
     Subjects(Vec<crate::event::Target>),
     Consent(bool),
     Number(u32),
+    Coin(crate::start::CoinFlip),
     Turn(Option<crate::turn_control::Anchor>),
     CreatedTurns(Vec<crate::turn_control::CreatedTurnId>),
     /// An exact CR 205.2a name. Unlike the executable characteristic vocabulary, choices
@@ -336,13 +337,14 @@ impl crate::retention::Trace for Value {
             Value::Destructions(results) => for result in results { visit(result.before); visit(result.after); },
             Value::Cards(cards) => cards.trace(visit),
             Value::Subjects(subjects) => subjects.trace(visit),
-            Value::Turn(_) | Value::CreatedTurns(_) | Value::Consent(_) | Value::Number(_) | Value::CardType(_) | Value::CreatureType(_) | Value::Color(_) | Value::CardName(_) | Value::BasicLandType(_) => {},
+            Value::Coin(_) | Value::Turn(_) | Value::CreatedTurns(_) | Value::Consent(_) | Value::Number(_) | Value::CardType(_) | Value::CreatureType(_) | Value::Color(_) | Value::CardName(_) | Value::BasicLandType(_) => {},
         }
     }
 }
 impl crate::retention::Players for Value {
     fn players(&self, visit: &mut dyn FnMut(crate::PlayerId)) {
         match self {
+            Value::Coin(flip) => visit(flip.player),
             Value::Damage(results) => for result in results { result.recipient.players(visit); },
             Value::Removals(results) => for result in results { result.from.players(visit); },
             Value::Subjects(subjects) => subjects.players(visit),

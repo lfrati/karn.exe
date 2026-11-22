@@ -278,8 +278,7 @@ mod tests {
         submit(&mut sim, Move::Pass, None);
         submit(&mut sim, Move::Pass, None);
         let top_first = vec![cards[1], cards[0], cards[2]];
-        let random = game::start::RandomOutcome { kind: game::start::RandomKind::Shuffle,
-            player: Some(0), order: top_first.clone() };
+        let random = game::start::RandomOutcome::Shuffle { player: 0, order: top_first.clone() };
         submit(&mut sim, Move::Choose(game::state::Answer::Objects(vec![])), Some((vec![random], false)));
         let mut bottom_first = top_first;
         bottom_first.reverse();

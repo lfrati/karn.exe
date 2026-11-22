@@ -304,6 +304,8 @@ pub enum Instr {
     SkipUnless { consent: Slot, count: usize },
     /// A resolution-time scalar choice, before subsequent instructions (608.2d).
     Choose { kind: crate::binding::Domain, who: Who, out: Slot },
+    /// A called flip: its player's call suspends before the fair random result (705.2).
+    FlipCoin { out: Slot },
     /// The top `n` cards of the library of `whose`, as many as there are. Changes nothing.
     TakeTop { n: expr::Amount, whose: action::Operand, out: Slot },
     /// 701.57a: sequential actual exiles, with separate nonland hit and final-card designation.
@@ -827,6 +829,7 @@ impl Program {
                     }
                     make(&mut kinds, *out, kind.kind)?;
                 }
+                Instr::FlipCoin { out } => make(&mut kinds, *out, Kind::Coin)?,
                 Instr::Discover { by, amount, all, hit, designated, bound } => {
                     who(&kinds, *by)?;
                     for scalar in amount.scalars() { if let Scalar::Local { slot, kind } = scalar { need(&kinds, slot, kind)?; } }
@@ -976,6 +979,7 @@ impl fmt::Display for Instr {
             Instr::SetX(amount) => write!(f, "X = {amount:?}"),
             Instr::SkipUnless { consent, count } => write!(f, "unless s{consent}, skip {count}"),
             Instr::Choose { kind, who, out } => write!(f, "s{out} = choose {kind:?} by {who:?}"),
+            Instr::FlipCoin { out } => write!(f, "s{out} = called coin flip by controller"),
             Instr::Discover { by, amount, all, hit, designated, bound } => write!(f, "s{all}, s{hit}, s{designated}, s{bound} = {by:?} discovers {amount:?}"),
             Instr::Discovered { by, bound } => write!(f, "{by:?} completed discover s{bound}"),
             Instr::TakeUntil { set, whose, out, matched } => write!(f, "s{out}, s{matched} = take_until {set:?} of {whose:?}"),
@@ -1183,6 +1187,8 @@ impl CompletedSubject {
 /// Resolves references to producers by lexical scope.
 #[derive(Default, Clone)]
 struct Binder {
+    /// The exact preceding local flip; unrelated numbers and actions do not replace it.
+    coin: Option<Slot>,
     turn: Option<Slot>,
     created_turn: Option<Slot>,
     /// What the text's copy instruction made: "the copy", "the copies" (707.12).
@@ -4075,6 +4081,10 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                     // than the library has can't be paid (701.17b): nothing is milled
                     if let Instr::Action { action: action::Action::Mill { .. }, attempt: Some(attempt), .. } = &mut e.instrs[*instruction] { attempt.cost = true; }
                     condition::Condition::outcome(*paid, *possible, *outcome)
+                } else if let ir::Condition::Won {player, won, contest: Some(ir::condition::Contest::Flip)} = c {
+                    if !crate::select::is_you(player) { return unsupported("coin outcome: only the flipping controller's result is implemented"); }
+                    let slot = binder.coin.ok_or_else(|| crate::Unsupported("coin outcome: no preceding local flip producer".into()))?;
+                    condition::Condition::coin(slot, *won)
                 } else if let Some(subject) = countered_subject(c) {
                     let subject = e.operand(subject, support, &mut binder)?;
                     let Some((_, slot)) = binder.countered.iter().rev().find(|(producer, _)| *producer == subject) else {
@@ -4903,6 +4913,17 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             let each = each?;
             e.instrs.push(Instr::Continuous { objects, changes, each, duration });
             e.end_act(false, optional_branch);
+            continue;
+        }
+        if act.action == Action::Keyword(ir::KeywordAction::FlipCoin) {
+            if optional || !branches.is_empty() || binder.actor.is_some() || binder.each.is_some()
+                || !controller_only(clause.subject.as_ref()) || !act.mods.is_empty() {
+                return unsupported("coin flip: only an unconditional single called flip by the controller is implemented");
+            }
+            let out = e.slot();
+            binder.coin = Some(out);
+            e.instrs.push(Instr::FlipCoin {out});
+            e.end_act(false, None);
             continue;
         }
         // 701.57a-c: sequential scan, ordinary cast/hand route and random-bottom
@@ -7413,6 +7434,15 @@ fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt> {
                     return Err(Halt::Ask(decision));
                 }
             }
+        }
+        Instr::FlipCoin { out } => {
+            let Answer::CoinCall(call) = f.ask(f.ctx.controller, Choice::CoinCall)? else {
+                return Err(crate::Unsupported("a called coin flip requires a call".into()).into());
+            };
+            let player = f.ctx.controller;
+            let flip = crate::start::CoinFlip {player, call: Some(call), face: game.flip_coin(player)};
+            game.log.push(crate::Event::CoinFlipped {source: f.ctx.object_source(), result: flip});
+            f.slots[*out] = Some(Value::Coin(flip));
         }
         Instr::Choose { kind, who, out } => {
             let Answer::Value(value) = f.ask(f.player(*who), kind.choice())? else {

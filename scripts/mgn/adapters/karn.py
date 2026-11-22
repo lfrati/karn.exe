@@ -74,7 +74,7 @@ KINDS = {"priority": "priority", "attackers": "declare_attackers", "blockers": "
          "mana": "choose_mana", "holders": "holders", "attach": "attach", "defender": "choose_defender",
          "pile": "pile", "command_zone": "command_zone", "cast": "cast_during_resolution",
          "change_targets": "change_targets", "retarget": "change_targets", "skip": "skip",
-         "replacement": "choose_replacement", "order_cards": "order_cards"}
+         "replacement": "choose_replacement", "order_cards": "order_cards", "coin_call": "coin_call"}
 # the answer kinds the adapter translates (spec 5.2 to 5.4); every MGN kind it can be asked
 ANSWER_KINDS = {"play_land", "cast", "activate", "special_action", "declare_attackers", "declare_blockers",
                 "assign_combat_damage", "order_triggers", "choose_targets", "choose_modes", "optional",
@@ -82,7 +82,7 @@ ANSWER_KINDS = {"play_land", "cast", "activate", "special_action", "declare_atta
                 "choose_alternative", "discard", "mulligan", "bottom", "choose_player", "choose_number",
                 "choose_value", "choose_mana", "holders", "attach", "choose_defender", "pile", "separate", "spell_destination",
                 "skip", "command_zone", "cast_during_resolution", "change_targets", "concede",
-                "choose_first", "companion", "opening_hand_action"}
+                "choose_first", "companion", "opening_hand_action", "coin_call"}
 # what a chosen value is of (spec 5.4), as the engine's `value` question spells its options
 VALUE_KINDS = {"color": "color", "creature_type": "creature_type", "card_name": "card_name", "card_type": "card_type",
                "basic_land_type": "basic_land_type", "land_type": "land_type"}
@@ -325,7 +325,7 @@ class KarnAdapter:
         source = (version.get("source") or {}).get("revision") or "unknown"
         return {"mgn": "1", "engine": {"name": "karn", "version": f"{version.get('package', '?')}+{source[:8]}"},
                 "adapter": dict(ADAPTER), "tiers": [1, 2], "starts": ["decks", "position"], "kinds": sorted(ANSWER_KINDS),
-                "random": ["shuffle", "random_order", "starting_player"], "formats": ["standard", "commander", "custom"],
+                "random": ["shuffle", "random_order", "coin", "starting_player"], "formats": ["standard", "commander", "custom"],
                 "unsupported_facts": list(UNSUPPORTED_FACTS)}
 
     # ----- protocol: setup -----
@@ -901,6 +901,9 @@ class KarnAdapter:
         """
         if not self.outcomes:
             keys = [{"kind": "shuffle", "seat": seat} for seat in self.seats] + [{"kind": "random_order"}]
+            # A called flip cannot consume randomness before its call (705.2).
+            if (self.state.get("asked") or {}).get("kind") == "coin_call":
+                keys.append({"kind": "coin"})
             for key in keys:
                 while (outcome := ask(key)) is not None:
                     if not matches_request(outcome, key):
@@ -912,12 +915,36 @@ class KarnAdapter:
         self.unused_now = list(self.outcomes)
         self.outcomes = []
 
-    def _engine_random_outcomes(self) -> list[dict]:
+    def _engine_random_outcomes(self, move: dict | None = None) -> list[dict]:
         """The held outcomes in the engine's form: the recorded order as current object ids. The
         engine keeps the cards a search set aside (701.24b) at their positions when the order leaves
         them out, as a record written after the search does."""
         orders = []
+        checked_coin = False
         for outcome in self.outcomes:
+            if outcome["kind"] == "coin":
+                asked = self.state.get("asked") or {}
+                if asked.get("kind") != "coin_call":
+                    raise unsupported("unsupported_random", "a coin receipt needs the engine's pending coin call", "random")
+                caller = outcome.get("caller", self.seats[asked["player"]])
+                player = self._player(caller)
+                face = outcome.get("result")
+                if face not in ("heads", "tails"):
+                    raise fault("random_mismatch", "a coin result is heads or tails")
+                # Authenticate only the next occurrence for this caller. Extra receipts
+                # are returned by the native consumption indices and checked when used.
+                if player == asked["player"] and not checked_coin:
+                    answer = (move or {}).get("answer")
+                    call = answer.get("call") if isinstance(answer, dict) else None
+                    if call in ("heads", "tails"):
+                        if "call" in outcome and outcome["call"] != call:
+                            raise fault("random_mismatch", "coin receipt call differs from the player's call")
+                        winner = caller if call == face else None
+                        if "winner" in outcome and outcome["winner"] != winner:
+                            raise fault("random_mismatch", "coin receipt winner does not follow from the call")
+                    checked_coin = True
+                orders.append({"kind":"coin", "player":player, "result":face})
+                continue
             if outcome.get("pile") is not None or (outcome.get("scope") or {}).get("fixed"):
                 raise unsupported("unsupported_random", "shuffles of piles and fixed positions are not consumed", "random")
             native = {"kind": outcome["kind"], "order": [self._engine_id(card) for card in outcome["order"]]}
@@ -958,7 +985,7 @@ class KarnAdapter:
                         if proof is not None and (proof.get("suspended") or {}).get("stage") == "mana_choice" else None)
         self._hold_outcomes(ask)
         request = {"cmd": "act", "session_id": self.session_id, "request_id": self.state["request_id"],
-                   "player": player, "move": move, "random_outcomes": self._engine_random_outcomes()}
+                   "player": player, "move": move, "random_outcomes": self._engine_random_outcomes(move)}
         if proof is not None:
             request["payment_expect"] = proof
         if self.outcomes:
@@ -1465,6 +1492,8 @@ class KarnAdapter:
             return {"kind": "choose", "answer": {"player": self._player(do["player"])}}
         if kind == "choose_number":
             return {"kind": "choose", "answer": {"value": {"number": do["number"]}}}
+        if kind == "coin_call":
+            return {"kind": "choose", "answer": {"call": do["call"]}}
         if kind == "choose_value":
             of = self._value_kind(self.state.get("asked") or {})
             keys = {"color": "color", "creature_type": "creature_type", "card_name": "card_name",

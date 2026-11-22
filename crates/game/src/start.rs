@@ -59,11 +59,27 @@ pub enum Initial<'a> {
     Orders(&'a [Vec<usize>]),
 }
 
-/// Physical permutation observed at the random operation, before following instructions.
-#[derive(Debug, Clone)]
-pub struct CapturedRandom { pub kind: RandomKind, pub player: PlayerId, pub position: Option<ir::action::LibraryPosition>, pub order: Vec<u64> }
+/// A two-sided equally likely result (705.1). A call is a separate player choice (705.2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CoinFace { Heads, Tails }
+impl CoinFace {
+    pub fn name(self) -> &'static str { match self { Self::Heads => "heads", Self::Tails => "tails" } }
+}
+/// A completed flip. Face-only flips have no call and no winner or loser (705.2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CoinFlip { pub player: PlayerId, pub call: Option<CoinFace>, pub face: CoinFace }
+impl CoinFlip {
+    pub fn won(self) -> Option<bool> { self.call.map(|call| call == self.face) }
+}
 
-/// Distinct random operations; a placement order is nearest the top first (401.4).
+/// Physical result observed at the random operation, before following instructions.
+#[derive(Debug, Clone)]
+pub enum CapturedRandom {
+    Order { kind: RandomKind, player: PlayerId, position: Option<ir::action::LibraryPosition>, order: Vec<u64> },
+    Coin { player: PlayerId, face: CoinFace },
+}
+
+/// Distinct permutation operations; a placement order is nearest the top first (401.4).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RandomKind {
     Shuffle,
@@ -73,16 +89,16 @@ pub enum RandomKind {
 /// Trusted, owned random receipt. Object handles are resolved to physical cards before
 /// execution, so intermediate zone changes cannot invalidate the receipt (400.7).
 #[derive(Debug, Clone)]
-pub struct RandomOutcome {
-    pub kind: RandomKind,
-    /// Required for a shuffle; random-order membership determines its owner.
-    pub player: Option<PlayerId>,
-    pub order: Vec<ObjId>,
+pub enum RandomOutcome {
+    Shuffle { player: PlayerId, order: Vec<ObjId> },
+    /// Membership determines its owner; an optional supplied hint must agree.
+    RandomOrder { player: Option<PlayerId>, order: Vec<ObjId> },
+    Coin { player: PlayerId, face: CoinFace },
 }
 
 impl From<ShuffleOrder> for RandomOutcome {
     fn from(value: ShuffleOrder) -> Self {
-        Self { kind: RandomKind::Shuffle, player: Some(value.player), order: value.order }
+        Self::Shuffle { player: value.player, order: value.order }
     }
 }
 
@@ -143,10 +159,11 @@ pub struct UnusedRandom {
 #[derive(Debug, Clone)]
 pub(crate) struct RecordedRandom {
     input_index: usize,
-    kind: RandomKind,
     player: PlayerId,
-    cards: Vec<CardId>,
+    result: RecordedResult,
 }
+#[derive(Debug, Clone)]
+enum RecordedResult { Order { kind: RandomKind, cards: Vec<CardId> }, Coin(CoinFace) }
 
 impl Random {
     pub fn new(seed: u64) -> Random {
@@ -221,16 +238,25 @@ impl Game {
     pub(crate) fn record_random(&mut self, orders: Vec<RandomOutcome>) -> Result<(), String> {
         let mut recorded = std::collections::VecDeque::new();
         for (input_index, order) in orders.into_iter().enumerate() {
-            let inferred = order.order.first().and_then(|id| self.get_object(*id)).map(|object| object.owner);
-            let player = match (order.kind, order.player, inferred) {
+            let (kind, hint, order) = match order {
+                RandomOutcome::Shuffle { player, order } => (RandomKind::Shuffle, Some(player), order),
+                RandomOutcome::RandomOrder { player, order } => (RandomKind::RandomOrder, player, order),
+                RandomOutcome::Coin { player, face } => {
+                    if player >= self.players.len() { return Err("no such random-outcome player".into()); }
+                    recorded.push_back(RecordedRandom {input_index, player, result: RecordedResult::Coin(face)});
+                    continue;
+                }
+            };
+            let inferred = order.first().and_then(|id| self.get_object(*id)).map(|object| object.owner);
+            let player = match (kind, hint, inferred) {
                 (RandomKind::Shuffle, Some(player), _) => player,
                 (RandomKind::Shuffle, None, _) => return Err("shuffle outcome needs player".into()),
                 (RandomKind::RandomOrder, hint, owner) => owner.or(hint).unwrap_or(0),
             };
             if player >= self.players.len() { return Err("no such random-outcome player".into()); }
-            if order.player.is_some_and(|hint| hint != player) { return Err("random outcome owner differs from its cards".into()); }
+            if hint.is_some_and(|hint| hint != player) { return Err("random outcome owner differs from its cards".into()); }
             let mut cards = Vec::new();
-            for id in order.order {
+            for id in order {
                 let object = self.get_object(id).ok_or("random outcome names an unknown object")?;
                 if object.zone == Zone::Gone || object.owner != player {
                     return Err("random outcome needs current cards owned by that player".into());
@@ -239,7 +265,7 @@ impl Game {
                 if cards.contains(&card) { return Err("random outcome repeats a card".into()); }
                 cards.push(card);
             }
-            recorded.push_back(RecordedRandom { input_index, kind: order.kind, player, cards });
+            recorded.push_back(RecordedRandom { input_index, player, result: RecordedResult::Order {kind, cards} });
         }
         self.replay_random = Some(recorded);
         self.random.recorded_only(true);
@@ -250,9 +276,18 @@ impl Game {
     pub(crate) fn unconsumed_random(&self, unused: std::collections::VecDeque<RecordedRandom>) -> Vec<UnusedRandom> {
         unused.into_iter().map(|receipt| UnusedRandom {
             input_index: receipt.input_index,
-            outcome: RandomOutcome { kind: receipt.kind, player: Some(receipt.player), order: receipt.cards.iter().map(|card|
-                self.audit_retained_objects().find(|o| o.card_id == Some(*card) && o.zone != Zone::Gone)
-                    .expect("a physical card has a current object").id).collect() },
+            outcome: match receipt.result {
+                RecordedResult::Coin(face) => RandomOutcome::Coin {player: receipt.player, face},
+                RecordedResult::Order {kind, cards} => {
+                    let order = cards.iter().map(|card| self.audit_retained_objects()
+                        .find(|o| o.card_id == Some(*card) && o.zone != Zone::Gone)
+                        .expect("a physical card has a current object").id).collect();
+                    match kind {
+                        RandomKind::Shuffle => RandomOutcome::Shuffle {player: receipt.player, order},
+                        RandomKind::RandomOrder => RandomOutcome::RandomOrder {player: Some(receipt.player), order},
+                    }
+                }
+            },
         }).collect()
     }
 
@@ -365,9 +400,11 @@ impl Game {
         // (two who take a mulligan in the same round, 103.5) do so in turn order, whatever
         // order their outcomes were given in.
         let recorded = self.replay_random.as_mut().map(|orders| {
-            let at = orders.iter().position(|order| order.player == player && order.kind == RandomKind::Shuffle)
+            let at = orders.iter().position(|order| order.player == player
+                && matches!(order.result, RecordedResult::Order {kind: RandomKind::Shuffle, ..}))
                 .unwrap_or_else(|| reject_replay("tape requested an unexpected extra shuffle"));
-            orders.remove(at).expect("located outcome").cards
+            let RecordedResult::Order {cards, ..} = orders.remove(at).expect("located outcome").result else { unreachable!("a shuffle") };
+            cards
         });
         // A recorded order may leave out the cards a search set aside (701.24b): they keep their
         // positions, and the order names the rest, as a record written after the search lists the
@@ -435,10 +472,12 @@ impl Game {
         let recorded = if self.replay_random.is_some() {
             let members: Vec<_> = cards.iter().map(|id| self.obj(*id).card_id).collect();
             let orders = self.replay_random.as_mut().expect("active recorded random scope");
-            let at = orders.iter().position(|order| order.player == player && order.kind == kind
-                && order.cards.len() == members.len() && members.iter().all(|card| card.is_some_and(|c| order.cards.contains(&c))))
+            let at = orders.iter().position(|order| order.player == player
+                && matches!(&order.result, RecordedResult::Order {kind: recorded, cards} if *recorded == kind
+                    && cards.len() == members.len() && members.iter().all(|card| card.is_some_and(|c| cards.contains(&c)))))
                 .unwrap_or_else(|| reject_replay("tape requested an unrecorded random library order"));
-            Some(orders.remove(at).expect("located outcome").cards)
+            let RecordedResult::Order {cards, ..} = orders.remove(at).expect("located outcome").result else { unreachable!("a random order") };
+            Some(cards)
         } else { None };
         if let Some(order) = recorded {
             if order.len() != cards.len() || !cards.iter().all(|id| self.obj(*id).card_id.is_some_and(|c| order.contains(&c))) {
@@ -452,15 +491,28 @@ impl Game {
         }
         if self.captured_random.is_some() {
             let order = cards.iter().map(|id| self.physical_card_identity(*id).expect("physical random-order card")).collect();
-            self.captured_random.as_mut().unwrap().push(CapturedRandom { kind, player, position: Some(position), order });
+            self.captured_random.as_mut().unwrap().push(CapturedRandom::Order { kind, player, position: Some(position), order });
         }
     }
 
     fn capture_shuffle(&mut self, player: PlayerId) {
         if self.captured_random.is_some() {
             let order=self.players[player].library.iter().rev().map(|id|self.physical_card_identity(*id).expect("shuffle card identity")).collect();
-            self.captured_random.as_mut().unwrap().push(CapturedRandom {kind: RandomKind::Shuffle,player,position: None,order});
+            self.captured_random.as_mut().unwrap().push(CapturedRandom::Order {kind: RandomKind::Shuffle,player,position: None,order});
         }
+    }
+
+    /// One fair physical result, after the player has made any required call (705.1–2).
+    /// The existing replay scope supplies outcomes by player in occurrence order.
+    pub(crate) fn flip_coin(&mut self, player: PlayerId) -> CoinFace {
+        let face = if let Some(outcomes) = self.replay_random.as_mut() {
+            let at = outcomes.iter().position(|outcome| outcome.player == player && matches!(outcome.result, RecordedResult::Coin(_)))
+                .unwrap_or_else(|| reject_replay("tape requested an unrecorded coin flip"));
+            let RecordedResult::Coin(face) = outcomes.remove(at).expect("located coin outcome").result else { unreachable!("a coin") };
+            face
+        } else if self.random.below(2) == 0 { CoinFace::Heads } else { CoinFace::Tails };
+        if let Some(captured) = &mut self.captured_random { captured.push(CapturedRandom::Coin {player, face}); }
+        face
     }
 
     /// The players in turn order from the active player (101.4).

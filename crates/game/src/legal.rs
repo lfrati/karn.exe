@@ -147,6 +147,7 @@ fn walk_target_assignments(slots: &[Slot], counts: &[usize], chosen: &mut Vec<Ve
 /// What the game waits for: whose move it is and what that player may do.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Asked {
+    CoinCall,
     LibraryDestination { cards: Vec<ObjId>, positions: Vec<ir::action::LibraryPosition> },
     SpellDestination { on: ObjId, among: Vec<crate::state::DestinationEffect> },
     /// Which of these skip effects replaces the step or phase that would begin (616.1); the
@@ -402,6 +403,7 @@ impl Game {
             Some(Decision::Choose { player, choice: Choice::Mana { options } }) => (player, Asked::Mana { options }),
             Some(Decision::Choose { player, choice: Choice::LibraryDestination { cards, positions } }) => (player, Asked::LibraryDestination { cards, positions }),
             Some(Decision::Choose { player, choice: Choice::Number { min, max } }) => (player, Asked::Number { min, max }),
+            Some(Decision::Choose { player, choice: Choice::CoinCall }) => (player, Asked::CoinCall),
             Some(Decision::Choose { player, choice: Choice::Value(kind) }) => (player, Asked::Value { kind, options: crate::binding::options(kind) }),
             Some(Decision::Choose { player, choice: Choice::Name(names) }) => (player, Asked::Value { kind: crate::binding::Kind::CardName,
                 options: crate::binding::options(crate::binding::Domain { kind: crate::binding::Kind::CardName, names }) }),

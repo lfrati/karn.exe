@@ -117,6 +117,14 @@ return a transactional replay-input error, reported as `random_mismatch`; they c
 satisfy an illegal-action expectation. Unused input indices identify exact occurrences,
 including repeated same-seat shuffles and consumption outside a list prefix.
 
+Karn also implements `coin_call` and called `coin` receipts (705.2). The caller supplies
+heads or tails before the adapter requests the physical result. A receipt's optional
+`caller`, `call` and `winner` must agree with the actual call; they cannot change that
+choice or its consequence. Native replay receives only `kind:"coin"`, the player and
+`result:"heads"` or `"tails"`, through the same transactional receipt scope as orders.
+Missing, extra and mismatched receipts preserve the pending call. Face-only card
+instructions, multiple-coin instructions and coin replacements remain unsupported.
+
 ## The explicit projection
 
 `state` in replies is the full projection of spec section 3.4 written out as

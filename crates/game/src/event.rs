@@ -61,6 +61,7 @@ pub enum Event {
     TappedForMana { object: ObjId, player: PlayerId },
     /// A library was randomized, even if it had zero or one cards (701.24e).
     Shuffled { player: PlayerId, by: PlayerId },
+    CoinFlipped { source: ObjId, result: crate::start::CoinFlip },
     Countered { object: ObjId },
     /// `ordinal`: the how-manyth time this turn `object` became the target of a spell or
     /// ability `of`'s controller controls.
@@ -168,6 +169,9 @@ impl Event {
         Some(match self {
             Event::TappedForMana { .. } => Verb::TapForMana,
             Event::Shuffled { .. } => Verb::Shuffle,
+            Event::CoinFlipped { result, .. } => match result.won() {
+                Some(true) => Verb::WinFlip, Some(false) => Verb::LoseFlip, None => return None,
+            },
             Event::Countered { .. } => Verb::Counter,
             Event::BecameTarget { .. } => Verb::BeTargeted,
             Event::Attached { .. } => Verb::Attach,
@@ -301,6 +305,7 @@ impl crate::retention::Trace for Event {
             Self::Created { token } => token.trace(visit),
             Self::SpellCopied { original, copy, .. } | Self::AbilityCopied { original, copy, .. } => { original.trace(visit); copy.trace(visit); },
             Self::EmblemCreated { object } => object.trace(visit),
+            Self::CoinFlipped { source, .. } => source.trace(visit),
             Self::Cast { spell, .. } | Self::Resolved { spell } | Self::Fizzled { spell } => spell.trace(visit),
             Self::LandPlayed { land, .. } => land.trace(visit),
             Self::Activated { source, ability, .. } => { source.trace(visit); ability.trace(visit); },

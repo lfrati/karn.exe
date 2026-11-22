@@ -72,7 +72,7 @@ class AdapterTests(unittest.TestCase):
         capabilities = self.adapter.capabilities()
         self.assertEqual([str(e) for e in schema_validate({"id": 1, "capabilities": capabilities}, "adapter-protocol.schema.json")], [])
         self.assertEqual(capabilities["starts"], ["decks", "position"])
-        self.assertEqual(capabilities["random"], ["shuffle", "random_order", "starting_player"])
+        self.assertEqual(capabilities["random"], ["shuffle", "random_order", "coin", "starting_player"])
         for kind in ("declare_attackers", "choose_first", "companion", "mulligan", "bottom", "opening_hand_action", "concede",
                      "assign_combat_damage", "discard", "separate", "skip", "spell_destination", "command_zone"):
             self.assertIn(kind, capabilities["kinds"])

@@ -425,6 +425,8 @@ pub struct Waterbend { pub among: Vec<ObjId>, pub generic: u32, pub most: u32 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Choice {
+    /// The flipping player's call, before any random result is produced (705.2).
+    CoinCall,
     /// Public destination choice; relative ordering is a separate private question (401.4).
     LibraryDestination { cards: Vec<ObjId>, positions: Vec<ir::action::LibraryPosition> },
     /// Existing stack object: required single replacement or optional new targets (115.7).
@@ -505,6 +507,7 @@ pub enum Choice {
 /// A player's answer to a [`Choice`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Answer {
+    CoinCall(crate::start::CoinFace),
     LibraryPosition(ir::action::LibraryPosition),
     SpellDestination { on: ObjId, effect: DestinationEffect },
     Targets(Vec<Vec<Target>>),

@@ -3,7 +3,7 @@
 use crate::support::cite;
 use game::{CardDef, Event, Game, Move, ObjId, Zone};
 use game::simulation::Simulation;
-use game::start::{ShuffleOrder, RandomKind, RandomOutcome};
+use game::start::{CapturedRandom, ShuffleOrder, RandomKind, RandomOutcome};
 use game::simulation::ResponseError;
 use ir::action::LibraryPosition;
 
@@ -246,19 +246,20 @@ fn harness_records_shuffle_order_before_following_draws() {
     let request = sim.request().unwrap().unwrap().clone();
     let outcomes = sim.respond_capturing_random(request.id,request.player,Move::Pass).unwrap();
     assert_eq!(outcomes.len(),1);
-    assert_eq!(outcomes[0].player,0);
-    assert_eq!(outcomes[0].order.len(),3);
-    let mut captured=outcomes[0].order.clone();captured.sort();
+    let CapturedRandom::Order {player,order,..} = &outcomes[0] else { panic!("a captured shuffle") };
+    assert_eq!(*player,0);
+    assert_eq!(order.len(),3);
+    let mut captured=order.clone();captured.sort();
     let mut expected=physical;expected.sort();assert_eq!(captured,expected);
     let g=sim.game().unwrap();
     let drawn: Vec<_> = g.players[0].hand.iter().map(|id|g.physical_card_identity(*id).unwrap()).collect();
-    assert_eq!(drawn,outcomes[0].order[..2]);
+    assert_eq!(drawn,order[..2]);
     assert_eq!(g.players[0].library.len(),1);
 }
 
 
 fn bottom_receipt(order: Vec<ObjId>) -> RandomOutcome {
-    RandomOutcome { kind: RandomKind::RandomOrder, player: None, order }
+    RandomOutcome::RandomOrder { player: None, order }
 }
 
 #[test]
@@ -294,8 +295,8 @@ fn random_bottom_bad_receipt_is_atomic_and_corrected_receipt_can_resume() {
             1 => vec![bottom_receipt(vec![cards[1]])],
             2 => vec![bottom_receipt(vec![cards[1], cards[1]])],
             3 => vec![bottom_receipt(vec![cards[0], cards[1]])],
-            4 => vec![RandomOutcome { kind: RandomKind::Shuffle, ..right.clone() }],
-            5 => vec![RandomOutcome { player: Some(1), ..right.clone() }],
+            4 => vec![RandomOutcome::Shuffle { player: 0, order: vec![cards[2], cards[1]] }],
+            5 => vec![RandomOutcome::RandomOrder { player: Some(1), order: vec![cards[2], cards[1]] }],
             _ => vec![right.clone(), right.clone()],
         };
         let before = format!("{:?}", sim.game().unwrap());
@@ -332,21 +333,21 @@ fn r701_57a_discover_captures_and_replays_random_bottom_with_physical_provenance
     let mut replay = sim.clone();
     let captured = sim.respond_capturing_random(request.id, request.player, Move::Choose(game::state::Answer::No)).unwrap();
     assert_eq!(captured.len(), 1);
-    let receipt = &captured[0];
-    assert_eq!(receipt.kind, RandomKind::RandomOrder);
-    assert_eq!(receipt.player, 0);
-    assert_eq!(receipt.position, Some(LibraryPosition::Bottom));
-    let mut members = receipt.order.clone(); members.sort();
+    let CapturedRandom::Order {kind,player,position,order: physical_order} = &captured[0] else { panic!("a captured order") };
+    assert_eq!(*kind, RandomKind::RandomOrder);
+    assert_eq!(*player, 0);
+    assert_eq!(*position, Some(LibraryPosition::Bottom));
+    let mut members = physical_order.clone(); members.sort();
     let mut expected = vec![physical[2], physical[3]]; expected.sort();
     assert_eq!(members, expected);
     let replay_g = replay.game().unwrap();
-    let order = receipt.order.iter().map(|physical| replay_g.exile.iter().copied()
+    let order = physical_order.iter().map(|physical| replay_g.exile.iter().copied()
         .find(|id| replay_g.physical_card_identity(*id) == Some(*physical)).unwrap()).collect();
     replay.respond_with_random(request.id, request.player, Move::Choose(game::state::Answer::No), vec![bottom_receipt(order)], false).unwrap();
     for sim in [&sim, &replay] {
         let g = sim.game().unwrap();
         let library: Vec<_> = g.top_cards(0, 4).iter().map(|id| g.physical_card_identity(*id).unwrap()).collect();
-        cite!(["701.57a", "401.4"]; assert_eq!(library, [vec![physical[0]], receipt.order.clone()].concat()));
+        cite!(["701.57a", "401.4"]; assert_eq!(library, [vec![physical[0]], physical_order.clone()].concat()));
         cite!(["701.57a"]; assert_eq!(g.physical_card_identity(g.players[0].hand[0]), Some(physical[1])));
         assert_eq!(g.obj(g.players[0].hand[0]).chars.name, "Bear");
         assert!(!g.log.iter().any(|event| matches!(event, Event::Shuffled { .. })));
@@ -361,12 +362,13 @@ fn random_outcomes_keep_unused_rebinds_cards_after_zone_changes() {
         vec![bottom_receipt(cards.clone()), ShuffleOrder { player: 0, order: cards.clone() }.into(), bottom_receipt(vec![cards[0]])], true).unwrap();
     assert_eq!(kept.len(), 2);
     assert_eq!(kept.iter().map(|unused|unused.input_index).collect::<Vec<_>>(), [0, 2]);
-    assert_eq!(kept[0].outcome.kind, RandomKind::RandomOrder);
-    assert_eq!(kept[0].outcome.order[1..], cards[1..]);
+    let RandomOutcome::RandomOrder {order: first,..} = &kept[0].outcome else { panic!("an unused random order") };
+    let RandomOutcome::RandomOrder {order: second,..} = &kept[1].outcome else { panic!("an unused random order") };
+    assert_eq!(first[1..], cards[1..]);
     let g = sim.game().unwrap();
-    assert_eq!(kept[0].outcome.order[0], g.players[0].hand[0]);
-    assert_ne!(kept[0].outcome.order[0], cards[0]);
-    assert_eq!(kept[1].outcome.order, vec![g.players[0].hand[0]]);
+    assert_eq!(first[0], g.players[0].hand[0]);
+    assert_ne!(first[0], cards[0]);
+    assert_eq!(*second, vec![g.players[0].hand[0]]);
 }
 
 #[test]
@@ -390,8 +392,9 @@ fn r701_24d_shuffle_into_has_one_random_event_and_no_insertion_order_choice() {
     let mut recording = sim.clone();
     let outcomes = recording.respond_capturing_random(request.id, request.player, Move::Pass).unwrap();
     assert_eq!(outcomes.len(), 1, "insertion must neither ask for owner order nor capture a phantom random order");
-    assert_eq!(outcomes[0].kind, RandomKind::Shuffle);
-    let mut actual = outcomes[0].order.clone(); actual.sort();
+    let CapturedRandom::Order {kind,order,..} = &outcomes[0] else { panic!("a captured shuffle") };
+    assert_eq!(*kind, RandomKind::Shuffle);
+    let mut actual = order.clone(); actual.sort();
     let mut expected = physical.clone(); expected.sort();
     assert_eq!(actual, expected);
     resolve(&mut sim, vec![ShuffleOrder { player: 0, order: vec![island, library, forest] }]).unwrap();

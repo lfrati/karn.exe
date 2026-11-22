@@ -51,7 +51,7 @@ fn r700_3_piles_are_refused() {
 
 #[test]
 fn r608_2c_repeating_the_process_is_refused() {
-    for (text, why) in [("Draw a card. Repeat this process once.", "repeat this process: a number of times, any number or until is not lowered"), ("Mill a card. If you win the flip, repeat this process.", "condition: Won")] {
+    for (text, why) in [("Draw a card. Repeat this process once.", "repeat this process: a number of times, any number or until is not lowered"), ("Mill a card. If you win the flip, repeat this process.", "coin outcome: no preceding local flip producer")] {
         crate::support::refused(checked(text), why);
     }
 }

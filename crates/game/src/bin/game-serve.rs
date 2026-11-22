@@ -64,6 +64,9 @@
 //!   top first, and issues a fresh request ID. Does not generate a shuffle event.
 //! - `act` optionally takes `"random_outcomes":[{"kind":"shuffle","player":0,"order":[...]}]`
 //!   or selected-card `{"kind":"random_order","order":[...]}` keyed by membership.
+//!   A called coin flip asks `coin_call`, answered with `{"kind":"choose","answer":{"call":"heads"}}`
+//!   (or `"tails"`) before consuming `{"kind":"coin","player":0,"result":"heads"}`.
+//!   Coin capture returns the same physical result shape; the completed event retains the call.
 //!   Orders are nearest the top first; handles are current at response start. Capture uses
 //!   `physical_order` instead, with actual owner/destination provenance.
 //!   `random_outcomes_keep_unused` returns `random_outcomes_unused` plus original
@@ -354,18 +357,29 @@ fn read_random_outcomes(value: &Value) -> Result<Vec<game::start::RandomOutcome>
     use game::start::{RandomKind, RandomOutcome};
     let read = || -> Result<Vec<RandomOutcome>, String> {
         value.as_array().ok_or("random_outcomes must be a list")?.iter().map(|item| {
+            let player = item.get("player").map(|value| value.as_u64().and_then(|n| usize::try_from(n).ok())
+                .ok_or_else(|| "random outcome player must be unsigned".to_string())).transpose()?;
+            if item["kind"] == "coin" {
+                let object = item.as_object().expect("a coin outcome is an object");
+                if object.keys().any(|key| !matches!(key.as_str(), "kind" | "player" | "result")) {
+                    return Err("a coin receipt contains only kind, player and result".into());
+                }
+                let face = match item["result"].as_str() {
+                    Some("heads") => game::start::CoinFace::Heads,
+                    Some("tails") => game::start::CoinFace::Tails,
+                    _ => return Err("a coin result is heads or tails".into()),
+                };
+                return Ok(RandomOutcome::Coin {player: player.ok_or("coin outcome needs player")?, face});
+            }
             let kind = match item["kind"].as_str() {
                 Some("shuffle") => RandomKind::Shuffle,
                 Some("random_order") => RandomKind::RandomOrder,
                 _ => return Err("unsupported random outcome kind".into()),
             };
-            Ok(RandomOutcome { kind,
-                player: match item.get("player") {
-                    Some(value) => Some(value.as_u64().ok_or("random outcome player must be unsigned")? as usize),
-                    None if kind == RandomKind::Shuffle => return Err("shuffle outcome needs player".into()),
-                    None => None,
-                },
-                order: read_library_order(&item["order"])?,
+            let order = read_library_order(&item["order"])?;
+            Ok(match kind {
+                RandomKind::Shuffle => RandomOutcome::Shuffle {player: player.ok_or("shuffle outcome needs player")?, order},
+                RandomKind::RandomOrder => RandomOutcome::RandomOrder {player, order},
             })
         }).collect()
     };
@@ -575,6 +589,7 @@ fn render_asked(g: &Game, question: Option<(usize, Asked)>) -> Value {
         Asked::LibraryDestination { cards, positions } => json!({ "kind": "library_destination", "cards": ids(&cards),
             "positions": positions.into_iter().map(|p| placement(game::state::Placement::Library(p))).collect::<Vec<_>>() }),
         Asked::Number { min, max } => json!({ "kind": "number", "min": min, "max": max }),
+        Asked::CoinCall => json!({"kind":"coin_call","options":["heads","tails"]}),
         // what is chosen: a color (105.1), a creature type (205.3m), a card name (201.4), a
         // card type (205.2a) or a basic land type (305.6)
         Asked::Value { kind, options } => json!({ "kind": "value", "of": value_kind(kind), "options": options.iter().map(bound_value).collect::<Vec<_>>() }),
@@ -669,6 +684,8 @@ fn event(g: &Game, viewer: Option<usize>, e: &Event) -> Value {
         Event::ManaAdded { source, player, mana: symbols } => ("mana_added", json!({ "source": o(source), "player": pid(*player), "mana": mana(symbols) })),
         Event::TappedForMana { object, player } => ("tapped_for_mana", json!({ "object": o(object), "player": pid(*player) })),
         Event::Shuffled { player, by } => ("shuffled", json!({ "player": pid(*player), "by": pid(*by) })),
+        Event::CoinFlipped { source, result } => ("coin_flipped", json!({"source":o(source),"player":pid(result.player),
+            "call":result.call.map(|face|face.name()),"result":result.face.name(),"won":result.won()})),
         Event::BecameTarget { object, of, .. } => ("became_target", json!({ "object": target(object), "of": o(of) })),
         Event::Countered { object } => ("countered", json!({ "object": o(object) })),
         Event::MonarchChanged { player, previous } => ("monarch",json!({"player":player.map(pid),"previous":previous.map(pid)})),
@@ -874,6 +891,7 @@ fn value_kind(kind: game::binding::Kind) -> &'static str {
         Kind::Subjects => "subjects",
         Kind::Consent => "consent",
         Kind::Number => "number",
+        Kind::Coin => "coin",
         Kind::Turn => "turn",
         Kind::CreatedTurns => "created_turns",
     }
@@ -912,6 +930,7 @@ fn answered(mv: &Move) -> Value {
         Move::Attack(attacks) => json!({ "kind": "attack", "attacks": attacks.iter().map(|(a, t)| json!([oid(*a), target(t)])).collect::<Vec<_>>() }),
         Move::Block(blocks) => json!({ "kind": "block", "blocks": blocks.iter().map(|(b, a)| json!([oid(*b), oid(*a)])).collect::<Vec<_>>() }),
         Move::Choose(answer) => json!({ "kind": "choose", "answer": match answer {
+            Answer::CoinCall(face) => json!({"call":face.name()}),
             Answer::SpellDestination{on,effect}=>json!({"spell_destination":{"on":oid(*on),"effect":effect.name()}}),
             Answer::Targets(groups) => json!({ "targets": groups.iter().map(|g|g.iter().map(target).collect::<Vec<_>>()).collect::<Vec<_>>() }),
             Answer::Yes => json!("yes"),
@@ -1376,7 +1395,7 @@ fn move_keys(kind: &str) -> Option<&'static [&'static str]> {
 }
 
 /// The keys a `choose` answer object may say: one answer's, or an arrangement's two.
-const ANSWER_KEYS: &[&str] = &["library_position", "spell_destination", "targets", "objects", "accept", "player", "alternative", "skip", "pile", "prevention", "holders",
+const ANSWER_KEYS: &[&str] = &["call", "library_position", "spell_destination", "targets", "objects", "accept", "player", "alternative", "skip", "pile", "prevention", "holders",
     "attach", "defender", "mana", "value", "replacement", "creature_type", "top", "away", "pay"];
 
 fn read_library_position(value: &Value) -> Result<ir::action::LibraryPosition, String> {
@@ -1711,6 +1730,11 @@ fn read_plain(v: &Value, offered: &[game::operation::ReplacementId]) -> Result<M
             },
             Some(a) if a.get("objects").is_some() => Answer::Objects(list(a, "objects").iter().map(read_id).collect::<Result<_, _>>()?),
             Some(a) if a.get("player").is_some() => Answer::Player(a["player"].as_u64().ok_or("player: a player's number")? as usize),
+            Some(a) if a.get("call").is_some() => Answer::CoinCall(match a["call"].as_str() {
+                Some("heads") => game::start::CoinFace::Heads,
+                Some("tails") => game::start::CoinFace::Tails,
+                _ => return Err("a coin call is heads or tails".into()),
+            }),
             Some(a) if a.get("alternative").is_some() => Answer::Alternative(a["alternative"].as_u64().ok_or("alternative: an offered action index")? as usize),
             Some(a) if a.get("skip").is_some() => Answer::Skip(game::turn::SkipId(a["skip"].as_u64().and_then(|n| u32::try_from(n).ok()).ok_or("skip: an offered skip effect's number")?)),
             Some(a) if a.get("library_position").is_some() => Answer::LibraryPosition(read_library_position(&a["library_position"])?),
@@ -2639,14 +2663,20 @@ fn dispatch(
             let _core = game::profile::span(game::profile::Scope::Respond);
             if capture {
                 let outcomes=simulation.respond_capturing_random(id,player,mv)?;
-                captured_random=Some(outcomes.into_iter().map(|outcome|random_outcome(outcome.kind,Some(outcome.player),outcome.position,"physical_order",json!(outcome.order))).collect::<Vec<_>>());
+                captured_random=Some(outcomes.into_iter().map(|outcome| match outcome {
+                    game::start::CapturedRandom::Order {kind,player,position,order} => random_outcome(kind,Some(player),position,"physical_order",json!(order)),
+                    game::start::CapturedRandom::Coin {player,face} => json!({"kind":"coin","player":player,"result":face.name()}),
+                }).collect::<Vec<_>>());
             } else if let Some(outcomes) = outcomes {
                 let unused = simulation.respond_with_random(id, player, mv, outcomes, outcomes_keep_unused)?;
                 if outcomes_keep_unused {
                     random_outcomes_unused_indices = Some(unused.iter().map(|unused|unused.input_index).collect::<Vec<_>>());
                     random_outcomes_unused = Some(unused.into_iter().map(|unused| {
-                        let outcome = unused.outcome;
-                        random_outcome(outcome.kind,outcome.player,None,"order",json!(outcome.order.iter().map(|id|id.0).collect::<Vec<_>>()))
+                        match unused.outcome {
+                            game::start::RandomOutcome::Shuffle {player,order} => random_outcome(game::start::RandomKind::Shuffle,Some(player),None,"order",json!(order.iter().map(|id|id.0).collect::<Vec<_>>())),
+                            game::start::RandomOutcome::RandomOrder {player,order} => random_outcome(game::start::RandomKind::RandomOrder,player,None,"order",json!(order.iter().map(|id|id.0).collect::<Vec<_>>())),
+                            game::start::RandomOutcome::Coin {player,face} => json!({"kind":"coin","player":player,"result":face.name()}),
+                        }
                     }).collect::<Vec<_>>());
                 }
             } else if let Some(outcomes) = shuffles {
@@ -3967,7 +3997,7 @@ fn bound_value(value: &game::binding::Value) -> Value {
         Bound::Consent(b) => json!({ "consent": b }),
         Bound::Number(n) => json!({ "number": n }),
         Bound::Cards(cards) => json!({ "cards": ids(cards) }),
-        Bound::Turn(_) | Bound::CreatedTurns(_) => unreachable!("turn identities are internal results, never player choices"),
+        Bound::Coin(_) | Bound::Turn(_) | Bound::CreatedTurns(_) => unreachable!("coin and turn results are internal, never player choices"),
         Bound::Destructions(_) | Bound::Removals(_) | Bound::Damage(_) => unreachable!("operation-local results are not public scalar choices"),
         Bound::Subjects(subjects) => json!({ "subjects": subjects.iter().map(target).collect::<Vec<_>>() }),
     }

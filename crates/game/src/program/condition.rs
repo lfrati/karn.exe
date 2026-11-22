@@ -284,6 +284,7 @@ enum Asks {
     ManaSpent { spell: expr::Subject, test: PaidTest, negated: bool },
     Stored { slot: usize, is: bool },
     Outcome { paid: usize, possible: usize, outcome: ir::condition::Outcome },
+    Coin { slot: usize, won: bool },
     /// "you control a Swamp", "you control no creatures", "an opponent controls two or more
     /// artifacts": several noun phrases are alternatives.
     Controls { players: Players, what: Vec<(expr::Set, Quantity)>, negated: bool },
@@ -383,6 +384,7 @@ pub(super) fn this_way_members(pattern: &ir::EventPattern) -> Option<(ir::Verb, 
 }
 
 impl Condition {
+    pub(super) fn coin(slot: usize, won: bool) -> Self { Self(Asks::Coin {slot, won}) }
     pub(super) fn stored(slot: usize, is: bool) -> Self { Self(Asks::Stored { slot, is }) }
     /// A positive completed-excess comparison names this immutable result quantity
     /// for "that much" in its true branch, not on the opposite or outer path.
@@ -424,7 +426,7 @@ impl Condition {
         fn available(asks: &Asks) -> bool {
             match asks {
                 Asks::Targets { .. } | Asks::Kicked { .. } | Asks::OptionalPaid { .. } | Asks::CostPaid { .. } | Asks::CastFor { .. } | Asks::Gift { .. } | Asks::CastBy { .. } | Asks::ManaSpent { .. }
-                    | Asks::Stored { .. } | Asks::Outcome { .. } | Asks::HadCounters { .. } => false,
+                    | Asks::Coin { .. } | Asks::Stored { .. } | Asks::Outcome { .. } | Asks::HadCounters { .. } => false,
                 Asks::And(parts) | Asks::Or(parts) => parts.iter().all(available),
                 _ => true,
             }
@@ -804,6 +806,7 @@ impl Asks {
                     if game.obj(*o).targets.iter().flatten().any(|t| target.contains(game, ctx, locals, *t))))
             }
             Asks::Stored { slot, is } => matches!(locals.local(*slot), Some(crate::binding::Value::Consent(value)) if value == is),
+            Asks::Coin { slot, won } => matches!(locals.local(*slot), Some(crate::binding::Value::Coin(flip)) if flip.won() == Some(*won)),
             Asks::Outcome { paid, possible, outcome } => {
                 let yes = |slot| matches!(locals.local(slot), Some(crate::binding::Value::Consent(true)));
                 match outcome { ir::condition::Outcome::Did => yes(*paid), ir::condition::Outcome::Didnt => !yes(*paid), ir::condition::Outcome::Couldnt => !yes(*possible) }
@@ -958,6 +961,7 @@ impl Asks {
         match self {
             Asks::Targets { what, target } => { what.scalars(out); out.extend(target.scalars()); }
             Asks::Stored { slot, .. } => out.push(Scalar::Local { slot: *slot, kind: crate::binding::Kind::Consent }),
+            Asks::Coin { slot, .. } => out.push(Scalar::Local {slot: *slot, kind: crate::binding::Kind::Coin}),
             Asks::Outcome { paid, possible, .. } => out.extend([*paid, *possible].map(|slot| Scalar::Local { slot, kind: crate::binding::Kind::Consent })),
             Asks::Controls { players, what, .. } => {
                 players.scalars(out);
@@ -1024,7 +1028,7 @@ impl Asks {
         };
         match self {
             Asks::TurnOf { .. } => Reads::NONE,
-            Asks::Stored { .. } | Asks::Outcome { .. } | Asks::Turn { .. } | Asks::NthTurn { .. } | Asks::Kicked { .. } | Asks::OptionalPaid { .. } | Asks::CostPaid { .. } | Asks::Gift { .. } => Reads::NONE,
+            Asks::Coin { .. } | Asks::Stored { .. } | Asks::Outcome { .. } | Asks::Turn { .. } | Asks::NthTurn { .. } | Asks::Kicked { .. } | Asks::OptionalPaid { .. } | Asks::CostPaid { .. } | Asks::Gift { .. } => Reads::NONE,
             Asks::CastBy { players: who, .. } => Reads::HISTORY | players(who),
             Asks::CastFrom { .. } => Reads::HISTORY,
             Asks::Targets { target, .. } => target.reads(),

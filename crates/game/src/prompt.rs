@@ -846,7 +846,7 @@ fn move_objects(m: &Move, out: &mut Vec<ObjId>) {
             Answer::OptionalObjects(objects) => out.extend(objects.iter().flatten()),
             Answer::Arrange { top, away } => out.extend(top.iter().chain(away)),
             Answer::Pay { plan, .. } => steps(plan, out),
-            Answer::LibraryPosition(_) | Answer::Yes | Answer::No | Answer::Alternative(_) | Answer::Mana(_) | Answer::Value(_) | Answer::Player(_) | Answer::Pile(_)
+            Answer::CoinCall(_) | Answer::LibraryPosition(_) | Answer::Yes | Answer::No | Answer::Alternative(_) | Answer::Mana(_) | Answer::Value(_) | Answer::Player(_) | Answer::Pile(_)
                 | Answer::Replacement(_) | Answer::DamageReplacement(_) | Answer::DamageOrder(_) | Answer::Prevention(_) | Answer::Skip(_) => {}
         },
         Move::WithMana(plan, inner) => { steps(plan, out); move_objects(inner, out); }

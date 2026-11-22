@@ -702,6 +702,10 @@ def native_action(adapter, move: dict, after: dict, pending: dict | None = None)
         return {**out, "player": adapter.seats[int(player[1:]) if isinstance(player, str) else player]}
     if question == "choose_number":
         return {**out, "number": answer["value"]["number"]}
+    if question == "coin_call":
+        if answer.get("call") not in ("heads", "tails"):
+            _refuse("a native coin call is heads or tails")
+        return {**out, "call": answer["call"]}
     if question == "choose_value":
         if len(answer["value"]) != 1:
             _refuse("native value choice must name one value")

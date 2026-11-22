@@ -20,6 +20,8 @@ pub enum Kind {
     Consent,
     /// A numeric result produced by an instruction.
     Number,
+    /// A completed local coin flip, distinct from numeric and other outcome values (705.2).
+    Coin,
     /// A named future turn, produced by a scheduling instruction.
     Turn,
     /// Exact turns already created by an instruction, distinct from next-unskipped anchors.

@@ -160,6 +160,10 @@ pub(crate) fn facts(game: &Game, e: &Event) -> Vec<Fact> {
             ..Fact::new(Verb::TapForMana, Some(P(*player)), what(O(*object)))
         }],
         Event::Shuffled { player, by } => vec![Fact::new(Verb::Shuffle, Some(P(*by)), vec![(Role::Of, P(*player))])],
+        Event::CoinFlipped { result, .. } => match result.won() {
+            Some(won) => vec![Fact::new(if won {Verb::WinFlip} else {Verb::LoseFlip}, Some(P(result.player)), vec![])],
+            None => Vec::new(),
+        },
         Event::Attached { .. } => Vec::new(), // attachment triggers are not accepted yet
         Event::Drew { player, card, ordinal, in_draw_step } => vec![Fact { ordinal: Some(*ordinal), in_draw_step: *in_draw_step, ..Fact::new(Verb::Draw, Some(P(*player)), what(O(*card))) }],
         Event::MonarchChanged { player, .. } => player.iter().map(|p| Fact::new(Verb::BecomeMonarch, Some(P(*p)), vec![])).collect(),

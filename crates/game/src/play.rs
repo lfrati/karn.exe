@@ -1188,6 +1188,8 @@ impl Game {
                         return Err(format!("choose exactly {count} of them to {word} (608.2d)").into());
                     }
                 }
+                (Choice::CoinCall, Answer::CoinCall(_)) => {}
+                (Choice::CoinCall, _) => return Err("call heads or tails before flipping the coin (705.2)".into()),
                 (Choice::Mana { options }, Answer::Mana(chosen)) if options.contains(chosen) => {}
                 (Choice::Mana { .. }, _) => return Err("the choice is which of the mana offered to add (608.2d)".into()),
                 (Choice::LibraryDestination { positions, .. }, Answer::LibraryPosition(position)) if positions.contains(position) => {}

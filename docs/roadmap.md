@@ -81,8 +81,19 @@ claimed. Literal granted flashback prices remain refused. Distinct prices requir
 explicit native choice; MGN's missing representation is tracked independently in
 [#34](https://github.com/lfrati/karn.exe/issues/34).
 
-**Next: [#30, typed coin results](https://github.com/lfrati/karn.exe/issues/30), with Mana
-Crypt.** This is the last of the initial four coverage mechanisms.
+Called coin flips now use typed local results and the existing seeded/replayed randomness
+([#30](https://github.com/lfrati/karn.exe/issues/30)). Mana Crypt, Stitch in Time and eighteen
+other whole cards now compile, without losses. Ral, Monsoon Mage's front face compiles, but
+the full card still refuses. Complete roster main decks remain 84. Validation covers 4,802
+rules tests and 1,126 tooling cases across the batch and a focused rerun of the updated
+capability assertion. Matched release replay medians are 1.0–2.8% lower than the prior batch;
+the raw results remain evidence for #31. Optional/conditional producers, grouped/repeated
+flips, face-only card instructions and coin replacements remain refused.
+
+**The initial four coverage mechanisms are implemented. Next is the bounded grammar and
+pinning work: [#25](https://github.com/lfrati/karn.exe/issues/25) and
+[#16](https://github.com/lfrati/karn.exe/issues/16).** The remaining supporting issues,
+Commander corpus and profiling investigation still belong to the initial execution queue.
 
 Re-rank coverage candidates against fresh blockers when the evidence justifies it. Trace
 the specific reference grammar, binding, lowering and runtime; identify Karn's missing

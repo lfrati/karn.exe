@@ -63,6 +63,15 @@ the cast announcement. An unqualified flashback route requires one distinct pric
 No-mana-cost recipients gain an unpayable ability. Literal granted flashback prices and
 MGN's representation of distinct price choices remain explicitly unsupported.
 
+A called coin flip suspends for its controller's heads/tails call before consuming a
+physical result from `start.rs`'s existing seeded/captured/replayed randomness. A typed
+frame slot retains that instruction's player, call and face; later win/loss conditions
+bind to that slot. Its event attributes the win or loss only to the flipping player.
+Earlier instructions stay completed across the call and cloned continuations. The
+supported producer is one unconditional called flip by the controller; optional,
+conditional, grouped, repeated and replacement flip variants remain refused. Face-only
+results have no winner or loser, but their card instructions are not implemented yet.
+
 `Simulation` owns the gameplay boundary: correlated requests, chooser validation, accepted
 commands and viewer projections. `Game` also exposes low-level state access for fixtures and
 tooling; a direct state edit is not equivalent to a rules action. Player prompts expose only

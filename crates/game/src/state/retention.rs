@@ -244,7 +244,7 @@ impl Trace for Choice {
             Choice::Pile { piles } => { for pile in piles { pile.trace(visit); } },
             Choice::Alternative { among, .. } => { for option in among { match &option.body { super::ActionOptionBody::Objects { among, .. } => among.trace(visit), super::ActionOptionBody::Counters { on,.. } => on.trace(visit), _ => {} } } },
             Choice::LibraryDestination { cards, .. } => cards.trace(visit),
-            Choice::May { .. } | Choice::Mana { .. } | Choice::Value(_) | Choice::Name(_) | Choice::Number { .. } | Choice::Player { .. } | Choice::Skip { .. } => {},
+            Choice::CoinCall | Choice::May { .. } | Choice::Mana { .. } | Choice::Value(_) | Choice::Name(_) | Choice::Number { .. } | Choice::Player { .. } | Choice::Skip { .. } => {},
         }
     }
 }
@@ -284,7 +284,7 @@ impl Trace for Answer {
                 tapped.trace(visit);
                 with.trace(visit);
             },
-            Answer::LibraryPosition(_) | Answer::Alternative(_) | Answer::Yes | Answer::No | Answer::Mana(_) | Answer::Player(_) | Answer::Pile(_) | Answer::Skip(_) => {},
+            Answer::CoinCall(_) | Answer::LibraryPosition(_) | Answer::Alternative(_) | Answer::Yes | Answer::No | Answer::Mana(_) | Answer::Player(_) | Answer::Pile(_) | Answer::Skip(_) => {},
         }
     }
 }
@@ -296,7 +296,7 @@ impl crate::retention::Players for Answer {
             Answer::Attach(target) | Answer::Defender(target) => target.players(visit),
             Answer::Player(player) => visit(*player),
             Answer::Value(value) => value.players(visit),
-            Answer::LibraryPosition(_) | Answer::SpellDestination { .. } | Answer::Alternative(_) | Answer::Yes | Answer::No
+            Answer::CoinCall(_) | Answer::LibraryPosition(_) | Answer::SpellDestination { .. } | Answer::Alternative(_) | Answer::Yes | Answer::No
             | Answer::Objects(_) | Answer::OptionalObjects(_) | Answer::Mana(_) | Answer::Pile(_) | Answer::Arrange { .. }
             | Answer::Replacement(_) | Answer::DamageReplacement(_) | Answer::DamageOrder(_) | Answer::Prevention(_)
             | Answer::Pay { .. } | Answer::Skip(_) => {},

@@ -46,7 +46,7 @@ impl Asks {
             Self::LifeLost { players, count, .. } => players.inputs() | count.inputs() | I::at(D::Context,P::HISTORY | P::TURN),
             Self::AttackedWith { players, those, count, .. } => players.inputs() | those.inputs().over_objects() | count.inputs() | I::at(D::Context,P::HISTORY | P::TURN),
             Self::CastBy { players, .. } => players.inputs() | I::at(D::Context,P::HISTORY | P::BINDINGS),
-            Self::CastFrom { .. } | Self::Kicked { .. } | Self::OptionalPaid { .. } | Self::CostPaid { .. } | Self::Gift { .. } | Self::Stored { .. } | Self::Outcome { .. } => I::at(D::Context,P::BINDINGS),
+            Self::Coin { .. } | Self::CastFrom { .. } | Self::Kicked { .. } | Self::OptionalPaid { .. } | Self::CostPaid { .. } | Self::Gift { .. } | Self::Stored { .. } | Self::Outcome { .. } => I::at(D::Context,P::BINDINGS),
             Self::CastFor { what, .. } => what.inputs() | I::at(D::Objects,P::BINDINGS),
             Self::Targets { what, target } => what.inputs() | target.inputs() | I::at(D::Objects,P::BINDINGS),
             Self::ManaSpent { spell, test, .. } => spell.inputs() | I::at(D::Objects,P::BINDINGS) | match test { PaidTest::Count(_,q) => q.inputs(), PaidTest::Symbols(_) => I::NONE },
