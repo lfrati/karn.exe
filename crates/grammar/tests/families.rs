@@ -670,3 +670,32 @@ fn r608_2c_replaced_instruction_counts() {
     declines("Draw three cards instead of two lands.");
     declines("Draw three cards instead of a card.");
 }
+
+/// CR 702.30a: Echo queries an acquisition since the beginning of the last upkeep.
+#[test]
+fn r702_30_control_acquisition_history() {
+    let (rule, _) = read("At the beginning of your upkeep, if this permanent came under your control since the beginning of your last upkeep, sacrifice it unless you pay {2}{G}.");
+    let (short, _) = read("At the beginning of your upkeep, if ~ came under your control since your last upkeep, sacrifice it unless you pay {2}{G}.");
+    assert_eq!(rule, short);
+    let json = serde_json::to_string(&rule).unwrap();
+    assert!(json.contains("CameUnderControl") && json.contains("Since") && json.contains("Upkeep"));
+    read("At the beginning of your end step, if ~ didn't attack this turn, it deals 2 damage to you unless it came under your control this turn.");
+    let rule = &grammar::condition::conditions().condition;
+    let text = "that creature came under that player's control since the beginning of your last upkeep";
+    let Outcome::Accepted { value, .. } = rule.parse_all(&tokenize(text)) else { panic!("{text}") };
+    let ir::Condition::CameUnderControl { what, player, window } = &value else { panic!() };
+    assert_eq!(what.set.domain, ir::Domain::Permanent);
+    assert_eq!(player.set.domain, ir::Domain::Player);
+    assert_eq!(*window, ir::Window::Since { step: ir::Step::Upkeep, whose: Box::new(ir::Selector::you()) });
+    let printed = rule.print_text(&value, true).unwrap();
+    let Outcome::Accepted { value: again, .. } = rule.parse_all(&tokenize(&printed)) else { panic!("{printed}") };
+    assert_eq!(value, again);
+    let (long, _) = read("If it attacked since the beginning of your last upkeep, draw a card.");
+    let (short, _) = read("If it attacked since your last upkeep, draw a card.");
+    assert_eq!(long, short);
+    for text in [
+        "If that player came under your control since your last upkeep, draw a card.",
+        "If ~ came under a creature's control this turn, draw a card.",
+        "If ~ came under your control, draw a card.",
+    ] { declines(text); }
+}

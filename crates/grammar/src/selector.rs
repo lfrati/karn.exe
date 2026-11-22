@@ -3850,6 +3850,7 @@ fn specials(possessor: &P<Selector>) -> P<Selector> {
                 },
             ),
             self_ref.to(def(Ref::This, Domain::Permanent)),
+            lit("this permanent").to(def(Ref::This, Domain::Permanent)).alias(),
             // Generated rules retain a typed spell source. "This spell" round-trips
             // that type; "~" parses as a permanent selector.
             lit("this spell").to(def(Ref::This, Domain::Spell)),

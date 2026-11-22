@@ -36,6 +36,10 @@ pub enum Condition {
     /// "you revealed a Dragon card or controlled a Dragon as you cast ~": the additional cost
     /// was paid by revealing, or the player controlled one, as the spell was cast.
     RevealedOrControlledAsCast(crate::vocab::Subtype),
+    /// This object began being controlled by this player during the history window
+    /// (702.30a, 608.2i), including entering under that player's control. This asks about an
+    /// acquisition, not whether control held continuously throughout the window.
+    CameUnderControl { what: Box<Selector>, player: Box<Selector>, window: Window },
     /// "you own a card in exile", "you own a card named ~ in exile": the player owns such an
     /// object (108.3).
     Owns {
@@ -385,8 +389,8 @@ pub enum Window {
     ThisGame,
     /// "during your last turn", "during their last turn": the most recent turn of that player.
     LastTurnOf(Box<Selector>),
-    /// "since your last upkeep", "since your last turn": from the most recent such step or turn
-    /// of that player until now.
+    /// "since your last upkeep", "since the beginning of your last upkeep": from the
+    /// beginning of that player's most recent such step or turn until now.
     Since { step: Step, whose: Box<Selector> },
     /// "that turn": the turn the context named (the turn of the event that triggered).
     ThatTurn,

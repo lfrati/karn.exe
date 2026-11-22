@@ -383,8 +383,8 @@ fn origin(p: &EventPattern) -> bool {
         })
 }
 
-/// History: an event pattern in a tense, with its window.
-fn happened(e: &Events, inherited_plural: Option<bool>) -> P<Condition> {
+/// The bounded span shared by historical events and control acquisitions.
+fn history_window() -> P<Window> {
     let s = selectors();
     // the most recent step or turn of a player, which "since" counts from
     let since_step = table(
@@ -396,7 +396,7 @@ fn happened(e: &Events, inherited_plural: Option<bool>) -> P<Condition> {
             ("end step".into(), Step::End),
         ],
     );
-    let window = alt(
+    alt(
         "window",
         vec![
             lit("this turn").to(Window::ThisTurn),
@@ -413,7 +413,7 @@ fn happened(e: &Events, inherited_plural: Option<bool>) -> P<Condition> {
                     _ => None,
                 },
             ),
-            lit("since").then_keep(&s.possessive).skip(&lit("last")).then(&since_step).map(
+            alt("since", vec![lit("since"), lit("since the beginning of").alias()]).then_keep(&s.possessive).skip(&lit("last")).then(&since_step).map(
                 |(who, step)| Some(Window::Since { step, whose: Box::new(who) }),
                 |w| match w {
                     Window::Since { step, whose } => Some(((**whose).clone(), *step)),
@@ -421,7 +421,13 @@ fn happened(e: &Events, inherited_plural: Option<bool>) -> P<Condition> {
                 },
             ),
         ],
-    );
+    )
+}
+
+/// History: an event pattern in a tense, with its window.
+fn happened(e: &Events, inherited_plural: Option<bool>) -> P<Condition> {
+    let s = selectors();
+    let window = history_window();
     // "four or more times", "exactly two times": how often, in the window
     let times = alt(
         "times",
@@ -1579,6 +1585,22 @@ fn clause(e: &Events) -> P<Condition> {
             },
         )
     };
+    let came_under_control = s.selector.skip(&lit("came under")).then(&s.possessive)
+        .skip(&lit("control")).then(&history_window()).map(
+            |((what, player), window)| {
+                (matches!(what.set.domain, Domain::Permanent | Domain::Spell | Domain::Object)
+                    && player.set.domain == Domain::Player).then_some(Condition::CameUnderControl {
+                        what: Box::new(what), player: Box::new(player), window,
+                    })
+            },
+            |c| match c {
+                Condition::CameUnderControl { what, player, window }
+                    if matches!(what.set.domain, Domain::Permanent | Domain::Spell | Domain::Object)
+                        && player.set.domain == Domain::Player =>
+                            Some((((**what).clone(), (**player).clone()), window.clone())),
+                _ => None,
+            },
+        );
     let targets_legal = alt("existing target group", vec![
         lit("both targets are still legal as").to(Some(2)),
         lit("all targets are still legal as").to(None),
@@ -1684,6 +1706,7 @@ fn clause(e: &Events) -> P<Condition> {
                 ),
             targets,
             targets_legal,
+            came_under_control,
             lit("able").to(Condition::Able),
             crate::vote::option().skip(&lit("gets more votes")).then(&lit("or the vote is tied").opt()).map(
                 |(option, tied)| Some(Condition::MoreVotes { option, or_tied: tied.is_some() }),
