@@ -426,3 +426,15 @@ fn r608_2c_independently_guarded_damage_parts() {
     read("~ deals 3 damage to each creature if {R} was spent to cast ~.");
     declines("~ deals 3 damage to target spell if {R} was spent to cast ~ and 3 damage to each creature if {G} was spent to cast ~.");
 }
+
+/// CR 702.72c: champion names linked exile by the permanent, rather than arbitrary exile.
+#[test]
+fn r702_72c_championed_with_source() {
+    let (with, _) = read("When a Faerie is championed with ~, tap all lands target player controls.");
+    let (by, _) = read("When a Faerie is championed by ~, tap all lands target player controls.");
+    assert_eq!(with, by);
+    let ir::Ability::Triggered { .. } = &with else { panic!() };
+    read("Whenever a creature is championed with another creature, draw a card.");
+    declines("When a player is championed with ~, draw a card.");
+    declines("When a creature is championed with target spell, draw a card.");
+}

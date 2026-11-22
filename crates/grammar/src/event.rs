@@ -261,6 +261,7 @@ pub(crate) fn own_rule(v: Verb) -> bool {
                 | DoubleCounters
                 | Distribute
                 | CreateCopy
+                | Champion
                 | ExchangeLifeTotals
                 | ExchangeLifeWithStat
         )
@@ -278,7 +279,7 @@ fn regular() -> impl Iterator<Item = Verb> {
 
 /// The verbs with a regular passive ("is exiled", "becomes tapped", "you've been attacked").
 pub(crate) fn passives() -> impl Iterator<Item = Verb> {
-    Verb::ALL.iter().copied().filter(|v| v.passive().is_some() && (!own_rule(*v) || *v == Verb::Attack))
+    Verb::ALL.iter().copied().filter(|v| v.passive().is_some() && (!own_rule(*v) || matches!(v, Verb::Attack | Verb::Champion)))
 }
 
 /// Is the passive said with "becomes" ("becomes tapped")? It is when the action leaves the object
@@ -1303,7 +1304,24 @@ fn participle_phrase() -> P<Deed> {
             _ => None,
         },
     );
-    alt("participle", vec![cast, done, done_under])
+    // Only explicit agent roles: the player instructed to act is not an effect source.
+    let with_agent = |verb: Verb, who: Selector| {
+        (!verb.kinds(Role::By).is_empty() && ir::lexicon::fills(&who, verb, Role::By))
+            .then(|| Deed { verb, passive: true, args: vec![(Role::By, Arg::Noun(who))] })
+    };
+    let done_by = words.skip(&lit("by")).then(&selectors().selector).map(
+        move |(verb, who)| with_agent(verb, who),
+        |d: &Deed| match (d.passive, d.args.as_slice()) {
+            (true, [(Role::By, Arg::Noun(who))]) => Some((d.verb, who.clone())),
+            _ => None,
+        },
+    );
+    // Oracle also names the permanent supplying champion with "with" (702.72c).
+    let championed_with = lit(&Verb::Champion.phrase(Inflection::Participle)).skip(&lit("with"))
+        .then(&selectors().selector).map(
+            move |((), who)| with_agent(Verb::Champion, who), |_| None,
+        ).alias();
+    alt("participle", vec![cast, done, done_under, done_by, championed_with])
 }
 
 /// The be-verb of a passive, agreeing with its subject: "is"/"are", "was"/"were", "has

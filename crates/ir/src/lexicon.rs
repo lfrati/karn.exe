@@ -336,6 +336,8 @@ lexicon! {
     /// A card exiled by a haunt ability "haunts" the object that ability targeted (702.55b),
     /// whether or not that object is still a creature.
     Haunt: "haunt", "702.55", Thing, [What => PERMANENT];
+    /// Exiled by a permanent as the direct result of its champion ability (702.72c).
+    Champion: "champion", "702.72c", Thing, [What => PERMANENT, By => PERMANENT];
     /// Being tapped to pay a saddle cost (702.171c).
     Saddle: "saddle", "702.171", Thing, [What => PERMANENT];
     // keyword actions a player or a permanent takes (701, 702)
