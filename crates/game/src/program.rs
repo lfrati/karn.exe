@@ -1934,11 +1934,11 @@ fn admitted(act: &ir::Act) -> Res<()> {
     match &act.action {
         Action::DrawUpTo(n) if !matches!(n, Amount::Const(_)) => unsupported("draw up to: fixed numeric bound required"),
         // what the turn plan does not hold: a skipped turn, every combat phase of a turn, an
-        // added beginning or ending phase, which needs added steps (500.10)
+        // added ending phase, which needs a cleanup continuation (500.8)
         Action::Static(s) if matches!(**s, ir::StaticAct::Skip(ir::statics::Skipped::ThatTurn)) => unsupported("skipping a named turn (614.10)"),
         Action::Static(s) if matches!(**s, ir::StaticAct::Skip(ir::statics::Skipped::CombatPhasesOfNextTurn)) => unsupported("skipping every combat phase of a turn (614.10a)"),
         Action::Static(s) if matches!(**s, ir::StaticAct::Skip(ir::statics::Skipped::Step { next: false, .. })) => unsupported("skipping a step that is not the next one (614.10)"),
-        Action::AdditionalPhase { kind: ir::turn::Phase::Beginning | ir::turn::Phase::Ending, .. } => unsupported("adding a beginning or ending phase (500.8; needs added steps)"),
+        Action::AdditionalPhase { kind: ir::turn::Phase::Ending, .. } => unsupported("adding an ending phase (500.8; cleanup continuation not implemented)"),
         Action::Create(tokens) if tokens.items.len() > 1 && tokens.conj != ir::Conj::And && tokens.conj != ir::Conj::Or => unsupported("unsupported token connective"),
         Action::DealDamage(hits) => hits.iter().flat_map(|h| &h.to.items).try_for_each(|to| crate::event::damage_recipient_ok(&to.set)),
         _ => Ok(()),
@@ -7517,7 +7517,7 @@ fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt> {
         }
         Instr::AddPhases { after, kinds, count } => {
             let count = count.checked(game, &f.ctx, f)?;
-            game.add_phases(*after, kinds, count);
+            game.add_phases(*after, kinds, count)?;
         }
         Instr::Copy { objects, from, turn } => {
             let affected = action::objects(game, f, objects);

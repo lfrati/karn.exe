@@ -147,7 +147,7 @@ expects `keyword: Fear`. When a keyword lands, point them at one that is still r
 
 *Skipped:*
 
-- Echo: direct rule expansion and a control-history condition need a since-last-upkeep history window; turn-only control duration is insufficient for repeated upkeeps.
+- Echo moved to Lane 4: printed fixed mana costs use observed per-player acquisitions and actual upkeep boundaries, including repeated upkeeps; nonmana costs, grants and unproved positioned history remain refused.
 - Unearth: the graveyard activation, haste and delayed exile lower, but the full rule and replacement adaptation still need an all-departure exile replacement.
 - Cascade moved to Lane 4: printed instances share the retained library scan with Discover, check the resulting spell's mana value and return uncast exiles in a captured random order; grants remain refused.
 - Suspend moved to Lane 4: fixed-count printed suspend now has its hand action, exile-counter scope and last-counter cast; variable announcements and grants remain refused.

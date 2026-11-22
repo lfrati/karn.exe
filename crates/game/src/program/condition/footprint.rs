@@ -52,7 +52,7 @@ impl Asks {
             Self::ManaSpent { spell, test, .. } => spell.inputs() | I::at(D::Objects,P::BINDINGS) | match test { PaidTest::Count(_,q) => q.inputs(), PaidTest::Symbols(_) => I::NONE },
             // Trigger patterns can inspect event/LKI/linked contexts and their selectors.
             // Their complete property walker is not implemented: keep broad trials.
-            Self::Happened { .. } | Self::GameCastChoice { .. } => I::UNKNOWN,
+            Self::Happened { .. } | Self::GameCastChoice { .. } | Self::CameUnderControlSinceUpkeep => I::UNKNOWN,
         }
     }
 }

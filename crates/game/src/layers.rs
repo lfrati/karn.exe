@@ -1300,6 +1300,7 @@ impl Game {
             if self.obj(object).zone == Zone::Battlefield && self.controller(object) != player {
                 self.grant_hideaway_look(object, self.controller(object));
                 self.obj_mut(object).since = self.turn;
+                self.record_control_acquisition(object, self.controller(object));
                 self.combat.remove(object);
                 // Its new controller may look at a face-down permanent (708.5).
                 if self.face_down(object) {

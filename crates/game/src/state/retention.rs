@@ -114,7 +114,7 @@ impl Trace for Object {
     fn trace(&self, visit: &mut dyn FnMut(ObjId)) {
         let Self { attached_to, targets, ability, invocations, bound, choices, cast_exiled, hidden, harmonized, cast_announcement, foretold: _, delayed: _,
             cast_as: _, id: _, card: _, card_id: _, chars: _, copy_acquisition: _, copied: _, copy_effects: _, token_faces: _, card_copy: _, stack_copy_of, face: _, emblem: _, owner: _, controller: _, zone: _,
-            tapped: _, damage: _, deathtouched: _, counters: _, counter_stamps: _, since: _, stamp: _, last: _, last_attachments: _,
+            tapped: _, damage: _, deathtouched: _, counters: _, counter_stamps: _, since: _, control_acquisitions: _, stamp: _, last: _, last_attachments: _,
             flashback: _, cast_rider: _, transformed: _, transformed_at: _, level: _, unlocked: _, monstrous: _, renowned: _, solved: _, prepared: _, prepared_copy, prepare_source, saddled: _, cast_from: _, cast_by: _, cast_ordinal: _, entered: _, activation_uses: _, x: _, spell_x: _, kicked: _, optional_paid: _, alternative: _, buyback_paid: _, entwined: _, replicated: _, gift: _, announced: _, left: _, arrived: _, successor: _, uncounterable: _, mana_paid: _, modes: _, division: _ } = self;
         if let Some(announcement) = cast_announcement {
             if let crate::announcement::CastRoute::Harmonize { tapped: Some(object) } = announcement.route { visit(object); }
@@ -177,7 +177,7 @@ impl Trace for Delayed {
 }
 impl Trace for Player {
     fn trace(&self, visit: &mut dyn FnMut(ObjId)) {
-        let Self { library, hand, graveyard, pool, counters: _, life: _, land_played: _, turn_began: _, turns_taken: _, game_casts: _, drew_from_empty: _, lost: _, speed: _ } = self;
+        let Self { library, hand, graveyard, pool, counters: _, life: _, land_played: _, turn_began: _, turns_taken: _, game_casts: _, upkeeps: _, drew_from_empty: _, lost: _, speed: _ } = self;
         library.trace(visit);
         hand.trace(visit);
         graveyard.trace(visit);

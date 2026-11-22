@@ -1369,7 +1369,7 @@ mod turn_bookkeeping_tests {
                 0=>{changed.extra_turn(1,None);},
                 1=>{changed.control_next_turn(1,0);},
                 2=>changed.add_skip(&[0],crate::turn::Occurrence::Part(Part::Draw),false,None,None),
-                _=>{changed.add_phases(ir::action::AfterPhase::This,&[ir::turn::Phase::Combat],1);},
+                _=>{changed.add_phases(ir::action::AfterPhase::This,&[ir::turn::Phase::Combat],1).unwrap();},
             }
             let before = format!("{changed:?}");
             assert_eq!(changed.audit_turn_bookkeeping(), json!({"unavailable":"nonordinary turn schedule, phase suffix, skip or turn control"}));

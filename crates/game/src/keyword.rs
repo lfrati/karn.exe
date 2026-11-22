@@ -433,6 +433,7 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if let Some(ability) = saddle(item) { return Some(ability); }
     if let Some(ability) = affinity(item) { return Some(ability); }
     if let Some(ability) = cumulative_upkeep(item) { return Some(ability); }
+    if let Some(ability) = echo(item) { return Some(ability); }
     if let Some(ability) = bloodthirst(item) { return Some(ability); }
     if let Some(ability) = fabricate(item) { return Some(ability); }
     if let Some(ability) = bushido(item) { return Some(ability); }
@@ -680,6 +681,16 @@ fn cumulative_upkeep(item: &ir::token::KeywordInstance) -> Option<Ability> {
     CardDef::new("Cumulative upkeep rule", "", "Enchantment", &text, None).ok()?.abilities.into_iter().next()
 }
 
+/// 702.30a: a fixed mana echo cost is paid through the ordinary retained unless-payment.
+fn echo(item: &ir::token::KeywordInstance) -> Option<Ability> {
+    if item.keyword.name() != "Echo" { return None; }
+    let KeywordParam::Mana(mana) = &item.param else { return None };
+    if mana.0.is_empty() || mana.0.iter().any(|symbol| *symbol == crate::cost::X || symbol.mana_payments().is_none()) { return None; }
+    let cost: String = mana.0.iter().map(|symbol| format!("{{{}}}", symbol.text())).collect();
+    let text = format!("At the beginning of your upkeep, if this permanent came under your control since the beginning of your last upkeep, sacrifice this permanent unless you pay {cost}.");
+    CardDef::new("Echo rule", "", "Enchantment", &text, None).ok()?.abilities.into_iter().next()
+}
+
 /// 702.54a: the ordinary prospective-entry replacement checks damage history.
 fn bloodthirst(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if item.keyword.name() != "Bloodthirst" { return None; }
@@ -868,7 +879,7 @@ pub(crate) fn ninjutsu(def: &CardDef, index: usize) -> bool {
 }
 
 /// Generated owner indices follow the cached declaration's exact ability order.
-fn generated_by(def: &CardDef) -> impl Iterator<Item = (usize, &Instance)> {
+pub(crate) fn generated_by(def: &CardDef) -> impl Iterator<Item = (usize, &Instance)> {
     def.keyword_declarations.iter().flat_map(|instance| {
         instance.declared.iter().flat_map(|d| &d.gives)
             .filter_map(move |(_, gives)| matches!(gives, Gives::Ability(_)).then_some(instance))

@@ -307,6 +307,8 @@ enum Asks {
     NthTurn { turns: Vec<u32> },
     /// Its retained cast ordinal, or the pending announcement's next ordinal (608.2i).
     GameCastChoice { n: u32 },
+    /// Historical acquisition by this ability's controller since their prior upkeep.
+    CameUnderControlSinceUpkeep,
     TurnOf { who: expr::Subject, negated: bool },
     /// "your life total is greater than your starting life total"
     Compare { left: Values, cmp: Cmp, right: Values },
@@ -601,6 +603,17 @@ impl Asks {
                 let predicate = if *negated { ir::Filter::Not(Box::new(filter.clone())) } else { filter.clone() };
                 set.filter = ir::Filter::All(vec![set.filter, predicate]);
                 Asks::Exists { what: expr::Set::compile_root(&set, support, &mut *bind)?, count: Quantity::compile(&what.quant, support, bind)? }
+            }
+            ir::Condition::CameUnderControl { what, player, window } => {
+                let own_upkeep = matches!(support.ability(), Some(ir::Ability::Triggered {
+                    trigger: ir::Trigger::Step { step: ir::Step::Upkeep, whose: ir::StepOwner::Player { who, next: false } }, ..
+                }) if is_you(who));
+                if !own_upkeep || what.quant != Quant::Definite(Ref::This)
+                    || what.set != ir::ObjectSet::of(ir::Domain::Permanent) || what.chooser.is_some() || what.random.is_some()
+                    || !is_you(player) || !matches!(window, ir::Window::Since { step: ir::Step::Upkeep, whose } if is_you(whose)) {
+                    return unsupported("control acquisition: only this source, you and the prior own-upkeep window are implemented");
+                }
+                Asks::CameUnderControlSinceUpkeep
             }
             ir::Condition::Is { what, pred, negated } => {
                 let thing = match &what.quant {
@@ -921,6 +934,7 @@ impl Asks {
             Asks::TurnOf { who, negated } => (who.evaluate(game, ctx, locals) == vec![Target::Player(game.active)]) != *negated,
             Asks::Turn { yours, negated } => ((game.active == ctx.controller) == *yours) != *negated,
             Asks::NthTurn { turns } => game.active == ctx.controller && turns.contains(&game.players[ctx.controller].turns_taken),
+            Asks::CameUnderControlSinceUpkeep => ctx.source.is_some_and(|object| game.came_under_control_since_upkeep(object, ctx.controller)),
             Asks::GameCastChoice { n } => {
                 if let Some(source) = ctx.source.and_then(|source| game.get_object(source))
                     && let Some(ordinal) = source.cast_ordinal {
@@ -1029,7 +1043,7 @@ impl Asks {
                 what.scalars(out);
             }
             Asks::TurnOf { who, .. } => who.scalars(out),
-            Asks::Turn { .. } | Asks::NthTurn { .. } | Asks::GameCastChoice { .. } | Asks::Kicked { .. } | Asks::OptionalPaid { .. } | Asks::CostPaid { .. } | Asks::Gift { .. } => {}
+            Asks::Turn { .. } | Asks::NthTurn { .. } | Asks::GameCastChoice { .. } | Asks::CameUnderControlSinceUpkeep | Asks::Kicked { .. } | Asks::OptionalPaid { .. } | Asks::CostPaid { .. } | Asks::Gift { .. } => {}
             Asks::Compare { left, right, .. } => {
                 left.scalars(out);
                 right.scalars(out);
@@ -1075,7 +1089,7 @@ impl Asks {
             Asks::TurnOf { .. } => Reads::NONE,
             Asks::Coin { .. } | Asks::Stored { .. } | Asks::Outcome { .. } | Asks::Turn { .. } | Asks::NthTurn { .. } | Asks::Kicked { .. } | Asks::OptionalPaid { .. } | Asks::CostPaid { .. } | Asks::Gift { .. } => Reads::NONE,
             Asks::CastBy { players: who, .. } => Reads::HISTORY | players(who),
-            Asks::CastFrom { .. } | Asks::GameCastChoice { .. } => Reads::HISTORY,
+            Asks::CastFrom { .. } | Asks::GameCastChoice { .. } | Asks::CameUnderControlSinceUpkeep => Reads::HISTORY,
             Asks::Targets { target, .. } => target.reads(),
             Asks::CastFor { .. } => Reads::NONE,
             Asks::ManaSpent { test, .. } => Reads::HISTORY | match test { PaidTest::Count(_, q) => quantity(q), PaidTest::Symbols(_) => Reads::NONE },

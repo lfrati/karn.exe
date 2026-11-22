@@ -380,6 +380,7 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
         "Undying" | "Persist" | "Extort" | "Living Weapon" | "Job Select" | "Prowess" | "Battle Cry" | "Renown" | "Annihilator" => generated(ability(item)?, true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
         "Affinity" => generated(ability(item)?, false, vec![Context::PrintedOnly]),
         "Cumulative Upkeep" => generated(ability(item)?, true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
+        "Echo" => generated(ability(item)?, true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
         "Bloodthirst" => generated(ability(item)?, true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
         "Vanishing" => generated_many(vanishing(item).ok_or_else(|| crate::Unsupported("keyword: Vanishing".into()))?,
             true, vec![Context::PrintedOnly, Context::PermanentsOnly]),

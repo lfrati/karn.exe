@@ -79,6 +79,19 @@ actual exile identities; its optional cast uses the ordinary permission and resu
 ceiling, then the existing library placement owner returns the remainder in a captured random
 order. Printed Cascade supports repeated instances; grants remain refused.
 
+Echo's fixed mana costs use the retained unless-payment owner. Historical control queries
+keep the last observed acquisition by each player on the exact incarnation, plus the last two
+actual upkeep boundaries of each player; retiring the event log does not lose those facts.
+A copied trigger uses its controller's window even if that player no longer controls the
+source. Current control is checked separately by sacrifice. Real entries establish complete
+history; positioned permanents with unproved acquisition history are refused. Nonmana Echo,
+grants and other control-history windows remain refused.
+
+Additional beginning phases use the existing turn plan's untap/upkeep/draw steps, preserving
+the current turn and its history. Extra beginning phases on the starting player's first
+two-player turn remain refused until draw omission is represented; additional ending phases
+still require a cleanup continuation.
+
 Ninjutsu retains the returned attacker's defender. Its rules text includes battles under
 702.49c; execution supports players and planeswalkers. Battle combat and protectors (310.8)
 remain unsupported.

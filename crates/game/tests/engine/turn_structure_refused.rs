@@ -1,9 +1,10 @@
 //! What the grammar reads of the turn's structure but the engine does not run stays refused, and
 //! the refusal names what is not run. The next step or combat phase of a player's is skipped
 //! (614.10) and combat and main phases are added (500.8) through the turn plan;
-//! every combat phase of a turn, a step other than the next one and added beginning or ending
-//! phases (which need added steps, 500.10) are not. Extra turns run through the shared turn
-//! scheduler (500.7). Plain next-turn skips now run before turn-begin actions; their
+//! every combat phase of a turn, a step other than the next one and added ending phases
+//! (which need a cleanup continuation) are not. Beginning phases run outside the starting
+//! player's first two-player turn, whose draw omission remains explicitly refused.
+//! Extra turns run through the shared turn scheduler (500.7). Plain next-turn skips now run before turn-begin actions; their
 //! single/count-two execution and boundaries are tested in r500_7_created_turn_rules.
 use game::CardDef;
 
@@ -34,19 +35,14 @@ fn r614_10a_skipping_all_combat_phases_of_a_next_turn_is_refused() {
 }
 
 #[test]
-fn r500_10_an_additional_beginning_phase_is_refused() {
-    // an additional combat and main phase is run (500.8), unlike an additional beginning phase
+fn r500_8_an_additional_beginning_phase_compiles() {
+    // The shared plan runs combat/main and complete beginning phases (500.8).
     let assault = CardDef::new("Relentless Assault", "{2}{R}{R}", "Sorcery",
         "Untap all creatures that attacked this turn. After this main phase, there is an additional combat phase followed by an additional main phase.", None).unwrap();
     game::play::check(&assault).unwrap();
-    let why = refusal(
-        "Sphinx of the Second Sun",
-        "{6}{U}{U}",
-        "Creature — Sphinx",
-        "Flying\nAt the beginning of each of your postcombat main phases, there is an additional beginning phase after this phase. (The beginning phase includes the untap, upkeep, and draw steps.)",
-        Some((6, 6)),
-    );
-    assert!(why.contains("500.8"), "{why}");
+    let sphinx = CardDef::new("Sphinx of the Second Sun", "{6}{U}{U}", "Creature — Sphinx",
+        "Flying\nAt the beginning of each of your postcombat main phases, there is an additional beginning phase after this phase.", Some((6, 6))).unwrap();
+    game::play::check(&sphinx).unwrap();
 }
 
 #[test]

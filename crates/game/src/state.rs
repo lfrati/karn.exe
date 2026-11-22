@@ -146,6 +146,8 @@ pub struct Object {
     /// The turn in which it came under its controller's control; 0 for what a game was set up
     /// with. A creature attacks only if that was before its controller's turn began (302.6).
     pub since: u32,
+    /// Historical acquisitions of this exact incarnation; setup history may be unknown.
+    pub(crate) control_acquisitions: crate::history::ControlAcquisitions,
     /// The turn in which it came to be in its zone, as the object it is (400.7); 0 for what a
     /// game was set up with. A permanent "entered this turn" if that turn is this one.
     pub(crate) entered: u32,
@@ -751,6 +753,7 @@ pub struct Player {
     pub turns_taken: u32,
     /// Accepted spells cast in this game; None when a positioned history does not say.
     pub game_casts: Option<u32>,
+    pub(crate) upkeeps: crate::history::Upkeeps,
     /// Tried to draw from an empty library since state-based actions were last checked (704.5b).
     pub drew_from_empty: bool,
     pub lost: bool,
@@ -1113,6 +1116,7 @@ impl Game {
             turn_began: 0,
             turns_taken: 0,
             game_casts: Some(0),
+            upkeeps: crate::history::Upkeeps::default(),
             drew_from_empty: false,
             speed: None,
             lost: false,
@@ -1265,6 +1269,7 @@ impl Game {
             self.next_card = self.next_card.checked_add(1).expect("physical card identity exhausted");
             id
         });
+        let control_acquisitions = if zone == Zone::Battlefield { crate::history::ControlAcquisitions::entered(controller, self.log.end()) } else { Default::default() };
         let id = self.objects.insert(|id| Object {
             cast_as: crate::card::CastAs::Whole,
             attached_to: None,
@@ -1296,6 +1301,7 @@ impl Game {
             invocations: None,
             delayed: false,
             since,
+            control_acquisitions,
             entered: since,
             activation_uses: Vec::new(),
             bound: Bound::default(),
@@ -1457,6 +1463,7 @@ impl Game {
         let chars = if zone == Zone::Battlefield { d.room([false; 2]).chars() } else { d.chars() };
         let id = self.new_object(Some(def), chars, player, player, zone);
         self.obj_mut(id).since = 0;
+        self.obj_mut(id).control_acquisitions = Default::default();
         self.obj_mut(id).entered = 0;
         if zone == Zone::Stack { self.capture_spell(id); }
         id
@@ -1518,7 +1525,13 @@ impl Game {
             return Err("initial control duration must cover every permanent".into());
         }
         self.turn=turn;
-        for player in &mut self.players { player.game_casts = (turn == 1).then_some(0); }
+        for player in &mut self.players {
+            player.game_casts = (turn == 1).then_some(0);
+            player.upkeeps = Default::default();
+        }
+        // Declared positions do not import control-acquisition history. This also
+        // covers tokens constructed through the ordinary token API during setup.
+        for object in self.battlefield.clone() { self.obj_mut(object).control_acquisitions = Default::default(); }
         self.part=part; self.active=active; self.priority=priority; self.passes=passes;
         self.plan=crate::turn::TurnPlan::at(turn,part,0);
         for (player,state) in self.players.iter_mut().enumerate() {
@@ -1537,6 +1550,7 @@ impl Game {
     /// action, trigger or decision refuses the premise instead of repairing it.
     /// On failure, preserve the unfinalized setup for inspection.
     pub fn finish_initial_position(&mut self) -> Result<(), String> {
+        self.validate_setup_control_history().map_err(|why| why.0)?;
         let log=self.log.end();
         // Any failure restores the position given, as an unsupported action does.
         self.guarded(|game| {
@@ -1762,7 +1776,7 @@ impl Game {
         let attacking = entry.attacking;
         let frozen_counters = entry.frozen_counters.clone();
         let counters = match now {
-            Some(now) if to == Zone::Battlefield => self.arrive(now, entry),
+            Some(now) if to == Zone::Battlefield => { self.record_control_entry(now); self.arrive(now, entry) },
             _ => Vec::new(),
         };
         if let Some(now) = now {
