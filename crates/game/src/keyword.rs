@@ -534,8 +534,17 @@ fn triggered(item: &ir::token::KeywordInstance) -> Option<&'static Ability> {
         "Mentor" => Some(mentor()),
         "Dethrone" => Some(dethrone()),
         "Training" => Some(training()),
+        "Ingest" => Some(ingest()),
         _ => None,
     }
+}
+
+/// 702.115a: the damaged player exiles one library card, regardless of damage amount.
+fn ingest() -> &'static Ability {
+    static RULE: OnceLock<Ability> = OnceLock::new();
+    crate::token::init(&RULE, || CardDef::new("Ingest rule", "", "Creature",
+        "Whenever this creature deals combat damage to a player, that player exiles the top card of their library.", None)
+        .expect("the grammar reads rule 702.115a").abilities[0].clone())
 }
 
 /// 702.149a: another greater-power attacker is required at the attack event.
