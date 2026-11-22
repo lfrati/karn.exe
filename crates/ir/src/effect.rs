@@ -81,6 +81,9 @@ pub enum Lead {
     /// "As ~ is turned face up,": applied while the permanent is being turned face up, not
     /// afterward (708.11).
     AsTurnedFaceUp(Selector),
+    /// During this player's (next) untap step, as their permanents untap (502.3).
+    /// A turn-based instruction, not an ability waiting to resolve during upkeep (502.4).
+    AsPermanentsUntap { who: Selector, next: bool },
     /// "As ~ enters or is turned face up,": at either of the two (614.1c, 708.11).
     AsEntersOrTurnedFaceUp(Selector),
     /// "Then": after the previous sentence is done (608.2c).

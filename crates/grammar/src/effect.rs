@@ -1196,6 +1196,29 @@ fn build() -> Effects {
             _ => None,
         },
     );
+    let untapping = alt("untapping player", all.iter().map(|(subject, form)| {
+        subject.skip(&lit(if *form == Form::Third { "untaps" } else { "untap" }))
+            .then(&selectors().possessive).skip(&lit("permanents")).map(
+                |(subject, possessor)| match subject {
+                    Some(Subject::Selector(who)) if who.set.domain == ir::Domain::Player && matches!(who.quant, ir::Quant::Definite(_)) && who == possessor => Some(who),
+                    _ => None,
+                },
+                |who: &Selector| Some((Some(Subject::Selector(who.clone())), who.clone())),
+            )
+    }).collect());
+    let as_untaps = lit("during").then_keep(&crate::event::span(true)).skip(&lit(", as"))
+        .then(&untapping).map(
+            |((step, owner), actor)| match owner {
+                ir::StepOwner::Player { who, next } if step == ir::Step::Untap && *who == actor =>
+                    Some(Lead::AsPermanentsUntap { who: actor, next }),
+                _ => None,
+            },
+            |lead| match lead {
+                Lead::AsPermanentsUntap { who, next } => Some(((ir::Step::Untap,
+                    ir::StepOwner::Player { who: Box::new(who.clone()), next: *next }), who.clone())),
+                _ => None,
+            },
+        );
     let leading = modifiers().leading.map(
         |m| Some(Lead::Modifier(m)),
         |l| match l {
@@ -1236,6 +1259,7 @@ fn build() -> Effects {
             as_either,
             as_enters,
             as_turned_face_up,
+            as_untaps,
         ],
     )
     .skip(&lit(","));

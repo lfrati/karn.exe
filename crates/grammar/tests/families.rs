@@ -295,3 +295,18 @@ fn r608_2c_same_way_procedure() {
     declines("Each player chooses a number of players equal to the number of players controlled by the player who controls the fewest.");
     declines("Each player sacrifices players the same way.");
 }
+
+/// CR 502.3–4: this turn-based instruction happens with untapping, before priority.
+#[test]
+fn r502_3_as_permanents_untap() {
+    for text in [
+        "{T}: Add one mana of any color. During your next untap step, as you untap your permanents, return ~ to its owner's hand.",
+        "During that player's next untap step, as that player untaps that player's permanents, draw a card.",
+    ] {
+        let (value, _) = read(text);
+        assert!(serde_json::to_string(&value).unwrap().contains("AsPermanentsUntap"));
+    }
+    declines("During your next untap step, as target player untaps your permanents, draw a card.");
+    declines("During your next upkeep, as you untap your permanents, draw a card.");
+    declines("During your next untap step, as you untap your creatures, draw a card.");
+}
