@@ -237,7 +237,11 @@ way of saying one kind of thing, read wherever it occurs. [The grammar](grammar.
 method and the tool that finds the families. Cards no roster deck names still count toward
 the first goal: a family's rule covers them too.
 
-*Skipped:* none yet.
+*Skipped:*
+
+- Drain Life: direct capped-gain and scalar-minimum decompositions both stop in the amount
+  grammar. Needs receiver-specific ceilings and pre-damage life/loyalty snapshots; a current
+  statistic or a sum of recipient limits would change its meaning.
 
 #### Lane 4: mechanisms (worktree `mechanisms`)
 
