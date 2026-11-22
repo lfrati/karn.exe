@@ -384,7 +384,7 @@ fn origin(p: &EventPattern) -> bool {
 }
 
 /// History: an event pattern in a tense, with its window.
-fn happened(e: &Events) -> P<Condition> {
+fn happened(e: &Events, inherited_plural: Option<bool>) -> P<Condition> {
     let s = selectors();
     // the most recent step or turn of a player, which "since" counts from
     let since_step = table(
@@ -486,6 +486,12 @@ fn happened(e: &Events) -> P<Condition> {
             },
         )
     };
+    if let Some(plural) = inherited_plural {
+        let predicate = crate::event::past_predicate(plural).map(
+            |action| Some(EventPattern::new(Vec::new(), vec![action])), |_| None,
+        );
+        return with_window(&predicate, Tense::Past, false);
+    }
     // "that spell is countered this way": the present, for the resolving ability's own events;
     // where the present reads the same as the past ("you cast a spell this way"), it is the past
     let present = e.pattern.skip(&lit("this way")).map(
@@ -1603,7 +1609,7 @@ fn clause(e: &Events) -> P<Condition> {
             was,
             remains,
             damage_dealt(),
-            happened(e),
+            happened(e, None),
             cast_was(),
             mana_spent(),
             turn,
@@ -1711,10 +1717,32 @@ fn clause(e: &Events) -> P<Condition> {
 
 fn build(e: &Events) -> Conditions {
     let c = clause(e);
+    // Sharing an already definite actor is an alias of repeating it. Choosing a fresh
+    // actor here would require correlated binding, so indefinite/targeted actors stay refused.
+    let inherited = alt("shared condition subject", [false, true].into_iter().map(|plural| {
+        let join = table("boolean join", vec![("and".into(), false), ("or".into(), true)]);
+        c.then(&join).then(&happened(e, Some(plural))).map(
+            move |((first, or), mut past)| {
+                let who = match &first {
+                    Condition::Controls { player, .. } | Condition::Owns { player, .. } | Condition::OwnsAndControls { player, .. } => (**player).clone(),
+                    _ => return None,
+                };
+                let definite = matches!(who.quant, Quant::Definite(Ref::You | Ref::Anaphor(Anaphor::That | Anaphor::They)));
+                let grammatical_plural = crate::selector::is_plural(&who) || who == Selector::you()
+                    || matches!(who.quant, Quant::Definite(Ref::Anaphor(Anaphor::They)));
+                if who.set.domain != Domain::Player || !definite || grammatical_plural != plural { return None; }
+                let Condition::Happened { pattern, window: Some(_), .. } = &mut past else { return None };
+                if !pattern.subjects.is_empty() || !pattern.actions.iter().all(|a| a.takes_subject(&who) && a.roles_fit()) { return None; }
+                pattern.subjects.push(who);
+                Some(if or { Condition::Or(vec![first, past]) } else { Condition::And(vec![first, past]) })
+            }, |_| None,
+        ).alias()
+    }).collect());
     let condition = alt(
         "conditions",
         vec![
             c.clone(),
+            inherited,
             c.list("and").map(
                 |v| Some(Condition::And(v)),
                 |c| match c {

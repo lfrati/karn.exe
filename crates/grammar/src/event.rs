@@ -695,6 +695,15 @@ pub fn reduced_passive() -> P<EventAction> {
     alt("reduced passive", vec![deed, states, into_graveyard, put_into, returned_to, returned, onto])
 }
 
+/// A past predicate whose player subject is supplied by the surrounding condition.
+pub(crate) fn past_predicate(plural: bool) -> P<EventAction> {
+    if plural {
+        crate::kernel::lazy("plural past predicate", || action(Form::Past, true))
+    } else {
+        crate::kernel::lazy("singular past predicate", || action(Form::Past, false))
+    }
+}
+
 /// `plural`: the subject is plural or "you", which turns a past "was …" into "were …".
 pub fn action(form: Form, plural: bool) -> P<EventAction> {
     let s = selectors();

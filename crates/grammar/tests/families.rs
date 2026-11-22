@@ -493,3 +493,18 @@ fn r601_2_passive_caster_and_permission_provenance() {
     read("If a spell was cast from exile by an opponent this turn, draw a card.");
     declines("A spell cast by target creature this way costs {2} more to cast.");
 }
+
+/// CR 608.2c–i: a shared definite player is repeated without losing the history window.
+#[test]
+fn r608_2c_shared_condition_subject() {
+    let (shared, _) = read("Mill four cards. You may put a permanent card from among the cards milled this way into your hand. If you control a Squirrel or returned a Squirrel card to your hand this way, create a Food token.");
+    let (explicit, _) = read("Mill four cards. You may put a permanent card from among the cards milled this way into your hand. If you control a Squirrel or you returned a Squirrel card to your hand this way, create a Food token.");
+    assert_eq!(shared, explicit);
+    let (shared, _) = read("If that player controls an artifact or was dealt damage this turn, draw a card.");
+    let (explicit, _) = read("If that player controls an artifact or that player was dealt damage this turn, draw a card.");
+    assert_eq!(shared, explicit);
+    read("If you control an artifact and discarded a card this turn, draw a card.");
+    declines("If an opponent controls an artifact and discarded a card this turn, draw a card.");
+    declines("If target player controls an artifact and discarded a card this turn, draw a card.");
+    declines("If you control a Squirrel or died this turn, draw a card.");
+}
