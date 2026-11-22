@@ -47,7 +47,25 @@ fn r205_2a_iterate_value_classes() {
         let (value, _) = read(text);
         assert!(serde_json::to_string(&value).unwrap().contains("ForEachValue"));
     }
-    for text in ["For each card, draw a card.", "For each card types, draw a card.", "For each power, draw a card."] {
+    for text in ["For each damage, draw a card.", "For each card types, draw a card.", "For each power, draw a card."] {
+        declines(text);
+    }
+}
+
+/// CR 606.3: timing permission remains scoped to the stated planeswalker's loyalty abilities.
+#[test]
+fn r606_3_scoped_activation_timing() {
+    for text in [
+        "As long as ~ entered this turn, you may activate her loyalty abilities any time you could cast an instant.",
+        "You may activate loyalty abilities of target planeswalker any time you could cast an instant.",
+        "You may activate its activated abilities any time you could cast an instant.",
+    ] {
+        let (value, _) = read(text);
+        let json = serde_json::to_string(&value).unwrap();
+        assert!(json.contains("ActivateAtInstantSpeed"));
+        assert!(!json.contains("LoyaltyAtInstantSpeed"));
+    }
+    for text in ["You may activate her triggered abilities any time you could cast an instant.", "You may activate loyalty spells of ~ any time you could cast an instant."] {
         declines(text);
     }
 }

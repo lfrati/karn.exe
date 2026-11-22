@@ -1015,6 +1015,7 @@ pub fn sentence(body: &P<Body>) -> P<Static> {
                 ),
             lit("you may reveal the first card you draw each turn as you draw it").to(Static::RevealFirstDraw { may: true }),
             lit("reveal the first card you draw each turn").to(Static::RevealFirstDraw { may: false }),
+            instant_activations(),
             lit("you may activate loyalty abilities of planeswalkers you control on any player's turn any time you could cast an instant")
                 .to(Static::LoyaltyAtInstantSpeed),
             lit("you may activate the loyalty abilities of planeswalkers you control twice each turn rather than only once")
@@ -1167,6 +1168,30 @@ pub fn sentence(body: &P<Body>) -> P<Static> {
             keyword_cost(),
         ],
     )
+}
+
+/// Activation timing permissions retain the ability class and the named source (606.3).
+fn instant_activations() -> P<Static> {
+    let kind = alt("activatable ability", vec![
+        lit("loyalty").to(AbilityKind::Loyalty),
+        lit("activated").to(AbilityKind::Activated),
+    ]);
+    let explicit = kind.skip(&lit("abilities of")).then(&party());
+    let it = Selector::new(Quant::Definite(Ref::Anaphor(Anaphor::It)), ObjectSet::of(Domain::Permanent));
+    let pronoun = alt("possessive pronoun", vec![lit("its"), lit("her").alias(), lit("his").alias()]);
+    let possessed = pronoun.then_keep(&kind).skip(&lit("abilities")).map(
+        move |kind| Some((kind, ir::Coord::one(Who::One(it.clone())))),
+        |_| None,
+    ).alias();
+    lit("you may activate").then_keep(&alt("ability sources", vec![explicit, possessed]))
+        .skip(&lit("any time you could cast an instant")).map(
+            |(kind, of)| Some(Static::ActivateAtInstantSpeed { of: AbilitiesOf::Of { kind, of } }),
+            |s| match s {
+                Static::ActivateAtInstantSpeed { of: AbilitiesOf::Of { kind, of } }
+                    if matches!(kind, AbilityKind::Loyalty | AbilityKind::Activated) => Some((*kind, of.clone())),
+                _ => None,
+            },
+        )
 }
 
 /// A causal prohibition keeps the source description distinct from the player who acts.

@@ -96,6 +96,8 @@ pub enum Static {
     /// "You may activate loyalty abilities of planeswalkers you control on any player's turn
     /// any time you could cast an instant." (606.3)
     LoyaltyAtInstantSpeed,
+    /// A permission scoped to the named sources' abilities (606.3, 602.5).
+    ActivateAtInstantSpeed { of: AbilitiesOf },
     /// "You may activate the loyalty abilities of planeswalkers you control twice each turn
     /// rather than only once." (`this_turn`: "twice this turn") (606.3)
     LoyaltyTwice { this_turn: bool },
