@@ -331,6 +331,9 @@ pub struct Bound {
     pub(crate) inputs: Vec<(crate::program::input::Input, Vec<Target>)>,
     /// Revealed for as long as this activated occurrence remains on the stack (702.49b).
     pub(crate) revealed: Vec<ObjId>,
+    /// Original reveal occurrence, through its resolution; copied abilities do not own it
+    /// (702.94b, 707.10). The exact hand incarnation ends access when it departs.
+    pub(crate) revealed_through_resolution: Vec<ObjId>,
     /// The creating ability for a delayed instruction (603.7, 607.2d).
     pub(crate) linked_ability: Option<crate::binding::AbilityKey>,
     /// The quantity of the event that caused this trigger (603.2, 608.2h): "that much" or
@@ -461,6 +464,9 @@ pub enum Choice {
     /// "You may …": whether to do it. A private, impossible action still asks,
     /// with only a decline legal, so the question does not disclose hidden qualities.
     May { possible: bool },
+    /// Reveal one exact printed Miracle instance as this card is drawn (702.94a).
+    /// Only the drawing player sees the card before accepting.
+    Miracle { card: ObjId, ability: usize, cost: ir::mana::ManaCost },
     /// Consent and the conditional object selection for one optional action (608.2d).
     OptionalObjects { verb: Verb, to: Option<Placement>, among: Vec<ObjId>, count: usize },
     /// "You may cast it without paying its mana cost" (608.2g): cast one of these cards now,
@@ -1525,6 +1531,7 @@ impl Game {
             return Err("initial control duration must cover every permanent".into());
         }
         self.turn=turn;
+        self.declare_initial_draw_history();
         for player in &mut self.players {
             player.game_casts = (turn == 1).then_some(0);
             player.upkeeps = Default::default();

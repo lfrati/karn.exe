@@ -96,10 +96,17 @@ impl Game {
             || ((if obj.zone == Zone::Gone { obj.left } else { Some(obj.zone) }) == Some(Zone::Exile) && obj.hidden.is_some())
             || self.sees(viewer, o)
     }
-    /// Current reveal grants owned by stack occurrences (602.2a, 702.49b).
-    /// These are not historical disclosures; removing the occurrence ends its grant.
+    /// Live reveal grants belong to their original occurrences, separately from disclosures.
+    /// Ninjutsu lasts on the stack; Miracle also spans pending triggers and resolution.
     pub(crate) fn reveal_grants(&self) -> impl Iterator<Item = ObjId> + '_ {
+        let through_resolution = self.stack.iter().map(|ability| &self.obj(*ability).bound)
+            .chain(self.triggered.iter().map(|trigger| &trigger.bound))
+            .chain(self.procedures.iter().filter_map(|procedure| match procedure {
+                crate::procedure::Procedure::Resolution(at) => Some(&at.bound), _ => None,
+            })).flat_map(|bound| bound.revealed_through_resolution.iter().copied())
+            .filter(|card| self.obj(*card).zone == Zone::Hand);
         self.stack.iter().flat_map(|ability| self.obj(*ability).bound.revealed.iter().copied())
+            .chain(through_resolution)
     }
 
     fn sees_directly(&self, viewer: PlayerId, o: ObjId) -> bool {

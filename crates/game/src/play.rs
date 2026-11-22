@@ -893,13 +893,16 @@ fn check_cost(def: &CardDef, r: &mut Refusals) -> Res<()> {
     if crate::keyword::of_items(def).filter_map(crate::foretell::cost).count() > 1 {
         r.say("foretell: choosing among multiple foretell costs")?;
     }
+    if def.costs.offered.iter().enumerate().any(|(i, (row, _))| def.costs.offered[..i].iter().any(|(other, _)| other == row)) {
+        r.say("offered alternative costs: several instances on one printed row need distinct cost identities")?;
+    }
     r.part(|| format!("{}, its casting costs", def.name()));
     // each lowered part by part, as made from what the card states (Definitions::compile)
     let parts = |cost: Option<ir::Cost>| cost.map_or(1, |c| c.0.len());
     let casts = [(&def.costs.normal, 1), (&def.costs.flashback, parts(crate::keyword::flashback(def))), (&def.costs.escape, parts(crate::keyword::escape(def))),
         (&def.costs.harmonize, parts(crate::keyword::harmonize(def))), (&def.costs.foretell, parts(crate::keyword::of_items(def).find_map(crate::foretell::cost)))];
     for (plan, n) in casts { if let Some(plan) = plan { r.several(plan.clone(), n, "cost parts")?; } }
-    for ((_, plan), (_, cost, _)) in def.costs.offered.iter().zip(crate::keyword::madness(def)) { r.several(plan.clone(), cost.0.len(), "cost parts")?; }
+    for ((_, plan), (_, cost, _)) in def.costs.offered.iter().zip(crate::keyword::offered_costs(def)) { r.several(plan.clone(), cost.0.len(), "cost parts")?; }
     for ((_, plan), (_, cost, condition)) in def.costs.alternatives.iter().zip(def.alternative_costs()) {
         r.several(plan.as_ref().map_err(Clone::clone), usize::from(condition.is_some()) + cost.0.len(), "cost parts and condition")?;
     }
@@ -1129,6 +1132,8 @@ impl Game {
                 (Choice::Attach { .. }, _) => return Err("choose a legal attachment (303.4f)".into()),
                 (Choice::CommandZone { .. }, Answer::Yes | Answer::No) => {}
                 (Choice::CommandZone { .. }, _) => return Err("return the commander to the command zone: yes or no (903.9)".into()),
+                (Choice::Miracle { .. }, Answer::Yes | Answer::No) => {},
+                (Choice::Miracle { .. }, _) => return Err("choose whether to reveal this drawn card using Miracle: yes or no (702.94a)".into()),
                 (Choice::May { .. }, Answer::No) | (Choice::May { possible: true }, Answer::Yes) => {}
                 (Choice::May { possible: false }, Answer::Yes) => return Err("that option is impossible (608.2d)".into()),
                 (Choice::May { .. }, _) => return Err("the choice is whether to do it: yes or no (608.2d)".into()),
@@ -1878,8 +1883,10 @@ impl Game {
                 .ok_or("that card prints no such ability to cast it face down (702.37c, 702.168b)")?.1.clone()?,
             CastCost::Alternative(row) if matches!(costs, Costs::Only(_)) => found(&def.costs.offered, row)
                 .ok_or("that card states no such cost an effect offers (702.35a)")?.clone()?,
-            CastCost::Alternative(row) if found(&def.costs.offered, row).is_some() =>
-                return Err("that cost is paid only for a cast its ability offers (702.35a)".into()),
+            CastCost::Alternative(row) if found(&def.costs.offered, row).is_some() => {
+                let rule = if crate::miracle::instances(def).any(|(at, _, _)| at == row) { "702.94a" } else { "702.35a" };
+                return Err(format!("that cost is paid only for a cast its ability offers ({rule})").into());
+            },
             // a warp cost an effect gives a card in a hand (613.1f, 702.185a)
             CastCost::Alternative(row) if def.costs.alternatives.iter().all(|(at, _)| *at != row) && self.obj(card).zone == Zone::Hand
                 && self.given_alternatives(card, cast_as).iter().any(|(at, _)| *at == row) =>

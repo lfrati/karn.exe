@@ -284,11 +284,11 @@ impl<'a> Support<'a> {
     }
     pub(crate) fn event(&self) -> Option<&'a ir::EventPattern> { self.event }
 
-    /// The madness ability whose triggered ability this text is, when it offers its card's cast
-    /// for this cost: its row (702.35a).
-    pub(crate) fn madness_offer(&self, cost: &ir::Cost) -> Option<usize> {
+    /// The linked keyword instance whose trigger offers this exact cost: its printed row
+    /// (702.35a, 702.94a), separately from the generated trigger's index.
+    pub(crate) fn linked_cost_offer(&self, cost: &ir::Cost) -> Option<usize> {
         let index = self.ability.clone()?.index;
-        crate::keyword::madness(self.def?).into_iter().find(|(_, said, trigger)| *trigger == index && said == cost).map(|(row, ..)| row)
+        crate::keyword::offered_costs(self.def?).into_iter().find(|(_, said, trigger)| *trigger == index && said == cost).map(|(row, ..)| row)
     }
 
     /// A self-cast offer keeps the source zone proved by this very ability's scope.

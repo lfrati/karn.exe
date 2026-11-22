@@ -181,6 +181,8 @@ pub(crate) struct ThisTurn {
     // Event-time type counts, bounded by seats × card types. No object/history retention.
     entries: Vec<(crate::PlayerId, ir::CardType, usize)>,
     draws: Vec<u32>,
+    /// A declared mid-turn position supplies no completed-draw history.
+    draws_unknown: bool,
     life_lost: Vec<u32>,
     departures: Vec<usize>,
     /// Which source dealt damage to what, once each and whether in combat: "dealt damage by ~
@@ -502,6 +504,12 @@ impl Game {
     /// ordinal until delivery, so several draws can finish before any trigger is stacked.
     /// Also counted, within a player's own draw step: "except the first one they draw in each
     /// of their draw steps" (the turn-based draw only if it was not replaced).
+    pub(crate) fn declare_initial_draw_history(&mut self) {
+        self.this_turn.draws.clear(); self.this_turn.draw_step = 0;
+        self.this_turn.draws_unknown = true;
+    }
+    pub(crate) fn draw_history_known(&self) -> bool { !self.this_turn.draws_unknown }
+
     pub(crate) fn note_draw(&mut self, player: crate::PlayerId) -> (u32, Option<u32>) {
         let seats = self.players.len();
         self.this_turn.draws.resize(seats, 0);
@@ -564,6 +572,7 @@ impl Game {
         self.this_turn.entries.clear();
         self.this_turn.departures.clear();
         self.this_turn.draws.clear();
+        self.this_turn.draws_unknown = false;
         self.this_turn.life_lost.clear();
         self.this_turn.damaged.clear();
         self.this_turn.attacked.clear();

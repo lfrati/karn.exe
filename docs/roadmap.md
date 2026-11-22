@@ -152,7 +152,7 @@ expects `keyword: Fear`. When a keyword lands, point them at one that is still r
 - Cascade moved to Lane 4: printed instances share the retained library scan with Discover, check the resulting spell's mana value and return uncast exiles in a captured random order; grants remain refused.
 - Suspend moved to Lane 4: fixed-count printed suspend now has its hand action, exile-counter scope and last-counter cast; variable announcements and grants remain refused.
 - Overload: rewriting a target-free effect lowers, but the full rule needs announcement-time text substitution and selection of that executable before targets are chosen.
-- Miracle: reveal-as-drawn and reveal-trigger expansions need draw-time suspension and a linked cost permission with the reveal's bounded visibility.
+- Miracle moved to Lane 4: printed mana/X costs pause the first actual draw for an explicit reveal and link their exact hand incarnation and price to a trigger. Visibility spans the original occurrence through resolution; grants, ambiguous same-row prices, unknown positioned first draws and deferred announcement-time disclosure remain refused.
 - Bestow: cost-only casting cannot declare Aura targets, and the alternative-characteristics owner accepts only Adventure/Omen instants or sorceries; needs a bestowed state through casting, illegal-target resolution and unattachment, preserving the permanent's incarnation.
 - Myriad: full and split rule expansions stop at mixed referent defenders and attacking-copy lowering; needs a per-opponent optional copy loop that preserves the chosen player/planeswalker constraint and captures the resulting group for delayed exile.
 

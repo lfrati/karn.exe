@@ -87,6 +87,15 @@ source. Current control is checked separately by sacrifice. Real entries establi
 history; positioned permanents with unproved acquisition history are refused. Nonmana Echo,
 grants and other control-history windows remain refused.
 
+Miracle pauses the retained draw operation after its first actual hand arrival and before
+another draw. Each printed instance has an explicit reveal question and its own linked
+trigger; only that trigger can offer its exact alternative-price row, from that hand
+incarnation. Reveals belong to the original occurrence across pending triggers, stack and
+resolution. Copying retains the cast link but does not extend the original reveal lifetime.
+Opening hands are outside any turn. Positioned first-draw history is unknown; a first observed
+Miracle draw there is refused, as are draws requiring deferred announcement-time disclosure
+under 121.8. Printed mana/X costs are supported; grants and same-row price ambiguity are refused.
+
 Additional beginning phases use the existing turn plan's untap/upkeep/draw steps, preserving
 the current turn and its history. Extra beginning phases on the starting player's first
 two-player turn remain refused until draw omission is represented; additional ending phases

@@ -4652,8 +4652,8 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             let costs = match (free, act.mods.as_slice()) {
                 (true, []) => Some(Costs::Free),
                 (false, [ir::effect::Modifier::By(said)]) if said.kind == ir::statics::CastCostKind::Alternative => {
-                    // only the cost its card states for the cast its madness ability offers
-                    let row = support.madness_offer(&crate::keyword::said_cost(said))
+                    // Only the price linked to this very keyword-generated casting trigger.
+                    let row = support.linked_cost_offer(&crate::keyword::said_cost(said))
                         .ok_or_else(|| crate::Unsupported("program: a cast for an alternative cost an effect states".into()))?;
                     Some(Costs::Only(crate::announcement::CastCost::Alternative(row)))
                 }
@@ -4716,8 +4716,8 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                     card
                 }).collect::<Vec<_>>();
                 let from = if matches!(costs, Costs::Only(_)) {
-                    // Admitted above only by the owning madness keyword's offer.
-                    CastOrigin::Fixed(Zone::Exile)
+                    // The owning linked keyword proves its exact source zone.
+                    CastOrigin::Fixed(if support.generated_by("Miracle") { Zone::Hand } else { Zone::Exile })
                 } else {
                     let mut origins = cards.iter().map(|card| {
                         if *card == action::Operand::Source {

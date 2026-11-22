@@ -1088,8 +1088,8 @@ impl DelayedPattern {
 pub(crate) struct Template {
     watch: Watch,
     intervening: Option<condition::Condition>,
-    /// It triggers as a replacement of its card is applied, not by being watched for: the
-    /// triggered ability of madness (702.35a). Its pattern only binds what it says.
+    /// The owning keyword action creates this linked occurrence directly: Madness
+    /// discard replacement or Miracle reveal (702.35a, 702.94a), never an unrelated event.
     applied: bool,
     limit: Option<crate::ability_limit::Limit>,
 }
@@ -1152,10 +1152,10 @@ impl Template {
 /// its keywords are, each under the index the rest of the engine knows it by.
 pub(crate) fn templates(def: &CardDef) -> Vec<Registered<Template>> {
     let abilities = def.abilities.iter().chain(def.keyword_abilities.iter().map(|(_, a)| a));
-    let madness = crate::keyword::madness(def);
+    let offered = crate::keyword::offered_costs(def);
     abilities.enumerate().filter_map(|(i, a)| {
         let support = Support::definition(def, Some(crate::binding::AbilityKey::printed(i)));
-        let applied = madness.iter().any(|(_, _, trigger)| *trigger == i);
+        let applied = offered.iter().any(|(_, _, trigger)| *trigger == i);
         Template::compile(a, &support).map(|result| Registered { ability: i, result: result.map(|t| Template { applied, ..t }) })
     }).collect()
 }

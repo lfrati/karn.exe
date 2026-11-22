@@ -301,6 +301,11 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
         }
         "Transmute" => generated(ability(item)?, true, vec![Context::PrintedOnly]),
         "Soulshift" => generated(ability(item)?, true, vec![Context::PermanentsOnly]),
+        "Miracle" => {
+            let Some(cost) = crate::miracle::cost(item) else { return refused(item) };
+            let ability = crate::miracle::trigger(&cost?);
+            Ok(Declared::new(vec![(hand, Gives::Asked), (hand, Gives::Ability(ability))], vec![Context::PrintedOnly]))
+        }
         "Madness" => {
             let Some(cost) = madness_cost(item) else { return refused(item) };
             let ability = madness_trigger(&cost);

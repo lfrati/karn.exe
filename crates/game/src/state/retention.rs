@@ -150,8 +150,9 @@ impl Trace for Object {
 
 impl Trace for Bound {
     fn trace(&self, visit: &mut dyn FnMut(ObjId)) {
-        let Self { inputs, became, revealed, cost_exiled, crew, linked_ability: _, event_amount: _ } = self;
+        let Self { inputs, became, revealed, revealed_through_resolution, cost_exiled, crew, linked_ability: _, event_amount: _ } = self;
         revealed.trace(visit);
+        revealed_through_resolution.trace(visit);
         if let Some(crew) = crew { crew.trace(visit); }
         for (_, subjects) in inputs { subjects.trace(visit); }
         for (_, card) in cost_exiled { card.trace(visit); }
@@ -242,6 +243,7 @@ impl Trace for Choice {
             Choice::Pay { waterbend, .. } => {
                 if let Some(bend) = waterbend { bend.among.trace(visit); }
             },
+            Choice::Miracle { card, .. } => card.trace(visit),
             Choice::Pile { piles } => { for pile in piles { pile.trace(visit); } },
             Choice::Alternative { among, .. } => { for option in among { match &option.body { super::ActionOptionBody::Objects { among, .. } => among.trace(visit), super::ActionOptionBody::Counters { on,.. } => on.trace(visit), _ => {} } } },
             Choice::LibraryDestination { cards, .. } => cards.trace(visit),

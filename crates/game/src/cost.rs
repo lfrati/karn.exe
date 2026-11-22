@@ -970,7 +970,7 @@ pub(crate) struct Definitions {
     /// Each printed alternative cost (118.9) by its row, with the additional costs.
     pub(crate) alternatives: Vec<(usize, Res<Alternative>)>,
     /// Each alternative cost its card states that it is cast for only when an ability offers
-    /// that cast, by its row, with the additional costs: its madness cost (702.35a, 702.35b).
+    /// that cast, by its row, with additional costs: Madness or Miracle (702.35, 702.94).
     pub(crate) offered: Vec<(usize, Res<Plan>)>,
     /// Each morph or disguise ability by its row: the card may be cast face down by paying
     /// {3} rather than its mana cost (702.37c, 702.168b). The face-down spell has no text,
@@ -1025,7 +1025,7 @@ impl Definitions {
                     plan: spell_with(cost,Some(AbilityKey::printed(row)))?,
                 }))())
             }).collect(),
-            offered: crate::keyword::madness(def).into_iter().map(|(row, cost, _)| (row, spell(&cost))).collect(),
+            offered: crate::keyword::offered_costs(def).into_iter().map(|(row, cost, _)| (row, spell(&cost))).collect(),
             face_down: crate::keyword::face_down_casts(def).map(|(row, by, _, _)| {
                 let three = Cost(vec![CostPart::Mana(ir::mana::ManaCost(vec![ir::mana::ManaSymbol::Generic(3)]))]);
                 (row, by, Plan::compile(&three, &Support::definition(crate::face::definition(by), None)))

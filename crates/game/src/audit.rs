@@ -270,6 +270,25 @@ impl Game {
                     "without_paying":permission.costs==Costs::Free,"during_resolution":true}));
             }
         }
+        // A linked Miracle price is evidence only for its exact offered row. Ordinary
+        // hand casts and another accepted instance cannot inherit this permission.
+        for player in 0..self.players.len() {
+            for (row, _, _) in crate::miracle::instances(def) {
+                for choice in choices.iter().copied() {
+                    if !def.spell(choice).is_ok_and(|spell| !spell.is(ir::CardType::Land)) { continue; }
+                    let selected = CastCost::Alternative(row);
+                    let Ok(Some(permission)) = self.cast_permission(player, source, choice, selected) else { continue; };
+                    if permission.window != Window::Offered || permission.costs != Costs::Only(selected) { continue; }
+                    let cast_as = match choice {
+                        CastAs::Whole => json!("whole"), CastAs::Half(index) => json!(index),
+                        CastAs::Fused => json!("fused"), CastAs::Adventure => json!("adventure"),
+                        CastAs::Omen => json!("omen"), CastAs::Face(index) => json!({"face": index}),
+                    };
+                    rows.push(json!({"player": player, "cast_as": cast_as, "without_paying": false,
+                        "during_resolution": true, "alternative": row}));
+                }
+            }
+        }
         json!(rows)
     }
 

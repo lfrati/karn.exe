@@ -75,6 +75,7 @@ pub(crate) enum Finish {
     Effect,
 }
 impl Payment {
+    pub(crate) fn announcement_in_progress(&self) -> bool { matches!(self.undo, Undo::Spell { .. } | Undo::Ability { .. }) }
     pub(crate) fn audit_child(mut self, scope: Option<Box<crate::payment_audit::Scope>>) -> Self { self.audit=scope; self }
     pub(crate) fn companion(player: PlayerId, card: ObjId, cost: Plan, steps: &[Step], with: Option<&Pool>) -> Self {
         Self {audit:None,next_child:0,library_tops:None,permission:None,player,source:card,ctx:Ctx::new(player,card),finish:Finish::Companion,undo:Undo::Companion,triggers:0..0,cost,steps:steps.iter().cloned().collect(),paying:Vec::new(),with:with.cloned(),waiting:false,committing:None,interactive:false,reports:false}

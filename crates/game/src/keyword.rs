@@ -1046,9 +1046,13 @@ pub(crate) fn madness_cost(item: &ir::token::KeywordInstance) -> Option<ir::Cost
     }
 }
 
-/// Each madness ability of a card: the row printing it, its cost, and the index its triggered
-/// ability has among the card's abilities (after the printed ones, in the order
-/// [`executable_in`] makes them).
+/// Alternative prices available only through their owning linked keyword trigger:
+/// the printed cost row, cost, and generated trigger index (702.35a, 702.94a).
+pub(crate) fn offered_costs(def: &CardDef) -> Vec<(usize, ir::Cost, usize)> {
+    madness(def).into_iter().chain(crate::miracle::instances(def)).collect()
+}
+
+/// Each Madness instance's printed row, cost and exact generated trigger.
 pub(crate) fn madness(def: &CardDef) -> Vec<(usize, ir::Cost, usize)> {
     generated_by(def).filter_map(|(made, instance)| {
         madness_cost(&instance.item).map(|cost| (instance.row, cost, made))
