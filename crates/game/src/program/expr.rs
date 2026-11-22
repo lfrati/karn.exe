@@ -451,6 +451,8 @@ pub(crate) enum Atom {
     Multicolored,
     Monocolored,
     Opponent,
+    /// All live players participate, including ties only when the text says so.
+    MostLife { least: bool, tied: bool },
     Keyword(ir::Keyword),
     Tapped(bool),
     Token,
@@ -535,7 +537,7 @@ impl Filter {
             Filter::Atom(Atom::Targets(sets)) => Reads::each(sets, Set::reads),
             Filter::Atom(Atom::Type(_) | Atom::PermanentType | Atom::HasAdventure | Atom::PreparedSpell | Atom::BasicLandType | Atom::ManaCost(_) | Atom::Subtype(_) | Atom::Supertype(_)
                 | Atom::Color(_) | Atom::Colorless | Atom::Multicolored | Atom::Monocolored
-                | Atom::Opponent | Atom::Token | Atom::Commander | Atom::FaceDown | Atom::Combat(_) | Atom::Attached(_) | Atom::Ability { .. } | Atom::TargetCount(_)
+                | Atom::Opponent | Atom::MostLife { .. } | Atom::Token | Atom::Commander | Atom::FaceDown | Atom::Combat(_) | Atom::Attached(_) | Atom::Ability { .. } | Atom::TargetCount(_)
                 | Atom::Chosen(_) | Atom::SameName(_) | Atom::SharesCreatureType(_) | Atom::SharesColor(_) | Atom::Named(_)
                 | Atom::Counters { .. } | Atom::Level { .. } | Atom::Entered(_) | Atom::InSubjects(_)) => Reads::NONE,
         }
@@ -613,6 +615,8 @@ impl Filter {
                     }
                     Atom::Targets(what.items.iter().map(|s| Set::compile(&s.set, support, bind)).collect::<Res<_>>()?)
                 }
+                ir::Atom::MostOf { measure, least, tied } if matches!(measure.as_ref(), ir::condition::Measure::Life) =>
+                    Atom::MostLife { least: *least, tied: *tied },
                 ir::Atom::AbilityKind(ir::selector::AbilityKind::Activated) => Atom::Ability { triggered: false },
                 ir::Atom::AbilityKind(ir::selector::AbilityKind::Triggered) => Atom::Ability { triggered: true },
                 ir::Atom::Reference(r) if r.form == RefForm::Choice && r.qualifiers.is_empty() => {
@@ -964,7 +968,18 @@ impl Atom {
         let o = match t {
             Target::Object(o) => game.obj(o),
             // what describes objects is false of a player
-            Target::Player(p) => return match self {Atom::Opponent=>p!=ctx.controller,Atom::LostLifeThisTurn=>game.life_lost_this_turn(p)>0,_=>false},
+            Target::Player(p) => return match self {
+                Atom::Opponent => p != ctx.controller,
+                Atom::MostLife { least, tied } => !game.players[p].lost && game.players.iter().enumerate()
+                    .filter(|(other, player)| *other != p && !player.lost)
+                    .all(|(_, other)| {
+                        let order = game.players[p].life.cmp(&other.life);
+                        order == if *least { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater }
+                            || *tied && order == std::cmp::Ordering::Equal
+                    }),
+                Atom::LostLifeThisTurn => game.life_lost_this_turn(p) > 0,
+                _ => false,
+            },
         };
         // what it is as the layers before the one asking have left it (613.1): its types and
         // colors after layers 4 and 5
@@ -1001,7 +1016,7 @@ impl Atom {
             Atom::Colorless => colors().colors.is_empty(),
             Atom::Multicolored => colors().colors.len() >= 2,
             Atom::Monocolored => colors().colors.len() == 1,
-            Atom::Opponent | Atom::LostLifeThisTurn => false,
+            Atom::Opponent | Atom::MostLife { .. } | Atom::LostLifeThisTurn => false,
             // "with flying": it has the ability
             Atom::Keyword(k) => abilities().has(*k),
             // Only permanents have tapped/untapped status (110.5d). A departed identity
@@ -2064,7 +2079,7 @@ impl Number {
                 Filter::Atom(Atom::HappenedTo(_)) => true,
                 Filter::Atom(Atom::Type(_) | Atom::PermanentType | Atom::HasAdventure | Atom::PreparedSpell | Atom::BasicLandType | Atom::ManaCost(_) | Atom::Subtype(_) | Atom::Supertype(_)
                     | Atom::Color(_) | Atom::Colorless | Atom::Multicolored | Atom::Monocolored
-                    | Atom::Opponent | Atom::Keyword(_) | Atom::Tapped(_) | Atom::Token | Atom::Saddled | Atom::Commander | Atom::Suspended | Atom::FaceDown
+                    | Atom::Opponent | Atom::MostLife { .. } | Atom::Keyword(_) | Atom::Tapped(_) | Atom::Token | Atom::Saddled | Atom::Commander | Atom::Suspended | Atom::FaceDown
                     | Atom::Combat(_) | Atom::Attached(_) | Atom::Ability { .. } | Atom::Chosen(_) | Atom::SameName(_) | Atom::SharesCreatureType(_) | Atom::SharesColor(_)
                     | Atom::TargetCount(_) | Atom::Named(_) | Atom::EnteredThisTurn | Atom::LostLifeThisTurn | Atom::DealtDamageBy(_) | Atom::TappedFor { .. } | Atom::Damage { .. } | Atom::FoughtThisTurn { .. } | Atom::Counters { .. } | Atom::Level { .. } | Atom::Entered(_) | Atom::InSubjects(_)) => false,
             }

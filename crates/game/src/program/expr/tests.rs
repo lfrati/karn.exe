@@ -286,3 +286,27 @@ fn r608_2c_root_target_exclusion_does_not_rebind_nested_sets() {
     let set = Set::compile_excluding(&root, &support, &mut bind, || Ok(Some(Subject::Local(0))), false).unwrap();
     assert_eq!(set.members(&game, &Ctx::new(0, source), &Slots(vec![Value::Subjects(vec![Target::Object(red)])])), vec![Target::Object(green)]);
 }
+
+#[test]
+fn life_extrema_include_explicit_ties_and_exclude_departed_players_without_clamping() {
+    // The typed MostOf predicate orders signed life totals; strict extrema have
+    // one winner, while explicitly tied extrema include every equal leader.
+    let rows = [
+        ([10,20,20], None, false, true, vec![1,2]),
+        ([10,20,20], None, false, false, vec![]),
+        ([10,20,20], None, true, false, vec![0]),
+        ([20,20,20], None, true, true, vec![0,1,2]),
+        ([20,20,20], None, true, false, vec![]),
+        ([-3,-2,-1], None, false, false, vec![2]),
+        ([-3,-2,-1], None, true, false, vec![0]),
+        ([10,20,30], Some(2usize), false, true, vec![1]),
+    ];
+    for (life, departed, least, tied, expected) in rows {
+        let mut game = Game::new(Vec::<CardDef>::new(), 3, 20);
+        for (p, life) in life.into_iter().enumerate() { game.players[p].life = life; }
+        if let Some(p) = departed { game.players[p].lost = true; }
+        let predicate = Atom::MostLife { least, tied };
+        let winners: Vec<_> = (0..3).filter(|p| predicate.matches(&game, &Ctx::rule(0, AbilityKey::printed(0)), &NoLocals, Target::Player(*p))).collect();
+        assert_eq!(winners, expected, "life={life:?}, departed={departed:?}, least={least}, tied={tied}");
+    }
+}

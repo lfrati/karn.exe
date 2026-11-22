@@ -392,6 +392,15 @@ impl Noun {
         if s.set.domain == ir::Domain::Ability && matches!(s.quant, Quant::Indefinite(Count::Exactly(Amount::Const(1))) | Quant::Each | Quant::All) {
             return crate::activate::ActivationFilter::compile(&s.set).map(Noun::Activation);
         }
+        // A definite life-extremum noun describes the event's own player; it
+        // does not choose an antecedent or arbitrarily select one tied player.
+        let mut bare = s.set.clone(); bare.filter = ir::Filter::any_object();
+        if s.quant == Quant::Definite(Ref::Anaphor(ir::Anaphor::The { plural: false }))
+            && bare == ir::ObjectSet::of(ir::Domain::Player)
+            && matches!(&s.set.filter, ir::Filter::All(parts) if matches!(parts.as_slice(),
+                [ir::Filter::Atom(ir::Atom::MostOf { measure, .. })] if matches!(measure.as_ref(), ir::condition::Measure::Life))) {
+            return expr::Set::compile(&s.set, support, &mut linked(support)).map(Noun::Described);
+        }
         match &s.quant {
             Quant::Definite(Ref::This) => Ok(Noun::This),
             Quant::Definite(Ref::You) => Ok(Noun::You),

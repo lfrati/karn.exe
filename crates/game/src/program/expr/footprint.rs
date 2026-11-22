@@ -30,6 +30,7 @@ impl Filter {
                 Atom::HasAdventure | Atom::PreparedSpell | Atom::ManaCost(_) => recipient(P::CATALOG | P::MANA),
                 Atom::Color(_) | Atom::Colorless | Atom::Multicolored | Atom::Monocolored => recipient(P::COLORS),
                 Atom::Opponent => context(P::CONTROL) | I::at(D::Players, P::IDENTITY),
+                Atom::MostLife { .. } => I::at(D::Players, P::LIFE | P::PLAYER_STATUS | P::COLLECTIONS),
                 Atom::Keyword(_) => recipient(P::KEYWORDS),
                 Atom::Suspended => recipient(P::ZONE | P::KEYWORDS | P::COUNTERS | P::IDENTITY | P::CATALOG),
                 Atom::Ability { .. } => recipient(P::ABILITIES),

@@ -647,6 +647,13 @@ impl Asks {
             ir::Condition::Compare { left, cmp, right } => {
                 Asks::Compare { left: Values::compile(left, support, &mut *bind)?, cmp: *cmp, right: Values::compile(right, support, bind)? }
             }
+            ir::Condition::MostOf { player, measure: ir::condition::Measure::Life, least, tied }
+                if player.set == ir::ObjectSet::of(ir::Domain::Player) && player.chooser.is_none() && player.random.is_none() => {
+                let predicate = ir::Condition::Is { what: player.clone(),
+                    pred: ir::Predicate::Adjective(ir::Filter::Atom(ir::Atom::MostOf {
+                        measure: Box::new(ir::condition::Measure::Life), least: *least, tied: *tied })), negated: false };
+                return Asks::compile(&predicate, support, bind);
+            }
             ir::Condition::MoreThan { player, measure, fewer, margin, than } => {
                 let players = Players::compile(player, support, &mut *bind)?;
                 let measure = match measure {
