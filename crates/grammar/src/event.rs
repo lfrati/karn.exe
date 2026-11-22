@@ -624,9 +624,15 @@ fn moves(put: P<()>, returned: P<()>, says_anywhere: bool) -> (P<EventAction>, P
     // no "from" is from anywhere; an event says so, a reduced relative leaves it out
     let none = empty().map(|()| Some(None), |z: &Option<Zone>| z.is_none().then_some(()));
     let gy_from = alt("from zone", vec![gy_from, if says_anywhere { none.alias() } else { none }]);
+    // In an event, bare "graveyards" permits any destination owner, just as "a graveyard".
+    // The subject still says whether to match one card or a batch of one or more cards.
+    let anyone = Selector::new(Quant::Indefinite(ir::Count::Exactly(ir::Amount::Const(1))), ObjectSet::of(Domain::Player));
+    let graveyard_owner = alt("graveyard owner", vec![
+        s.possessive.skip(&lit("graveyard")),
+        lit("graveyards").to(anyone).alias(),
+    ]);
     let put_into_gy = put
-        .then_keep(&s.possessive)
-        .skip(&lit("graveyard"))
+        .then_keep(&graveyard_owner)
         .then(&gy_from)
         .map(
             |(into, from)| Some(EventAction::PutIntoGraveyard { into: Box::new(into), from }),

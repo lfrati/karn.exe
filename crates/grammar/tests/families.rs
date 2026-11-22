@@ -880,3 +880,28 @@ fn r201_2c_different_names_and_conjoined_properties() {
         "Exile a card with mana value less than or equal to that player.",
     ] { declines(text); }
 }
+
+
+/// CR 400.1 and 603.2c: plural graveyards allow any owner without changing event batching.
+#[test]
+fn r603_2c_plural_graveyard_event_destinations() {
+    read("Whenever one or more creature cards are put into graveyards from anywhere, investigate. This ability triggers only once each turn.");
+    read("Destroy all artifacts, then ~ deals damage to each creature equal to the number of artifacts that were put into graveyards from the battlefield this turn.");
+    read("Exile up to two creature cards put into graveyards this way.");
+    let (plural, _) = read("Whenever one or more creature cards are put into graveyards from anywhere, draw a card.");
+    let (singular, _) = read("Whenever one or more creature cards are put into a graveyard from anywhere, draw a card.");
+    assert_eq!(plural, singular);
+    let ir::Ability::Triggered { trigger: ir::Trigger::Event { pattern, .. }, .. } = plural else { panic!() };
+    assert_eq!(pattern.subjects.len(), 1);
+    assert_eq!(pattern.subjects[0].quant, ir::Quant::Indefinite(ir::Count::AtLeast(ir::Amount::Const(1))));
+    let [ir::EventAction::PutIntoGraveyard { into, from: None }] = pattern.actions.as_slice() else { panic!() };
+    assert_eq!(into.quant, ir::Quant::Indefinite(ir::Count::Exactly(ir::Amount::Const(1))));
+    assert_eq!(into.set, ir::ObjectSet::of(ir::Domain::Player));
+    let (one, _) = read("Whenever a creature card is put into graveyards from anywhere, draw a card.");
+    assert_ne!(singular, one);
+    for text in [
+        "Whenever one or more creature cards are put into players from anywhere, draw a card.",
+        "Whenever one or more creature cards are put into your graveyards from anywhere, draw a card.",
+        "Whenever one or more players are put into graveyards from anywhere, draw a card.",
+    ] { declines(text); }
+}
