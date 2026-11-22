@@ -22,6 +22,7 @@ pub(crate) use declaration::*;
 /// rule, and the rule's sentence said of the permanent.
 const SENTENCES: &[(&str, &str, &str)] = &[
     ("Defender", "702.3b", "This creature can't attack."),
+    ("Intimidate", "702.13b", "This creature can't be blocked except by artifact creatures and/or creatures that share a color with it."),
     ("Fear", "702.36b", "This creature can't be blocked except by artifact creatures and/or black creatures."),
     ("Flying", "702.9b", "This creature can't be blocked except by creatures with flying and/or reach."),
     ("Menace", "702.111b", "This creature can't be blocked except by two or more creatures."),

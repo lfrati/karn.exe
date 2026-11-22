@@ -465,6 +465,7 @@ pub(crate) enum Atom {
     Chosen(Scalar),
     SameName(Subject),
     SharesCreatureType(Subject),
+    SharesColor(Subject),
     Named(String),
     /// "that entered this turn": a permanent that came onto the battlefield in this turn as
     /// the object it is now (400.7).
@@ -526,7 +527,7 @@ impl Filter {
             Filter::Atom(Atom::Type(_) | Atom::PermanentType | Atom::HasAdventure | Atom::PreparedSpell | Atom::BasicLandType | Atom::ManaCost(_) | Atom::Subtype(_) | Atom::Supertype(_)
                 | Atom::Color(_) | Atom::Colorless | Atom::Multicolored | Atom::Monocolored
                 | Atom::Opponent | Atom::Token | Atom::Commander | Atom::FaceDown | Atom::Combat(_) | Atom::Attached(_) | Atom::Ability { .. } | Atom::TargetCount(_)
-                | Atom::Chosen(_) | Atom::SameName(_) | Atom::SharesCreatureType(_) | Atom::Named(_)
+                | Atom::Chosen(_) | Atom::SameName(_) | Atom::SharesCreatureType(_) | Atom::SharesColor(_) | Atom::Named(_)
                 | Atom::Counters { .. } | Atom::Level { .. } | Atom::Entered(_) | Atom::InSubjects(_)) => Reads::NONE,
         }
     }
@@ -561,6 +562,7 @@ impl Filter {
             }
             ir::Filter::Atom(a) => Filter::Atom(match a {
                 ir::Atom::Shares { what: ir::amount::Characteristic::CreatureType, with } => Atom::SharesCreatureType(Subject::compile(with, bind)?),
+                ir::Atom::Shares { what: ir::amount::Characteristic::Color, with } => Atom::SharesColor(Subject::compile(with, bind)?),
                 ir::Atom::Shares { what: ir::amount::Characteristic::Name, with } => Atom::SameName(Subject::compile(with, bind)?),
                 ir::Atom::DealtDamageBy { by, this_turn: true } => Atom::DealtDamageBy(Subject::compile(by, bind)?),
                 ir::Atom::Type(t) => Atom::Type(*t),
@@ -714,7 +716,7 @@ impl Filter {
     fn name_references(&self, out: &mut Vec<Subject>) {
         match self {
             Filter::All(items) | Filter::Any(items) => items.iter().for_each(|f| f.name_references(out)),
-            Filter::Atom(Atom::SameName(subject) | Atom::SharesCreatureType(subject)) => { if !out.contains(subject) { out.push(subject.clone()); } },
+            Filter::Atom(Atom::SameName(subject) | Atom::SharesCreatureType(subject) | Atom::SharesColor(subject)) => { if !out.contains(subject) { out.push(subject.clone()); } },
             _ => {},
         }
     }
@@ -860,7 +862,7 @@ impl Filter {
             Filter::Atom(Atom::Chosen(scalar)) => out.push(scalar.clone()),
             Filter::Atom(Atom::InSubjects(slot)) => out.push(Scalar::Local { slot: *slot, kind: Kind::Subjects }),
             Filter::Atom(Atom::Entered(slot)) => out.push(Scalar::Local { slot: *slot, kind: Kind::Cards }),
-            Filter::Atom(Atom::SameName(subject) | Atom::SharesCreatureType(subject) | Atom::DealtDamageBy(subject) | Atom::TappedFor { what: subject, .. } | Atom::Damage { to: Some(subject), .. }) => subject.scalars(out),
+            Filter::Atom(Atom::SameName(subject) | Atom::SharesCreatureType(subject) | Atom::SharesColor(subject) | Atom::DealtDamageBy(subject) | Atom::TappedFor { what: subject, .. } | Atom::Damage { to: Some(subject), .. }) => subject.scalars(out),
             Filter::Atom(Atom::Stat { value, .. }) => value.scalars(out),
             Filter::Atom(Atom::Most{among,..}) => among.collect(out),
             Filter::Atom(Atom::Targets(sets)) => sets.iter().for_each(|set| set.collect(out)),
@@ -957,6 +959,10 @@ impl Atom {
             Atom::SharesCreatureType(with) => {
                 let own=types();
                 with.objects(game,ctx,locals).any(|other|ctx.seen_for(game,other,Aspect::Types).subtypes.iter().any(|t|t.kind()==ir::vocab::SubtypeKind::Creature && own.subtypes.contains(t)))
+            },
+            Atom::SharesColor(with) => {
+                let own = colors();
+                with.objects(game, ctx, locals).any(|other| ctx.seen_for(game, other, Aspect::Colors).colors.iter().any(|color| own.colors.contains(color)))
             },
             Atom::SameName(with) => {
                 let others: Vec<_> = with.objects(game, ctx, locals).collect();
@@ -1996,7 +2002,7 @@ impl Number {
                 Filter::Atom(Atom::Type(_) | Atom::PermanentType | Atom::HasAdventure | Atom::PreparedSpell | Atom::BasicLandType | Atom::ManaCost(_) | Atom::Subtype(_) | Atom::Supertype(_)
                     | Atom::Color(_) | Atom::Colorless | Atom::Multicolored | Atom::Monocolored
                     | Atom::Opponent | Atom::Keyword(_) | Atom::Tapped(_) | Atom::Token | Atom::Saddled | Atom::Commander | Atom::FaceDown
-                    | Atom::Combat(_) | Atom::Attached(_) | Atom::Ability { .. } | Atom::Chosen(_) | Atom::SameName(_) | Atom::SharesCreatureType(_)
+                    | Atom::Combat(_) | Atom::Attached(_) | Atom::Ability { .. } | Atom::Chosen(_) | Atom::SameName(_) | Atom::SharesCreatureType(_) | Atom::SharesColor(_)
                     | Atom::TargetCount(_) | Atom::Named(_) | Atom::EnteredThisTurn | Atom::LostLifeThisTurn | Atom::DealtDamageBy(_) | Atom::TappedFor { .. } | Atom::Damage { .. } | Atom::FoughtThisTurn { .. } | Atom::Counters { .. } | Atom::Level { .. } | Atom::Entered(_) | Atom::InSubjects(_)) => false,
             }
         }

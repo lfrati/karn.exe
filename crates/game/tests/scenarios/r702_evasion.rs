@@ -25,3 +25,15 @@ fn r702_36b_fear_allows_black_and_artifacts_but_refuses_other_colors() {
     }
     cite!(["702.36b"]; refused("Squirming Mass has fear (702.36b, 509.1b)"): declaration(attacker, oracle("Grizzly Bears")));
 }
+
+#[test]
+fn r702_13b_intimidate_uses_shared_colors_and_artifact_creatures() {
+    let attacker = oracle("Krenko's Enforcer");
+    for blocker in ["Hill Giant", "Memnite"] {
+        cite!(["702.13b"]; ok: declaration(attacker.clone(), oracle(blocker)));
+    }
+    cite!(["702.13b"]; refused("Krenko's Enforcer has intimidate (702.13b, 509.1b)"): declaration(attacker, oracle("Walking Corpse")));
+    let colorless = CardDef::new("Colorless intimidator", "{0}", "Creature", "Intimidate", Some((2, 2))).unwrap();
+    game::play::check(&colorless).unwrap();
+    cite!(["702.13b", "105.2c"]; refused("Colorless intimidator has intimidate (702.13b, 509.1b)"): declaration(colorless, oracle("Ugin's Conjurant")));
+}
