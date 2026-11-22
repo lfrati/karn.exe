@@ -204,3 +204,44 @@ fn r709_5d_a_card_entering_as_a_room_copy_starts_with_neither_door_unlocked() {
     unlock(&mut g, room, 0, "U");
     assert_room(&g, room, [true, false], "Bottomless Pool", 1, Some("{U}"));
 }
+
+#[test]
+fn r707_9_room_copy_exceptions_keep_both_doors_and_their_own_triggers() {
+    let mut g = game();
+    let copier = game::CardDef::new("Room copy", "{0}", "Sorcery",
+        "Create a token that's a copy of target enchantment, except it has hexproof.", None).unwrap();
+    game::play::check(&copier).unwrap();
+    let index = g.defs.len();
+    std::sync::Arc::make_mut(&mut g.defs).push(copier);
+    let model = g.put(0, POOL, Zone::Battlefield);
+    unlock(&mut g, model, 0, "U");
+    let spell = g.put(0, index, Zone::Hand);
+    g.act(0, Move::Cast { card: spell, targets: vec![vec![Target::Object(model)]] }).unwrap();
+    resolve(&mut g);
+    let room = *g.battlefield.iter().find(|o| g.obj(**o).token()).unwrap();
+    assert_room(&g, room, [false, false], "", 0, None);
+    cite!(["707.9a", "709.5"]; assert!(g.has(room, "Hexproof")));
+    let bear = g.put(1, BEAR, Zone::Battlefield);
+    g.players[0].pool = mana_pool("U");
+    g.act(0, paid("U", Move::Unlock { room, half: 0 })).unwrap();
+    g.act(0, Move::ChooseTargets(vec![vec![Target::Object(bear)]])).unwrap();
+    resolve(&mut g);
+    assert_room(&g, room, [true, false], "Bottomless Pool", 1, Some("{U}"));
+    cite!(["709.5h", "400.7"]; assert_eq!(g.obj(bear).zone, Zone::Gone));
+    cite!(["707.9a"]; assert!(g.has(room, "Hexproof")));
+    unlock(&mut g, room, 1, "CCCCU");
+    assert_room(&g, room, [true, true], "Bottomless Pool // Locker Room", 6, Some("{U} // {4}{U}"));
+    cite!(["707.9a"]; assert!(g.has(room, "Hexproof")));
+    // A second copy retains the modified halves, without inheriting either designation.
+    let spell = g.put(0, COPY_ENCHANTMENT, Zone::Hand);
+    g.players[0].pool = mana_pool("CCU");
+    g.act(0, paid("CCU", Move::Cast { card: spell, targets: vec![] })).unwrap();
+    for _ in 0..2 { g.act(g.priority, Move::Pass).unwrap(); }
+    g.act(0, Move::Choose(game::state::Answer::Objects(vec![room]))).unwrap();
+    resolve(&mut g);
+    let second = *g.battlefield.iter().find(|o| g.obj(**o).card == Some(COPY_ENCHANTMENT)).unwrap();
+    assert_room(&g, second, [false, false], "", 0, None);
+    unlock(&mut g, second, 1, "CCCCU");
+    assert_room(&g, second, [false, true], "Locker Room", 5, Some("{4}{U}"));
+    cite!(["707.2", "707.9a"]; assert!(g.has(second, "Hexproof")));
+}

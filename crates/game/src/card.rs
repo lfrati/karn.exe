@@ -264,7 +264,14 @@ impl CardDef {
     /// "this door" of a Room (709.5j). None for a card that is not split.
     pub(crate) fn door_of(&self, index: usize) -> Option<usize> {
         match self.halves.first() {
-            Some(left) => Some(usize::from(index >= left.abilities.len())),
+            Some(left) => {
+                // Copy-exception abilities belong to the whole Room, not either door.
+                // Each unlocked view includes them, as does the locked view.
+                let shared = self.room.as_ref().map_or(0, |room| room.abilities.len());
+                let left = left.abilities.len() - shared;
+                let right = self.halves[1].abilities.len() - shared;
+                (index < left + right).then(|| usize::from(index >= left))
+            },
             None => self.door,
         }
     }
@@ -607,6 +614,14 @@ impl CardDef {
                 printed.modes = printed.modes.into_iter().enumerate().filter(|(i, _)| keep(i)).map(|(_, m)| m).collect();
                 copied = Self::compile(printed);
             }
+        }
+        // A Room keeps both halves, including their door-specific text. Apply the same
+        // exception to each unlocked view and to the shared, fully locked type line;
+        // unlocked designations remain state on the receiving permanent (709.5c).
+        copied.door = def.and_then(|d| d.door);
+        if let Some(room) = def.filter(|d| d.is_room()) {
+            copied.halves = room.halves.iter().map(|half| Self::copied(&half.chars(), Some(half), changes)).collect();
+            copied.room = room.room.as_ref().map(|locked| Box::new(Self::copied(&locked.chars(), Some(locked), changes)));
         }
         // Alternative characteristics are copiable even while the normal ones apply (715.2b).
         copied.prepare_spell = def.and_then(|d| d.prepare_spell.clone());
