@@ -468,6 +468,7 @@ fn triggered(item: &ir::token::KeywordInstance) -> Option<&'static Ability> {
         "Job Select" => Some(job_select()),
         "Prowess" => Some(prowess()),
         "Battle Cry" => Some(battle_cry()),
+        "Exalted" => Some(exalted()),
         _ => None,
     }
 }
@@ -478,6 +479,14 @@ fn prowess() -> &'static Ability {
     crate::token::init(&PROWESS, || CardDef::new("Prowess rule", "", "Creature",
         "Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.", None)
         .expect("the grammar reads rule 702.108a").abilities[0].clone())
+}
+
+/// 702.83a: the creature declared alone is retained by the ordinary event binding.
+fn exalted() -> &'static Ability {
+    static EXALTED: OnceLock<Ability> = OnceLock::new();
+    crate::token::init(&EXALTED, || CardDef::new("Exalted rule", "", "Creature",
+        "Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn.", None)
+        .expect("the grammar reads rule 702.83a").abilities[0].clone())
 }
 
 /// 702.91a-b: each instance triggers separately as this creature attacks.

@@ -5,6 +5,7 @@ use game::{CardDef, Game, Move, Target, Zone};
 
 fn declaration(attacker: CardDef, blocker: CardDef) -> Result<(), String> {
     let mut g = Game::new(vec![attacker, blocker], 2, 20);
+    g.set_ask_forced(true);
     let a = g.put(0, 0, Zone::Battlefield);
     let b = g.put(1, 1, Zone::Battlefield);
     while g.decision != Some(Decision::Attackers { player: 0 }) {
