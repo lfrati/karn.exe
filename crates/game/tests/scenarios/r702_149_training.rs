@@ -46,3 +46,26 @@ fn training_event_consumers_stay_refused_until_successful_training_emits_its_own
     // Uncited (admission): a general counter placement is not a training event (702.149c).
     crate::support::refused(game::play::check(&oracle_read("Savior of Ollenbock")).map_err(|e| e.0), "trigger: Train");
 }
+
+#[test]
+fn r122_1b_senseis_named_training_counter_does_not_grant_the_training_keyword() {
+    let mut g = Game::new(vec![oracle("Sensei Golden-Tail"), oracle("Grizzly Bears"), oracle("Hill Giant")], 2, 20);
+    let sensei = g.put(0, 0, Zone::Battlefield);
+    let receiver = g.put(0, 1, Zone::Battlefield);
+    let larger = g.put(0, 2, Zone::Battlefield);
+    g.players[0].pool = mana_pool("WW");
+    g.act(
+        0,
+        paid("WW", Move::Activate { source: sensei, ability: 1, targets: vec![vec![receiver.into()]], paying: vec![] }),
+    )
+    .unwrap();
+    resolve(&mut g);
+    cite!(["122.1b"]; assert_eq!(g.counters(receiver).get("training"), Some(&1)));
+    cite!(["122.1b"]; assert!(!g.has(receiver, "Training")));
+    // Uncited (Oracle): Sensei explicitly grants bushido; its named counter grants no ability.
+    assert!(g.has(receiver, "Bushido"));
+    g.put_counters(receiver, "flying", 1);
+    cite!(["122.1b"]; assert!(g.has(receiver, "Flying") && !g.has(receiver, "Training")));
+    attack(&mut g, vec![(receiver, Target::Player(1)), (larger, Target::Player(1))]);
+    cite!(["122.1b"]; assert!(g.stack.is_empty()));
+}
