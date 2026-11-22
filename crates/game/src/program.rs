@@ -2891,10 +2891,18 @@ impl Emit {
             },
             // "the exiled cards": what this text exiled, all of it, as it is in exile; else
             // what an ability linked to this one exiled (607.2a)
-            Quant::Definite(Ref::Anaphor(ir::Anaphor::TheParticiple { what: Verb::Exile, .. })) => match binder.exiled_now.as_slice() {
-                [] => Ok(Operand::Subject(expr::Subject::LinkedExile(support.exile_producer()?))),
-                [one] => Ok(Operand::Reference(*one)),
-                several => Ok(Operand::Union(several.iter().map(|slot| Operand::Reference(*slot)).collect())),
+            Quant::Definite(Ref::Anaphor(ir::Anaphor::TheParticiple { what: Verb::Exile, plural })) => {
+                let operand = match binder.exiled_now.as_slice() {
+                    [] => Operand::Subject(expr::Subject::LinkedExile(support.exile_producer()?)),
+                    [one] => Operand::Reference(*one),
+                    several => Operand::Union(several.iter().map(|slot| Operand::Reference(*slot)).collect()),
+                };
+                // A possessive may introduce this card before the next act names it
+                // directly: "the exiled card's owner may cast that card" (608.2c).
+                let out = self.slot();
+                self.instrs.push(Instr::Capture { operand, out });
+                binder.name(out, s.set.clone(), (0, if *plural { u32::MAX } else { 1 }), false);
+                Ok(Operand::Reference(out))
             },
             Quant::Definite(Ref::You) => Ok(Operand::Controller),
             Quant::Definite(Ref::This) => { binder.source_named = Some(binder.at); Ok(Operand::Source) }
@@ -4445,7 +4453,14 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 _ => None,
             };
             if let Some(costs) = costs && (clause.may || act.may) && durations.is_empty() {
-                if !controller_only(clause.subject.as_ref()) { return unsupported("program: a cast offered to another player"); }
+                let card_owner = matches!(clause.subject.as_ref(), Some(Subject::Selector(s))
+                    if s.set == ObjectSet::of(Domain::Player) && s.chooser.is_none() && s.random.is_none()
+                    && matches!(&s.quant, Quant::Definite(Ref::OwnerOf(of))
+                        if of.quant == Quant::Definite(Ref::Anaphor(ir::Anaphor::TheParticiple { what: Verb::Exile, plural: false }))
+                            && of.set == ObjectSet::of(Domain::Card) && of.chooser.is_none() && of.random.is_none()));
+                if !controller_only(clause.subject.as_ref()) && !card_owner {
+                    return unsupported("program: a cast offered to another player");
+                }
                 // A completed-action card predicate must not silently become a
                 // literal lexical target. Only the owning plain exile-result path
                 // below is modeled; other verbs/constraints remain explicit refusals.
