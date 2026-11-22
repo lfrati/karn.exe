@@ -143,7 +143,7 @@ fn native_fifteen_consumer_admission_matrix() {
         ("Dáin Ironfoot", None),
         ("Blacksmith's Talent", None),
         ("Graceful Takedown", None),
-        ("Lord Skitter's Blessing", Some("engine: program: action not lowered: DrawAdditional")),
+        ("Lord Skitter's Blessing", None),
         ("Firion, Wild Rose Warrior", Some("engine: copy exception ability")),
         ("Eriette of the Charmed Apple", Some("grammar: text the grammar does not read")),
     ] {
