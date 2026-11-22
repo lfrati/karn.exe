@@ -324,14 +324,27 @@ fn participants(set: &P<ObjectSet>) -> P<Amount> {
             && action.takes_subject(subject) && action.roles_fit()) { return None; }
         Some((set_of_one(first)?, subject.clone(), verbs, *when))
     };
-    let anyone = one_of(ObjectSet::of(Domain::Player));
-    let any = anyone.clone();
     let window = alt("window", vec![lit("this turn").to(When::ThisTurn), lit("this game").to(When::ThisGame)]);
+    // A passive leaves the actor unbound: destruction may be caused by a rule rather
+    // than a player. Its counted object is the subject of the passive deed.
+    let make_passive = |set: ObjectSet, verbs: Vec<Verb>, when| {
+        let subject = one_of(set);
+        let actions: Vec<_> = verbs.into_iter().map(EventAction::undergoes).collect();
+        actions.iter().all(|a| a.takes_subject(&subject) && a.roles_fit()).then(|| Amount::Participants {
+            pattern: Box::new(EventPattern::new(vec![subject], actions)), counted: Role::Subject, when,
+        })
+    };
     let passive = set.then(&words(Inflection::Participle)).then(&window).map(
-        move |((set, verbs), when)| make(set, anyone.clone(), verbs, when),
+        move |((set, verbs), when)| make_passive(set, verbs, when),
         move |amount| {
-            let (set, who, verbs, when) = parts(amount)?;
-            (who == any).then_some(((set, verbs), when))
+            let Amount::Participants { pattern, counted: Role::Subject, when: when @ (When::ThisTurn | When::ThisGame) } = amount else { return None };
+            let (subject, actions) = participant_shape(pattern)?;
+            let verbs = actions.iter().map(|action| match action {
+                EventAction::Deed(d) if d.passive && d.args.is_empty() => Some(d.verb),
+                _ => None,
+            }).collect::<Option<Vec<_>>>()?;
+            let set = set_of_one(subject)?;
+            (make_passive(set.clone(), verbs.clone(), *when).as_ref() == Some(amount)).then_some(((set, verbs), *when))
         },
     );
     let perfect = perfect_subject().then(&words(Inflection::Participle));

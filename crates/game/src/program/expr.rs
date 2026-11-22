@@ -1991,9 +1991,12 @@ fn death_filter(filter: &ir::Filter) -> Option<ir::Filter> {
 /// The unrestricted participant count whose pre-cast value can be reconstructed from the
 /// source spell's ordered cast receipt. Other fixed-at-cast amounts remain refused.
 fn all_casts_this_turn(amount: &ir::Amount) -> bool {
-    let ir::Amount::Participants { pattern, counted: ir::amount::Role::Object, when: ir::amount::When::ThisTurn } = amount else { return false; };
+    let ir::Amount::Participants { pattern, counted, when: ir::amount::When::ThisTurn } = amount else { return false; };
     let one = |domain| ir::Selector::new(Quant::Indefinite(Count::Exactly(ir::Amount::Const(1))), ir::ObjectSet::of(domain));
-    **pattern == ir::EventPattern::new(vec![one(ir::Domain::Player)], vec![ir::EventAction::does(ir::Verb::Cast, one(ir::Domain::Spell))])
+    **pattern == match counted {
+        ir::amount::Role::Object => ir::EventPattern::new(vec![one(ir::Domain::Player)], vec![ir::EventAction::does(ir::Verb::Cast, one(ir::Domain::Spell))]),
+        ir::amount::Role::Subject => ir::EventPattern::new(vec![one(ir::Domain::Spell)], vec![ir::EventAction::undergoes(ir::Verb::Cast)]),
+    }
 }
 
 /// A number the text says, as it is computed. Values within calculations and comparisons

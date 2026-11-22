@@ -771,3 +771,27 @@ fn r702_29_alternative_object_participant_histories() {
         "Draw a card for each card you've cycled or discarded.",
     ] { declines(text); }
 }
+
+/// CR 608.2i: a source-free passive does not require any player to have caused the event.
+#[test]
+fn r608_2i_passive_participants_keep_actor_unbound() {
+    let rule = &grammar::amount::amounts().for_each;
+    let text = "for each creature destroyed or exiled this turn";
+    let Outcome::Accepted { value, .. } = rule.parse_all(&tokenize(text)) else { panic!("{text}") };
+    let ir::Amount::Participants { pattern, counted, .. } = &value else { panic!() };
+    assert_eq!(*counted, ir::amount::Role::Subject);
+    assert_eq!(pattern.subjects.len(), 1);
+    assert_eq!(pattern.subjects[0].set.domain, ir::Domain::Permanent);
+    for action in &pattern.actions {
+        let ir::EventAction::Deed(deed) = action else { panic!() };
+        assert!(deed.passive && deed.args.is_empty());
+    }
+    let printed = rule.print_text(&value, false).unwrap();
+    let Outcome::Accepted { value: again, .. } = rule.parse_all(&tokenize(&printed)) else { panic!("{printed}") };
+    assert_eq!(value, again);
+    let Outcome::Accepted { value: active, .. } = rule.parse_all(&tokenize("for each creature you've destroyed or exiled this turn")) else { panic!() };
+    assert_ne!(value, active);
+    let ir::Amount::Participants { pattern, counted, .. } = active else { panic!() };
+    assert_eq!(counted, ir::amount::Role::Object);
+    assert_eq!(pattern.subjects, vec![ir::Selector::you()]);
+}
