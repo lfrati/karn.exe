@@ -122,3 +122,18 @@ fn r107_1a_round_each_amount() {
     }
     declines("Draw half X cards. Round sideways each time.");
 }
+
+/// CR 608.2i: an ordinal over the game does not become an ordinal over just this turn.
+#[test]
+fn r608_2i_game_cast_ordinal() {
+    for text in [
+        "If ~ is the first spell you've cast this game, you may cast it without paying its mana cost.",
+        "If that spell is the second creature spell you have cast this game, draw a card.",
+    ] {
+        let (value, _) = read(text);
+        assert!(serde_json::to_string(&value).unwrap().contains("NthCastThisGame"));
+    }
+    for text in ["If ~ is the first creature you've cast this game, draw a card.", "If target player is the first spell you've cast this game, draw a card."] {
+        declines(text);
+    }
+}

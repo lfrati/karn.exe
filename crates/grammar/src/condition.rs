@@ -1662,6 +1662,17 @@ fn clause(e: &Events) -> P<Condition> {
                     _ => None,
                 },
             ),
+            object.skip(&lit("is the")).then(&ordinal()).then(&s.set_sg)
+                .skip(&alt("cast this game", vec![lit("you've cast this game"), lit("you have cast this game").alias()]))
+                .map(
+                    |((what, n), set)| (set.domain == Domain::Spell
+                        && (what.set.domain == Domain::Spell || matches!(what.quant, Quant::Definite(Ref::This | Ref::Anaphor(Anaphor::It)))))
+                        .then(|| Condition::NthCastThisGame { what: Box::new(what), n, set }),
+                    |c| match c {
+                        Condition::NthCastThisGame { what, n, set } => Some((((**what).clone(), *n), set.clone())),
+                        _ => None,
+                    },
+                ),
             lit("you're playing for ante").to(Condition::PlayingForAnte { negated: false }),
             lit("you're not playing for ante").to(Condition::PlayingForAnte { negated: true }),
         ],

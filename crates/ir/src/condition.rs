@@ -219,6 +219,8 @@ pub enum Condition {
     /// "it's the second creature spell you cast this turn": the spell whose casting is being
     /// spoken of is the n-th such spell that player has cast in the turn (a look back at the
     /// turn, CR 608.2i).
+    /// The named spell is the n-th matching spell its controller has cast this game (608.2i).
+    NthCastThisGame { what: Box<Selector>, n: u32, set: ObjectSet },
     NthCastThisTurn {
         n: u32,
         set: ObjectSet,
