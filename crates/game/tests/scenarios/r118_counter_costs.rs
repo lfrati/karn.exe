@@ -147,14 +147,13 @@ fn r122_2_departure_is_not_removal_and_actual_removal_is_bounded() {
 }
 
 #[test]
-fn r118_3_counter_choices_and_variable_amounts_remain_explicit_refusals() {
+fn r118_3_counter_kind_choices_and_variable_amounts_remain_explicit_refusals() {
     for text in [
         "Remove a counter from this artifact: You gain 1 life.",
         "Remove X charge counters from this artifact: You gain 1 life.",
-        "Remove a +1/+1 counter from a creature you control: You gain 1 life.",
     ] {
         let d = CardDef::new("Resource", "{0}", "Artifact", text, None).unwrap();
-        assert!(game::play::check(&d).unwrap_err().0.contains("removing counters requires"), "{text}");
+        assert!(game::play::check(&d).unwrap_err().0.contains("counter removal needs"), "{text}");
     }
 }
 

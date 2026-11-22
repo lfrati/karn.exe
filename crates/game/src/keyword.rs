@@ -892,7 +892,8 @@ fn mobilize(item: &ir::token::KeywordInstance) -> Option<Ability> {
 /// Is this, of a card's abilities (the printed ones, then those [`executable_in`] makes, in
 /// order), a crew ability (702.122a)? "Becomes crewed" is said of its resolving (702.122e).
 pub(crate) fn crews(def: &CardDef, index: usize) -> bool {
-    made_by(def, index).is_some_and(|item| crew(item).is_some())
+    made_by(def, index).is_some_and(|item| item.keyword.name() == "Crew"
+        && matches!(item.param, KeywordParam::Number(ir::Amount::Const(_))))
 }
 
 /// Is this, of a card's abilities, a saddle ability (702.171a)? The creatures tapped to pay

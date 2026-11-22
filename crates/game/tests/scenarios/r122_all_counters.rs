@@ -175,7 +175,7 @@ fn r122_1_unsupported_selective_count_among_and_ordinal_removal_watchers_remain_
         let d = CardDef::new("Refused", "{0}", if permanent { "Creature" } else { "Sorcery" }, text, permanent.then_some((2, 2))).unwrap();
         // Uncited (admission): these are implementation limits, not rules prohibitions.
         let reason = if text.starts_with("Whenever") { "trigger: CountersRemoved" }
-            else if text.contains(":") { "cost: removing counters requires a fixed count and kind from the source" }
+            else if text.contains(":") { "cost: counter removal needs a fixed named count from this source or one selected permanent" }
             else { "counter removal: named fixed/all count or all kinds, explicit holder and no among required" };
         crate::support::refused(game::play::check(&d).map_err(|e|e.0), reason);
     }

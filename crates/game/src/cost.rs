@@ -20,7 +20,7 @@ pub(crate) enum Payment {
     Objects { verb: Verb, objects: Vec<ObjId>, producer: Option<AbilityKey> },
     /// Put that many loyalty counters on the permanent, or remove them when negative (606.4).
     Loyalty(ObjId, i32),
-    RemoveCounters { on: Target, kind: String, count: u32 },
+    RemoveCounters { on: Target, kind: String, count: u32, selected: bool },
     /// Blight N: that many -1/-1 counters put on the creature its payer chose (701.68a).
     Blight { on: ObjId, count: u32 },
 }
@@ -55,6 +55,13 @@ impl Candidates {
         } else { expr::Set::compile(&selector.set, support, &mut linked(support)).map(Self::Set) }
     }
 
+    fn counters(selector: &ir::Selector, kind: &ir::CounterKind, count: u32, support: &Support<'_>) -> Res<Self> {
+        let mut selector = selector.clone();
+        selector.set.filter = ir::Filter::All(vec![selector.set.filter,
+            ir::Filter::Atom(ir::Atom::Counters { kind: Some(kind.clone()), count: Count::AtLeast(Amount::Const(count)) })]);
+        Self::compile(Verb::RemoveCounters, &selector, support)
+    }
+
     fn among(&self, game: &Game, ctx: &Ctx, verb: Verb, blight: u32) -> Vec<ObjId> {
         let objects: Vec<ObjId> = match self {
             Self::Hand(cards) => game.players[ctx.controller].hand.iter().copied().filter(|o| cards.contains(game, ctx, &NoLocals, *o)).collect(),
@@ -63,6 +70,7 @@ impl Candidates {
                 .chain(set.members(game, ctx, &NoLocals).into_iter().filter_map(|t| if let Target::Object(o) = t { Some(o) } else { None })).collect(),
         };
         objects.into_iter().filter(|o| match verb {
+            Verb::RemoveCounters => game.holds_counters(Target::Object(*o)),
             // blight: what can have counters put on it (701.68a, 122.1)
             Verb::PutCounters if blight == 0 => game.holds_counters(Target::Object(*o)),
             Verb::PutCounters => game.may_place(Target::Object(*o), "-1/-1", ctx.controller),
@@ -181,7 +189,7 @@ fn total_power(s: &ir::Selector) -> Option<(ir::Selector, u32)> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Part { Reveal, Mana(ManaCost), Tap, Untap, Energy(u32), Life(expr::Amount), /// `blight`: with [`Verb::PutCounters`], that many -1/-1 counters put on each (701.68a).
-    Objects { verb: Verb, groups: Vec<Objects>, producer: Option<AbilityKey>, blight: u32, target_minimum: bool }, Loyalty(i32), RemoveCounters { kind: String, count: u32 } }
+    Objects { verb: Verb, groups: Vec<Objects>, producer: Option<AbilityKey>, blight: u32, target_minimum: bool }, Loyalty(i32), RemoveCounters { kind: String, count: u32, from: Option<Candidates> } }
 /// Selected tapping and a zone-changing cost together: the current object-choice protocol
 /// requires all selected resources to be distinct, and these can reuse an object.
 fn mixed(parts: &[Part]) -> bool {
@@ -217,6 +225,7 @@ pub enum Branch {
     PrintedOr { arm: usize, #[serde(skip_serializing_if="Option::is_none", default)] forage: Option<ForagePayment> },
     Forage { payment: ForagePayment },
     HybridReduction { symbol: usize, half: HybridHalf },
+    KeywordActivation { keyword: String, alternative: bool },
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum HybridHalf { W, U, B, R, G, C, #[serde(rename="2")] Two }
@@ -265,7 +274,7 @@ impl Part {
             Part::Energy(n) => format!("pay {n} energy"),
             Part::Life(n) => format!("pay {} life", n.evaluate(game, ctx, &NoLocals)),
             Part::Loyalty(n) => format!("{n:+} loyalty"),
-            Part::RemoveCounters { kind, count } => format!("remove {count} {kind} counter(s)"),
+            Part::RemoveCounters { kind, count, from } => format!("remove {count} {kind} counter(s){}", if from.is_some() { " from a selected permanent" } else { "" }),
             Part::Objects { verb: Verb::PutCounters, blight, .. } => format!("blight {blight}"),
             Part::Objects { verb, groups, .. } => format!("{} {}", verb.entry().word, groups.iter().map(|g| match g {
                 Objects::Source(_) => "this".to_string(),
@@ -366,9 +375,15 @@ impl Plan {
                 CostPart::Action(Action::PayLife(n)) => Part::Life(expr::Amount::compile(n, support, &mut linked(support))?),
                 CostPart::Action(Action::RemoveCounters { count: ir::CounterCount::Exactly(Amount::Const(count)), kind: Some(kind), from: Some(from), among: false })
                     if from.quant == Quant::Definite(Ref::This) && from.chooser.is_none() && from.random.is_none() && from.set.zone.is_none() => {
-                        Part::RemoveCounters { kind: kind.0.clone(), count: *count }
+                        Part::RemoveCounters { kind: kind.0.clone(), count: *count, from: None }
                     },
-                CostPart::Action(Action::RemoveCounters { .. }) => return unsupported("cost: removing counters requires a fixed count and kind from the source"),
+                CostPart::Action(Action::RemoveCounters { count: ir::CounterCount::Exactly(Amount::Const(count)), kind: Some(kind), from: Some(from), among: false })
+                    if from.quant == Quant::Indefinite(Count::Exactly(Amount::Const(1))) && from.set.domain == Domain::Permanent
+                        && from.set.zone.is_none() && from.chooser.is_none() && from.random.is_none() => {
+                        Part::RemoveCounters { kind: kind.0.clone(), count: *count,
+                            from: Some(Candidates::counters(from, kind, *count, support)?) }
+                    },
+                CostPart::Action(Action::RemoveCounters { .. }) => return unsupported("cost: counter removal needs a fixed named count from this source or one selected permanent"),
                 // "collect evidence N": exile any number of cards from your graveyard with total
                 // mana value N or greater (701.59a)
                 // "blight N": put N -1/-1 counters on a creature you control (701.68a); one that
@@ -543,6 +558,20 @@ impl Plan {
             Some(SelectedBranch { text, owner, definition, source: ctx.ability.as_ref().map(|_|ctx.object_source()), branch:branches.get(*i).cloned() })
         }).collect()
     }
+    /// One static permission replaces the keyword's activation cost before cost
+    /// increases/reductions. The activated ability's identity is unchanged (602.2b).
+    pub(crate) fn alternative_activation(mut self, alternative: &Plan, owner: AbilityKey, keyword: ir::Keyword) -> Res<Self> {
+        if !self.choices.is_empty() || !alternative.choices.is_empty() {
+            return unsupported("alternative keyword activation: nested cost choices not implemented");
+        }
+        self.validate_selections()?; alternative.validate_selections()?;
+        let normal = std::mem::take(&mut self.parts);
+        self.choices.push(Choice { owner: Some(owner),
+            branches: [false, true].into_iter().map(|alternative| Branch::KeywordActivation { keyword: keyword.name().into(), alternative }).collect(),
+            among: vec![normal, alternative.parts.clone()], said: vec![None, None] });
+        Ok(self)
+    }
+
     /// Add another plan's parts and its choices among alternatives.
     fn join(&mut self, other: Plan) {
         self.parts.extend(other.parts);
@@ -553,6 +582,10 @@ impl Plan {
     fn validate_selections(&self) -> Res<()> {
         let (count, collective) = self.parts.iter().flat_map(|p| match p { Part::Objects {groups,..} => groups.as_slice(), _ => &[] })
             .fold((0, false), |(n, any), group| (n + 1, any || matches!(group, Objects::Choose { selection: Selection::CardTypesAtLeast {..} | Selection::PowerAtLeast {..} | Selection::ManaValueAtLeast {..}, .. })));
+        let counters = self.parts.iter().filter(|part| matches!(part, Part::RemoveCounters { from: Some(_), .. })).count();
+        if counters > 1 || counters > 0 && count > 0 {
+            return unsupported("cost: selected counter removal combined with another selected object cost");
+        }
         if count > 1 && collective {
             return unsupported("cost: a collective type selection combined with another object cost");
         }
@@ -773,7 +806,7 @@ impl Plan {
         Ok(self)
     }
     fn object_choice_count(&self) -> usize {
-        self.parts.iter().map(|p| match p { Part::Objects { groups, .. } => groups.iter().filter(|g| matches!(g, Objects::Choose { .. })).count(), _ => 0 }).sum()
+        self.parts.iter().map(|p| match p { Part::Objects { groups, .. } => groups.iter().filter(|g| matches!(g, Objects::Choose { .. })).count(), Part::RemoveCounters { from: Some(_), .. } => 1, _ => 0 }).sum()
     }
     /// Read only after the owning payment has validated and committed every group.
     pub(crate) fn cast_payment(&self, paying: &[Vec<ObjId>]) -> crate::state::CastPayment {
@@ -862,12 +895,22 @@ impl Plan {
                     Payment::Reveal(ctx.object_source())
                 },
                 Part::Mana(mana) => Payment::Mana(mana.clone()), Part::Tap => Payment::Tap(ctx.object_source()), Part::Untap => Payment::Untap(ctx.object_source()),
-                Part::Energy(n) => Payment::RemoveCounters { on: Target::Player(ctx.controller), kind: "energy".into(), count: *n },
+                Part::Energy(n) => Payment::RemoveCounters { on: Target::Player(ctx.controller), kind: "energy".into(), count: *n, selected: false },
                 // more life than any life total the engine holds can't be paid (119.4)
                 Part::Life(n) => Payment::Life(n.checked(game, ctx, &NoLocals)
                     .map_err(|_| format!("you can't pay more life than your life total of {} (119.4)", game.players[ctx.controller].life))?),
                 Part::Loyalty(n) => Payment::Loyalty(ctx.object_source(), *n),
-                Part::RemoveCounters { kind, count } => Payment::RemoveCounters { on: Target::Object(ctx.object_source()), kind: kind.clone(), count: *count },
+                Part::RemoveCounters { kind, count, from: None } => Payment::RemoveCounters { on: Target::Object(ctx.object_source()), kind: kind.clone(), count: *count, selected: false },
+                Part::RemoveCounters { kind, count, from: Some(among) } => {
+                    let selected = chosen.map(|groups| groups.get(choices).cloned().unwrap_or_default());
+                    choices += 1;
+                    let Some(selected) = selected else { continue };
+                    let [on] = selected.as_slice() else { return Err("a counter-removal cost chooses exactly one permanent (118.3)".into()); };
+                    if !among.among(game, ctx, Verb::RemoveCounters, 0).contains(on) {
+                        return Err(unfit(game, ctx, Verb::RemoveCounters, *on).into());
+                    }
+                    Payment::RemoveCounters { on: Target::Object(*on), kind: kind.clone(), count: *count, selected: true }
+                },
                 Part::Objects { verb, groups, producer, blight, .. } => {
                     let mut objects = Vec::new();
                     for group in groups {
@@ -917,13 +960,23 @@ impl Plan {
         Ok((payments, choices))
     }
     pub(crate) fn choices(&self, game: &Game, ctx: &Ctx, spent: &[ObjId]) -> Vec<(Vec<ObjId>, Selection)> {
-        self.parts.iter().filter_map(|p| if let Part::Objects { verb, groups, blight, .. } = p { Some((verb, groups, blight)) } else { None })
-            .flat_map(|(verb, groups, blight)| groups.iter().filter_map(move |g| if let Objects::Choose { selection, among } = g {
-                let among: Vec<_> = among.among(game, ctx, *verb, *blight).into_iter().filter(|o| !spent.contains(o)).collect();
-                let selection = selection.evaluated(game, ctx, &among);
-                Some((among, selection))
-            } else { None })).collect()
+        let mut choices = Vec::new();
+        for part in &self.parts {
+            match part {
+                Part::Objects { verb, groups, blight, .. } => for group in groups {
+                    if let Objects::Choose { selection, among } = group {
+                        let among: Vec<_> = among.among(game, ctx, *verb, *blight).into_iter().filter(|o| !spent.contains(o)).collect();
+                        let selection = selection.evaluated(game, ctx, &among);
+                        choices.push((among, selection));
+                    }
+                },
+                Part::RemoveCounters { from: Some(among), .. } => choices.push((among.among(game, ctx, Verb::RemoveCounters, 0), Selection::Exact(1))),
+                _ => {},
+            }
+        }
+        choices
     }
+
 }
 
 /// Why a chosen object cannot pay a cost's action. Ninjutsu's return says what its rule asks

@@ -124,18 +124,35 @@ pub(crate) fn unused_permissions(def: &CardDef) -> Vec<crate::program::registrat
 #[derive(Debug, Clone)]
 pub(crate) struct Modifier {
     keyword: Option<ir::Keyword>,
-    sources: crate::program::expr::Set,
+    /// None is this exact permanent, not every object with the same keyword.
+    sources: Option<crate::program::expr::Set>,
     scope: crate::functions::Scope,
     change: Modification,
 }
 #[derive(Debug, Clone)]
-enum Modification { Cost { more: bool, amount: u32 }, Additional(crate::program::expr::Amount) }
+enum Modification { Cost { more: bool, amount: u32 }, Additional(crate::program::expr::Amount), Alternative(Plan) }
 pub(crate) fn modifiers(def: &CardDef) -> Vec<crate::program::registration::Registered<Modifier>> {
     use crate::program::{expr, registration::Registered};
     use ir::statics::{AbilitiesOf, AbilityRule};
     def.abilities.iter().enumerate().filter_map(|(index, ability)| {
         let Ability::Text(ir::Effect(rows)) = ability else { return None };
         let [ir::Sentence::Static(stated)] = rows.as_slice() else { return None };
+        if let ir::statics::Static::AlternativeKeywordCost { cost, of, keyword } = stated.as_ref() {
+            let result = (|| {
+                if keyword.name() != "Crew" || of.quant != ir::Quant::Definite(ir::Ref::This)
+                    || of.set != ir::ObjectSet::of(ir::Domain::Permanent) || of.chooser.is_some() || of.random.is_some() {
+                    return crate::unsupported("alternative keyword activation: only this permanent's crew cost is implemented");
+                }
+                let [action @ Action::RemoveCounters { count: ir::CounterCount::Exactly(ir::Amount::Const(_)), kind: Some(_), from: Some(_), among: false }] = cost.items.as_slice() else {
+                    return crate::unsupported("alternative keyword activation: one fixed counter-removal cost required");
+                };
+                let support = crate::select::Support::definition(def, Some(crate::binding::AbilityKey::printed(index)));
+                let cost = Plan::compile(&ir::Cost(vec![ir::CostPart::Action(action.clone())]), &support)?;
+                Ok(Modifier { keyword: Some(*keyword), sources: None,
+                    scope: def.scope(index).expect("a declared alternative")?, change: Modification::Alternative(cost) })
+            })();
+            return Some(Registered { ability: index, result });
+        }
         let ir::statics::Static::ActivatedAbilities { of, rule, this_turn } = stated.as_ref() else { return None };
         if matches!(rule, AbilityRule::CantBeActivated { .. }) { return None; }
         let result = (|| {
@@ -162,13 +179,14 @@ pub(crate) fn modifiers(def: &CardDef) -> Vec<crate::program::registration::Regi
                 AbilityRule::CantBeActivated { .. } => unreachable!("prohibitions have their own owner"),
                 AbilityRule::DontTrigger => return crate::unsupported("trigger suppression: ability-family rule not implemented (603.2)"),
             };
-            Ok(Modifier { keyword, sources, scope: def.scope(index).expect("a declared modifier")?, change })
+            Ok(Modifier { keyword, sources: Some(sources), scope: def.scope(index).expect("a declared modifier")?, change })
         })();
         Some(Registered { ability: index, result })
     }).collect()
 }
 #[derive(Default)]
-struct Modifications { increase: u32, reduction: u32, additional: u32 }
+struct Modifications { increase: u32, reduction: u32, additional: u32,
+    alternatives: Vec<(crate::binding::AbilityKey, ir::Keyword, Plan)> }
 
 impl CardDef {
     pub(crate) fn activation_modifier_ok(&self, index: usize) -> Option<Res<()>> {
@@ -181,7 +199,9 @@ impl CardDef {
 
 impl Game {
     fn activation_modifications(&self, source: ObjId, key: crate::binding::AbilityKey) -> Modifications {
-        let keyword = self.activation_keyword(source, key);
+        let keyword = self.activation_keyword(source, key.clone()).or_else(||
+            self.definition(source, &key.origin).is_some_and(|def| crate::keyword::crews(def, key.index))
+                .then(|| ir::Keyword::from_name("Crew").expect("Crew is a keyword")));
         let changed = self.membership_changed();
         let mut changes = Modifications::default();
         for grant in &self.battlefield {
@@ -190,11 +210,13 @@ impl Game {
                     let Ok(modifier) = &registration.result else { continue };
                     if !modifier.scope.contains(self.obj(*grant).zone) || modifier.keyword.is_some_and(|k| Some(k) != keyword) { continue; }
                     let ctx = Ctx::new(self.controller(*grant), *grant).with_key(crate::binding::AbilityKey { origin: origin.clone(), index: registration.ability });
-                    if !modifier.sources.contains(self, &ctx, &crate::program::expr::NoLocals, Target::Object(source)) { continue; }
+                    if !modifier.sources.as_ref().map_or(*grant == source, |sources|
+                        sources.contains(self, &ctx, &crate::program::expr::NoLocals, Target::Object(source))) { continue; }
                     match &modifier.change {
                         Modification::Cost { more: true, amount } => changes.increase += amount,
                         Modification::Cost { more: false, amount } => changes.reduction += amount,
                         Modification::Additional(n) => changes.additional += n.evaluate(self, &ctx, &crate::program::expr::NoLocals),
+                        Modification::Alternative(cost) => changes.alternatives.push((ctx.ability.expect("registered modifier identity"), modifier.keyword.expect("a keyword alternative"), cost.clone())),
                     }
                 }
             }
@@ -434,6 +456,16 @@ impl Game {
         let mut bound = Bound::default();
         bound.inputs.push((crate::program::input::Input::Convoked,cost.convokers(paying)));
         if cost.reveals_source() { bound.revealed.push(ctx.object_source()); }
+        let crew = ctx.ability.as_ref().is_some_and(|key| self.definition(ctx.object_source(), &key.origin)
+            .is_some_and(|def| crate::keyword::crews(def, key.index)));
+        if crew {
+            // A replacement cost may retain a different kind of first cost input.
+            // Only creatures actually tapped for this activation crew it (702.122b).
+            bound.crew = Some(payments.iter().filter_map(|payment| match payment {
+                Payment::Objects { verb: Verb::Tap, objects, .. } => Some(objects.as_slice()),
+                _ => None,
+            }).flatten().copied().collect());
+        }
         let mut cost_index = 0;
         for p in &payments {
             if let Payment::Objects { objects, .. } = p {
@@ -452,7 +484,19 @@ impl Game {
                 cost_index += 1;
             }
         }
-        if payments.iter().any(|p| matches!(p, Payment::RemoveCounters { on: Target::Object(on), .. } if *on == ctx.object_source())) {
+        for payment in &payments {
+            if let Payment::RemoveCounters { on: Target::Object(on), selected: true, .. } = payment
+                && !crew {
+                bound.inputs.push((crate::program::input::Input::Cost(cost_index), vec![Target::Object(*on)]));
+                cost_index += 1;
+            }
+        }
+        // The normal Crew rule's creature-cost input is empty when that cost was
+        // replaced. A planeswalker paid the alternative, not that creature cost.
+        if crew && !bound.inputs.iter().any(|(input, _)| *input == crate::program::input::Input::Cost(0)) {
+            bound.inputs.push((crate::program::input::Input::Cost(0), Vec::new()));
+        }
+        if payments.iter().any(|p| matches!(p, Payment::RemoveCounters { on: Target::Object(on), selected: false, .. } if *on == ctx.object_source())) {
             bound.inputs.push((crate::program::input::Input::CostSource, vec![Target::Object(ctx.object_source())]));
         }
         // Record the actual payment, including colored/colorless restricted mana.
@@ -474,7 +518,7 @@ impl Game {
         let mut counters = std::collections::HashMap::<(Target, String), u32>::new();
         for p in payments {
             let removed = match p {
-                Payment::RemoveCounters { on, kind, count } => Some((*on, kind.as_str(), *count)),
+                Payment::RemoveCounters { on, kind, count, .. } => Some((*on, kind.as_str(), *count)),
                 Payment::Loyalty(o, n) if *n < 0 => Some((Target::Object(*o), "loyalty", n.unsigned_abs())),
                 _ => None,
             };
@@ -561,6 +605,11 @@ impl Game {
         }
         for r in programs.iter().flat_map(|p| &p.announcement.limits) { self.allowed(player, source, index, r)?; }
         let modifications = self.activation_modifications(source, self.key(source, index)?);
+        match modifications.alternatives.as_slice() {
+            [] => {},
+            [(owner, keyword, alternative)] => cost = cost.alternative_activation(alternative, owner.clone(), *keyword)?,
+            _ => return Err(crate::Unsupported("multiple alternative keyword activation costs need one identified cost choice".into()).into()),
+        }
         cost = cost.change_generic(increase + modifications.increase, reduction + modifications.reduction);
         cost = self.reduce_power_up(source, self.key(source, index)?, cost);
 
