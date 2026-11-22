@@ -288,6 +288,7 @@ pub(crate) struct TargetValues<'a> {
     pub base: usize,
 }
 impl crate::program::expr::Locals for TargetValues<'_> {
+    fn successor(&self, was: crate::ObjId) -> Option<crate::ObjId> { self.parent.successor(was) }
     fn local(&self,n:usize)->Option<&crate::binding::Value>{self.parent.local(n)}
     fn input(&self,k:crate::program::input::Input)->Option<&[crate::Target]>{self.parent.input(k)}
     fn event_amount(&self)->Option<u32>{self.parent.event_amount()}

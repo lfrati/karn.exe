@@ -1257,6 +1257,8 @@ struct Binder {
     /// A named object performing damage, scoped only to that act's recipient selectors.
     /// The effect source/controller and amount-anaphor context remain independent.
     other_subject: Option<expr::Subject>,
+    /// An adjacent quantified clause contrasted with the stated following root set.
+    contrast: Option<(Slot, ObjectSet)>,
     /// A distributive dealer needs per-member recipients unless the root has its own referent.
     other_distributive: bool,
     /// The clause being lowered says what X is ("where X is …") and it is not computed yet:
@@ -1508,6 +1510,9 @@ impl Binder {
         if let Some(actor) = &self.other_subject { return Ok(Some(actor.clone())); }
         // An explicitly self-naming acting clause wins over an earlier announced target.
         if self.clause == Some(expr::Subject::Source) { return Ok(Some(expr::Subject::Source)); }
+        if let Some((slot, expected)) = &self.contrast && expected == set {
+            return Ok(Some(expr::Subject::Local(*slot)));
+        }
         let mut targets = Vec::new();
         for named in self.subjects.iter().filter(|n| n.target) {
             // Possibility sorts are type proofs, not current membership. Card types and
@@ -1535,10 +1540,13 @@ impl Binder {
                 }
             }
         }
-        match targets.as_slice() {
-            [] => Ok(None),
-            [slot] => Ok(Some(expr::Subject::Local(*slot))),
-            _ => unsupported("other: ambiguous announced target slots"),
+        let created = self.result.as_ref().filter(|(slot, _, _)| set.domain == Domain::Permanent && self.created_groups.contains(slot));
+        match (targets.as_slice(), created) {
+            ([], Some((slot, _, _))) => Ok(Some(expr::Subject::Local(*slot))),
+            ([_ , ..], Some(_)) => unsupported("other: competing target and created-group antecedents"),
+            ([], None) => Ok(None),
+            ([slot], None) => Ok(Some(expr::Subject::Local(*slot))),
+            (_, None) => unsupported("other: ambiguous announced target slots"),
         }
     }
     /// What the reference names: something this text named, else what took part in the
@@ -2455,6 +2463,8 @@ struct Emit {
     target_x: Option<ir::Amount>,
     // Cached operand and ordinary-reference validity in its original binding context.
     clause_subject: Option<(action::Operand, Res<()>)>,
+    /// Capture this clause's quantified subject for the following explicit contrast.
+    contrast: Option<ObjectSet>,
     /// The slot a continuous effect fixed the ability's own object in as the subject of its
     /// clause (611.2c). It holds nothing once that object has left; what the same clause has
     /// that object do is still done by it as it last was (608.2h).
@@ -2862,6 +2872,20 @@ impl Emit {
                 // Existing explicit comparisons and prior-target distinctness keep precedence.
                 let attached = binder.other_subject == Some(expr::Subject::Attached);
                 let mut spec = TargetSpec::compile_after_with_attached_dealer(selector, support, self.target_x.as_ref(), &self.targets, attached, self.sentence_targets)?;
+                // A public-zone “other card” after a named occurrence participant
+                // contrasts with that participant, not the ability source. Only a
+                // retained input is available before resolution/target announcement.
+                if s.set.other && s.set.domain == Domain::Card
+                    && s.set.zone.as_ref().is_some_and(|z| z.zones.items.len() == 1
+                        && matches!(z.zones.items[0], ir::Zone::Graveyard | ir::Zone::Exile))
+                    && let Some(named) = binder.subjects.iter().rev().find(|n| !n.target && !n.own && kinds(&n.set) == (false, true))
+                    && let Some(input) = self.instrs.iter().rev().find_map(|i| match i {
+                        Instr::Input { input, out } if *out == named.slot => Some(*input),
+                        _ => None,
+                    })
+                {
+                    spec.set = spec.set.excluding(expr::Subject::MovedInput(input));
+                }
                 spec.distinct_from = distinct;
                 spec.announced_mask = self.announced_mask;
                 self.targets.push(spec);
@@ -3293,6 +3317,12 @@ impl Emit {
         }
         let ordinary = if dealer { ordinary(clause.subject.as_ref(), support, binder) } else { Ok(()) };
         let mut subject = self.subject_scoped(clause.subject.as_ref(), support, binder, dealer)?;
+        if let Some(next) = self.contrast.clone() && matches!(subject, action::Operand::All(_)) {
+            let out = self.slot();
+            self.instrs.push(Instr::Capture { operand: subject, out });
+            binder.contrast = Some((out, next));
+            subject = action::Operand::Reference(out);
+        }
         // An explicitly named owner/controller is a player antecedent, not just
         // a projection recomputed after this clause moves the object (608.2c).
         if matches!(clause.subject.as_ref(), Some(Subject::Selector(s))
@@ -3576,7 +3606,30 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
     }
     let heads: Vec<&Clause> = effect.0.iter().filter_map(head).collect();
     let base = binder.sentences;
-    let mut e = Emit { instrs: Vec::new(), acts: Vec::new(), next: initial.len(), targets: Vec::new(), relative_targets: None, sentence_targets: 0, target_relations: Vec::new(), announced_mask: crate::announcement::ANY, alternative_kicker_targets: false, target_x: None, clause_subject: None, captured_source: None, unless_open: None, unless_said: None };
+    let mut e = Emit { instrs: Vec::new(), acts: Vec::new(), next: initial.len(), targets: Vec::new(), relative_targets: None, sentence_targets: 0, target_relations: Vec::new(), announced_mask: crate::announcement::ANY, alternative_kicker_targets: false, target_x: None, clause_subject: None, contrast: None, captured_source: None, unless_open: None, unless_said: None };
+    fn group_subject(clause: &Clause) -> Option<&ObjectSet> {
+        match clause.subject.as_ref()? {
+            Subject::Set(set) if set.domain == Domain::Permanent => Some(set),
+            Subject::Selector(s) | Subject::Each(s)
+                if matches!(s.quant, Quant::All | Quant::Each) && s.set.domain == Domain::Permanent => Some(&s.set),
+            _ => None,
+        }
+    }
+    let mut clauses: Vec<&Clause> = Vec::new();
+    for step in &acts {
+        if let TextStep::Act(clause, ..) = step
+            && clauses.last().is_none_or(|previous| !std::ptr::eq(*previous, *clause)) {
+            clauses.push(*clause);
+        }
+    }
+    // The same unqualified domain/ownership with a stated “other” is a group
+    // contrast. Capture membership before the first effect changes characteristics.
+    let contrasts: Vec<_> = clauses.windows(2).filter_map(|pair| {
+        let (a, b) = (group_subject(pair[0])?, group_subject(pair[1])?);
+        (b.other && !a.other && a.domain == b.domain && a.controller == b.controller
+            && a.owner == b.owner && a.caster == b.caster && a.zone == b.zone)
+            .then_some((pair[0], pair[1], b))
+    }).collect();
     let mut skip_rider = false;
     let mut branches = Vec::new();
     // conditions said after their act, read once it has been: (branch, condition, what was
@@ -4197,7 +4250,17 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
         let same_scope = matches!((x_scope, definition), (Some(previous), Some((current, _))) if std::ptr::eq(previous, current));
         if !body_x && !same_scope { x_defined = false; }
         x_scope = definition.map(|(amount, _)| amount);
-        if std::ptr::eq(act, &clause.first) { e.clause_subject = None; binder.clause = None; }
+        if std::ptr::eq(act, &clause.first) {
+            e.clause_subject = None;
+            binder.clause = None;
+            let consuming = contrasts.iter().find(|(_, next, _)| std::ptr::eq(*next, clause));
+            if let Some((_, _, expected)) = consuming {
+                if binder.contrast.as_ref().is_none_or(|(_, set)| set != *expected) {
+                    return unsupported("other: preceding group is not retained on this path");
+                }
+            } else { binder.contrast = None; }
+            e.contrast = contrasts.iter().find(|(first, _, _)| std::ptr::eq(*first, clause)).map(|(_, _, set)| (*set).clone());
+        }
         // A trailing step marker creates an ability now; its body runs at that future
         // step through this same executor, with this occurrence's bindings (603.7c).
         let at: Vec<_> = act.mods.iter().filter_map(|m| match m {
@@ -6435,6 +6498,9 @@ pub struct Frame {
 }
 
 impl expr::Locals for Frame {
+    fn successor(&self, was: ObjId) -> Option<ObjId> {
+        self.transitions.iter().rev().find(|(old, _)| *old == was).map(|(_, now)| *now)
+    }
     fn revealed(&self, o: ObjId) -> bool {
         self.exploring() == Some(o) || self.shown.iter().any(|(slot, audience)| matches!(audience, Audience::Everyone) && match self.slot(*slot) {
             Some(Value::Cards(cards)) => cards.contains(&o),

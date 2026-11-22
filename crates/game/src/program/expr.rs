@@ -37,6 +37,8 @@ pub trait Locals {
     fn input(&self, _key: Input) -> Option<&[Target]> {
         None
     }
+    /// The public-zone transition retained by this occurrence, not a later incarnation.
+    fn successor(&self, _was: ObjId) -> Option<ObjId> { None }
 }
 
 impl Locals for Vec<Option<Value>> {
@@ -222,6 +224,8 @@ pub enum Subject {
     Local(usize),
     /// What the occurrence was given under that name.
     Input(Input),
+    /// A named occurrence participant in the public zone its event moved it to (400.7e).
+    MovedInput(Input),
     Targets(usize),
     Union(Vec<Subject>),
     /// All players matching an explicit quantified description, not an anaphoric reference.
@@ -309,6 +313,10 @@ impl Subject {
                 _ => Vec::new(),
             },
             Subject::Input(key) => locals.input(*key).map(<[Target]>::to_vec).unwrap_or_default(),
+            Subject::MovedInput(key) => locals.input(*key).unwrap_or_default().iter().map(|t| match t {
+                Target::Object(old) => Target::Object(locals.successor(*old).unwrap_or(*old)),
+                other => *other,
+            }).collect(),
             Subject::ControllerOf(of) => players(of, &|game, o| ctx.controlled_by(game, o)),
             Subject::OwnerOf(of) => players(of, &|game, o| game.obj(o).owner),
         }
@@ -330,7 +338,7 @@ impl Subject {
             Subject::Targets(_) => {},
             Subject::Local(slot) => out.push(Scalar::Local { slot: *slot, kind: Kind::Subjects }),
             Subject::ControllerOf(of) | Subject::OwnerOf(of) | Subject::Commanders(of) => of.scalars(out),
-            Subject::Source | Subject::Controller | Subject::Actor | Subject::ObjectActor | Subject::Input(_) | Subject::Attached | Subject::LinkedExile(_) => {}
+            Subject::Source | Subject::Controller | Subject::Actor | Subject::ObjectActor | Subject::Input(_) | Subject::MovedInput(_) | Subject::Attached | Subject::LinkedExile(_) => {}
         }
     }
 }
@@ -341,6 +349,7 @@ pub(crate) struct Actor<'a> {
     pub player: PlayerId,
 }
 impl Locals for Actor<'_> {
+    fn successor(&self, was: ObjId) -> Option<ObjId> { self.parent.successor(was) }
     fn local(&self, slot: usize) -> Option<&Value> { self.parent.local(slot) }
     fn input(&self, key: Input) -> Option<&[Target]> { self.parent.input(key) }
     fn event_amount(&self) -> Option<u32> { self.parent.event_amount() }
@@ -351,6 +360,7 @@ impl Locals for Actor<'_> {
 /// An ephemeral source binding while one grouped damage request is prepared.
 struct ObjectActor<'a> { parent: &'a dyn Locals, source: ObjId }
 impl Locals for ObjectActor<'_> {
+    fn successor(&self, was: ObjId) -> Option<ObjId> { self.parent.successor(was) }
     fn local(&self, slot: usize) -> Option<&Value> { self.parent.local(slot) }
     fn input(&self, key: Input) -> Option<&[Target]> { self.parent.input(key) }
     fn event_amount(&self) -> Option<u32> { self.parent.event_amount() }
@@ -1205,6 +1215,11 @@ fn linked_exile_filter_bound(filter: &ir::Filter, bind: Bind<'_>) -> Res<Option<
 }
 
 impl Set {
+    /// A compiler-proven root exclusion; an explicit comparison already in the text wins.
+    pub(crate) fn excluding(mut self, subject: Subject) -> Self {
+        if self.other && self.other_than.is_none() { self.other_than = Some(subject); }
+        self
+    }
     /// Control predicates enumerate battlefield objects (109.2, 110.2). A designation
     /// such as "commander" can denote a card in any zone in other contexts, but this
     /// query already supplies the battlefield. Preserve card-vs-token membership.

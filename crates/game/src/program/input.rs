@@ -297,6 +297,9 @@ impl super::expr::Binding for Binding<'_, '_> {
     }
 }
 impl super::expr::Locals for crate::state::Bound {
+    fn successor(&self, was: crate::ObjId) -> Option<crate::ObjId> {
+        self.became.iter().rev().find(|(old, _)| *old == was).map(|(_, now)| *now)
+    }
     fn local(&self, _: usize) -> Option<&crate::binding::Value> { None }
     fn input(&self, key: Input) -> Option<&[crate::Target]> {
         self.inputs.iter().find(|(k,_)|*k==key).map(|(_,v)|v.as_slice())
