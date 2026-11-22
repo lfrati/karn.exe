@@ -181,7 +181,17 @@ lowered` 394. Take a family of cards inside one, not the label.
 This lane is slower than the keywords: each target is a different mechanism. It is here
 because it is what moves the deck count.
 
-*Skipped:* none yet.
+*Skipped:*
+
+- Chain Lightning / Chain of Vapor: two narrowed copy probes still require optional
+  copying, an explicit copy controller and one-target retargeting; existing stack-copy
+  execution assigns the effect controller. Both complete cards remain refused.
+- Leading modifiers (Urza's Rage / Gideon Jura): narrowed damage and attack-requirement
+  probes need per-damage prevention scope and next-turn rules requiring a particular
+  defender. Neither maps safely to the current global prevention or turn lifetimes.
+- Browbeat / Vexing Devil: named-player and any-player damage offers both need a
+  resumable optional damage action with per-player outcomes. Object-payment outcomes
+  do not represent that choice. Both complete cards remain refused.
 
 #### Lane 3: grammar (worktree `grammar`)
 
