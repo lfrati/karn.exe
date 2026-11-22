@@ -1508,7 +1508,7 @@ fn source(n: Number, sel: &P<Selector>) -> P<Filter> {
         ),
         Number::Pl => crate::kernel::lazy("plural set", || selectors().set_pl.clone()),
     };
-    lit("from").then_keep(&set).map(
+    alt("ability source", vec![lit("from"), lit("of").alias()]).then_keep(&set).map(
         |set| Some(Filter::Atom(Atom::Source(Box::new(set)))),
         |f| match f {
             Filter::Atom(Atom::Source(set)) => Some((**set).clone()),

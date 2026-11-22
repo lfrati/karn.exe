@@ -137,3 +137,19 @@ fn r608_2i_game_cast_ordinal() {
         declines(text);
     }
 }
+
+/// CR 113.7a and 608.2i: an ability's source retains its own object description.
+#[test]
+fn r113_7a_ability_source_of() {
+    for text in [
+        "When ~ enters, counter up to one target activated or triggered ability. If an ability of an artifact, creature, or planeswalker is countered this way, that permanent loses all abilities for as long as ~ remains on the battlefield.",
+        "Counter target activated ability of an artifact.",
+        "Counter target triggered ability from a creature.",
+    ] {
+        let (value, _) = read(text);
+        assert!(serde_json::to_string(&value).unwrap().contains("Source"));
+    }
+    for text in ["Counter target creature of an artifact.", "Counter target activated ability of a player."] {
+        declines(text);
+    }
+}

@@ -155,6 +155,7 @@ impl Spend {
                 SpendOn::Activate(ir::statics::Who::Set(set)) => only.push(Use::Activation(crate::activate::ActivationFilter::compile(set)?)),
                 SpendOn::Activate(_) => return unsupported("spend this mana only to activate: unsupported relative ability source (106.6)"),
                 SpendOn::X => return unsupported("spend this mana only: the X component (106.6)"),
+                SpendOn::Generic => return unsupported("spend this mana only: the generic component (106.6)"),
             }
         }
         Ok(Spend { only: Only(only), uncounterable: *uncounterable, trigger: None, kept: None })
