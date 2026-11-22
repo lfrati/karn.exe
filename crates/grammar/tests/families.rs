@@ -257,3 +257,9 @@ fn r602_2b_activation_cost_source_alias() {
     let (from, _) = read("Activated abilities from creatures you control cost {2} less to activate.");
     assert_eq!(of, from);
 }
+
+/// CR 608.2c: role-local player pronouns do not duplicate every noun-phrase reading.
+#[test]
+fn r608_2c_role_local_pronouns_in_permissions() {
+    read("{T}, Exile ~: Each player exiles the top seven cards of their library. Until your next turn, players may play cards they exiled this way, and they can't play cards from their hand. Activate only as a sorcery.");
+}

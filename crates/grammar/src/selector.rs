@@ -3815,7 +3815,6 @@ fn specials(possessor: &P<Selector>) -> P<Selector> {
         "special",
         vec![
             lit("you").to(Selector::you()),
-            lit("they").to(def(Ref::Anaphor(Anaphor::They), Domain::Player)),
             lit("the").then_keep(&crate::event::ordinal()).skip(&lit("player")).map(
                 |n| Some(Selector::new(Quant::Definite(Ref::Anaphor(Anaphor::Ordinal { n })), ObjectSet::of(Domain::Player))),
                 |s| match s.quant {
