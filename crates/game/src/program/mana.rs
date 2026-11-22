@@ -188,6 +188,8 @@ pub enum Production {
     /// Colors fixed by this player's commander designation, not its current characteristics
     /// or location (903.4a, 903.4f).
     CommanderColors(expr::Amount),
+    /// A previous color choice, local to this resolution or linked to this ability.
+    ChosenColor { amount: expr::Amount, color: crate::binding::Scalar },
     /// Mana types defined by another permanent's current abilities (106.7).
     CouldProduce { amount: expr::Amount, by: expr::Set, types: bool },
     /// Mana that remembers what it may be spent on (106.6).
@@ -256,6 +258,12 @@ impl Production {
             }).collect::<Res<_>>()?),
             ManaSpec::AmountOf { symbol, amount: n } => Production::Times { mana: vec![Mana::compile(symbol)?], amount: amount(n)? },
             ManaSpec::Of { amount: n, color: ManaColor::AnyOne } => Production::AnyOneColor(amount(n)?),
+            ManaSpec::Of { amount: n, color: ManaColor::Chosen } => {
+                let amount = amount(n)?;
+                let color = bind.scalar(&ir::reference::UnresolvedRef { expected: crate::binding::Kind::Color,
+                    form: ir::reference::RefForm::Choice, qualifiers: Vec::new() })?;
+                Production::ChosenColor { amount, color }
+            },
             ManaSpec::Of { amount: n, color: ManaColor::Any(ManaTypes::Colors) } => Production::AnyColors(amount(n)?),
             ManaSpec::Of { amount: n, color: ManaColor::Any(ManaTypes::Symbols(of)) } => {
                 let of: Vec<ManaSymbol> = of.iter().map(|s| Mana::compile(s).map(|m| m.symbol())).collect::<Res<_>>()?;
@@ -288,6 +296,7 @@ impl Production {
         match self {
             Production::Fixed(mana) => Ok(Production::Times { mana, amount }),
             Production::AnyColors(unit) if unit.as_constant() == Some(1) => Ok(Production::AnyColors(amount)),
+            Production::ChosenColor { amount: unit, color } if unit.as_constant() == Some(1) => Ok(Production::ChosenColor { amount, color }),
             _ => unsupported("mana: for each with variable color choices"),
         }
     }
@@ -332,6 +341,7 @@ impl Production {
     pub fn scalars(&self) -> Vec<crate::binding::Scalar> {
         match self {
             Production::CombinationOf { amount, .. } => amount.scalars(),
+            Production::ChosenColor { amount, color } => amount.scalars().into_iter().chain(std::iter::once(color.clone())).collect(),
             Production::Times { amount, .. } | Production::AnyOneColor(amount) | Production::AnyColors(amount) | Production::CommanderColors(amount) => amount.scalars(),
             Production::Restricted { production, .. } => production.scalars(),
             Production::CouldProduce { amount, by, .. } => amount.scalars().into_iter().chain(by.scalars()).collect(),
@@ -380,6 +390,14 @@ impl Production {
                 n => combinations(n, &COLORS, 0).into_iter().map(|o| o.into_iter().map(ManaSymbol::Color).collect()).collect(),
             },
             Production::CombinationOf { amount, of } => combinations(amount.evaluate(game, ctx, locals), of, 0),
+            Production::ChosenColor { amount, color } => {
+                let mana = match expr::chosen(game, ctx, locals, color.clone()) {
+                    Some(crate::binding::Value::Color(c)) => vec![ManaSymbol::Color(*c); amount.checked(game, ctx, locals)? as usize],
+                    // A copied ability does not invent the choice made for its donor (607.5).
+                    _ => Vec::new(),
+                };
+                vec![mana]
+            },
             Production::CommanderColors(amount) => {
                 let colors = game.commander_identity(ctx.controller);
                 let n = amount.evaluate(game, ctx, locals);

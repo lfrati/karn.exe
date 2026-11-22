@@ -6222,7 +6222,9 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
         // "add an additional {G}": mana added as any is, by a triggered mana ability (106.12a)
         if let Action::AddMana(spec) | Action::AddAdditionalMana(spec) = &act.action {
             let players = e.clause_subject(clause, support, &mut binder)?;
-            let mut production = if stated.is_some() || x_defined || binder.condition_amount.is_some()
+            let mut production = if stated.is_some() || x_defined
+                || matches!(spec, ir::mana::ManaSpec::Of { color: ir::mana::ManaColor::Chosen, .. })
+                || binder.condition_amount.is_some()
                 && matches!(spec, ir::mana::ManaSpec::AmountOf { amount: Amount::That { many: false }, .. }) {
                 mana::Production::compile_bound(spec, support, &mut binder.scope(support))?
             } else { mana::Production::compile(spec, support)? };

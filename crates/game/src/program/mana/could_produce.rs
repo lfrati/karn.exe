@@ -116,6 +116,11 @@ fn production_types(game: &Game, ctx: &Ctx, locals: &dyn expr::Locals, productio
         Production::CombinationOf { amount, of } => if amount.evaluate(game, ctx, locals) > 0 {
             for symbol in of { result.include(Types::of(*symbol)); }
         },
+        Production::ChosenColor { amount, color } => if amount.evaluate(game, ctx, locals) > 0 {
+            if let Some(crate::binding::Value::Color(c)) = expr::chosen(game, ctx, locals, color.clone()) {
+                result.include(Types::of(ManaSymbol::Color(*c)));
+            }
+        },
         Production::CommanderColors(amount) => if amount.evaluate(game, ctx, locals) > 0 {
             for color in game.commander_identity(ctx.controller) { result.include(Types::of(ManaSymbol::Color(color))); }
         },

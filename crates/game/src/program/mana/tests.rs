@@ -189,7 +189,7 @@ fn unported_productions_are_refused_as_the_text_is_lowered() {
     let (game, source, _) = game();
     let refused = |spec: ManaSpec| compile(&game, source, &spec).unwrap_err().0;
     assert!(refused(ManaSpec::Symbols(cost(&[ManaSymbol::Generic(1)]))).contains("Generic"));
-    assert!(refused(ManaSpec::Of { amount: ir::Amount::Const(1), color: ManaColor::Chosen }).contains("Chosen"));
+    assert!(refused(ManaSpec::Of { amount: ir::Amount::Const(1), color: ManaColor::Chosen }).contains("linked choice"));
     assert!(refused(ManaSpec::Of { amount: ir::Amount::Const(4), color: ManaColor::Any(ManaTypes::CommanderIdentity) }).contains("any combination"));
     // "four mana in any combination of colors" asks the color of each (Baxter Building)
     assert!(compile(&game, source, &ManaSpec::Of { amount: ir::Amount::Const(4), color: ManaColor::Any(ManaTypes::Colors) }).is_ok());
