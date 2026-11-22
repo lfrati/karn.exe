@@ -80,6 +80,7 @@ fn read() -> &'static Vec<(Keyword, Ability)> {
 
 /// The rule that states a keyword's sentence: "702.9b" for flying.
 pub(crate) fn sentence_rule(k: Keyword) -> Option<&'static str> {
+    if k.name() == "Shadow" { return Some("702.28b"); }
     SENTENCES.iter().find(|(name, _, _)| Keyword::from_name(name) == Some(k)).map(|(_, rule, _)| *rule)
 }
 
@@ -100,6 +101,14 @@ fn split_second_rules() -> &'static [Ability] {
         def.abilities.clone()
     });
     rules
+}
+
+/// Shadow constrains both sides of a block (702.28b); both are ordinary restrictions.
+fn shadow_rules() -> &'static [Ability] {
+    static RULES: OnceLock<Vec<Ability>> = OnceLock::new();
+    crate::token::init(&RULES, || CardDef::new("Shadow rule", "", "Creature",
+        "This creature can't be blocked except by creatures with shadow.\nThis creature can block only creatures with shadow.", None)
+        .expect("the grammar reads both restrictions of 702.28b").abilities.clone())
 }
 
 /// Does the engine give this keyword ability its meaning?

@@ -217,6 +217,8 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
             (stack, Gives::Asked),
             (stack, Gives::Substitute(if item.keyword.name() == "Delve" { Substitution::Delve } else { Substitution::Convoke })),
         ], vec![])),
+        "Shadow" if plain => Ok(Declared::new(shadow_rules().iter()
+            .map(|rule| (bf, Gives::Rule(rule))).collect(), vec![Context::PermanentsOnly])),
         "Split Second" if plain => Ok(Declared::new(split_second_rules().iter()
             .map(|rule| (stack, Gives::Rule(rule))).collect(), vec![])),
         // an optional additional cost the spell is announced with (702.166a): asked of the

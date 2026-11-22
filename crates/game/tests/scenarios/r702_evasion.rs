@@ -37,3 +37,11 @@ fn r702_13b_intimidate_uses_shared_colors_and_artifact_creatures() {
     game::play::check(&colorless).unwrap();
     cite!(["702.13b", "105.2c"]; refused("Colorless intimidator has intimidate (702.13b, 509.1b)"): declaration(colorless, oracle("Ugin's Conjurant")));
 }
+
+#[test]
+fn r702_28b_shadow_restricts_attackers_and_blockers_in_both_directions() {
+    let shadow = oracle("Dauthi Mercenary");
+    cite!(["702.28b"]; ok: declaration(shadow.clone(), shadow.clone()));
+    cite!(["702.28b"]; refused("Dauthi Mercenary has shadow (702.28b, 509.1b)"): declaration(shadow.clone(), oracle("Grizzly Bears")));
+    cite!(["702.28b"]; refused("Dauthi Mercenary has shadow (702.28b, 509.1b)"): declaration(oracle("Grizzly Bears"), shadow));
+}
