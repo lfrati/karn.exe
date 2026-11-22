@@ -1579,6 +1579,21 @@ fn clause(e: &Events) -> P<Condition> {
             },
         )
     };
+    let targets_legal = alt("existing target group", vec![
+        lit("both targets are still legal as").to(Some(2)),
+        lit("all targets are still legal as").to(None),
+    ]).then(&s.singular).skip(&lit("resolves")).map(
+        |(expected, source)| {
+            (matches!(source.quant, Quant::Definite(_)) && matches!(source.set.domain, Domain::Spell | Domain::Ability))
+                .then_some(Condition::TargetsRemainLegal { source: Box::new(source), expected })
+        },
+        |c| match c {
+            Condition::TargetsRemainLegal { source, expected }
+                if matches!(source.quant, Quant::Definite(_)) && matches!(source.set.domain, Domain::Spell | Domain::Ability) =>
+                    Some((*expected, (**source).clone())),
+            _ => None,
+        },
+    );
     let targets = object.skip(&lit("targets")).then(&s.selector).map(
         |(what, target)| Some(Condition::Targets { what: Box::new(what), target: Box::new(target) }),
         |c| match c {
@@ -1668,6 +1683,7 @@ fn clause(e: &Events) -> P<Condition> {
                     },
                 ),
             targets,
+            targets_legal,
             lit("able").to(Condition::Able),
             crate::vote::option().skip(&lit("gets more votes")).then(&lit("or the vote is tied").opt()).map(
                 |(option, tied)| Some(Condition::MoreVotes { option, or_tied: tied.is_some() }),

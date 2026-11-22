@@ -195,6 +195,10 @@ pub enum Condition {
         what: Box<Selector>,
         target: Box<Selector>,
     },
+    /// Every target already selected for this spell or ability is still legal as it resolves
+    /// (608.2b). An expected count means "both targets" also requires two selected targets;
+    /// None is "all". This queries the existing target set rather than introducing new targets.
+    TargetsRemainLegal { source: Box<Selector>, expected: Option<u32> },
     /// "{B} was spent to cast ~", "at least three white mana was spent to cast ~", "five or more
     /// mana was spent to cast that spell", "mana from a Treasure was spent to activate this
     /// ability" (the mana paid as the cost of what it was spent on, CR 601.2h, 602.2b), "that mana

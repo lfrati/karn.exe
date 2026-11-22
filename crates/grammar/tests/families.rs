@@ -574,3 +574,31 @@ fn r608_2f_simultaneous_predicates() {
     declines("That player simultaneously sacrifices an artifact, then draws a card.");
     declines("Target creature simultaneously draws a card and discards a card.");
 }
+
+/// CR 608.2b: legality names the existing target set and preserves its required cardinality.
+#[test]
+fn r608_2b_existing_targets_remain_legal() {
+    let (value, _) = read("{T}: Choose target artifact a player controls and target artifact card in that player's graveyard. If both targets are still legal as this ability resolves, that player simultaneously sacrifices the artifact and returns the artifact card to the battlefield.");
+    let json = serde_json::to_string(&value).unwrap();
+    assert!(json.contains("TargetsRemainLegal") && json.contains("Simultaneously"));
+    let rule = &grammar::condition::conditions().condition;
+    for (text, expected, domain) in [
+        ("both targets are still legal as this ability resolves", Some(2), ir::Domain::Ability),
+        ("all targets are still legal as this spell resolves", None, ir::Domain::Spell),
+        ("both targets are still legal as that spell resolves", Some(2), ir::Domain::Spell),
+    ] {
+        let Outcome::Accepted { value, .. } = rule.parse_all(&tokenize(text)) else { panic!("{text}") };
+        let ir::Condition::TargetsRemainLegal { source, expected: got } = &value else { panic!() };
+        assert_eq!(*got, expected);
+        assert_eq!(source.set.domain, domain);
+        assert!(matches!(source.quant, ir::Quant::Definite(_)));
+        let printed = rule.print_text(&value, true).unwrap();
+        let Outcome::Accepted { value: again, .. } = rule.parse_all(&tokenize(&printed)) else { panic!("{printed}") };
+        assert_eq!(value, again);
+    }
+    for text in [
+        "If both creatures are still legal as this ability resolves, draw a card.",
+        "If both targets are still legal as this creature resolves, draw a card.",
+        "If all targets are still legal as target spell resolves, draw a card.",
+    ] { declines(text); }
+}
