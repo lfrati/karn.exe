@@ -3511,10 +3511,16 @@ fn assemble(((q, other), (domain, items)): (Det, (Domain, Vec<Filter>)), posts: 
         zone: None,
         other,
     };
-    // "any target" is spelled as a special, never "target target"
-    if set.domain == Domain::AnyTarget && matches!(q, Quant::Target(_) | Quant::Any) {
-        return None;
-    }
+    // The noun "targets" carries targeting itself: "three targets", not "three
+    // target targets". Retargeting constructions consume their target-set wording
+    // before selecting the spell, rather than going through this noun phrase.
+    let q = if set.domain == Domain::AnyTarget {
+        match q {
+            Quant::Indefinite(count) => Quant::Target(count),
+            Quant::Target(_) | Quant::Any => return None,
+            q => q,
+        }
+    } else { q };
     // "an exiled card" is a card in exile; "the exiled card" is the participle reference
     let the = matches!(&q, Quant::Definite(Ref::Anaphor(Anaphor::The { .. } | Anaphor::That | Anaphor::Those)));
     absorb_exiled(&mut set, the)?;
@@ -3604,11 +3610,15 @@ fn battlefield_and_graveyards() -> P<Selector> {
 type Parts = ((Det, (Domain, Vec<Filter>)), Vec<Post>);
 
 fn disassemble(s: &Selector) -> Option<Parts> {
-    if s.set.domain == Domain::AnyTarget && matches!(s.quant, Quant::Target(_) | Quant::Any) {
-        return None;
-    }
+    let quant = if s.set.domain == Domain::AnyTarget {
+        match &s.quant {
+            Quant::Target(Count::Exactly(Amount::Const(1))) | Quant::Any => return None,
+            Quant::Target(count) => Quant::Indefinite(count.clone()),
+            _ => s.quant.clone(),
+        }
+    } else { s.quant.clone() };
     let (core, posts) = unfold_posts(&s.set, &s.chooser, s.random)?;
-    Some((((s.quant.clone(), s.set.other), (s.set.domain.clone(), core)), posts))
+    Some((((quant, s.set.other), (s.set.domain.clone(), core)), posts))
 }
 
 /// "the top card of your library", "the top three cards of target player's library", "the bottom

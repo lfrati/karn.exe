@@ -5889,7 +5889,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 Some(action::Action::Damage { source, hits })
             }
             // "deals 3 damage divided as you choose among one, two, or three targets" (601.2d)
-            Action::DealDivided { amount, among } => {
+            Action::DealDivided { amount, among, division: ir::action::DamageDivision::Chosen } => {
                 let source = if clause.subject.is_none() { binder.clause = Some(expr::Subject::Source); action::Operand::Source }
                     else {
                         match e.clause_subject_scoped(clause, support, &mut binder, true)? {

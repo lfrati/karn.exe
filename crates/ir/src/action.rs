@@ -100,7 +100,7 @@ pub enum Action {
     /// the subject is the source.
     DealDamage(Vec<Hit>),
     /// "deals 3 damage divided as you choose among one, two, or three targets" (601.2d).
-    DealDivided { amount: Amount, among: Objects },
+    DealDivided { amount: Amount, among: Objects, division: DamageDivision },
     /// "becomes 10" with a life total as the subject: the player gains or loses the difference
     /// (119.5).
     LifeTotalBecomes(Amount),
@@ -1010,4 +1010,12 @@ pub enum VoteFor {
     Objects(Box<Selector>),
     /// "blue, black, red, or green".
     Colors(Vec<crate::vocab::Color>),
+}
+
+/// How one amount of damage is divided: a chosen distribution is fixed while
+/// announcing targets (601.2d); an even division uses the recipients on resolution.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+pub enum DamageDivision {
+    Chosen,
+    Evenly { round_up: bool },
 }

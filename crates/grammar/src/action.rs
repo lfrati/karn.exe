@@ -877,12 +877,17 @@ fn build(form: Form, base: &P<Action>) -> P<Action> {
     );
     let deal_divided = v("deals", "deal")
         .then_keep(&noun_amount("damage"))
-        .skip(&lit("divided as you choose among"))
-        .then(&damaged)
+        .then(&alt("damage division", vec![
+            lit("divided as you choose").to(ir::action::DamageDivision::Chosen),
+            lit("divided evenly, rounded").then_keep(&alt("rounding", vec![lit("up").to(true), lit("down").to(false)])).skip(&lit(","))
+                .map(|round_up| Some(ir::action::DamageDivision::Evenly { round_up }),
+                    |d| match d { ir::action::DamageDivision::Evenly { round_up } => Some(*round_up), _ => None }),
+        ]))
+        .skip(&lit("among")).then(&damaged)
         .map(
-            |(amount, among)| Some(Action::DealDivided { amount, among }),
+            |((amount, division), among)| Some(Action::DealDivided { amount, among, division }),
             |a| match a {
-                Action::DealDivided { amount, among } => Some((amount.clone(), among.clone())),
+                Action::DealDivided { amount, among, division } => Some(((amount.clone(), *division), among.clone())),
                 _ => None,
             },
         );

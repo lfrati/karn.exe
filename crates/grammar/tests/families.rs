@@ -310,3 +310,27 @@ fn r502_3_as_permanents_untap() {
     declines("During your next upkeep, as you untap your permanents, draw a card.");
     declines("During your next untap step, as you untap your creatures, draw a card.");
 }
+
+/// CR 107.1a and 608.2b: evenly rounded damage differs from a chosen distribution (601.2d).
+#[test]
+fn r107_1a_even_damage_division() {
+    for text in [
+        "~ deals X damage divided evenly, rounded down, among any number of targets.",
+        "~ deals X damage divided evenly, rounded down, among all creatures target opponent controls.",
+    ] {
+        let (value, _) = read(text);
+        let json = serde_json::to_string(&value).unwrap();
+        assert!(json.contains("Evenly") && json.contains("false"));
+        assert!(!json.contains("Chosen"));
+    }
+    let (chosen, _) = read("~ deals 3 damage divided as you choose among up to three target creatures.");
+    assert!(serde_json::to_string(&chosen).unwrap().contains("Chosen"));
+    for text in [
+        "You may choose new targets for target spell.",
+        "Change the target of target spell with a single target.",
+        "Copy target instant or sorcery spell. You may choose new targets for the copy.",
+    ] { read(text); }
+    declines("Change any number of targets of target spell.");
+    declines("~ deals X damage divided evenly, rounded down, among target spell.");
+    declines("~ deals X damage divided evenly, rounded down, among any number of target.");
+}
