@@ -93,11 +93,14 @@ including any reductions needed to stop claiming unsupported cards.
 Supporting work is separate from that sequence: accurate ability text
 ([#2](https://github.com/lfrati/karn.exe/issues/2)), native refusal integrity
 ([#13](https://github.com/lfrati/karn.exe/issues/13)), MGN adapter repairs
-([#14](https://github.com/lfrati/karn.exe/issues/14)), benchmark defaults
-([#15](https://github.com/lfrati/karn.exe/issues/15)), hosting reliability
+([#14](https://github.com/lfrati/karn.exe/issues/14)), hosting reliability
 ([#20](https://github.com/lfrati/karn.exe/issues/20)) and rules-selection cache invalidation
 ([#25](https://github.com/lfrati/karn.exe/issues/25)). Take them when they help the current
 batch or repair the affected interface; they are not one serial prerequisite chain.
+
+The [benchmark default matrix fix](https://github.com/lfrati/karn.exe/issues/15) is complete:
+implicit worker counts fit the physical cores available under affinity, while explicit
+oversized requests still refuse unless the requested SMT sharing is possible.
 
 The [two effects ambiguities](https://github.com/lfrati/karn.exe/issues/16) remain a real
 grammar defect. That gate is red, so the full progress workflow is not clean. A passing

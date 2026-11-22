@@ -42,7 +42,12 @@ the matrix. Keep the same workload source hash and configuration across compared
 of each, read from the kernel topology (performance cores before efficient ones on a hybrid
 processor). The report records the topology and each row's placement. A row with more workers
 than physical cores is refused; `--allow-shared-cores` runs it on SMT siblings and warns.
-Neither case measures per-core scaling, so say so wherever such a row is quoted.
+Rows measure aggregate throughput of independent games; quote the worker count and
+placement with each rate.
+
+Without `--workers`, the matrix uses powers of two that fit the process's affinity and adds
+the full available physical-core count (12 cores: `1,2,4,8,12`). The report records that
+chosen matrix. Explicit requests are validated before any row runs.
 
 ## Comparing two builds
 

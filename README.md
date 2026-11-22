@@ -19,7 +19,7 @@ rejected with a reason.
 ## Where it stands
 
 <!-- implementation-progress:start -->
-<!-- Measurement inputs: 7748d81f0b014f0eb5fc60ea6987fb099542baf6ba822dca28d36ce81ba02327 -->
+<!-- Measurement inputs: a93db0a4f972f3023ef5ad8036942272b211f1151670ffb593828f95be314179 -->
 Snapshot: 2026-11-22. Card corpus dated 2026-10-11; deck roster dated 2026-10-08.
 
 | Goal | Measure | Count |

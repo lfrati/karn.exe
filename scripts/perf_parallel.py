@@ -106,10 +106,23 @@ def placement(topo, workers, allow_shared=False):
             'warnings': warnings}
 
 
+def default_workers(topo):
+    """Powers of two that fit, then the full physical-core count under this affinity."""
+    count = len(topo['physical_cores'])
+    if not count:
+        raise SystemExit('no physical cores are available under this process affinity')
+    workers = [1]
+    while workers[-1] * 2 < count:
+        workers.append(workers[-1] * 2)
+    if workers[-1] != count:
+        workers.append(count)
+    return workers
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--engine', type=Path, default=ROOT / 'target/release/game-serve')
-    parser.add_argument('--workers', default='1,2,4,8,16')
+    parser.add_argument('--workers', help='comma-separated matrix; default: powers of two and the available physical-core count')
     parser.add_argument('--allow-shared-cores', action='store_true',
                         help='run a row with more workers than physical cores on SMT siblings, with a warning')
     parser.add_argument('--ram-gib', type=int, default=8, help='Per-process address-space ceiling; also report actual RSS')
@@ -120,11 +133,11 @@ def main():
     parser.add_argument('--engine-source', help='Known engine build revision; omitted means unknown, not the current checkout')
     parser.add_argument('--build-profile', help='Build profile used for this binary, e.g. fast or release')
     args = parser.parse_args()
-    workers = [int(n) for n in args.workers.split(',')]
     available = sorted(os.sched_getaffinity(0))
+    topo = topology(available)
+    workers = [int(n) for n in args.workers.split(',')] if args.workers is not None else default_workers(topo)
     if min(workers + [args.ram_gib, args.copies]) < 1 or args.timeout <= 0:
         parser.error('positive workers/budgets/limits required')
-    topo = topology(available)
     # every row placed before any runs: a refused row refuses the matrix
     placements = {count: placement(topo, count, args.allow_shared_cores) for count in workers}
     for count, placed in placements.items():
@@ -140,6 +153,8 @@ def main():
         'engine_sha256': hashlib.sha256(engine.read_bytes()).hexdigest(),
         'traces': [{'path': str(p.relative_to(ROOT) if p.is_relative_to(ROOT) else p), 'sha256': hashlib.sha256(p.read_bytes()).hexdigest()} for p in paths],
         'topology': topo,
+        'worker_matrix': workers,
+        'worker_matrix_source': 'explicit' if args.workers is not None else 'default',
         'budget': {'available_affinity': available, 'address_space_bytes': args.ram_gib * 1024**3,
                    'memory_total': read('/proc/meminfo'), 'cpu_hardware': read('/proc/cpuinfo'),
                    'cgroup_membership': read('/proc/self/cgroup'), 'cgroup_cpu_quota': read('/sys/fs/cgroup/user.slice/cpu.max'),

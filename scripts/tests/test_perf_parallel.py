@@ -3,7 +3,7 @@ import sys
 import tempfile
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from perf_parallel import cpu_list, placement, summarize, topology
+from perf_parallel import cpu_list, default_workers, placement, summarize, topology
 
 
 def devices(root, cores, types=None):
@@ -57,6 +57,20 @@ class PlacementTests(unittest.TestCase):
         # affinity without CPU 0: core [0, 1] is reached through its other thread
         topo = topology([1, 3, 4, 5], devices(self.root, [[0, 1], [2, 3], [4, 5]]))
         self.assertEqual(placement(topo, 3)['cpus'], [1, 3, 4])
+
+    def test_default_matrix_fits_one_two_and_twelve_physical_cores(self):
+        for count, expected in [(1, [1]), (2, [1, 2]), (12, [1, 2, 4, 8, 12])]:
+            with self.subTest(cores=count):
+                topo = topology(range(count * 2), devices(self.root / str(count), [[i, i + count] for i in range(count)]))
+                workers = default_workers(topo)
+                self.assertEqual(workers, expected)
+                for row in workers:
+                    self.assertTrue(placement(topo, row)['distinct_physical_cores'])
+
+    def test_default_matrix_uses_affinity_reachable_cores_without_counting_smt_twice(self):
+        topo = topology([1, 3, 4, 5], devices(self.root, [[0, 1], [2, 3], [4, 5], [6, 7]]))
+        self.assertEqual(default_workers(topo), [1, 2, 3])
+        self.assertEqual(placement(topo, default_workers(topo)[-1])['cpus'], [1, 3, 4])
 
     def test_more_workers_than_physical_cores_is_refused_unless_sharing_is_asked_for(self):
         topo = topology(range(4), devices(self.root, [[0, 1], [2, 3]]))
