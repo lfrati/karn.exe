@@ -27,8 +27,8 @@ pub struct TokenSpec {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub enum Combat {
     /// "that's attacking" (its controller chooses what, 508.4), "that's attacking that opponent"
-    /// (the effect specifies it).
-    Attacking(Option<Box<crate::selector::Selector>>),
+    /// (the effect specifies it). Alternatives retain each defender's own quantifier/reference.
+    Attacking(Option<Box<crate::action::Objects>>),
     /// "that's blocking that creature" (506.3e): the attacking creature it blocks.
     Blocking(Box<crate::selector::Selector>),
 }

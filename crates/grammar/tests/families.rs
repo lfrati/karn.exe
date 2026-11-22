@@ -364,3 +364,17 @@ fn r608_2i_damage_time_before_source() {
     assert_eq!(before, after);
     declines("Destroy target creature dealt damage this turn by target player.");
 }
+
+/// CR 508.4: one attacking token's defender alternatives preserve their distinct referents.
+#[test]
+fn r508_4_token_defender_alternatives() {
+    let (value, _) = read("Whenever you attack, for each opponent, create a 1/1 white Human creature token that's tapped and attacking that player or a planeswalker they control.");
+    let json = serde_json::to_string(&value).unwrap();
+    assert!(json.contains("Attacking") && json.contains("Definite") && json.contains("Indefinite") && json.contains("They"));
+    for text in [
+        "Create a 1/1 white Soldier creature token that's tapped and attacking that opponent.",
+        "Create two 1/1 white Soldier creature tokens that are attacking target player or planeswalker.",
+    ] { read(text); }
+    declines("Create a 1/1 white Soldier creature token that's attacking target spell.");
+    declines("Create a 1/1 white Soldier creature token that's attacking target player and target planeswalker.");
+}

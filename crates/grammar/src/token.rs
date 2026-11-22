@@ -149,15 +149,19 @@ fn selector() -> P<ir::Selector> {
 pub fn placement(n: Number) -> P<(bool, Combat)> {
     let that = if n == Number::Sg { "that's" } else { "that are" };
     // what it attacks: a player, or a permanent (planeswalker, battle); what it blocks: a permanent
-    let player_or_permanent = |s: &ir::Selector| matches!(s.set.domain, Domain::Player | Domain::Permanent);
+    let defender = |s: &ir::Selector| ir::lexicon::of_kind(s, ir::Verb::Attack.kinds(ir::Role::To));
+    let defenders = crate::action::objects(&selector()).map(
+        move |s| ((s.items.len() == 1 || s.conj == ir::Conj::Or) && s.items.iter().all(defender)).then_some(s),
+        move |s: &ir::Objects| ((s.items.len() == 1 || s.conj == ir::Conj::Or) && s.items.iter().all(defender)).then(|| s.clone()),
+    );
     let attacking = move |tapped: bool| {
         let words = if tapped { "tapped and attacking" } else { "attacking" };
-        lit(&format!("{that} {words}")).then_keep(&selector().opt()).map(
+        lit(&format!("{that} {words}")).then_keep(&defenders.opt()).map(
             move |who| {
-                who.as_ref().is_none_or(player_or_permanent).then(|| (tapped, Combat::Attacking(who.map(Box::new))))
+                Some((tapped, Combat::Attacking(who.map(Box::new))))
             },
             move |(t, c): &(bool, Combat)| match c {
-                Combat::Attacking(who) if *t == tapped && who.as_deref().is_none_or(player_or_permanent) => {
+                Combat::Attacking(who) if *t == tapped => {
                     Some(who.as_deref().cloned())
                 }
                 _ => None,
