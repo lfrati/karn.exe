@@ -161,7 +161,7 @@ adapter entry points and current limits.
 - [Roadmap](docs/roadmap.md) — the aim, where it stands and the order of work.
 - [Performance](docs/performance-replay.md) — reproducible workloads and measurements.
 - [GitHub Issues](https://github.com/lfrati/karn.exe/issues) — tasks and progress.
-- [Working rules](AGENTS.md) — the few rules that keep the engine correct.
+- [How we work](AGENTS.md) — what we are aiming for and how we trade things off.
 
 ## License
 

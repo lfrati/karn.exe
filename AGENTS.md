@@ -1,47 +1,36 @@
-# Working rules
+# How we work
 
-karn is a rules engine for Magic: The Gathering. These are the few rules that keep it correct.
-Everything else is ordinary engineering judgment.
+karn is a rules engine for Magic: The Gathering. The aim is to read every card and run most of
+Magic, quickly and correctly.
 
-## Correctness
+Speed, quality and correctness are what we strive for, not gates everything must pass before
+it moves. Reaching them takes judgment. When holding one of them rigidly would stall the work,
+make progress and say what was traded.
 
-- **The rules decide.** Every transition the engine implements matches the pinned
-  Comprehensive Rules (the edition `resources/manifest.json` names), the full Oracle text and
-  the rulings in `resources/oracle/`. An illegal move is refused with the state unchanged.
-- **Refuse, never approximate.** Text or behaviour the engine does not support is refused with
-  a reason. A card that runs wrongly is a defect, not coverage, and fixing it comes before
-  adding cards.
-- **Expectations come from the rules**, the Oracle text and the rulings, never from what the
-  engine currently does. When a test and the engine disagree, check the rules; do not weaken
-  the assertion. A recorded game is never edited: a mistaken one is replaced.
-- **Count honestly.** Progress is the README's counts, refreshed with `make readme-progress`.
-  A card that runs is one the engine compiles: say so wherever a count could be taken for a
-  claim of correct play.
+## What we care about
 
-## Design
+- **Progress is cards and decks that run.** The README carries the counts
+  (`make readme-progress`); the blocker report says what to take next.
+- **A card that plays wrong costs more than one that is refused.** The counts cannot tell them
+  apart, so nothing flags it later. When a behaviour is in doubt, check it if that is cheap;
+  if it is not, refuse that part with a reason and move on.
+- **The rules are the tiebreaker.** The pinned Comprehensive Rules, Oracle text and rulings in
+  [resources/](resources/README.md) settle what is right when a test, the engine or a
+  reference engine disagree.
+- **Ironsmith is a working reference** ([source](https://github.com/Chiplis/ironsmith),
+  checked out at `~/git/ironsmith`). Read it, port from it and cross-check against it.
+- **Shared mechanisms keep the engine small and fast.** Prefer one implementation in the owner
+  the [architecture map](docs/architecture-map.md) names, and grammar that reads a family of
+  phrasing ([grammar](docs/grammar.md)). A narrow version that works today is a fine first
+  step.
 
-- **Build a mechanism once, where it belongs** ([architecture map](docs/architecture-map.md)).
-  A genuinely unique card may use a narrow, visible handler, held to the same tests.
-- **Keep the architecture small and coherent.** Other engines are references for mechanisms
-  and edge cases, not templates for our structure. Adapt insights into the existing owners;
-  uphold Karn's code quality even when the reference implementation does not.
-- **A grammar rule covers a family of phrasing, never one card's sentence**
-  ([grammar](docs/grammar.md)).
-- **The engine evaluates one fully specified move at a time.** It never searches, lists moves,
-  fills in a choice, passes priority for a player or answers "would this be legal?". Those
-  belong to its callers.
-- **Speed is a primary target.** A change to a hot path comes with a matched before and after
-  measurement ([performance](docs/performance-replay.md)).
+## The process
 
-## Sources
-
-- Rules, cards, rulings and the deck roster are pinned in [resources/](resources/README.md).
-  Builds and tests never fetch.
-- Never copy code from another engine, and never take an expected result from one. Forge is
-  GPL-3.0; this repository is MIT.
-- For card batches, trace a specific blocker's grammar, reference binding, lowering and
-  runtime in the reference engine. Identify the missing Karn mechanism, derive assertions
-  from pinned sources, implement it in its owner, then rescan and report compilation gains.
+Builders add mechanisms and keep moving. A review pass closes each round: it cleans up
+structure and duplication, and looks hardest at the cards that newly run. So finish the
+mechanism before polishing it, and note what you skipped and why. Speed is measured once per
+round ([performance](docs/performance-replay.md)), not per change. The
+[roadmap](docs/roadmap.md) has the steps and the current lanes.
 
 ## Checks
 

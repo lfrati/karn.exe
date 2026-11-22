@@ -1,7 +1,7 @@
 # Roadmap
 
-This document owns the order of work; GitHub issues own bounded work. The rules the work is
-held to are in [AGENTS.md](../AGENTS.md).
+This document owns the order of work; GitHub issues own bounded work. How we work is in
+[AGENTS.md](../AGENTS.md).
 
 ## The aim
 
@@ -17,219 +17,204 @@ The work is the engine. It has two goals and one bar:
 ## Where it stands
 
 The [README](../README.md#where-it-stands) carries the current numbers; `make readme-progress`
-refreshes them. The queue comes from `scripts/blocker_report.py` ([the rule](#the-rule)).
+refreshes them. The queue comes from `scripts/blocker_report.py`
+([choosing what comes next](#choosing-what-comes-next)).
 
 The roster is `resources/decks/selected-decks.jsonl`: 2,012 published tournament lists from
 1994 to 2026, across eleven constructed formats ([the roster](../resources/decks/README.md)).
 Three authored Commander targets are pinned separately in `resources/decks/commander.jsonl`;
 they do not change the tournament denominator.
 
-**A deck is the unit, because a deck needs every one of its cards.** The share of decks that
-run rises slowly at first and then quickly, as the same missing cards are removed from many
-decks.
+**A deck is the unit, because a deck needs every one of its cards.** The median roster deck
+is four cards short, and those cards sit behind hundreds of different blockers, so decks
+arrive roughly one per card fixed.
 
 **A card that runs is one the engine compiles.** That is not a proof of correct play. Defects
 are fixed as they are found.
 
 ## The order of work
 
-### Current execution plan
+This part is written for the agent doing the work. You were given a lane, the review pass or
+the whole round. A round is one builder per lane working in parallel, then one review pass.
+The record is the commit log and the README counts; nothing else needs writing up.
 
-The [execution tracker](https://github.com/lfrati/karn.exe/issues/18) carries task status.
-The first engine/benchmark pass is implemented and validated:
-shared object slots, early trigger filtering, four-player scaling and typed replay
-profiling. Bounded choices and cost-source references are implemented too. This foundation
-pass landed in [6e28b7b](https://github.com/lfrati/karn.exe/commit/6e28b7b).
+### If you are a builder
 
-The initial core correctness queue is complete:
-[#1, “other” binding](https://github.com/lfrati/karn.exe/issues/1),
-[#3, private optional choices](https://github.com/lfrati/karn.exe/issues/3),
-[#4, Room copies](https://github.com/lfrati/karn.exe/issues/4),
-[#5, conditional self-flash](https://github.com/lfrati/karn.exe/issues/5),
-[#6, Adventure replacement choice](https://github.com/lfrati/karn.exe/issues/6), and
-[#7, cost-reveal lifetime](https://github.com/lfrati/karn.exe/issues/7).
-The #6/#7 batch passes the full repository check: 4,757 rules tests and 1,113 tooling
-tests. Matched release replays show no material regression. All 32,872 admission rows,
-including refusals, remain unchanged; these repairs add no compilation coverage.
+Work in your lane's worktree (`keywords`, `closers` or `grammar`). Make it if it is missing:
 
-An independent Room copy-exception rebuilding defect is tracked separately in
-[#33](https://github.com/lfrati/karn.exe/issues/33), outside the initial queue.
+```sh
+git fetch origin
+git worktree add ~/git/karn-wt/<lane> -b <lane> origin/main
+cd ~/git/karn-wt/<lane>
+```
 
-Historical card predicates now retain the immediately preceding movement's actual input
-([#27](https://github.com/lfrati/karn.exe/issues/27)), reusing ordinary program slots and
-departure characteristics. Scavenging Ooze, Cling to Dust and General's Enforcer now compile:
-three whole-card gains, with no compilation losses and no additional complete roster main
-decks. Deluge of the Dead's face also compiles; Invasion of Innistrad still refuses, so that
-is not a whole-card gain. The batch passes `make check`: 4,766 rules tests and 1,115 tooling
-tests. Other historical predicates still need their own supported facts and producer proof.
-Repeated matched release replay medians are 0.6–1.8% lower than the baseline; no speedup
-is claimed. The profiling task below retains these measurements.
+It builds into its own `target/`, so the first build is cold. Run builds and tests through
+`~/git/karn-wt/bin/slot`, which shares the machine between the lanes.
 
-Counter results and destination self-replacements now share the existing departure batch
-([#28](https://github.com/lfrati/karn.exe/issues/28)). Remand, Memory Lapse, Lapse of Certainty
-and Spell Crumple add four compiled whole cards without losses. Remand unlocks one roster
-main deck: Celso Zampere's 2006 BUG Control list. `make check` passes 4,780 rules tests and
-1,118 tooling tests. Matched release replay medians are 0.2–2.0% lower than the prior batch;
-the measurements remain evidence for #31. Hinder's library-position choice remains refused.
+For each target:
 
-Granted flashback now uses ordinary continuous keyword changes and the existing cost
-compiler ([#29](https://github.com/lfrati/karn.exe/issues/29)). Snapcaster Mage, Past in Flames
-and eight other whole cards now compile, with no losses. Snapcaster unlocks three roster
-main decks: Sammy Tukeman's UWR Control, Jason Chung's Blue Moon and Alex Mitas's Jeskai
-Control lists. The batch passes `make check`: 4,792 rules tests and 1,122 tooling tests.
-Matched release replay medians are 0.2–1.0% lower than the previous batch; no speedup is
-claimed. Literal granted flashback prices remain refused. Distinct prices require an
-explicit native choice; MGN's missing representation is tracked independently in
-[#34](https://github.com/lfrati/karn.exe/issues/34).
+1. Take the next target in the lane.
+2. Build it in the owner the [architecture map](architecture-map.md) names. Ironsmith
+   (`~/git/ironsmith`) shows one way each mechanism can be modelled; look when it saves time.
+3. Test it on real cards, with expectations from their Oracle text and the rules.
+4. Run the blocker report against the snapshot taken before the change. `newly_admitted` is
+   what was gained; `no_longer_admitted` should be empty.
+5. Rebase on `origin/main`, run `make check` and push to `main`. One commit per target, with
+   the cards that now run in its message.
 
-Called coin flips now use typed local results and the existing seeded/replayed randomness
-([#30](https://github.com/lfrati/karn.exe/issues/30)). Mana Crypt, Stitch in Time and eighteen
-other whole cards now compile, without losses. Ral, Monsoon Mage's front face compiles, but
-the full card still refuses. Complete roster main decks remain 84. Validation covers 4,802
-rules tests and 1,126 tooling cases across the batch and a focused rerun of the updated
-capability assertion. Matched release replay medians are 1.0–2.8% lower than the prior batch;
-the raw results remain evidence for #31. Optional/conditional producers, grouped/repeated
-flips, face-only card instructions and coin replacements remain refused.
+A target that has not moved a card after two real attempts is skipped: add a line under the
+lane's *Skipped* saying what it needs, and take the next one.
 
-**The core queue, four coverage mechanisms and interface repairs are implemented.**
-Generated firebending, casualty, replicate and partner-with triggers now have accurate text;
-ordinary waiting triggers use their captured definition after a source changes
-([#2](https://github.com/lfrati/karn.exe/issues/2)). Ninjutsu names all three defender kinds;
-battle combat remains explicitly unsupported. MGN setup preserves native refusal classes,
-scoped shuffles validate physical identity and fixed placement at consumption, and the
-look-and-return default preserves the current order
-([#14](https://github.com/lfrati/karn.exe/issues/14)). `make progress` passes 5,519 Rust tests
-(4,809 rules), 1,144 tooling tests and all seven grammar gates. The final execution-queue
-`make check` passes 5,521 Rust tests (4,811 rules) and 1,146 tooling tests. Matched release
-core rates are 0.4–1.0% higher; Bant JSON throughput is 0.7% lower with identical responses.
-No speedup is claimed, and all 32,872 admission rows remain unchanged.
+```sh
+uv run scripts/blocker_report.py --out .cache/before                       # before a target, about 30 s
+uv run scripts/blocker_report.py --out .cache/after --compare .cache/before/admission.jsonl
+cat .cache/after/admission-compare.json                                    # newly_admitted, no_longer_admitted
+~/git/karn-wt/bin/slot make check                                          # builds and tests go through slot
+git fetch origin && git rebase origin/main                                 # then make check again if main moved
+git push origin HEAD:main
+```
 
-Re-rank coverage candidates against fresh blockers when the evidence justifies it. Trace
-the specific reference grammar, binding, lowering and runtime; identify Karn's missing
-producer, consumer or operation; derive assertions from pinned Oracle, rulings and CR;
-implement once in the existing owner; rescan. Broad blocker labels are not promised card
-unlocks, and another engine's structure is not a template for Karn.
+A wrong-play defect met on the way is fixed if it is small. Otherwise it gets an issue with a
+reproduction, and the work goes on.
 
-A batch needs full-card regressions, relevant client/visibility/suspension checks, required
-repository checks and a fresh admission report. Hot-path changes need matched before/after
-measurements. Report actual whole-card/deck compilation changes and remaining refusals,
-including any reductions needed to stop claiming unsupported cards.
+The lane is finished when each of its listed targets is done or skipped. With time left,
+carry on from the blocker report as the lane describes.
 
-Supporting work is separate from that sequence: accurate ability text
-([#2](https://github.com/lfrati/karn.exe/issues/2)), native refusal integrity
-([#13](https://github.com/lfrati/karn.exe/issues/13)), MGN adapter repairs
-([#14](https://github.com/lfrati/karn.exe/issues/14)), hosting reliability
-([#20](https://github.com/lfrati/karn.exe/issues/20)). Take them when they help the current
-batch or repair the affected interface; they are not one serial prerequisite chain.
+### If you are doing the review pass
 
-Native refusals now preserve unsupported costs and captured modes, and restricted selectors
-retain a failed move's class and reason when no payment boundary was reached
-([#13](https://github.com/lfrati/karn.exe/issues/13)). Every command rejects unknown fields
-before projection or mutation. Payment probes run inside the existing simulation failure
-boundary; invalid JSON values and uncorrelated input replies leave other shared-host clients
-working ([#20](https://github.com/lfrati/karn.exe/issues/20)). Validation covers 5,509 Rust
-workspace tests and 1,136 tooling cases across full runs and focused corrections to two
-fixtures; this was not one uninterrupted passing `make check`. All 150 native server tests
-and 40 affected client tests pass after the final containment cleanup. Matched release core
-rates are within 0.5% of the baseline; Bant JSON action round trips are within 0.8%, with
-identical responses. No speedup is claimed. The JSON comparison covers Bant only: the baseline
-refuses Vivi's historical quote metadata, and Torch JSON was not attempted. The subsequent final
-execution-queue `make check` passes 5,521 Rust and 1,146 tooling tests.
+Do it once the builders have finished, from the main checkout after `git pull`, in a session
+that wrote none of the round. The round began at the `round-start` tag.
 
-The [benchmark default matrix fix](https://github.com/lfrati/karn.exe/issues/15) is complete:
-implicit worker counts fit the physical cores available under affinity, while explicit
-oversized requests still refuse unless the requested SMT sharing is possible.
+Read `round-start..origin/main` and fix what you find: duplicated mechanisms, patches for one
+card, cards that run but play wrong. A card you cannot make right goes back to refused. Then
+refresh the README counts (`make readme-progress`), compare speed with `round-start`
+([performance](performance-replay.md)) and push. Finish by removing each lane's worktree and
+branch: `git worktree remove ~/git/karn-wt/<lane>` and `git branch -d <lane>`.
 
-The [rules-selection cache fix](https://github.com/lfrati/karn.exe/issues/25) now invalidates
-grammar dumps when the manifest or pinning reader changes. The
-[two effects ambiguities](https://github.com/lfrati/karn.exe/issues/16) now select canonical
-free-card cast and next-turn player-control forms, with family and round-trip regressions.
-`make progress` passes all 5,505 Rust workspace tests (4,802 rules tests), 1,127 tooling
-tests and all seven grammar gates. The admission rows, including refusals, are unchanged.
-The snapshot receipt-path reporting defect found during that run is tracked separately;
-its missing attribution does not mean the passing tests did not run.
+### If you were given the whole round
 
-The Commander corpus [#17](https://github.com/lfrati/karn.exe/issues/17) now pins three
-authored 100-card lists, with every commander and face counted. Ezuri and Talrand each
-compile 62/69 distinct required cards; Meren compiles 68/78. None compiles in full. The
-corpus has 23 distinct refused cards (two unread, 21 engine refusals); these are targets,
-not claims of tested Commander games. The tournament denominator stays 2,012.
+Move the tag to where the round starts (`git tag -f round-start origin/main`), start one
+builder per lane as a subagent, and when they have finished run the review pass in a fresh
+one. If you cannot start subagents, take Lane 1 yourself.
 
-For a Commander delivery batch, start with Talrand's seven missing cards: Myriad Landscape,
-Arcane Denial, Chart a Course, Baral, Aetherspouts, Delay and Wash Out. Read Myriad Landscape's
-shared-land-type search family first; it is also in Meren. Its downstream search constraints
-still need assessment after parsing. Then take optional fixed-count draw and conditional
-instruction composition in their existing program owners (Arcane Denial, Chart a Course).
-Counter-cause triggers, per-owner library choices, chosen-color effects and suspend are
-separate capabilities, with their own retained choices and client checks, not one counter
-patch. Delay must include counter destination, counters and granted suspend together.
+### This round
 
-Ezuri follows with selection/result binding (Lead the Stampede, Inspiring Call), the
-Guardian Project name-comparison phrasing, and actual Graft, hideaway-play, life-setting and
-forced-blocking semantics. Meren shares selection work but also needs simultaneous
-multiplayer results, sacrifice-failure consumers, Aura lifetimes and keyword/copy semantics.
-Complete Oracle text was read for all 23 refusals; first blocker labels are not complete
-implementation assignments. Use the refreshed report to select the next bounded mechanism;
-keep the lists fixed, validate its full cards and clients, then rescan. No bulk archive is
-needed, and no complete-game result is claimed while a required card refuses.
+The numbers are from the blocker report at `80dae61` (2026-11-22). They estimate what a target
+unlocks. A card can show a second blocker once the first is gone.
 
-The profiling investigation [#31](https://github.com/lfrati/karn.exe/issues/31) found that
-unrelated mana changes already retain warm characteristic worlds. No new cache is needed.
-The measured long-turn bottleneck was boolean history predicates counting all occurrences;
-the existing history owner now stops at the first match, with exact counts and ordinals
-preserved. The 1,000-event/16-query fixture falls from 109.7 ms to 1.14 ms per step.
-Complete-game typed replay rates stay within 0.6% of baseline, and Bant JSON responses match.
-See [methods and limits](performance-replay.md#history-and-invalidation-investigation).
-The final whole-queue `make check` passes 5,521 Rust tests (4,811 rules) and 1,146 tooling
-tests. All seven grammar gates passed the preceding coherent batch; grammar is unchanged.
-No additional cache or history index was introduced.
+#### Lane 1: keywords (worktree `keywords`)
 
-The initial [execution queue](https://github.com/lfrati/karn.exe/issues/18) is complete.
-The next known wrong-play defect is [Room copy exceptions #33](https://github.com/lfrati/karn.exe/issues/33);
-fix it before claiming more Room coverage. [MGN flashback choices #34](https://github.com/lfrati/karn.exe/issues/34)
-and [snapshot evidence paths #35](https://github.com/lfrati/karn.exe/issues/35) are bounded
-interface/reporting follow-ups. They remain open, outside the completed starting queue.
-Use fresh blockers for the next coverage batch; the Commander targets above stay fixed.
+132 keywords are recognised and not implemented. They block 2,161 cards, and for 1,464 of
+those the keyword is the only known blocker. Each keyword is declared once, in
+`crates/game/src/keyword.rs` and `keyword/declaration.rs`, and its entry in rule 702 is the
+specification. A keyword whose rule is one sentence about its permanent, as flying's is, may
+need only a row in `SENTENCES`.
 
-### Standing priorities
+| Keyword | Cards it alone blocks | Roster decks it touches |
+| --- | ---: | ---: |
+| Fear | 50 | 29 |
+| Intimidate | 25 | 6 |
+| Shadow | 35 | 25 |
+| Horsemanship | 28 | 0 |
+| Exalted | 36 | 44 |
+| Flanking | 20 | 18 |
+| Bushido | 28 | 4 |
+| Bloodthirst | 20 | 4 |
+| Echo | 48 | 31 |
+| Cumulative Upkeep | 40 | 5 |
+| Affinity | 56 | 48 |
+| Dash | 19 | 33 |
+| Unearth | 49 | 26 |
+| Storm | 27 | 83 |
+| Cascade | 30 | 32 |
+| Suspend | 33 | 63 |
+| Overload | 18 | 29 |
+| Miracle | 14 | 31 |
 
-Two coverage streams, ordered by the target decks. The correctness queue above comes first.
+That is 576 cards if every estimate holds. If the first three keywords gain less than half of
+their numbers, the estimate behind this lane is wrong: say so in the commit message.
 
-### Engine: run what is read
+After these, take the `keyword:` labels of the report by cards blocked alone (Bestow,
+Soulshift, Myriad, Splice, Improvise, Aftermath and on). Banding, Partner, Mutate, Daybound
+and Nightbound need larger machinery and can wait.
 
-A card named in a roster main deck that the grammar reads and the engine does not run stops at
-a blocker, said in the engine's own words. The blocker report lists each blocker with the
-roster decks it keeps from running and the decks it alone holds. The work is a long tail,
-taken widest first.
+Some tests use today's refusals as examples: `crates/game/tests/engine/admission_blockers.rs`
+expects `keyword: Fear`. When a keyword lands, point them at one that is still refused.
 
-### Grammar: read every card
+*Skipped:* none yet.
 
-Resolve an unread phrasing family before downstream engine work for the same target cards.
-A roster main deck that holds an unread card cannot compile in full.
+#### Lane 2: deck closers (worktree `closers`)
+
+Mechanisms in the program and binding owner (`crates/game/src/program.rs` and `program/`),
+each the last thing keeping several roster decks from running. One builder: these all meet in
+the same files.
+
+Start with two short pieces of work:
+
+- [#33](https://github.com/lfrati/karn.exe/issues/33): copy exceptions discard a Room's
+  halves. This is known wrong play.
+- The report sorts blockers by the decks they touch, which does not predict what they
+  complete. Sort `deck-labels.jsonl` by decks completed (`sole_decks`) and count the cards
+  each label alone blocks over the whole corpus, so later targets come from the report.
+
+Then, by the report's label:
+
+| Blocker | Cards such as | Decks it completes, about |
+| --- | --- | ---: |
+| result group: no earlier instruction did what "Some(Reveal) this way" names | Delver of Secrets | 6 |
+| optional compound instruction by another chooser not lowered | Chain Lightning, Chain of Vapor | 5 |
+| selection not lowered: Indefinite(UpTo(Const(2))) | Collected Company | 5 |
+| program: lead not lowered: Modifier | Urza's Rage, Gideon Jura | 5 |
+| reference: the exiled card, of the ability that exiles it | Expressive Iteration | 5 |
+| mana: of Chosen | Utopia Sprawl, Coldsteel Heart | 5 |
+| program: a cast offered to another player | Spell Queller | 4 |
+| description: ThatType | Distant Melody, Tsabo's Decree | 4 |
+| modifier: ForEach of Counter | Circular Logic | 4 |
+| noun phrase: an unsupported zone or zone owner | Crime // Punishment, Relic of Progenitus | 4 |
+| program: optional compound clause or other chooser not lowered | Browbeat, Vexing Devil | 3 |
+| token: Those | Conqueror's Pledge, Gather the Townsfolk | 3 |
+
+The widest labels are many mechanisms under one name: `input reference: nothing before it
+supplies the required participant/cardinality` holds 278 cards and `program: control flow not
+lowered` 394. Take a family of cards inside one, not the label.
+
+This lane is slower than the keywords: each target is a different mechanism. It is here
+because it is what moves the deck count.
+
+*Skipped:* none yet.
+
+#### Lane 3: grammar (worktree `grammar`)
+
+Unread phrasing families, in `crates/grammar` only. 839 roster decks hold an unread card and
+581 of them hold exactly one. Reading a card does not make it run: it moves the card into the
+other lanes' queues.
+
+Read the family each of these belongs to, most roster decks first: Liliana of the Veil (41),
+Atraxa, Grand Unifier (38), The Wandering Emperor (31), Jegantha, the Wellspring (29), Time
+Vault (24), Intuition (22), Hydroid Krasis (21), Once Upon a Time (21), Tishana's Tidebinder
+(20), Preacher of the Schism (19), Agadeem's Awakening (18), Sylvan Library (17), Oath of
+Druids (16), Heart of Kiran (15). After these, take unread roster cards from the report.
 
 The word where reading stops is not the unit of work. One word is the stop of many different
 phrases, and a rule written for one card's sentence is a patch. The unit is a **family**: one
 way of saying one kind of thing, read wherever it occurs. [The grammar](grammar.md) has the
-method and the tool that finds the families.
+method and the tool that finds the families. Cards no roster deck names still count toward
+the first goal: a family's rule covers them too.
 
-A family is taken whole, most roster decks first. Cards no roster deck names still count
-toward the first goal: a family's rule covers them too.
+*Skipped:* none yet.
 
-### The rule
+#### Not this round
 
-- Take the blocker or the family that touches the most roster decks. Build it once, in its
-  owning mechanism ([architecture map](architecture-map.md), [grammar](grammar.md)), with tests
-  derived from the rules.
-- After each merge, refresh the README numbers and rerun the blocker report. The report is the
-  queue:
+The Commander targets, [#34](https://github.com/lfrati/karn.exe/issues/34) (MGN cannot say
+which flashback cost was chosen) and [#35](https://github.com/lfrati/karn.exe/issues/35)
+(`make progress` reports no attributed rules from its snapshot).
 
-  ```sh
-  uv run scripts/blocker_report.py --out .cache/blockers
-  ```
+### Choosing what comes next
 
+- For decks, take the blocker that completes the most roster decks. For cards, take the
+  blocker that alone keeps the most cards from running. The blocker report gives both.
 - Removing one blocker often uncovers the next on the same card. A card counts when it runs.
-- A defect found in a card that runs outranks new cards. It gets a reproduction, an issue and a
-  fix.
+- A defect in a card that runs outranks new cards.
 
 ## Out of scope
 
