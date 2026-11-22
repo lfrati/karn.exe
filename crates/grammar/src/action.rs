@@ -864,11 +864,24 @@ fn build(form: Form, base: &P<Action>) -> P<Action> {
     // "3 damage to any target", "1 damage to any target and 1 damage to you"
     let damaged = slot(&object, Verb::DealDamage, Role::To);
     let hit = noun_amount("damage").skip(&lit("to")).then(&damaged).map(
-        |(amount, to)| Some(Hit { amount, to, amount_after_targets: false }),
-        |h: &Hit| (!h.amount_after_targets).then(|| (h.amount.clone(), h.to.clone())),
+        |(amount, to)| Some(Hit { amount, to, amount_after_targets: false, condition: None }),
+        |h: &Hit| (!h.amount_after_targets && h.condition.is_none()).then(|| (h.amount.clone(), h.to.clone())),
+    );
+    let guarded_hit = hit.then(&lit("if").then_keep(&crate::kernel::lazy("damage condition", || crate::condition::conditions().condition.clone())).opt()).map(
+        |(mut hit, condition)| { hit.condition = condition.map(Box::new); Some(hit) },
+        |hit: &Hit| {
+            let mut plain = hit.clone(); plain.condition = None;
+            Some((plain, hit.condition.as_deref().cloned()))
+        },
+    );
+    // A local guard on the first part establishes independent part scope for the list.
+    // A lone trailing guard keeps the existing whole-action modifier representation.
+    let guarded_hits = guarded_hit.list("and").map(
+        |hits| hits.first().is_some_and(|h| h.condition.is_some()).then_some(hits),
+        |hits: &Vec<Hit>| (hits.len() >= 2 && hits[0].condition.is_some()).then(|| hits.clone()),
     );
     let one_hit = hit.map(|h| Some(vec![h]), |v: &Vec<Hit>| (v.len() == 1).then(|| v[0].clone()));
-    let deal_damage = v("deals", "deal").then_keep(&alt("hits", vec![one_hit, hit.list("and")])).map(
+    let deal_damage = v("deals", "deal").then_keep(&alt("hits", vec![one_hit, hit.list("and"), guarded_hits])).map(
         |v| Some(Action::DealDamage(v)),
         |a| match a {
             Action::DealDamage(v) => Some(v.clone()),
@@ -1002,8 +1015,8 @@ fn build(form: Form, base: &P<Action>) -> P<Action> {
         .then_keep(&damaged)
         .skip(&lit("equal to"))
         .then(&crate::amount::amounts().amount)
-        .map(|(to, amount)| Some(Action::DealDamage(vec![Hit { amount, to, amount_after_targets: true }])), |a| match a {
-            Action::DealDamage(hits) if hits.len() == 1 && hits[0].amount_after_targets => Some((hits[0].to.clone(), hits[0].amount.clone())),
+        .map(|(to, amount)| Some(Action::DealDamage(vec![Hit { amount, to, amount_after_targets: true, condition: None }])), |a| match a {
+            Action::DealDamage(hits) if hits.len() == 1 && hits[0].amount_after_targets && hits[0].condition.is_none() => Some((hits[0].to.clone(), hits[0].amount.clone())),
             _ => None,
         });
     let gets = v("gets", "get").then_keep(&delta()).skip(&lit("/").tight()).then(&delta().tight()).map(

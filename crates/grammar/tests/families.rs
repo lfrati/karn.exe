@@ -411,3 +411,18 @@ fn r608_2c_definite_recalled_number() {
     read("Draw cards equal to the number of creatures you control.");
     declines("Draw cards equal to the number of.");
 }
+
+/// CR 608.2c: each damage part keeps its own condition, within one damage action.
+#[test]
+fn r608_2c_independently_guarded_damage_parts() {
+    let (value, _) = read("~ deals 3 damage to each creature without flying if {R} was spent to cast ~ and 3 damage to each creature with flying if {G} was spent to cast ~.");
+    let ir::Ability::Text(effect) = value else { panic!() };
+    let ir::Sentence::Do(body) = &effect.0[0] else { panic!() };
+    let ir::Action::DealDamage(hits) = &body.first.first.action else { panic!() };
+    assert_eq!(hits.len(), 2);
+    assert!(hits.iter().all(|h| h.condition.is_some()));
+    assert_ne!(hits[0].condition, hits[1].condition);
+    assert!(body.first.first.mods.is_empty());
+    read("~ deals 3 damage to each creature if {R} was spent to cast ~.");
+    declines("~ deals 3 damage to target spell if {R} was spent to cast ~ and 3 damage to each creature if {G} was spent to cast ~.");
+}

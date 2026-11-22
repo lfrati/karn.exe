@@ -503,6 +503,10 @@ fn act(form: Form) -> P<Act> {
         {
             return false;
         }
+        // After independently guarded damage parts, another trailing "if" belongs to
+        // the final part. A whole-action guard can still lead the sentence explicitly.
+        if matches!(&a.action, ir::Action::DealDamage(hits) if hits.iter().any(|h| h.condition.is_some()))
+            && a.mods.iter().any(|m| matches!(m, Modifier::If(_))) { return false; }
         // "… to their owners' hands except for Giants": said after where a move goes; right
         // after the things themselves it is part of their description
         if a.mods.iter().any(|m| matches!(m, Modifier::ExceptFor(_))) && !matches!(a.action, ir::Action::Move { .. }) {

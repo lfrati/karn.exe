@@ -5853,6 +5853,9 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 Some(action::Action::Tap { objects: operands, tapped: matches!(act.action, Action::Tap(_)) })
             },
             Action::DealDamage(hits) => {
+                if hits.iter().any(|hit| hit.condition.is_some()) {
+                    return unsupported("damage: independently conditional components are not lowered (608.2c)");
+                }
                 // "If this spell was bargained, instead it deals 3 damage to that permanent":
                 // what deals the damage is not what it is dealt to, which would be "itself"
                 // (the converse of a recipient "it"); the "it" is the source

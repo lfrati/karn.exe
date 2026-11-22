@@ -991,6 +991,8 @@ pub struct Hit {
     /// The amount follows the recipients: "damage to target player equal to ...". Those
     /// recipients have been named when its references are evaluated (608.2h).
     pub amount_after_targets: bool,
+    /// A condition on this damage component, independently of the other hits (608.2c).
+    pub condition: Option<Box<crate::condition::Condition>>,
 }
 
 /// Whose counters "put … counters on" moves.
