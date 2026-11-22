@@ -19,6 +19,8 @@ def main():
     parser.add_argument('--players', type=int, default=4)
     parser.add_argument('--runs', type=int, default=9)
     parser.add_argument('--iterations', type=int, default=200)
+    parser.add_argument('--history-events', help='optional comma-separated long-turn event counts, each in 1..100000')
+    parser.add_argument('--history-steps', type=int, default=8)
     parser.add_argument('--engine-source')
     parser.add_argument('--build-profile')
     parser.add_argument('--output', type=Path, default=ROOT / '.cache/performance/scale.json')
@@ -30,6 +32,14 @@ def main():
     if not sizes or any(n < 1 or n > 100000 for n in sizes) or not 2 <= args.players <= 16 or min(args.runs, args.iterations) < 1:
         parser.error('invalid object counts, players, runs or iterations')
     config = dict(objects=sizes, players=args.players, runs=args.runs, iterations=args.iterations)
+    if args.history_events is not None:
+        try:
+            events = [int(n) for n in args.history_events.split(',')]
+        except ValueError:
+            parser.error('--history-events must be comma-separated positive integers')
+        if not events or any(n<1 or n>100000 for n in events) or not 1<=args.history_steps<=10000:
+            parser.error('invalid history event count or steps')
+        config.update(history_events=events, history_steps=args.history_steps)
     engine = args.engine.resolve()
     report = dict(engine_source=args.engine_source, build_profile=args.build_profile,
                   engine_source_provenance='operator-supplied build revision' if args.engine_source else 'unknown',
@@ -44,7 +54,7 @@ def main():
     try:
         measured = json.loads(result.stdout)
         report['workload_source_sha256'] = hashlib.sha256(measured.pop('workload_source').encode()).hexdigest()
-        failed = result.returncode != 0 or len(measured['workloads']) != 7 * len(sizes) or any(row['status'] != 'passed' for row in measured['workloads'])
+        failed = result.returncode != 0 or len(measured['workloads']) != 11 * len(sizes) + 14 * len(config.get('history_events', [])) or any(row['status'] != 'passed' for row in measured['workloads'])
         report.update(measured)
     except (ValueError, KeyError):
         report.update(config=config, workloads=[], error=result.stderr or result.stdout)
@@ -56,7 +66,9 @@ def main():
         if row['status'] == 'passed':
             print(f"{row['name']:42} n={row['objects']:5} {row['ns_per_operation']:12,.0f} ns/op")
         else:
-            print(f"FAILED n={row['objects']}: {row['error']}")
+            print(f"FAILED objects={row.get('objects')} events={row.get('events')}: {row['error']}")
+    if report.get('instrumented'):
+        print('Instrumented diagnostic timings: do not compare with normal release builds.')
     print(f'Report: {args.output}')
     if failed:
         raise SystemExit(report.get('error', 'one or more scaling workloads failed'))

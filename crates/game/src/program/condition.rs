@@ -932,6 +932,8 @@ impl Asks {
             })) != *negated,
             Asks::LifeLost { players, count, negated } => players.hold(players.players(game,ctx,locals).into_iter()
                 .map(|p|count.is(game,ctx,locals,game.life_lost_this_turn(p) as usize))) != *negated,
+            Asks::Happened { pattern, turn, times: Quantity::AtLeast(expr::Number::Const(1)), negated, .. } =>
+                game.has_happened(ctx, pattern, *turn) != *negated,
             Asks::Happened { pattern, turn, each, times, negated } => times.is(game, ctx, locals, game.happened(ctx, pattern, *turn, *each)) != *negated,
             Asks::ManaSpent { spell, test, negated } => {
                 let spells = spell.evaluate(game, ctx, locals);

@@ -272,15 +272,26 @@ impl Game {
 
     /// What happened this turn or the one before: what was noted, and this turn what has not
     /// been yet, as it is now.
-    fn facts_of(&self, turn: Turn) -> Vec<std::borrow::Cow<'_, Fact>> {
+    fn facts_of(&self, turn: Turn) -> impl Iterator<Item=std::borrow::Cow<'_, Fact>> {
         use std::borrow::Cow;
-        let mut all: Vec<Cow<'_, Fact>> = self.this_turn.of(turn).iter().map(Cow::Borrowed).collect();
-        if turn == Turn::This {
-            let from = self.this_turn.noted.max(self.log.start());
-            all.extend(self.log.sequenced().filter(|(at, _)| *at >= from)
-                .flat_map(|(at, e)| crate::trigger::facts(self, e).into_iter().filter(|f| self.kept(f)).map(move |f| Cow::Owned(f.remembered().at(at)))));
+        let from = self.this_turn.noted.max(self.log.start());
+        let pending = if turn == Turn::This {self.log.since(from)} else {&[]};
+        self.this_turn.of(turn).iter().map(Cow::Borrowed).chain(
+            pending.iter().enumerate().flat_map(move |(offset, e)| {
+                let at = crate::event::Seq(from.0 + offset);
+                crate::trigger::facts(self, e).into_iter().filter(|f| self.kept(f))
+                    .map(move |f| Cow::Owned(f.remembered().at(at)))
+            }))
+    }
+
+    /// An existence predicate needs one matching occurrence, independent of how
+    /// many events any individual player produced. Keep exact counts separate.
+    pub(crate) fn has_happened(&self, ctx: &Ctx, pattern: &Pattern, turn: Turn) -> bool {
+        if turn == Turn::This && pattern.exhaust_starts() {
+            return self.activation_started.iter().any(|(player, keyword, mana)|
+                pattern.described(self, ctx, &Fact::activation(*player, *keyword, *mana, None)).is_some());
         }
-        all
+        self.facts_of(turn).any(|fact| pattern.described(self, ctx, &fact).is_some())
     }
 
     /// The players who declared these creatures as attackers this turn, each once, and what
@@ -393,8 +404,7 @@ impl Game {
             if !each { return such.len(); }
             return such.iter().map(|fact| such.iter().filter(|other| other.doer() == fact.doer()).count()).max().unwrap_or(0);
         }
-        let all = self.facts_of(turn);
-        let such: Vec<&Fact> = all.iter().map(|f| &**f).filter(|f| pattern.described(self, ctx, f).is_some()).collect();
+        let such: Vec<_> = self.facts_of(turn).filter(|f| pattern.described(self, ctx, f).is_some()).collect();
         if !each { return such.len(); }
         such.iter().map(|f| such.iter().filter(|other| other.doer() == f.doer()).count()).max().unwrap_or(0)
     }
@@ -402,7 +412,7 @@ impl Game {
     /// Did an event of this turn the pattern describes happen to this object or player, as the
     /// object it is now (400.7)? "a card that was put into a graveyard from anywhere this turn"
     pub(crate) fn happened_to(&self, ctx: &Ctx, pattern: &Pattern, t: crate::event::Target) -> bool {
-        self.facts_of(Turn::This).iter().any(|f| pattern.subject_of(self, ctx, f) == Some(t))
+        self.facts_of(Turn::This).any(|f| pattern.subject_of(self, ctx, &f) == Some(t))
     }
 
     /// Which such event of the turn this one is, among those of the same subject ("your

@@ -100,7 +100,7 @@ scoped shuffles validate physical identity and fixed placement at consumption, a
 look-and-return default preserves the current order
 ([#14](https://github.com/lfrati/karn.exe/issues/14)). `make progress` passes 5,519 Rust tests
 (4,809 rules), 1,144 tooling tests and all seven grammar gates. The final execution-queue
-check remains due after the Commander corpus and profiling investigation. Matched release
+`make check` passes 5,521 Rust tests (4,811 rules) and 1,146 tooling tests. Matched release
 core rates are 0.4–1.0% higher; Bant JSON throughput is 0.7% lower with identical responses.
 No speedup is claimed, and all 32,872 admission rows remain unchanged.
 
@@ -133,8 +133,8 @@ fixtures; this was not one uninterrupted passing `make check`. All 150 native se
 and 40 affected client tests pass after the final containment cleanup. Matched release core
 rates are within 0.5% of the baseline; Bant JSON action round trips are within 0.8%, with
 identical responses. No speedup is claimed. The JSON comparison covers Bant only: the baseline
-refuses Vivi's historical quote metadata, and Torch JSON was not attempted. The final
-execution queue still requires a clean full check.
+refuses Vivi's historical quote metadata, and Torch JSON was not attempted. The subsequent final
+execution-queue `make check` passes 5,521 Rust and 1,146 tooling tests.
 
 The [benchmark default matrix fix](https://github.com/lfrati/karn.exe/issues/15) is complete:
 implicit worker counts fit the physical cores available under affinity, while explicit
@@ -173,10 +173,23 @@ implementation assignments. Use the refreshed report to select the next bounded 
 keep the lists fixed, validate its full cards and clients, then rescan. No bulk archive is
 needed, and no complete-game result is claimed while a required card refuses.
 
-Further performance work is [one profiling investigation](https://github.com/lfrati/karn.exe/issues/31).
-Selective characteristic reuse and long-turn history cost are hypotheses; implement another
-cache or index only if Karn's measurements justify a sound, small change. A measured no-go
-is a valid result.
+The profiling investigation [#31](https://github.com/lfrati/karn.exe/issues/31) found that
+unrelated mana changes already retain warm characteristic worlds. No new cache is needed.
+The measured long-turn bottleneck was boolean history predicates counting all occurrences;
+the existing history owner now stops at the first match, with exact counts and ordinals
+preserved. The 1,000-event/16-query fixture falls from 109.7 ms to 1.14 ms per step.
+Complete-game typed replay rates stay within 0.6% of baseline, and Bant JSON responses match.
+See [methods and limits](performance-replay.md#history-and-invalidation-investigation).
+The final whole-queue `make check` passes 5,521 Rust tests (4,811 rules) and 1,146 tooling
+tests. All seven grammar gates passed the preceding coherent batch; grammar is unchanged.
+No additional cache or history index was introduced.
+
+The initial [execution queue](https://github.com/lfrati/karn.exe/issues/18) is complete.
+The next known wrong-play defect is [Room copy exceptions #33](https://github.com/lfrati/karn.exe/issues/33);
+fix it before claiming more Room coverage. [MGN flashback choices #34](https://github.com/lfrati/karn.exe/issues/34)
+and [snapshot evidence paths #35](https://github.com/lfrati/karn.exe/issues/35) are bounded
+interface/reporting follow-ups. They remain open, outside the completed starting queue.
+Use fresh blockers for the next coverage batch; the Commander targets above stay fixed.
 
 ### Standing priorities
 

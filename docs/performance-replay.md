@@ -31,6 +31,7 @@ current handling of historical quote metadata.
 
 `perf-scale` supplements the complete games with synthetic clone and first-write costs,
 cold/warm characteristic queries under four anthems and a same-layer dependency chain,
+plus queries after unrelated mana changes and relevant counter/producer changes,
 and explicit mana activations among
 mostly unrelated trigger subscriptions. Setup and validation are outside timing; every
 workload checks its relevant results and branch isolation. The report retains failures,
@@ -63,3 +64,56 @@ chosen matrix. Explicit requests are validated before any row runs.
 
 `engine_source` names the build that was measured; `harness_revision` names the checkout
 running the script. An unknown engine source stays unknown.
+
+## History and invalidation investigation
+
+```sh
+make perf-scale SCALE_ARGS='--runs 5 --history-events 1,100,1000'
+```
+
+The optional history matrix varies committed events independently of objects, with zero or
+16 first-occurrence watchers, zero or 16 history-dependent characteristic queries, and
+clones every step, every eight steps, or none inside the measured loop. Each step gains
+life, activates an explicit mana ability and performs the requested queries. The original
+branch, life/mana totals, conditional power and absence of new first-occurrence triggers
+are checked. Separate clone rows distinguish an undelivered raw log from delivered turn
+facts. Event setup is a bulk fixture with no active watcher or gain replacement; only the
+consumed raw log is cleared. Setup, initial clone and validation are excluded from timing.
+This measures the raw Game path; hosted complete-game replays remain a separate workload.
+
+For characteristic rows, cache priming and the named mutation happen before timing; the
+measured operation is the subsequent query. Profile builds include per-row internal counters
+for these rows and history actions. Build `game-scale` with `--features profile` into a
+separate target directory for diagnostics; the report flags instrumentation. Never compare
+those timings with ordinary release builds. No allocation or memory totals are collected.
+
+The November 22 investigation found that unrelated mana changes already preserve the
+cached world: at 1,000 creatures, warm/after-mana queries cost about 45/44 ns under four
+anthems and 112/111 ns in the dependency fixture. Diagnostic counters show zero world
+builds after mana changes; relevant counter changes or producer departure build one.
+**No additional characteristic cache is justified by these fixtures.**
+
+Long-turn history exposed a smaller change: boolean “at least one” conditions counted every
+matching event and materialized the whole history. They now iterate the existing retained
+facts and undelivered log suffix lazily and stop at one match. Exact counts and ordinals
+retain their existing semantics; no history index or second store was added.
+
+Matched release probes (same workload-source hash, CPU 0, five repetitions, eight steps)
+with 1,000 prior events and 16 history-dependent queries fell from **109.7 ms to 1.14 ms
+per step** without watchers, and **110.1 ms to 1.70 ms** with 16 first-occurrence watchers.
+These are synthetic fixtures, not universal game speedups. Clone cost still scales with
+retained history (about 17 µs for 1,000 delivered facts in this fixture); exact occurrence
+scans remain linear. Neither cost justified importing a persistent event index here.
+The first 10,000-event attempt was interrupted before completion and retained as a failed
+measurement. Its fixture generated gains iteratively; the corrected matrix uses bulk setup
+and stops at 1,000 events. No timing or phase attribution is claimed for the interruption.
+
+The three complete-game typed replays remain within 0.6% of the baseline in balanced
+B,C,C,B runs (15 repetitions per phase, CPU 0); Bant JSON throughput is unchanged to within
+0.01%, with all 20 response digests identical. No general game speedup is claimed. Baseline
+production code is 7f6c277; the candidate adds the history existence path. Raw local evidence
+and SHA-256 provenance are retained under `.cache/goal-work/`: `profiling-history-release-v2.json`,
+`profiling-history-candidate.json`, `profiling-scale-comparison.json`,
+`profiling-history-diagnostic-v2.json`, `profiling-core-diagnostic.json` and
+`history-optimization-perf/`. Instrumented profiles are diagnostic only. These reports
+were collected without competing builds or tests; their rates apply only to their workloads.
