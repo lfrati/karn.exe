@@ -1,5 +1,5 @@
 """Actual shared-process client checks; no synthetic game rules."""
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 import os
 import json
 import subprocess
@@ -11,6 +11,52 @@ from shared_host import SharedHost
 from rust_tools import fast_binary
 
 class SharedHostTests(unittest.TestCase):
+    def test_process_eof_fails_every_unanswered_request(self):
+        with SharedHost(os.environ.get('MAGIC_ENGINE'), workers=2) as host:
+            futures = [Future(), Future()]
+            # Hold two unanswered correlations at the actual process EOF boundary.
+            with host._lock:
+                host._pending.update({100: (0, futures[0]), 101: (1, futures[1])})
+            host.proc.kill()
+            for future in futures:
+                with self.assertRaisesRegex(RuntimeError, 'shared engine stopped'):
+                    future.result(timeout=10)
+            with self.assertRaisesRegex(RuntimeError, 'host closed'):
+                host.request(0, {'cmd': 'state'})
+
+    def test_nonfinite_input_is_local_and_other_sessions_continue(self):
+        with SharedHost(os.environ.get('MAGIC_ENGINE'), workers=2) as host:
+            a, b = host.session(), host.session()
+            setup = {'cmd': 'new', 'players': [{}, {}]}
+            a.ask(setup); b.ask(setup)
+            a.send({'cmd': 'state'})
+            before = a.send({'cmd': 'state'})
+            for value in (float('nan'), float('inf'), -float('inf')):
+                with self.assertRaises(ValueError):
+                    host.request(a.game, setup | {'life': value})
+            self.assertEqual(a.send({'cmd': 'state'}), before)
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                list(pool.map(lambda c: c.act({'kind': 'pass'}), [a, b]))
+            self.assertEqual(a.state['request_id'], before['request_id'] + 1)
+            self.assertEqual(b.state['request_id'], before['request_id'] + 1)
+
+    def test_uncorrelated_replies_do_not_poison_pending_requests(self):
+        with SharedHost(os.environ.get('MAGIC_ENGINE'), workers=2) as host:
+            clients = [host.session() for _ in range(4)]
+            for c in clients:
+                c.ask({'cmd': 'new', 'players': [{}, {}]})
+            # A parse fault has no request ID; a foreign numeric ID has no pending owner.
+            with host._write:
+                host.proc.stdin.write('not JSON\n' + json.dumps({'id': 999999, 'game': 0,
+                    'request': {'cmd': 'state'}}) + '\n')
+                host.proc.stdin.flush()
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                states = list(pool.map(lambda c: c.send({'cmd': 'state'}), clients))
+            self.assertEqual(len({s['session_id'] for s in states}), 4)
+            for c in clients:
+                c.act({'kind': 'pass'})
+                self.assertEqual(c.state['request_id'], 2)
+
     def test_concurrent_identity_ordering_close_and_private_views(self):
         with SharedHost(os.environ.get('MAGIC_ENGINE'),workers=4) as host:
             clients=[host.session() for _ in range(8)]

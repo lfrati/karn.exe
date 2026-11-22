@@ -5,8 +5,8 @@ use crate::program::*;
 use super::{Amount, Number};
 use crate::CardDef;
 
-const RANGE: &str = "quantity exceeds the supported numerical range (107.1b)";
-const EXPRESSION_RANGE: &str = "quantity expression exceeds the supported numerical range (107.1b)";
+const RANGE: &str = "quantity exceeds the engine numerical range";
+const EXPRESSION_RANGE: &str = "quantity expression exceeds the engine numerical range";
 
 #[derive(Clone, Copy, Debug)]
 enum Caller { Arrange, ExtraTurns, SkipTurns, AddPhases, Continuous, CopyStack, CopyCards }
@@ -144,7 +144,7 @@ fn r107_1b_r701_22_maximum_arrangement_retains_exact_group_across_clone() {
 #[test]
 fn r107_1b_r611_2d_scaling_refuses_before_installing_any_effect() {
     for n in [i32::MAX as u32 + 1, u32::MAX] {
-        refuse(Caller::Continuous, Amount::constant(n), "continuous P/T change exceeds the supported numerical range (107.1b)");
+        refuse(Caller::Continuous, Amount::constant(n), "continuous P/T change exceeds the engine numerical range");
     }
     let (mut g, mut f, mut instr) = fixture(Caller::Continuous, Amount::constant(i32::MAX as u32));
     if let Instr::Continuous { changes, .. } = &mut instr {
@@ -152,7 +152,7 @@ fn r107_1b_r611_2d_scaling_refuses_before_installing_any_effect() {
     }
     let before = format!("{g:?}");
     match step(&mut g, &mut f, &instr) {
-        Err(Halt::Unsupported(e)) => assert_eq!(e.0, "continuous P/T change exceeds the supported numerical range (107.1b)"),
+        Err(Halt::Unsupported(e)) => assert_eq!(e.0, "continuous P/T change exceeds the engine numerical range"),
         _ => panic!("must refuse the whole effect"),
     }
     assert_eq!(format!("{g:?}"), before);

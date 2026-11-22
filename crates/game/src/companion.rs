@@ -83,7 +83,7 @@ impl Game {
         self.companions[player] = Some(Chosen { definition, taken: false });
         Ok(())
     }
-    pub(crate) fn companion_cost(&self, player: PlayerId) -> Result<crate::cost::Plan, String> {
+    pub(crate) fn companion_cost(&self, player: PlayerId) -> crate::play::ActionResult<crate::cost::Plan> {
         if !self.sorcery_timing(player) {
             return Err("companion action requires your main phase and an empty stack (116.2g)".into());
         }
@@ -93,7 +93,7 @@ impl Game {
             .as_ref()
             .expect("chosen companion")
             .as_ref()
-            .map_err(|e| e.0.clone())?
+            .map_err(Clone::clone)?
             .cost
             .clone())
     }

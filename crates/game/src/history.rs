@@ -338,7 +338,7 @@ impl Game {
     /// Refused, with nothing noted, when the turn's total is not representable (107.1b).
     pub(crate) fn note_life_loss(&mut self,player:crate::PlayerId,amount:u32) -> crate::Res<()> {
         let lost = self.this_turn.life_lost.get(player).copied().unwrap_or(0).checked_add(amount)
-            .ok_or_else(|| crate::Unsupported("life lost this turn exceeds the supported numerical range (107.1b)".into()))?;
+            .ok_or_else(|| crate::Unsupported("life lost this turn exceeds the engine numerical range".into()))?;
         let seats = self.players.len();
         self.turn_history_mut().life_lost.resize(seats,0);
         self.turn_history_mut().life_lost[player]=lost;

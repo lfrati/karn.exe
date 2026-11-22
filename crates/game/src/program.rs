@@ -7376,7 +7376,7 @@ fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt> {
             let Some(life) = cost.life(game, &f.ctx).filter(|life| game.can_pay_life(player, *life)) else { outcome(f, false); return Ok(()) };
             // Waterbend exposes a rules domain, never selected objects or mana sources.
             let waterbend = if let Some((index, generic)) = cost.waterbend() {
-                let (choices, _) = game.cost_choices(Ctx::new(player, source), &cost).map_err(crate::Unsupported)?;
+                let (choices, _) = game.cost_choices(Ctx::new(player, source), &cost).map_err(|e| crate::Unsupported(e.to_string()))?;
                 let among = choices.get(index).ok_or_else(|| crate::Unsupported("waterbend payment has no matching choice group".into()))?.0.clone();
                 let most = generic.min(among.len() as u32);
                 Some(crate::state::Waterbend { among, generic, most })

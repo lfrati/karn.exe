@@ -117,7 +117,7 @@ impl Installed {
 }
 
 pub(crate) fn counter_add(left: u32, right: u32) -> crate::Res<u32> {
-    left.checked_add(right).ok_or_else(|| crate::Unsupported("counter amount exceeds the supported numerical range (107.1b)".into()))
+    left.checked_add(right).ok_or_else(|| crate::Unsupported("counter amount exceeds the engine numerical range".into()))
 }
 
 /// Counter totals frozen before entry. Installation is only on the fresh incarnation,
@@ -677,7 +677,7 @@ mod counter_arithmetic_reproduction {
     #[test]
     fn r107_1b_inventory_merge_does_not_silently_clamp_the_rule_result() {
         let request=vec![Placement{on:Target::Player(0),kind:"energy".into(),count:2_147_483_648,by:0};2];
-        assert!(CounterEvent::batch(request,EventOrigin::Effect).unwrap_err().0.contains("107.1b"));
+        assert!(CounterEvent::batch(request,EventOrigin::Effect).unwrap_err().0.contains("engine numerical range"));
     }
 }
 
@@ -690,7 +690,7 @@ mod checked_inventory_tests {
         let before=format!("{game:?}");
         let placements=[1,u32::MAX].into_iter().map(|count|Placement{on:Target::Player(0),kind:"energy".into(),count,by:0}).collect();
         assert_eq!(game.prepare_counters(placements).commit(&mut game).unwrap_err().0,
-            "counter amount exceeds the supported numerical range (107.1b)");
+            "counter amount exceeds the engine numerical range");
         assert_eq!(format!("{game:?}"),before);
     }
     #[test]
@@ -755,7 +755,7 @@ mod instruction_snapshot_tests {
         let mut overflow = placement(lord);
         overflow.count = u32::MAX;
         assert_eq!(game.put_counter_instructions(vec![vec![placement(elf)],vec![overflow]],EventOrigin::Effect).unwrap_err().0,
-            "counter amount exceeds the supported numerical range (107.1b)");
+            "counter amount exceeds the engine numerical range");
         assert_eq!(format!("{game:?}"), before);
     }
 }

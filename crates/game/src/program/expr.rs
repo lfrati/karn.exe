@@ -2194,7 +2194,7 @@ impl Number {
     }
 
     fn checked_evaluate(&self, game:&Game, ctx:&Ctx, locals:&dyn Locals)->Res<i64> {
-        let overflow=||crate::Unsupported("quantity expression exceeds the supported numerical range (107.1b)".into());
+        let overflow=||crate::Unsupported("quantity expression exceeds the engine numerical range".into());
         let value=|n:&Number|n.checked_evaluate(game,ctx,locals);
         let counters=|o:ObjId, kind:Option<&ir::CounterKind>|->Res<i64> {
             game.obj(o).counters.iter().filter(|(k,_)|kind.is_none_or(|kind|kind.0==**k))
@@ -2389,7 +2389,7 @@ impl Amount {
     /// arithmetic and counter inventories before converting the final nonnegative value.
     pub(crate) fn checked(&self, game: &Game, ctx: &Ctx, locals: &dyn Locals) -> Res<u32> {
         let n=self.0.checked_evaluate(game,ctx,locals)?;
-        u32::try_from(n.max(0)).map_err(|_|crate::Unsupported("quantity exceeds the supported numerical range (107.1b)".into()))
+        u32::try_from(n.max(0)).map_err(|_|crate::Unsupported("quantity exceeds the engine numerical range".into()))
     }
     pub(crate) fn checked_for_actor(&self, game:&Game, ctx:&Ctx, locals:&dyn Locals, player:PlayerId)->Res<u32> {
         self.checked(game,ctx,&Actor{parent:locals,player})
@@ -2459,7 +2459,7 @@ mod checked_evaluate_tests {
     fn r107_1b_checked_counter_expression_rejects_large_result_but_negative_is_zero() {
         let g=Game::new(Vec::new(),2,20);let ctx=Ctx::new(0,ObjId(0));
         let large=Amount(Number::Product(Box::new(Number::Const(u32::MAX)),Box::new(Number::Const(2))));
-        assert_eq!(large.checked(&g,&ctx,&NoLocals).unwrap_err().0, "quantity exceeds the supported numerical range (107.1b)");
+        assert_eq!(large.checked(&g,&ctx,&NoLocals).unwrap_err().0, "quantity exceeds the engine numerical range");
         let negative=Amount(Number::Difference(Box::new(Number::Const(1)),Box::new(Number::Const(2))));
         assert_eq!(negative.checked(&g,&ctx,&NoLocals).unwrap(),0);
     }

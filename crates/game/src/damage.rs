@@ -19,13 +19,13 @@ fn completed_damage(game: &Game, hits: &[Hit], combat: bool) -> crate::Res<Vec<C
     // Any later unqualified completed-damage quantity may sum all recipients.
     // Establish that bound before committing this occurrence, not in a later follower.
     hits.iter().try_fold(0i64, |sum, hit| sum.checked_add(i64::from(hit.amount))
-        .ok_or_else(|| crate::Unsupported("completed damage total exceeds the supported numerical range (107.1b)".into())))?;
+        .ok_or_else(|| crate::Unsupported("completed damage total exceeds the engine numerical range".into())))?;
     let mut result = Vec::new();
     for hit in hits {
         if result.iter().any(|r: &CompletedDamage| r.recipient == hit.to) { continue; }
         let same: Vec<_> = hits.iter().filter(|h| h.to == hit.to).collect();
         let amount = same.iter().try_fold(0u32, |n, h| n.checked_add(h.amount)
-            .ok_or_else(|| crate::Unsupported("completed damage exceeds the supported numerical range (107.1b)".into())))?;
+            .ok_or_else(|| crate::Unsupported("completed damage exceeds the engine numerical range".into())))?;
         let mut excess = 0;
         if let Target::Object(on) = hit.to {
             let seen = game.seen(on, None);
@@ -96,7 +96,7 @@ impl Outcome {
             if has("Lifelink") {
                 if let Some((_, _, total)) = gains.iter_mut().find(|(s, _, _)| *s == source) {
                     *total = total.checked_add(amount).ok_or_else(|| crate::Unsupported(
-                        "life gain amount exceeds the supported numerical range (107.1b)".into()))?;
+                        "life gain amount exceeds the engine numerical range".into()))?;
                 } else { gains.push((source, controller, amount)); }
             }
             let (planeswalker, creature) = match to {
@@ -897,7 +897,7 @@ impl Proposals {
             if amount == 0 || !game.takes(Verb::DealDamage, Role::To, to) { continue; }
             if let Some(hit) = hits.iter_mut().find(|hit| hit.source == source && hit.to == to) {
                 hit.amount = hit.amount.checked_add(amount).ok_or_else(|| crate::Unsupported(
-                    "simultaneous damage from one source to one recipient exceeds the supported numerical range (107.1b)".into()))?;
+                    "simultaneous damage from one source to one recipient exceeds the engine numerical range".into()))?;
             } else {
                 hits.push(Proposal { id, source, to, amount, applied: Vec::new(), prevented: Vec::new() });
             }
@@ -1514,7 +1514,7 @@ mod modifier_tests {
         let mut g=game();let source=g.put(0,3,Zone::Battlefield);
         let before=format!("{g:?}");
         assert_eq!(g.damage_as_rule(&[(source,Target::Player(1),u32::MAX),(source,Target::Player(1),1)],false).unwrap_err().0,
-            "simultaneous damage from one source to one recipient exceeds the supported numerical range (107.1b)");
+            "simultaneous damage from one source to one recipient exceeds the engine numerical range");
         assert_eq!(format!("{g:?}"),before);
     }
     #[test]

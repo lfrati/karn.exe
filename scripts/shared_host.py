@@ -35,7 +35,12 @@ class SharedHost:
             for line in self.proc.stdout:
                 answer = json.loads(line)
                 with self._lock:
-                    game, future = self._pending.pop(answer['id'])
+                    identity = answer.get('id')
+                    pending = self._pending.pop(identity, None) if type(identity) is int else None
+                # Input faults without a matching request cannot reject a different one.
+                if pending is None:
+                    continue
+                game, future = pending
                 if answer.get('game') != game:
                     future.set_exception(RuntimeError('reply belongs to another game'))
                 else:
@@ -60,10 +65,13 @@ class SharedHost:
         with self._write:
             with self._lock:
                 if self._closed: raise RuntimeError('host closed')
-                identity = self._next; self._next += 1
+                identity = self._next
+                # Refuse non-JSON values before publishing or writing this request.
+                body = json.dumps({'id':identity, 'game':game, 'request':request}, allow_nan=False)
+                self._next += 1
                 self._pending[identity] = (game, future)
             try:
-                self.proc.stdin.write(json.dumps({'id':identity, 'game':game, 'request':request})+'\n')
+                self.proc.stdin.write(body+'\n')
                 self.proc.stdin.flush()
             except Exception:
                 with self._lock: self._pending.pop(identity, None)

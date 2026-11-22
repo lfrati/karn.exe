@@ -147,7 +147,7 @@ fn r719_3_case_intervening_if_rechecks_detectives_on_resolution() {
 // Rules: 107.1b, 701.7b, 614.6.
 #[test]
 fn r107_1b_append_overflow_and_heterogeneous_instruction_refusal_restore_resolution() {
-    for (text,reason) in [("Create 4294967295 Treasure tokens.","107.1b"),
+    for (text,reason) in [("Create 4294967295 Treasure tokens.","engine numerical range"),
         ("Create a tapped Treasure token and a 1/1 white Soldier creature token.","heterogeneous token entry instructions")] {
         let mut defs=native(&["Quina, Qu Gourmet"]);defs.push(spell(text));
         let mut g=Game::new(defs,2,20);g.put(0,0,Zone::Battlefield);

@@ -1,6 +1,7 @@
 //! Costs compiled once into payment plans (118, 601.2f–h, 602.2b). Runtime asks the
 //! same compiled candidate predicates for validation and payment; it never interprets syntax.
 use crate::binding::AbilityKey;
+use crate::play::ActionResult;
 use crate::program::expr::{self, NoLocals, linked};
 use crate::select::{Ctx, Support, name};
 use crate::{CardDef, Game, ObjId, Res, Target, unsupported};
@@ -305,7 +306,7 @@ impl Plan {
                                 said.push(text.clone().or_else(|| match (plan.choices.as_slice(), way.as_slice()) { ([only], [i]) => only.said[*i].clone(), _ => None }));
                                 let forage = match (plan.choices.as_slice(), way.as_slice()) { ([only], [i]) => match only.branches.get(*i) { Some(Branch::Forage { payment }) => Some(*payment), _ => None }, _ => None };
                                 branches.push(Branch::PrintedOr { arm: arm + 1, forage });
-                                among.push(plan.clone().chosen(&way).map_err(crate::Unsupported)?.parts);
+                                among.push(plan.clone().chosen(&way).map_err(|e| crate::Unsupported(e.to_string()))?.parts);
                             }
                         }
                         choices.push(Choice { owner: support.ability_key(), branches, among, said });
@@ -448,7 +449,7 @@ impl Plan {
         if choices.len() > 1 { return unsupported("cost: more than one choice among alternatives"); }
         let plan = Self { parts, generic_reduction: 0, minimum: 0, generic_substitution: 0, convoke_colors: [0;5], convoke_groups: Vec::new(), convoke_allocation: Vec::new(), delve_group: None, changed: (0, 0), choices, typed_reduction: [0;6], reduction_choices: Vec::new(), reduction_owners: Vec::new() };
         plan.validate_selections()?;
-        for way in plan.ways() { plan.clone().chosen(&way).map_err(crate::Unsupported)?; }
+        for way in plan.ways() { plan.clone().chosen(&way).map_err(|e| crate::Unsupported(e.to_string()))?; }
         Ok(plan)
     }
     /// Each way of making its choices among alternatives (601.2b): one alternative of each.
@@ -462,15 +463,15 @@ impl Plan {
     /// The cost with its choices among alternatives made, as its payer says them while
     /// proposing the spell or ability (601.2b, 602.2b): for each choice in order, the
     /// alternative paid. It is locked in with the rest of the cost (601.2f).
-    pub(crate) fn chosen(mut self, chose: &[usize]) -> Result<Self, String> {
+    pub(crate) fn chosen(mut self, chose: &[usize]) -> ActionResult<Self> {
         let count = self.choices.len() + self.reduction_choices.len();
         if chose.len() != count {
-            return Err(format!("that cost has {count} choice(s) among alternatives: say which alternative of each is paid or applied (601.2b, 118.7e)"));
+            return Err(format!("that cost has {count} choice(s) among alternatives: say which alternative of each is paid or applied (601.2b, 118.7e)").into());
         }
         let reductions = &chose[self.choices.len()..];
         for (choice, i) in std::mem::take(&mut self.choices).into_iter().zip(chose) {
             let Some(parts) = choice.among.get(*i) else {
-                return Err(format!("that cost is a choice among {} alternatives, numbered from 0 (601.2b)", choice.among.len()));
+                return Err(format!("that cost is a choice among {} alternatives, numbered from 0 (601.2b)", choice.among.len()).into());
             };
             self.parts.extend(parts.iter().cloned());
         }
@@ -479,7 +480,7 @@ impl Plan {
             self = self.reduced_symbol(symbol);
         }
         if mixed(&self.parts) { return Err("that alternative taps an object the rest of the cost moves (601.2b)".into()); }
-        self.validate_selections().map_err(|u| u.0)?;
+        self.validate_selections()?;
         Ok(self)
     }
     /// What each alternative of each of its choices pays, said plainly, as a player is offered
@@ -492,15 +493,15 @@ impl Plan {
     }
     /// The alternative of each of its choices that is chosen, said as [`Plan::alternatives`]
     /// says it: what its payer announces (601.2b). None for a choice not said.
-    pub(crate) fn branch_choices(&self, game: &Game, ctx: &Ctx) -> Result<Vec<Vec<BranchSelection>>, String> {
+    pub(crate) fn branch_choices(&self, game: &Game, ctx: &Ctx) -> ActionResult<Vec<Vec<BranchSelection>>> {
         let mut rows = Vec::new();
         for choice in &self.choices {
-            let owner=choice.owner.as_ref().ok_or("cost branch has no declaring ability")?;
+            let owner=choice.owner.as_ref().ok_or_else(|| crate::Unsupported("cost branch has no declaring ability".into()))?;
             let mut owner=owner.clone();
             if let Some(key)=&ctx.ability {owner.origin=key.origin.clone();}
             if !matches!(owner.origin,crate::binding::Origin::Own) || game.frozen_definition(ctx.object_source(),&owner.origin).is_none_or(|definition|definition.printed_cost_definition().is_none())
                 || ctx.casting.is_some_and(|(_,cast)|cast!=crate::card::CastAs::Whole) {
-                return Err("cost branch owner requires a whole printed definition".into());
+                return Err(crate::Unsupported("cost branch owner requires a whole printed definition".into()).into());
             }
             let ability=game.audit_ability(Some(ctx.object_source()), &owner);
             rows.push(choice.branches.iter().cloned().map(|branch|BranchSelection { ability: ability.clone(), branch }).collect());
@@ -510,14 +511,14 @@ impl Plan {
             if let Some(key)=&ctx.ability {owner.origin=key.origin.clone();}
             if !matches!(owner.origin,crate::binding::Origin::Own) || game.frozen_definition(ctx.object_source(),&owner.origin).is_none_or(|definition|definition.printed_cost_definition().is_none())
                 || ctx.casting.is_some_and(|(_,cast)|cast!=crate::card::CastAs::Whole) {
-                return Err("cost branch owner requires a whole printed definition".into());
+                return Err(crate::Unsupported("cost branch owner requires a whole printed definition".into()).into());
             }
             let ability=game.audit_ability(Some(ctx.object_source()), &owner);
             rows.push(options.iter().map(|half|BranchSelection { ability:ability.clone(), branch:Branch::HybridReduction { symbol:*occurrence, half:HybridHalf::of(*half) } }).collect());
         }
         Ok(rows)
     }
-    pub(crate) fn resolve_branches(&self, game:&Game, ctx:&Ctx, ordinal:&[usize], semantic:Option<&[BranchSelection]>) -> Result<Vec<usize>, String> {
+    pub(crate) fn resolve_branches(&self, game:&Game, ctx:&Ctx, ordinal:&[usize], semantic:Option<&[BranchSelection]>) -> ActionResult<Vec<usize>> {
         let Some(selected)=semantic else { return Ok(ordinal.to_vec()) };
         if !ordinal.is_empty() {return Err("cannot combine semantic and ordinal cost choices".into());}
         let sites=self.branch_choices(game,ctx)?;
@@ -813,8 +814,8 @@ impl Plan {
 
     pub(crate) fn selected_tap(&self) -> bool { self.parts.iter().any(|p| matches!(p, Part::Objects { verb: Verb::Tap, .. })) }
     pub(crate) fn reveals_source(&self) -> bool { self.parts.contains(&Part::Reveal) }
-    pub(crate) fn payments(&self, game: &Game, ctx: &Ctx, chosen: Option<&[Vec<ObjId>]>) -> Result<(Vec<Payment>, usize), String> {
-        self.validate_selections().map_err(|e| e.0)?;
+    pub(crate) fn payments(&self, game: &Game, ctx: &Ctx, chosen: Option<&[Vec<ObjId>]>) -> ActionResult<(Vec<Payment>, usize)> {
+        self.validate_selections()?;
         if self.chooses() { return Err("say which alternative of that cost is paid (601.2b)".into()); }
         let mut payments = Vec::new();
         let mut choices = 0;
@@ -849,12 +850,12 @@ impl Plan {
                                 // each card first, then what they must be together: a card the cost can't
                                 // take is named, rather than counted as missing from the whole
                                 for o in &selected {
-                                    if !legal.contains(o) { return Err(unfit(game, ctx, *verb, *o)); }
+                                    if !legal.contains(o) { return Err(unfit(game, ctx, *verb, *o).into()); }
                                 }
                                 let evaluated = selection.evaluated(game, ctx, &legal);
                                 if !evaluated.accepts(&selected) {
                                     let rule = verb.entry().rule;
-                                    if returns_attacker(game, ctx, *verb) { return Err(returned_count(game, selected.len())); }
+                                    if returns_attacker(game, ctx, *verb) { return Err(returned_count(game, selected.len()).into()); }
                                     return Err(match evaluated {
                                         Selection::Exact(n) => format!("that selection does not satisfy the cost, which asks for exactly {n} {}: {} chosen (601.2h, {rule})", if !legal.is_empty() && legal.iter().all(|o| game.obj(*o).zone == crate::Zone::Battlefield) { "permanent(s)" } else { "card(s)" }, selected.len()),
                                         Selection::UpTo(n) => format!("that selection exceeds the maximum of {n}: {} chosen (601.2h)", selected.len()),
@@ -862,7 +863,7 @@ impl Plan {
                                         Selection::PowerAtLeast { minimum, .. } => format!("that selection does not satisfy the cost: the chosen creatures have total power less than {minimum} (601.2h)"),
                                         Selection::ManaValueAtLeast { minimum, .. } => format!("that selection does not satisfy the cost: the chosen cards have total mana value less than {minimum} (601.2h, 701.59a)"),
                                         Selection::Waterbend { generic, .. } => format!("a waterbend cost taps at most one artifact or creature for each generic mana in it, {generic}: {} chosen (701.67a, 701.67b)", selected.len()),
-                                    });
+                                    }.into());
                                 }
                                 objects.extend(selected);
                             }
@@ -1017,6 +1018,23 @@ impl Game {
 #[cfg(test)]
 mod selection_tests {
     use super::*;
+    #[test]
+    fn composed_selection_limits_stay_unsupported_through_choice_and_payment() {
+        let def = CardDef::new("Source", "{0}", "Artifact", "", None).unwrap();
+        let support = Support::definition(&def, None);
+        let among = expr::Set::compile(&ir::ObjectSet::of(Domain::Permanent), &support, &mut linked(&support)).unwrap();
+        let mut plan = Plan::default();
+        plan.parts.push(Part::Objects {verb:Verb::Sacrifice, groups:vec![
+            Objects::Choose {selection:Selection::PowerAtLeast {minimum:1, powers:vec![]}, among:Candidates::Set(among)},
+            Objects::Source(None),
+        ], producer:None, blight:0, target_minimum:false});
+        let mut game = Game::new(vec![def], 2, 20);
+        let source = game.put(0, 0, crate::Zone::Battlefield);
+        for error in [plan.clone().chosen(&[]).unwrap_err(), plan.payments(&game, &Ctx::new(0, source), None).unwrap_err()] {
+            assert_eq!(error.class(), crate::simulation::Class::Unsupported);
+            assert_eq!(error.to_string(), "cost: a collective type selection combined with another object cost");
+        }
+    }
     #[test]
     fn r702_122a_total_power_counts_a_negative_power_as_itself() {
         // 107.1b: a calculation that needs a negative value uses it.

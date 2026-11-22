@@ -58,9 +58,11 @@ class PlayerPromptClientTests(unittest.TestCase):
                 and (controller is None or o["controller"] == controller) and (zone is None or o["zone"] == zone)]
 
     def refused(self, seat, request):
+        fields = {"seat": seat.label, "session_id": seat.last["session_id"]}
+        if request["cmd"] == "answer":
+            fields["request_id"] = seat.last["request_id"]
         with self.assertRaises(SystemExit) as refusal:
-            self.engine.send({"seat": seat.label, "session_id": seat.last["session_id"],
-                              "request_id": seat.last["request_id"]} | request)
+            self.engine.send(fields | request)
         return str(refusal.exception)
 
     def test_a_target_is_chosen_by_label_among_duplicates_and_paid_by_an_ability_label(self):

@@ -223,7 +223,7 @@ impl Change {
     /// Counts fit u32, but their modifiers may exceed the represented i32 change.
     pub(crate) fn checked_times(self, n: u32) -> crate::Res<Change> {
         let scale = |value: i32| i32::try_from(i64::from(value) * i64::from(n))
-            .map_err(|_| crate::Unsupported("continuous P/T change exceeds the supported numerical range (107.1b)".into()));
+            .map_err(|_| crate::Unsupported("continuous P/T change exceeds the engine numerical range".into()));
         Ok(match self {
             Change::Pt(p, t) => Change::Pt(scale(p)?, scale(t)?),
             other => other,

@@ -39,7 +39,7 @@ pub(crate) fn compile(def: &CardDef) -> Option<Res<Plan>> {
     })())
 }
 impl Game {
-    pub(crate) fn plot_cost(&self, player: PlayerId, card: ObjId) -> Result<Plan, String> {
+    pub(crate) fn plot_cost(&self, player: PlayerId, card: ObjId) -> crate::play::ActionResult<Plan> {
         if !self.sorcery_timing(player) {
             return Err("plot only in your main phase with an empty stack (702.170a)".into());
         }
@@ -47,8 +47,8 @@ impl Game {
             return Err("plot a card from your hand (702.170a)".into());
         }
         let def = self.def(card).ok_or("plot needs a card")?;
-        crate::play::check(def).map_err(|e| e.0)?;
-        def.plot.as_ref().ok_or("that card has no supported plot ability")?.clone().map_err(|e| e.0)
+        crate::play::check(def)?;
+        def.plot.as_ref().ok_or("that card has no supported plot ability")?.clone().map_err(Into::into)
     }
     pub(crate) fn plot(
         &mut self,

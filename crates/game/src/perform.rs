@@ -199,7 +199,7 @@ pub(crate) fn run(game: &mut Game, action: Action) -> crate::Res<Result<Complete
                         game.lose_life(p, count)?;
                         let lost = u32::try_from(i64::from(before) - i64::from(game.players[p].life)).unwrap_or(0);
                         result.lost = result.lost.checked_add(lost).ok_or_else(||
-                            crate::Unsupported("life lost exceeds the supported numerical range (107.1b)".into()))?;
+                            crate::Unsupported("life lost exceeds the engine numerical range".into()))?;
                     }
                 }
             }

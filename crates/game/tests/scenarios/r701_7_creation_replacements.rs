@@ -100,7 +100,7 @@ fn r107_1b_creation_multiplier_overflow_restores_resolution_before_reserving_tok
     let mut g=Game::new(defs,2,20);g.put(0,0,Zone::Battlefield);
     let card=g.put(0,1,Zone::Hand);g.act(0,Move::Cast {card,targets:vec![]}).unwrap();g.act(0,Move::Pass).unwrap();
     let before=format!("{g:?}");
-    cite!(["107.1b","701.7b"];assert!(g.act(1,Move::Pass).unwrap_err().contains("107.1b")));
+    cite!(["107.1b","701.7b"];assert!(g.act(1,Move::Pass).unwrap_err().contains("engine numerical range")));
     assert_eq!(format!("{g:?}"),before);assert!(tokens(&g).is_empty());
 }
 

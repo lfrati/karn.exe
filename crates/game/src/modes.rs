@@ -147,22 +147,22 @@ fn count(modes: &Modes, n: usize, repeats: bool) -> Res<(usize, usize)> {
 /// Is this a choice of modes the player may make (700.2a, 700.2d)? As many as the text says,
 /// each a mode the ability has, none of them twice. Of an ability that is not modal, no modes.
 /// As announced with none of the choices "choose both instead" asks of (601.2b).
-pub fn legal(effect: &Effect, rows: &[Mode], chosen: &[usize]) -> Result<(), String> {
-    match bounds(effect, rows).map_err(|u| u.0)? {
+pub fn legal(effect: &Effect, rows: &[Mode], chosen: &[usize]) -> Result<(), crate::play::ActionError> {
+    match bounds(effect, rows)? {
         None if chosen.is_empty() => Ok(()),
         None => Err("that is not modal: no mode is chosen (700.2)".into()),
         Some(Bounds { min, max, paws, .. }) => {
             if let Some(most) = paws.filter(|most| pawprints(rows, chosen) > *most) {
-                return Err(format!("choose up to {most} {{P}} worth of modes (700.2i)"));
+                return Err(format!("choose up to {most} {{P}} worth of modes (700.2i)").into());
             }
             if chosen.len() < min || chosen.len() > max {
                 return Err(match (min, max) {
                     (a, b) if a == b => format!("choose {a} of its modes (700.2a)"),
                     (a, b) => format!("choose {a} to {b} of its modes (700.2a)"),
-                });
+                }.into());
             }
             if chosen.iter().any(|m| *m >= rows.len()) {
-                return Err(format!("it has {} modes (700.2)", rows.len()));
+                return Err(format!("it has {} modes (700.2)", rows.len()).into());
             }
             if !repeats(effect) && chosen.iter().enumerate().any(|(i, m)| chosen[..i].contains(m)) {
                 return Err("a mode is chosen once (700.2d)".into());

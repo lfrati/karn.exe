@@ -361,7 +361,7 @@ fn r107_overflow_refuses_before_events_history_or_partial_inventory() {
     g.act(0, Move::Cast { card: spell, targets: vec![] }).unwrap();
     g.act(0, Move::Pass).unwrap();
     let before = format!("{g:?}");
-    cite!(["107.1b","733.1"];refused("107.1b"):g.act(1,Move::Pass));
+    cite!(["107.1b","733.1"];refused("engine numerical range"):g.act(1,Move::Pass));
     cite!(["733.1"];assert_eq!(format!("{g:?}"),before));
     cite!(["122.6"];assert_eq!((counter(&g,a,"charge"),placements(&g).len()),(0,0)));
 }

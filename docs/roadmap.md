@@ -90,10 +90,10 @@ capability assertion. Matched release replay medians are 1.0–2.8% lower than t
 the raw results remain evidence for #31. Optional/conditional producers, grouped/repeated
 flips, face-only card instructions and coin replacements remain refused.
 
-**The initial four coverage mechanisms and the grammar/pinning batch are implemented.
-Next are native refusal boundaries [#13](https://github.com/lfrati/karn.exe/issues/13) and
-hosting reliability [#20](https://github.com/lfrati/karn.exe/issues/20).** Ability text, MGN
-repairs, the Commander corpus and profiling remain in the initial execution queue.
+**The core queue, four coverage mechanisms, grammar/pinning and native hosting repairs are
+implemented. Next are ability text [#2](https://github.com/lfrati/karn.exe/issues/2) and MGN
+repairs [#14](https://github.com/lfrati/karn.exe/issues/14).** The Commander corpus and
+profiling investigation also remain in the initial execution queue.
 
 Re-rank coverage candidates against fresh blockers when the evidence justifies it. Trace
 the specific reference grammar, binding, lowering and runtime; identify Karn's missing
@@ -112,6 +112,20 @@ Supporting work is separate from that sequence: accurate ability text
 ([#14](https://github.com/lfrati/karn.exe/issues/14)), hosting reliability
 ([#20](https://github.com/lfrati/karn.exe/issues/20)). Take them when they help the current
 batch or repair the affected interface; they are not one serial prerequisite chain.
+
+Native refusals now preserve unsupported costs and captured modes, and restricted selectors
+retain a failed move's class and reason when no payment boundary was reached
+([#13](https://github.com/lfrati/karn.exe/issues/13)). Every command rejects unknown fields
+before projection or mutation. Payment probes run inside the existing simulation failure
+boundary; invalid JSON values and uncorrelated input replies leave other shared-host clients
+working ([#20](https://github.com/lfrati/karn.exe/issues/20)). Validation covers 5,509 Rust
+workspace tests and 1,136 tooling cases across full runs and focused corrections to two
+fixtures; this was not one uninterrupted passing `make check`. All 150 native server tests
+and 40 affected client tests pass after the final containment cleanup. Matched release core
+rates are within 0.5% of the baseline; Bant JSON action round trips are within 0.8%, with
+identical responses. No speedup is claimed. The JSON comparison covers Bant only: the baseline
+refuses Vivi's historical quote metadata, and Torch JSON was not attempted. The final
+execution queue still requires a clean full check.
 
 The [benchmark default matrix fix](https://github.com/lfrati/karn.exe/issues/15) is complete:
 implicit worker counts fit the physical cores available under affinity, while explicit

@@ -25,7 +25,7 @@ fn r107_1b_holder_total_overflow_rejects_resolution_without_partial_effects() {
     let mut g=game(1);let holder=g.put(0,0,Zone::Battlefield);
     g.set_initial_counters(holder,"charge",u32::MAX);cast(&mut g,holder);
     let before=format!("{g:?}");
-    cite!(["107.1b"];assert!(g.act(1,Move::Pass).unwrap_err().contains("107.1b")));
+    cite!(["107.1b"];assert!(g.act(1,Move::Pass).unwrap_err().contains("engine numerical range")));
     assert_eq!(format!("{g:?}"),before);
 }
 #[test]
@@ -37,7 +37,7 @@ fn r107_1b_overflowing_replacement_answer_retains_exact_question_and_other_order
     let first=among.iter().find(|r|r.source==plus).unwrap().clone();
     let safe=among.iter().find(|r|r.source==double).unwrap().clone();
     let before=format!("{g:?}");
-    cite!(["107.1b","616.1"];assert!(g.act(0,Move::Choose(Answer::Replacement(first))).unwrap_err().contains("107.1b")));
+    cite!(["107.1b","616.1"];assert!(g.act(0,Move::Choose(Answer::Replacement(first))).unwrap_err().contains("engine numerical range")));
     assert_eq!(format!("{g:?}"),before);
     g.act(0,Move::Choose(Answer::Replacement(safe))).unwrap();
     assert_eq!(g.obj(holder).counters["charge"],u32::MAX);
@@ -48,7 +48,7 @@ fn r107_1b_checked_fixture_accepts_boundary_and_rejects_next_without_events() {
     g.try_put_counters(holder,"charge",u32::MAX).unwrap();
     let before=format!("{g:?}");
     // Uncited (contract): the finite representation refuses instead of clamping CR107.1b.
-    crate::support::refused(g.try_put_counters(holder,"charge",1).map_err(|e| e.0), "counter amount exceeds the supported numerical range (107.1b)");
+    crate::support::refused(g.try_put_counters(holder,"charge",1).map_err(|e| e.0), "counter amount exceeds the engine numerical range");
     assert_eq!(g.obj(holder).counters.get("charge"), Some(&u32::MAX));
     assert_eq!(format!("{g:?}"),before);
 }
@@ -72,7 +72,7 @@ fn r610_3_return_entry_overflow_restores_parent_before_source_departure() {
     g.put(1,3,Zone::Battlefield);
     let release=g.put(0,2,Zone::Hand);g.act(0,Move::Cast{card:release,targets:vec![vec![source.into()]]}).unwrap();g.act(0,Move::Pass).unwrap();
     let before=format!("{g:?}");
-    assert!(g.act(1,Move::Pass).unwrap_err().contains("107.1b"));
+    assert!(g.act(1,Move::Pass).unwrap_err().contains("engine numerical range"));
     assert_eq!(format!("{g:?}"),before);
     assert!(!g.log.iter().any(|e|matches!(e,Event::LifeGained{amount:1,..})));
 }
@@ -88,7 +88,7 @@ fn native_warden_derived_counter_total_cannot_be_preclamped_before_endure() {
     for _ in 0..2{g.act(g.priority,Move::Pass).unwrap();}
     g.set_initial_counters(w,"charge",u32::MAX);g.set_initial_counters(w,"stun",1);
     g.act(0,Move::Pass).unwrap();let before=format!("{g:?}");
-    cite!(["107.1b","701.63a"];assert!(g.act(1,Move::Pass).unwrap_err().contains("107.1b")));
+    cite!(["107.1b","701.63a"];assert!(g.act(1,Move::Pass).unwrap_err().contains("engine numerical range")));
     assert_eq!(format!("{g:?}"),before);
 }
 #[test]
@@ -106,7 +106,7 @@ fn r704_5_sba_source_death_return_overflow_restores_prior_public_action() {
     // isolates the SBA parent; the public pass must not leave a half-returned object.
     g.damage(source,source.into(),2);
     let before=format!("{g:?}");
-    cite!(["704.5g","610.3","107.1b"];assert!(g.act(0,Move::Pass).unwrap_err().contains("107.1b")));
+    cite!(["704.5g","610.3","107.1b"];assert!(g.act(0,Move::Pass).unwrap_err().contains("engine numerical range")));
     assert_eq!(format!("{g:?}"),before);
 }
 #[test]
@@ -123,7 +123,7 @@ fn r118_11_pending_loyalty_replacement_overflow_restores_cost_and_safe_order_pay
     let Some(Decision::Choose{choice:Choice::Replacement{among,..},..})=&g.decision else{panic!("counter cost ordering: {:?}",g.decision)};
     let first=among.iter().find(|r|r.source==plus).unwrap().clone();let safe=among.iter().find(|r|r.source==double).unwrap().clone();
     let before=format!("{g:?}");
-    cite!(["606.4","118.11","107.1b"];assert!(g.act(0,Move::Choose(Answer::Replacement(first))).unwrap_err().contains("107.1b")));
+    cite!(["606.4","118.11","107.1b"];assert!(g.act(0,Move::Choose(Answer::Replacement(first))).unwrap_err().contains("engine numerical range")));
     assert_eq!(format!("{g:?}"),before);
     g.act(0,Move::Choose(Answer::Replacement(safe))).unwrap();
     assert_eq!(g.obj(source).counters["loyalty"],u32::MAX);

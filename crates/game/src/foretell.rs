@@ -46,7 +46,7 @@ impl Game {
     /// The cost of foretelling this card, if this player may now: any time they have
     /// priority during their own turn (116.2h), a card with foretell in their hand
     /// (702.143a).
-    pub(crate) fn foretell_cost(&self, player: PlayerId, card: ObjId) -> Result<Plan, String> {
+    pub(crate) fn foretell_cost(&self, player: PlayerId, card: ObjId) -> crate::play::ActionResult<Plan> {
         if self.active != player {
             return Err("foretell only during your own turn (702.143a)".into());
         }
@@ -54,7 +54,7 @@ impl Game {
             return Err("foretell a card from your hand (702.143a)".into());
         }
         let def = self.def(card).ok_or("foretell needs a card")?;
-        crate::play::check(def).map_err(|e| e.0)?;
+        crate::play::check(def)?;
         let castable = def.cast_choices(true).into_iter().any(|cast_as| def.spell(cast_as).is_ok_and(|d| matches!(d.costs.foretell, Some(Ok(_)))));
         if !castable { return Err("that card has no supported foretell ability".into()); }
         Ok(action_cost())

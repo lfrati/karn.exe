@@ -98,8 +98,7 @@
 //!   cites (none, `[]`, when it cites none);
 //! - `"unsupported"`: the engine does not run something it needs; the game is as it was;
 //! - `"malformed"`: the request is not JSON, misses a field or gives one a value it does not
-//!   take, says a field its command does not take (of `act`, `library_order`,
-//!   `set_library_order`, `quote_payment`, `quote_modal`, and of a move, [`move_keys`]),
+//!   take, says a field its command or move does not take ([`move_keys`]),
 //!   describes no game (a setup with one deck), or breaks the protocol (a privileged command
 //!   with a `viewer`, replay receipts that do not fit: these also say `"code":"replay_input"`);
 //! - `"unreferable"`: it names an object, player, label, request or game the requester
@@ -2099,10 +2098,10 @@ fn new_position(faces: &Catalog, position: &Value) -> Result<Game, Error> {
 }
 
 /// The life total each player begins with (103.4): 20 unless the setup says. One the engine
-/// cannot hold is refused, never truncated (107.1b).
+/// cannot hold is refused as an engine representation limit, never truncated.
 fn starting_life(request: &Value) -> Result<i32, String> {
     request.get("life").map_or(Ok(20), |life| life.as_i64().and_then(|n| i32::try_from(n).ok())
-        .ok_or_else(|| format!("starting life is a whole number from {} to {} (103.4, 107.1b)", i32::MIN, i32::MAX)))
+        .ok_or_else(|| format!("starting life is a whole number in the engine range {} to {}", i32::MIN, i32::MAX)))
 }
 
 fn new_game(faces: &Catalog, request: &Value) -> Result<Game, Error> {
@@ -2329,10 +2328,16 @@ fn version() -> Value {
             "random": game::start::RANDOM })
 }
 
+struct PaymentProbe {
+    proof: Value,
+    pools: Vec<Pool>,
+    outcome: Result<(), game::play::ActionError>,
+}
+
 /// Execute only an isolated clone. The live RNG, pending request, labels and
 /// delivery buffers are untouched. A missing completed receipt is evidence of
 /// an interrupted announcement, never a guessed zero cost.
-fn payment_probe(g:&Game, player:usize, request:&Value) -> Result<(Value,Vec<Pool>),Error> {
+fn payment_probe(g:&Game, player:usize, request:&Value) -> Result<PaymentProbe,Error> {
     let pool=&g.players.get(g.decision_actor()).ok_or_else(|| Error::unreferable("no such player"))?.pool;
     let offered=match &g.decision {
         Some(game::state::Decision::Choose {choice:game::state::Choice::Replacement{among,..},..})=>among.as_slice(),
@@ -2340,10 +2345,10 @@ fn payment_probe(g:&Game, player:usize, request:&Value) -> Result<(Value,Vec<Poo
     };
     optional_named(request,g)?;
     let mv=read_payment_move(g,player,request,pool,offered)?;
-    Ok(payment_probe_move(g, player, request, mv)?)
+    Ok(payment_probe_move(g, player, request, mv))
 }
 
-fn payment_probe_move(g:&Game, player:usize, request:&Value, mv:Move) -> Result<(Value,Vec<Pool>),String> {
+fn payment_probe_move(g:&Game, player:usize, request:&Value, mv:Move) -> PaymentProbe {
     let mut quoted=g.clone();
     quoted.begin_payment_audit();
     let since=quoted.log.end();
@@ -2417,11 +2422,11 @@ fn payment_probe_move(g:&Game, player:usize, request:&Value, mv:Move) -> Result<
     }
     if let Some(boundary)=suspended {proof["suspended"]=boundary;}
     if let Some(boundary)=g.payment_mana_boundary() { proof["continuation"] = boundary; }
-    Ok((proof,payment_pool))
+    PaymentProbe { proof, pools:payment_pool, outcome }
 }
 
 fn payment_quote(g:&Game, player:usize, request:&Value) -> Result<Value,Error> {
-    payment_probe(g,player,request).map(|(value,_)|value)
+    payment_probe(g,player,request).map(|probe|probe.proof)
 }
 
 /// Resolve only caller-supplied restricted indices at their actual cost boundary.
@@ -2441,9 +2446,15 @@ fn read_payment_move(g:&Game,player:usize,request:&Value,pool:&Pool,offered:&[ga
         let mana=if let Some(indices)=selector.get("restricted_after").cloned() {
             if selector.get("restricted").is_some() {return Err("pending payment chooses only one restricted boundary".into());}
             let plain_move=Move::Choose(game::state::Answer::Mana(adding.clone()));
-            let (quote,boundaries)=payment_probe_move(g,player,&plain,plain_move)?;
-            let index=quote["payments"].as_array().and_then(|rs|rs.iter().position(|r|r["path"]==json!([]) && r["source"]==source.0))
-                .ok_or("pending selector did not reach the exact post-production root boundary")?;
+            let probe=payment_probe_move(g,player,&plain,plain_move);
+            let index=match probe.proof["payments"].as_array().and_then(|rs|rs.iter().position(|r|r["path"]==json!([]) && r["source"]==source.0)) {
+                Some(index)=>index,
+                None=>{
+                    probe.outcome.map_err(ResponseError::from)?;
+                    return Err("pending selector did not reach the exact post-production root boundary".into());
+                }
+            };
+            let boundaries=probe.pools;
             selector.as_object_mut().ok_or("pending mana is an object")?.remove("restricted_after");
             selector["restricted"]=indices;
             read_pool_selection(&selector,&boundaries[index])?
@@ -2477,8 +2488,15 @@ fn read_payment_move(g:&Game,player:usize,request:&Value,pool:&Pool,offered:&[ga
             }
         }
         let mv=read_move_at_pools(&baseline,&outer,offered,&pools)?;
-        let (quote,boundaries)=payment_probe_move(g,player,&baseline,mv)?;
-        let index=quote["payments"].as_array().and_then(|rs|rs.iter().position(|r|r["path"]==json!(path))).ok_or("restricted selection did not reach its scoped locked boundary")?;
+        let probe=payment_probe_move(g,player,&baseline,mv);
+        let index=match probe.proof["payments"].as_array().and_then(|rs|rs.iter().position(|r|r["path"]==json!(path))) {
+            Some(index)=>index,
+            None=>{
+                probe.outcome.map_err(ResponseError::from)?;
+                return Err("restricted selection did not reach its scoped locked boundary".into());
+            }
+        };
+        let (quote,boundaries)=(probe.proof,probe.pools);
         let boundary=boundaries.get(index).ok_or("missing scoped boundary pool")?;
         let chosen_pool=if mana.get("restricted_after").is_some() {boundary.clone()} else {
             // Restricted indices before a child's mana window name its initial pool.
@@ -2498,6 +2516,23 @@ fn read_payment_move(g:&Game,player:usize,request:&Value,pool:&Pool,offered:&[ga
         if path.is_empty() {outer=chosen_pool;} else {pools.insert(path.clone(),chosen_pool);}
     }
     read_move_at_pools(&selected,&outer,offered,&pools)
+}
+
+/// State-dependent decoding can execute isolated payment probes. Hosts call it
+/// inside Simulation::observe so every such rules query shares its fault boundary.
+fn read_response_move(g:&Game, player:usize, request:&Value) -> Result<Move,Error> {
+    let pool=&g.players.get(g.decision_actor()).ok_or_else(|| Error::unreferable("no such player"))?.pool;
+    let offered=match &g.decision {
+        Some(game::state::Decision::Choose {choice:game::state::Choice::Replacement {among,..},..})=>among.as_slice(),
+        _=>&[],
+    };
+    optional_named(request,g)?;
+    match &g.decision {
+        _ if request["kind"]=="concede"=>read_move_offered(request,pool,offered),
+        Some(game::state::Decision::Choose {choice:game::state::Choice::DamageOrder {among,..},..})=>read_damage_order(request,among),
+        Some(game::state::Decision::Choose {choice:game::state::Choice::DamageReplacement {among,..},..})=>read_damage_move(request,among),
+        _=>read_payment_move(g,player,request,pool,offered),
+    }
 }
 
 /// Exact observations from an isolated modal announcement, never the live host.
@@ -2535,6 +2570,21 @@ fn dispatch(
     logged: &mut Delivery,
     input: &Value,
 ) -> Result<Value, Error> {
+    let fields: &[&str] = match input["cmd"].as_str().unwrap_or("") {
+        "new" => &["players", "life", "viewer", "ask_forced", "position"],
+        "start" => &["decks", "companions", "commanders", "format", "sideboards", "life", "first", "seed", "orders", "viewer", "ask_forced"],
+        "act" => &["session_id", "request_id", "player", "move", "viewer", "payment_expect", "capture_random", "random_outcomes", "random_outcomes_keep_unused", "shuffles", "shuffles_keep_unused"],
+        "quote_payment" | "quote_modal" => &["session_id", "request_id", "player", "move", "viewer"],
+        "state" => &["viewer"],
+        "version" => &[],
+        "audit_initial" | "audit_pending" | "audit_game" | "audit_objects" => &["session_id", "viewer"],
+        "library_order" => &["session_id", "player", "viewer"],
+        "set_library_order" => &["session_id", "request_id", "player", "order", "viewer"],
+        "labels" | "prompt" => &["session_id", "seat"],
+        "answer" => &["session_id", "request_id", "seat", "answer"],
+        _ => &[],
+    };
+    request_fields(input, fields)?;
     let mut captured_random = None;
     let mut shuffles_unused = None;
     let mut random_outcomes_unused = None;
@@ -2596,12 +2646,13 @@ fn dispatch(
             request_fields(input, &["session_id", "request_id", "player", "move", "viewer"])?;
             if input.get("viewer").is_some() {return Err("quote_payment is privileged".into());}
             if input["session_id"].as_u64()!=Some(*session_id) {return Err(Error::stale("stale session_id"));}
-            let mut isolated=game.as_ref().ok_or_else(|| Error::unreferable("no game"))?.clone();
-            let pending=isolated.request()?.ok_or_else(|| Error::stale("no pending request"))?;
+            let simulation=game.as_mut().ok_or_else(|| Error::unreferable("no game"))?;
+            let pending=simulation.request()?.ok_or_else(|| Error::stale("no pending request"))?;
             if input["request_id"].as_u64()!=Some(pending.id.0) {return Err(Error::stale("stale request_id"));}
             let player=input["player"].as_u64().ok_or("the request has no player")? as usize;
             if player!=pending.player {return Err(Error::unreferable("another player's request"));}
-            return payment_quote(isolated.game()?,player,input.get("move").ok_or("the request has no move")?);
+            let request=input.get("move").ok_or("the request has no move")?;
+            return simulation.observe(|g|payment_quote(g,player,request))?;
         }
         "act" => {
             request_fields(input, &["session_id", "request_id", "player", "move", "viewer", "payment_expect", "capture_random",
@@ -2617,32 +2668,21 @@ fn dispatch(
             if request["kind"] != "concede" {
                 simulation.validate_request(id, player)?;
             }
-            let g = simulation.game()?;
-            let pool = &g.players.get(g.decision_actor()).ok_or_else(|| Error::unreferable("no such player"))?.pool;
-            let offered = match &g.decision {
-                Some(game::state::Decision::Choose { choice: game::state::Choice::Replacement { among, .. }, .. }) => among.as_slice(),
-                _ => &[],
-            };
-            optional_named(request, g)?;
-            if let Some(expected)=input.get("payment_expect") {
-                let actual=payment_quote(g,player,request)?;
-                let refused="payment quote changed or is incomplete; action was not applied";
-                if &actual!=expected { return Err(Error::stale(refused)); }
-                // an action is applied as quoted only when the quote says it completes or stops
-                if actual["complete"]!=true && actual.get("suspended").is_none() { return Err(refused.into()); }
-            }
-            let mv=match &g.decision {
-                // a concession answers no question (104.3a)
-                _ if request["kind"]=="concede"=>read_move_offered(request,pool,offered)?,
-                Some(game::state::Decision::Choose {choice:game::state::Choice::DamageOrder{among,..},..})=>read_damage_order(request,among)?,
-                Some(game::state::Decision::Choose {choice:game::state::Choice::DamageReplacement{among,..},..})=>read_damage_move(request,among)?,
-                _=>read_payment_move(g,player,request,pool,offered)?,
-            };
-            let mv=if input.pointer("/payment_expect/suspended/stage").and_then(Value::as_str)==Some("mana_choice") {
-                Move::AuditPayment(Box::new(mv))
-            } else {mv};
-            // every other argument is read before the game is given the move
-            read_viewer(g, input)?;
+            let mv=simulation.observe(|g| -> Result<Move,Error> {
+                if let Some(expected)=input.get("payment_expect") {
+                    let actual=payment_quote(g,player,request)?;
+                    let refused="payment quote changed or is incomplete; action was not applied";
+                    if &actual!=expected { return Err(Error::stale(refused)); }
+                    // Apply exactly a complete quote or its retained suspension.
+                    if actual["complete"]!=true && actual.get("suspended").is_none() { return Err(refused.into()); }
+                }
+                let mv=read_response_move(g,player,request)?;
+                let mv=if input.pointer("/payment_expect/suspended/stage").and_then(Value::as_str)==Some("mana_choice") {
+                    Move::AuditPayment(Box::new(mv))
+                } else {mv};
+                read_viewer(g, input)?;
+                Ok(mv)
+            })??;
             if input.get("shuffles_keep_unused").is_some() && input.get("shuffles").is_none() {
                 return Err("replay input: shuffles_keep_unused needs shuffles".into());
             }
@@ -2658,7 +2698,7 @@ fn dispatch(
             let outcomes = input.get("random_outcomes").map(read_random_outcomes).transpose()?;
             let shuffles = input.get("shuffles").map(read_shuffles).transpose().map_err(|why| game::start::ReplayInput(why).to_string())?;
             // what happened so far is rendered before the game goes on and may forget it
-            logged.snapshot(g);
+            logged.snapshot(simulation.game()?);
             #[cfg(feature = "profile")]
             let _core = game::profile::span(game::profile::Scope::Respond);
             if capture {
@@ -2844,18 +2884,7 @@ fn player(game: &mut Option<Simulation>, session_id: u64, logged: &mut Delivery,
             Err(why) => Err(why),
             Ok(()) => {
                 let request = &request;
-                let g = simulation.game()?;
-        let pool = &g.players.get(g.decision_actor()).ok_or_else(|| Error::unreferable("no such player"))?.pool;
-        let offered = match &g.decision {
-            Some(game::state::Decision::Choose { choice: game::state::Choice::Replacement { among, .. }, .. }) => among.as_slice(),
-            _ => &[],
-        };
-                labelled(|| optional_named(request, g).and_then(|()| Ok(match &g.decision {
-                    _ if request["kind"]=="concede"=>read_move_offered(request,pool,offered)?,
-                    Some(game::state::Decision::Choose {choice:game::state::Choice::DamageOrder{among,..},..})=>read_damage_order(request,among)?,
-                    Some(game::state::Decision::Choose {choice:game::state::Choice::DamageReplacement{among,..},..})=>read_damage_move(request,among)?,
-                    _=>read_payment_move(g,seat,request,pool,offered)?,
-                })))
+                simulation.observe(|g| labelled(|| read_response_move(g,seat,request)))?
             }
         };
         logged.snapshot(simulation.game()?);
@@ -4221,7 +4250,9 @@ mod correlation_tests {
         assert_eq!(send(get).unwrap()["order"], json!([forest.0]));
         let drawn = done["players"][0]["hand"][0].as_u64().unwrap().to_string();
         assert_eq!(done["objects"][drawn]["name"], "Island");
-        assert!(send(json!({"cmd":"answer","shuffles":[]})).unwrap_err().contains("privileged"));
+        let refused=send(json!({"cmd":"answer","shuffles":[]})).unwrap_err();
+        assert_eq!(refused.class(), Some(Class::Malformed));
+        assert!(refused.contains("answer has no \"shuffles\""));
     }
 
     /// `audit_game` as the pipe answers it, of this game.
@@ -6724,7 +6755,7 @@ mod replay_wire_tests {
         with_corpus(|catalog| {
             let (mut game, mut session, mut logged) = (None, 0, Delivery::default());
             let mut send = |input: Value| dispatch(catalog, &mut game, &mut session, &mut logged, &input);
-            let refused = format!("starting life is a whole number from {} to {} (103.4, 107.1b)", i32::MIN, i32::MAX);
+            let refused = format!("starting life is a whole number in the engine range {} to {}", i32::MIN, i32::MAX);
             // 2^32 + 20 was read as 20 when truncated to 32 bits (107.1b)
             for life in [json!(4_294_967_316_i64), json!(i64::from(i32::MAX) + 1), json!(i64::from(i32::MIN) - 1), json!(20.5), json!("20")] {
                 let start = json!({"cmd":"start", "decks":[DECK, DECK], "first":0, "seed":3, "life":life});

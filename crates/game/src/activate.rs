@@ -392,7 +392,7 @@ impl Game {
     /// each subsequent part commits once, even when library ordering interrupts it.
     pub(crate) fn prepare_cost(
         &mut self, ctx: Ctx<'static>, cost: &Plan, paying: &[Vec<ObjId>], with: Option<&Pool>, on: Spent,
-    ) -> Result<crate::payment::Commitment, String> {
+    ) -> crate::play::ActionResult<crate::payment::Commitment> {
         let player = ctx.controller;
         // each artifact or creature chosen for a waterbend cost pays {1} of it (701.67a)
         let cost = &cost.clone().bent(paying)?;
@@ -400,13 +400,14 @@ impl Game {
         // created one, or consumed one the player proposed to use. Validate against this state.
         let (payments, choices) = cost.payments(self, &ctx, Some(paying))?;
         if paying.len() != choices {
-            return Err(format!("that cost asks for {choices} choice(s), {} given", paying.len()));
+            return Err(format!("that cost asks for {choices} choice(s), {} given", paying.len()).into());
         }
         let mana = self.payable_but_mana(player, ctx.object_source(), &payments)?;
         let mana = cost.requirement(mana);
         let audit_payment = self.audit_payment_start(player, &mana, with, on);
         let (left, spent) = self.spend_with(&self.players[player].pool, &mana, with, on).map_err(|e| {
-            if e != crate::mana::UNPAYABLE && e != crate::mana::UNCHOSEN { return e; }
+            let crate::play::ActionError::Refused(reason) = &e else { return e };
+            if reason != crate::mana::UNPAYABLE && reason != crate::mana::UNCHOSEN { return e; }
             // the total cost, as increases, reductions and then a minimum left it (601.2f), as
             // the payment computes it; generic first and as one amount, as a cost is written
             let symbols = &mana.symbols.0;
@@ -424,7 +425,7 @@ impl Game {
             if !cost.changes().is_empty() { why.push(format!("{} than it was", cost.changes())); }
             if raised { why.push(format!("raised to its minimum of {{{}}}", mana.minimum)); }
             if two_hybrid && mana.minimum > typed { why.push(format!("at least {{{}}}", mana.minimum)); }
-            if why.is_empty() { format!("{e}: {total}") } else { format!("{e}: {total} in total, {} (601.2f)", why.join(", ")) }
+            if why.is_empty() { format!("{e}: {total}").into() } else { format!("{e}: {total} in total, {} (601.2f)", why.join(", ")).into() }
         })?;
         self.audit_payment_finish(audit_payment, &left);
         let mut bound = Bound::default();
@@ -574,7 +575,7 @@ impl Game {
     /// each such part ("Sacrifice a creature", "Discard a card") what it could be paid with
     /// and how many of them it takes; and whether the rest of the cost can be paid, leaving
     /// which mana to pay.
-    pub(crate) fn cost_choices(&self, ctx: Ctx<'_>, cost: &Plan) -> Result<(Vec<Choosing>, crate::mana::ReducedCost), String> {
+    pub(crate) fn cost_choices(&self, ctx: Ctx<'_>, cost: &Plan) -> crate::play::ActionResult<(Vec<Choosing>, crate::mana::ReducedCost)> {
         let (player, source) = (ctx.controller, ctx.object_source());
         let (fixed, _) = cost.payments(self, &ctx, None)?;
         let mana = self.payable_but_mana(player, source, &fixed)?;

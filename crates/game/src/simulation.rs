@@ -106,6 +106,8 @@ pub enum ResponseError {
     Stale { expected: RequestId, received: RequestId },
     WrongPlayer { expected: PlayerId, received: PlayerId },
     Finished,
+    /// An answer to a decision that is not pending (for example, keep at priority).
+    NoDecision,
     Illegal(String),
     /// The engine does not run something the answer needs: the game is as it was.
     Unsupported(String),
@@ -123,7 +125,7 @@ impl ResponseError {
     /// to a request issued to another player names a request that is not theirs.
     pub fn class(&self) -> Option<Class> {
         Some(match self {
-            Self::Stale { .. } | Self::Finished => Class::Stale,
+            Self::Stale { .. } | Self::Finished | Self::NoDecision => Class::Stale,
             Self::WrongPlayer { .. } | Self::Unreferable(_) => Class::Unreferable,
             Self::Illegal(_) => Class::Illegal,
             Self::Unsupported(_) => Class::Unsupported,
@@ -138,6 +140,7 @@ impl std::fmt::Display for ResponseError {
             Self::Stale { expected, received } => write!(f, "stale request {}; expected {}", received.0, expected.0),
             Self::WrongPlayer { expected, received } => write!(f, "request belongs to player {expected}, not {received}"),
             Self::Finished => write!(f, "the game is over"),
+            Self::NoDecision => f.write_str("no decision is pending"),
             Self::Illegal(message) | Self::Unsupported(message) | Self::Malformed(message) => f.write_str(message),
             Self::Unreferable(crate::Target::Object(_)) => write!(f, "the answer names an object you cannot refer to now"),
             Self::Unreferable(crate::Target::Player(player)) => write!(f, "the game has no player {player}"),
@@ -152,6 +155,7 @@ impl From<crate::play::ActionError> for ResponseError {
         use crate::play::ActionError;
         match refused {
             ActionError::Refused(why) | ActionError::Restarted(why) => Self::Illegal(why),
+            ActionError::NoDecision => Self::NoDecision,
             ActionError::Unsupported(why) => Self::Unsupported(why.0),
             ActionError::Unreferable(named) => Self::Unreferable(named),
         }
@@ -551,7 +555,7 @@ mod tests {
         let before: Vec<_> = [None, Some(0), Some(1)].into_iter().map(|v| sim.snapshot(v).unwrap()).collect();
         // the game refuses it, having been handed it
         let refused = sim.respond(id, player, Move::Keep);
-        assert!(matches!(refused, Err(ResponseError::Illegal(_))), "{refused:?}");
+        assert!(matches!(refused, Err(ResponseError::NoDecision)), "{refused:?}");
         assert_eq!(sim.request().unwrap().unwrap().id, id, "the request is still the one asked");
         let after: Vec<_> = [None, Some(0), Some(1)].into_iter().map(|v| sim.snapshot(v).unwrap()).collect();
         for (a, b) in before.iter().zip(&after) {

@@ -597,7 +597,7 @@ impl CounterChange {
         match self {
             CounterChange::Plus(n) => count.checked_add(n),
             CounterChange::Times(n) => count.checked_mul(n),
-        }.ok_or_else(|| crate::Unsupported("replacement amount exceeds the supported numerical range (107.1b)".into()))
+        }.ok_or_else(|| crate::Unsupported("replacement amount exceeds the engine numerical range".into()))
     }
 }
 
@@ -668,7 +668,7 @@ impl Game {
                     && who.is(self, &ctx.clone().with_key(key), Target::Player(player))
                 {
                     amount = amount.checked_mul(*factor)
-                        .ok_or_else(|| crate::Unsupported("life gain amount exceeds the supported numerical range (107.1b)".into()))?;
+                        .ok_or_else(|| crate::Unsupported("life gain amount exceeds the engine numerical range".into()))?;
                 }
             }
         }

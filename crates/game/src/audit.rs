@@ -215,7 +215,7 @@ impl Game {
     fn audit_cost_branch_choices(&self, source:ObjId) -> Value {
         let mut sites=Vec::new();
         let mut append=|plan:&crate::cost::Plan,ctx:&crate::select::Ctx| -> Result<(),String> {
-            for site in plan.branch_choices(self,ctx)? {if !sites.contains(&site) {sites.push(site);}} Ok(())
+            for site in plan.branch_choices(self,ctx).map_err(|e| e.to_string())? {if !sites.contains(&site) {sites.push(site);}} Ok(())
         };
         let result=(|| -> Result<(),String> {
             if let Some(def)=self.def(source) {

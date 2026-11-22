@@ -82,13 +82,13 @@ impl Replaced for Event {
             let instructions=self.instructions.as_ref().ok_or_else(||crate::Unsupported(
                 "additional token: heterogeneous token entry instructions are not implemented".into()))?;
             self.inventory.iter().try_fold(1u32,|total,r|total.checked_add(r.count))
-                .ok_or_else(||crate::Unsupported("token creation exceeds the supported numerical range (107.1b)".into()))?;
+                .ok_or_else(||crate::Unsupported("token creation exceeds the engine numerical range".into()))?;
             let mut request=Request::new(self.player,1,values,instructions.tapped);
             request.choose_defender=instructions.choose_defender;request.attached=instructions.attached;request.attacking=instructions.attacking;
             self.inventory.push(request);self.modified=true;return Ok(());
         };
         let counts=self.inventory.iter().map(|request|if scope.matches(&request.values) {
-            request.count.checked_mul(factor).ok_or_else(||crate::Unsupported("token creation exceeds the supported numerical range (107.1b)".into()))
+            request.count.checked_mul(factor).ok_or_else(||crate::Unsupported("token creation exceeds the engine numerical range".into()))
         } else { Ok(request.count) }).collect::<crate::Res<Vec<_>>>()?;
         for (request,count) in self.inventory.iter_mut().zip(counts) { request.count=count; }
         self.modified=true;

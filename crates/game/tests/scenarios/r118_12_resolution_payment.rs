@@ -85,7 +85,7 @@ fn r118_12_nihil_spellbomb_pays_from_the_pool_then_draws_and_exiles() {
     let before = format!("{g:?}");
     // Omission supplies no mana even though B is present; it never chooses from the pool. The
     // pool could pay {B}, so the refusal is the choice not made (601.2h), not a shortfall.
-    cite!(["601.2h"]; refused("no mana was chosen from your mana pool to pay that cost (601.2h): {B}"): act_unchanged(&mut g, 0, Move::Choose(Answer::Pay { plan: vec![], with: None, tapped: vec![] })));
+    cite!(["118.3a"]; refused("no mana was chosen from your mana pool to pay that cost (118.3a): {B}"): act_unchanged(&mut g, 0, Move::Choose(Answer::Pay { plan: vec![], with: None, tapped: vec![] })));
     assert_eq!(format!("{g:?}"), before);
     g.act(0, Move::Choose(Answer::Pay { plan: vec![], with: Some(mana_pool("B")), tapped: vec![] })).unwrap();
     assert!(g.decision.is_none() && g.resolving().is_none());

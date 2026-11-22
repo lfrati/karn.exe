@@ -2134,7 +2134,7 @@ impl Game {
     /// (119.3, 107.1b); one this engine cannot represent is refused, never wrapped or clamped.
     pub(crate) fn changed_life(&self, player: PlayerId, by: i64) -> crate::Res<i32> {
         i32::try_from(i64::from(self.players[player].life) + by)
-            .map_err(|_| crate::Unsupported("life total exceeds the supported numerical range (107.1b)".into()))
+            .map_err(|_| crate::Unsupported("life total exceeds the engine numerical range".into()))
     }
 
     /// Apply an already determined life-gain result, including one of simultaneous damage.

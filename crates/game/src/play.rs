@@ -18,7 +18,7 @@ use ir::{Ability, Action, CardType, Effect, Quant, Sentence, Supertype};
 /// complete action proposal, including its pending choice. A move naming an object or player
 /// that is not there is refused before anything is tried.
 #[derive(Debug)]
-pub enum ActionError { Refused(String), Restarted(String), Unsupported(crate::Unsupported), Unreferable(Target) }
+pub enum ActionError { Refused(String), Restarted(String), NoDecision, Unsupported(crate::Unsupported), Unreferable(Target) }
 pub(crate) type ActionResult<T> = Result<T,ActionError>;
 impl From<&str> for ActionError { fn from(reason:&str)->Self { Self::Refused(reason.into()) } }
 impl From<String> for ActionError { fn from(reason:String)->Self { Self::Refused(reason) } }
@@ -28,13 +28,13 @@ impl ActionError {
     /// (510.1e), is illegal.
     pub fn class(&self) -> crate::simulation::Class {
         use crate::simulation::Class;
-        match self { Self::Refused(_) | Self::Restarted(_) => Class::Illegal, Self::Unsupported(_) => Class::Unsupported, Self::Unreferable(_) => Class::Unreferable }
+        match self { Self::Refused(_) | Self::Restarted(_) => Class::Illegal, Self::Unsupported(_) => Class::Unsupported, Self::Unreferable(_) => Class::Unreferable, Self::NoDecision => Class::Stale }
     }
 }
 impl std::fmt::Display for ActionError {
     fn fmt(&self,f:&mut std::fmt::Formatter<'_>)->std::fmt::Result {
         match self {
-            Self::Refused(reason)|Self::Restarted(reason)=>reason.fmt(f),Self::Unsupported(reason)=>reason.0.fmt(f),
+            Self::Refused(reason)|Self::Restarted(reason)=>reason.fmt(f), Self::NoDecision=>f.write_str("no decision is pending"),Self::Unsupported(reason)=>reason.0.fmt(f),
             Self::Unreferable(Target::Object(_))=>f.write_str("an object handle is stale or unknown"),
             Self::Unreferable(Target::Player(player))=>write!(f,"the game has no player {player}"),
         }
@@ -925,7 +925,7 @@ impl Game {
                 #[cfg(debug_assertions)]
                 self.note_assignment_interrupted(dividing);
             }
-            Err(refused @ (ActionError::Refused(_) | ActionError::Unreferable(_))) => {
+            Err(refused @ (ActionError::Refused(_) | ActionError::Unreferable(_) | ActionError::NoDecision)) => {
                 #[cfg(debug_assertions)]
                 crate::state::assert_unchanged(&before, self, &refused.to_string());
                 #[cfg(not(debug_assertions))]
@@ -1254,7 +1254,7 @@ impl Game {
                 if !modal { return Err("the triggered ability's modes have already been chosen".into()); }
                 if player != who { return Err("that decision is another player's".into()); }
                 ability.captured.as_ref().ok_or("the ability has no captured definition")?.as_ref()
-                    .map_err(|e| e.0.clone())?.legal_modes(&modes)?;
+                    .map_err(Clone::clone)?.legal_modes(&modes)?;
                 let slots = self.ability_slots(&ability, &modes);
                 if self.unfillable(&ability.context(), &slots, &ability.bound) {
                     return Err("the chosen modes have no legal target selection (603.3c)".into());
@@ -1291,7 +1291,7 @@ impl Game {
             }
             if modal {
                 ability.captured.as_ref().ok_or("the ability has no captured definition")?.as_ref()
-                    .map_err(|e| e.0.clone())?.legal_modes(&modes)?;
+                    .map_err(Clone::clone)?.legal_modes(&modes)?;
             }
             let ctx = ability.context();
             let slots = self.ability_slots(&ability, &modes);
@@ -1387,7 +1387,7 @@ impl Game {
             | Move::FinishPayment { .. }
             | Move::ReversePayment => {
                 // answers to a decision, and none is pending
-                return Err("no decision is pending".into());
+                return Err(ActionError::NoDecision);
             }
             Move::Concede => unreachable!("a concession is taken before priority is checked"),
             Move::Pass => {
@@ -1685,7 +1685,7 @@ impl Game {
             && let Some((by, _)) = self.face_down_cast(card, row)
         {
             let (_, def) = self.physical_card(card).expect("a card casts face down");
-            check(def).map_err(|u| format!("the engine cannot run {}: {}", def.name, u.0))?;
+            check(def).map_err(|u| crate::Unsupported(format!("the engine cannot run {}: {}", def.name, u.0)))?;
             if cast_as != CastAs::Whole || !modes.is_empty() || x.is_some() || kicks > 0 || buyback || optional || entwine || replicate > 0 || gift.is_some() {
                 return Err("a face-down spell has no text: nothing else is announced for it (702.37c, 702.168b)".into());
             }
@@ -1811,7 +1811,7 @@ impl Game {
                 } else { def.costs.given(def, cost)? }
             },
             CastCost::Flashback(_) => return Err("a flashback cost is selected only with the flashback route (702.34a)".into()),
-            CastCost::Mana if library_life && def.costs.normal.is_none() => crate::cost::Plan::default().kicked(&ir::mana::ManaCost(Vec::new()),1).plus(def.costs.additional.as_ref().map_err(|u|u.0.clone())?),
+            CastCost::Mana if library_life && def.costs.normal.is_none() => crate::cost::Plan::default().kicked(&ir::mana::ManaCost(Vec::new()),1).plus(def.costs.additional.as_ref().map_err(Clone::clone)?),
             CastCost::Mana => if route == CastRoute::Escape { def.costs.escape.as_ref() } else if matches!(route, CastRoute::Harmonize { .. }) { def.costs.harmonize.as_ref() } else if route == CastRoute::Foretell { def.costs.foretell.as_ref() } else { def.costs.normal.as_ref() }
                 .ok_or("that card has no mana cost (202.1b)")?.clone()?,
             CastCost::Alternative(_) if flashback || matches!(route, CastRoute::Escape | CastRoute::Foretell | CastRoute::Harmonize { .. }) || free => return Err("only one alternative cost is paid for a spell (118.9a)".into()),
@@ -1827,7 +1827,7 @@ impl Game {
                 self.given_alternatives(card, cast_as).into_iter().find(|(at, _)| *at == row).expect("found").1?,
             CastCost::Alternative(row) => {
                 let alternative = def.costs.alternatives.iter().find(|(at, _)| *at == row)
-                    .ok_or("that card prints no such alternative cost (118.9)")?.1.as_ref().map_err(|u| u.0.clone())?;
+                    .ok_or("that card prints no such alternative cost (118.9)")?.1.as_ref().map_err(Clone::clone)?;
                 // a warp cost is paid only for a spell cast from a hand (702.185a), a mayhem cost
                 // from a graveyard (702.187b)
                 match crate::keyword::alternative_from(def, row) {
@@ -1874,7 +1874,7 @@ impl Game {
         // or the one its text prints (118.8b)
         let cost = if optional {
             let (_, _, plan) = def.costs.optional.first().ok_or("that spell has no optional additional cost (118.8b)")?;
-            cost.plus(plan.as_ref().map_err(|u| u.0.clone())?)
+            cost.plus(plan.as_ref().map_err(Clone::clone)?)
         } else { cost };
         let cost = if route == CastRoute::Retrace { cost.plus(crate::keyword::retrace_cost()) } else { cost };
         let cost = match crate::keyword::replicate(def) {
@@ -2624,5 +2624,56 @@ impl crate::retention::Players for Move {
             | Move::Discard(_) | Move::Bottom(_) | Move::Block(_) | Move::FinishPayment { .. } | Move::ContinueManaPayment { .. }
             | Move::ChooseModes(_) | Move::Order(_) | Move::Mulligan | Move::Keep | Move::Pass | Move::Concede | Move::ReversePayment => {},
         }
+    }
+}
+
+#[cfg(test)]
+mod typed_refusal_tests {
+    use super::*;
+    use crate::simulation::Class;
+
+    #[test]
+    fn cached_cost_refusals_keep_their_class_through_casting() {
+        // Controlled compiler refusals exercise the error boundary, not card admission.
+        for alternative in [false, true] {
+            let text = if alternative { "You may pay 1 life rather than pay this spell's mana cost.\nGain 1 life." }
+                else { "Bargain\nGain 1 life." };
+            let mut def = CardDef::new("Probe spell", "{0}", "Instant", text, None).unwrap();
+            check(&def).unwrap();
+            let refusal = crate::Unsupported("controlled cost lowering refusal".into());
+            let row = if alternative {
+                let (row, plan) = def.costs.alternatives.first_mut().expect("alternative cost");
+                *plan = Err(refusal);
+                *row
+            } else {
+                def.costs.optional.first_mut().expect("optional cost").2 = Err(refusal);
+                0
+            };
+            let mut g = Game::new(vec![def], 2, 20);
+            let card = g.put(0, 0, Zone::Hand);
+            let action = Box::new(Move::Cast {card, targets:vec![]});
+            let action = if alternative { Move::CastFor(crate::announcement::CastCost::Alternative(row), action) }
+                else { Move::WithOptional(true, action) };
+            let before = format!("{g:?}");
+            let error = g.attempt(0, action).unwrap_err();
+            assert_eq!(error.class(), Class::Unsupported);
+            assert_eq!(error.to_string(), "controlled cost lowering refusal");
+            assert_eq!(format!("{g:?}"), before);
+        }
+    }
+
+    #[test]
+    fn captured_modal_refusals_keep_their_class_and_pending_occurrence() {
+        let mut g = Game::new(vec![], 2, 20);
+        let ability = Triggered {source:None, controller:0, origin:crate::binding::Origin::Own,
+            index:0, bound:Default::default(), delayed:None,
+            captured:Some(Err(crate::Unsupported("controlled captured-mode refusal".into())))};
+        g.triggered.push(ability.clone());
+        g.decision = Some(Decision::Modes {player:0, ability});
+        let before = format!("{g:?}");
+        let error = g.attempt(0, Move::ChooseModes(vec![0])).unwrap_err();
+        assert_eq!(error.class(), Class::Unsupported);
+        assert_eq!(error.to_string(), "controlled captured-mode refusal");
+        assert_eq!(format!("{g:?}"), before);
     }
 }

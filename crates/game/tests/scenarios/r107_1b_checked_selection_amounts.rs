@@ -37,7 +37,7 @@ fn noir(charge: u32) -> (Game, game::ObjId, Vec<game::ObjId>) {
 fn r107_1b_selection_overflow_refuses_transactionally() {
     let (mut g, source, cards) = noir(u32::MAX);
     let before = format!("{g:?}");
-    cite!(["107.1b"]; assert!(g.act(g.priority, Move::Pass).unwrap_err().contains("quantity exceeds the supported numerical range (107.1b)")));
+    cite!(["107.1b"]; assert!(g.act(g.priority, Move::Pass).unwrap_err().contains("quantity exceeds the engine numerical range")));
     // Uncited (transaction contract): every rules-state field, including RNG, logs,
     // choices, priority and pending procedures, equals its pre-action state.
     assert_eq!(format!("{g:?}"), before);
@@ -46,7 +46,7 @@ fn r107_1b_selection_overflow_refuses_transactionally() {
     cite!(["701.25a"]; assert_eq!(g.players[0].library, cards));
     cite!(["608.2c"]; assert_eq!(g.stack.len(), 1));
     // The same pending resolution refuses again without accumulating effects.
-    cite!(["107.1b"]; assert!(g.act(g.priority, Move::Pass).unwrap_err().contains("107.1b")));
+    cite!(["107.1b"]; assert!(g.act(g.priority, Move::Pass).unwrap_err().contains("engine numerical range")));
     assert_eq!(format!("{g:?}"), before);
 }
 
@@ -108,6 +108,6 @@ fn native_stargaze_refuses_unrepresentable_twice_x_before_payment() {
     // a Magic restriction on choosing X (107.1b permits larger integers).
     let selected = game::state::Pool { colors: [0, 0, 2_147_483_650, 0, 0], ..Default::default() };
     assert!(g.act(0, Move::Paying(selected, Box::new(Move::WithX(2_147_483_648, Box::new(Move::Cast { card, targets: vec![] })))))
-        .unwrap_err().contains("quantity exceeds the supported numerical range (107.1b)"));
+        .unwrap_err().contains("quantity exceeds the engine numerical range"));
     assert_eq!(format!("{g:?}"), before);
 }

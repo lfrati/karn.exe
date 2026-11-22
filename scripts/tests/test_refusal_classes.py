@@ -35,6 +35,51 @@ class Routes:
         return {"cmd": "act", "session_id": state["session_id"], "request_id": state["request_id"],
                 "player": state["asked"]["player"], "move": move, **fields}
 
+    def test_unknown_command_fields_refuse_before_projection_or_session_changes(self):
+        engine = self.engine()
+        engine.send({"cmd": "new", "players": [{"hand": ["Forest"]}, {"hand": ["Island"]}]})
+        whole = engine.send({"cmd": "state"})
+        for request in (
+            {"cmd": "state", "viewr": 0},
+            {"cmd": "new", "players": [{}, {}], "viewr": 0},
+            {"cmd": "start", "decks": [[], []], "viewr": 0},
+            {"cmd": "version", "viewr": 0},
+            {"cmd": "labels", "seat": "p0", "viewr": 0},
+            {"cmd": "prompt", "seat": "p0", "viewr": 0},
+            {"cmd": "audit_game", "session_id": whole["session_id"], "viewr": 0},
+        ):
+            with self.subTest(request=request):
+                refusal = self.refused(engine, request)
+                self.assertEqual(refusal["class"], "malformed", refusal)
+                self.assertNotIn("state", refusal)
+                self.assertEqual(engine.send({"cmd": "state"}), whole)
+
+    def test_fresh_answers_to_absent_decisions_are_stale_without_fabricated_rules(self):
+        engine = self.engine()
+        state = engine.send({"cmd": "new", "players": [{}, {}]})
+        whole = engine.send({"cmd": "state"})
+        for move in ({"kind": "keep"}, {"kind": "attack", "attacks": []}):
+            refusal = self.refused(engine, self.act(engine, state, move))
+            self.assertEqual((refusal["class"], refusal["error"]), ("stale", "no decision is pending"))
+            self.assertNotIn("rules", refusal)
+            self.assertEqual(engine.send({"cmd": "state"}), whole)
+        self.assertEqual(engine.send(self.act(engine, state, {"kind": "pass"}))["request_id"], state["request_id"] + 1)
+
+    def test_restricted_selectors_keep_the_move_refusal_before_a_payment_boundary(self):
+        engine = self.engine()
+        state = engine.send({"cmd": "new", "players": [{"graveyard": ["Grizzly Bears"]}, {}]})
+        card = next(int(o) for o, item in state["objects"].items() if item["name"] == "Grizzly Bears")
+        move = {"kind": "cast", "card": card}
+        whole = engine.send({"cmd": "state"})
+        plain = self.refused(engine, self.act(engine, state, move))
+        self.assertEqual(plain["class"], "illegal", plain)
+        self.assertTrue(plain["rules"], plain)
+        for selector in ("restricted", "restricted_after"):
+            refusal = self.refused(engine, self.act(engine, state, move | {"mana": {selector: []}}))
+            self.assertEqual({k: refusal.get(k) for k in ("class", "error", "rules")},
+                             {k: plain.get(k) for k in ("class", "error", "rules")})
+            self.assertEqual(engine.send({"cmd": "state"}), whole)
+
     def test_an_invalid_viewer_is_refused_before_the_action_is_applied(self):
         # two empty fixture players, session 1 / request 1 / player 0's priority
         engine = self.engine()

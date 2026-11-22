@@ -29,6 +29,7 @@ fn handle(catalog: &Catalog, sessions: &mut BTreeMap<u64, Session>, serial: &Ato
         let request = &input["request"];
         let cmd = request["cmd"].as_str().ok_or("envelope needs request command")?;
         if cmd == "close" {
+            request_fields(request, &["session_id"])?;
             let session = sessions.get(&key).ok_or_else(|| Error::unreferable("no game"))?;
             if request["session_id"].as_u64() != Some(session.id) { return Err(Error::stale("stale session_id")); }
             sessions.remove(&key);
@@ -98,6 +99,39 @@ pub(super) fn run(catalog: &Catalog, workers: usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn a_fault_during_a_payment_quote_is_terminal_only_for_its_game() {
+        let catalog = Catalog::new(BTreeMap::new());
+        let mut sessions = BTreeMap::new();
+        let serial = AtomicU64::new(0);
+        let send = |sessions: &mut BTreeMap<u64, Session>, key, request| {
+            handle(&catalog, sessions, &serial, &json!({"id":7,"game":key,"request":request}))
+        };
+        assert_eq!(send(&mut sessions, 1, json!({"cmd":"new","players":[{},{}]}))["ok"], true);
+        let other_before = format!("{:?}", sessions[&1].game);
+        let draw = CardDef::new("Probe spell", "{0}", "Instant", "Draw a card.", None).unwrap();
+        check(&draw).unwrap();
+        let mut g = Game::new(vec![draw], 2, 20);
+        let card = g.put(0, 0, Zone::Hand);
+        g.act(0, Move::Cast {card, targets:vec![]}).unwrap();
+        g.act(0, Move::Pass).unwrap();
+        // Controlled internal corruption: resolving the draw must panic when it reads
+        // the nonexistent library object. No wire input can construct this game.
+        g.players[0].library.push(ObjId(999999));
+        sessions.insert(0, Session {game:Some(Simulation::new(g)), id:42, delivery:Delivery::default()});
+        let faulted_quote = send(&mut sessions, 0, json!({"cmd":"quote_payment","session_id":42,
+            "request_id":1,"player":1,"move":{"kind":"pass"}}));
+        assert_eq!(faulted_quote["error"], "simulation fault", "{faulted_quote}");
+        assert_eq!(faulted_quote["fault"], json!({"session_id":42,"request_id":1,"stage":"Observation"}));
+        assert!(sessions[&0].game.as_ref().unwrap().fault().is_some());
+        assert_eq!(send(&mut sessions, 0, json!({"cmd":"state"}))["error"], "simulation fault");
+        assert_eq!(format!("{:?}", sessions[&1].game), other_before);
+        let request = sessions.get_mut(&1).unwrap().game.as_mut().unwrap().request().unwrap().unwrap().clone();
+        let session = sessions[&1].id;
+        assert_eq!(send(&mut sessions, 1, json!({"cmd":"act","session_id":session,"request_id":request.id.0,
+            "player":request.player,"move":{"kind":"pass"}}))["ok"], true);
+    }
+
     #[test]
     fn identity_close_and_mutations_are_game_local() {
         let catalog = Catalog::new(BTreeMap::new()); let mut sessions = BTreeMap::new(); let serial = AtomicU64::new(0);

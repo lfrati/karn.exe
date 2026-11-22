@@ -100,7 +100,7 @@ fn r119_10_a_kept_multiplier_is_asked_of_the_permanent_whose_ability_it_is() {
     assert_eq!(game.replace_life_gain(1, 3), Ok(6));
     // a modified gain this engine cannot represent is refused, never wrapped (107.1b)
     assert_eq!(game.replace_life_gain(0, u32::MAX / 8 + 1).unwrap_err().0,
-        "life gain amount exceeds the supported numerical range (107.1b)");
+        "life gain amount exceeds the engine numerical range");
     assert_eq!(game.replace_life_gain(0, u32::MAX / 8), Ok(u32::MAX / 8 * 8));
 }
 
@@ -202,5 +202,5 @@ fn r614_1a_draw_replacements_compile_once_and_refuse_unimplemented_qualifiers() 
 #[test]
 fn r107_1b_counter_replacement_does_not_silently_clamp_the_rule_result() {
     let actual=super::CounterChange::Times(2).apply(2_147_483_648);
-    assert!(actual.unwrap_err().0.contains("107.1b"));
+    assert!(actual.unwrap_err().0.contains("engine numerical range"));
 }

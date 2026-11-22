@@ -8,12 +8,17 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 fn only_the_games_refusal_satisfies_an_expected_refusal() {
 
     use game::simulation::{ResponseError, Simulation};
-    // asked for priority, an answer to a question is refused for this reason
-    let reason = "no decision is pending";
-    let mut sim = Simulation::new(Game::new(vec![], 2, 20));
+    // A land outside a main phase is a rules refusal; an absent decision is not.
+    let reason = "305.1";
+    let forest = game::CardDef::new("Forest", "", "Basic Land — Forest", "", None).unwrap();
+    let mut g = Game::new(vec![forest], 2, 20);
+    let card = g.put(0, 0, Zone::Hand);
+    g.part = Part::Upkeep;
+    let mut sim = Simulation::new(g);
     let r = sim.request().unwrap().unwrap().clone();
-    refused(sim.respond(r.id, r.player, Move::Choose(Answer::Yes)), reason);
-    panics_for("refused, but not for",|| refused(sim.respond(r.id, r.player, Move::Choose(Answer::Yes)), "the game is over"));
+    refused(sim.respond(r.id, r.player, Move::PlayLand(card)), reason);
+    panics_for("refused, but not for",|| refused(sim.respond(r.id, r.player, Move::PlayLand(card)), "the game is over"));
+    panics_for("not NoDecision", || refused(sim.respond(r.id, r.player, Move::Choose(Answer::Yes)), "no decision is pending"));
     let stale = sim.respond(game::simulation::RequestId(r.id.0 + 1), r.player, Move::Pass);
     assert!(matches!(stale, Err(ResponseError::Stale { .. })));
     panics_for("not Stale",|| refused(stale, "request"));

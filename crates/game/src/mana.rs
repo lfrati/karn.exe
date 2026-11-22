@@ -26,8 +26,8 @@ use ir::{Effect, Sentence};
 /// caller that knows the total says it.
 pub(crate) const UNPAYABLE: &str = "your mana pool cannot pay that cost (118.3a)";
 /// No mana was chosen from a pool that could pay the cost: the player says which mana pays
-/// (601.2h), and the engine never chooses it. The caller that knows the total says it.
-pub(crate) const UNCHOSEN: &str = "no mana was chosen from your mana pool to pay that cost (601.2h)";
+/// (118.3a), and the engine never chooses it. The caller that knows the total says it.
+pub(crate) const UNCHOSEN: &str = "no mana was chosen from your mana pool to pay that cost (118.3a)";
 
 pub(crate) trait Requirement {
     fn symbols(&self) -> &[ManaSymbol];
@@ -170,10 +170,10 @@ impl Game {
     }
 
     /// Take a cost out of a pool with the mana the player chooses to pay it with (107.4b,
-    /// 601.2h): mana that is in the pool, may be spent on this, and pays the cost with nothing
+    /// 118.3a): mana that is in the pool, may be spent on this, and pays the cost with nothing
     /// over. With none stated, no mana is supplied. Returns the pool left and the
     /// restricted mana spent; it never allocates units from the live pool.
-    pub(crate) fn spend_with(&self, pool: &Pool, cost: &dyn Requirement, with: Option<&Pool>, on: Spent) -> Result<(Pool, Vec<Restricted>), String> {
+    pub(crate) fn spend_with(&self, pool: &Pool, cost: &dyn Requirement, with: Option<&Pool>, on: Spent) -> crate::play::ActionResult<(Pool, Vec<Restricted>)> {
         let empty = Pool::default();
         let supplied = with;
         let with = with.unwrap_or(&empty);
@@ -191,11 +191,11 @@ impl Game {
         let mut selected = Pool { colors: with.colors, colorless: with.colorless, restricted: Vec::new() };
         for unit in &with.restricted {
             let count = plain(&mut selected, unit.mana).ok_or("a supplied mana unit must have a mana type (106.1)")?;
-            *count = count.checked_add(1).ok_or("supplied mana exceeds the supported numerical range (107.1b)")?;
+            *count = count.checked_add(1).ok_or_else(|| crate::Unsupported("supplied mana exceeds the engine numerical range".into()))?;
         }
         selected.colors.iter().chain(std::iter::once(&selected.colorless))
             .try_fold(0u32, |total, count| total.checked_add(*count))
-            .ok_or("supplied mana exceeds the supported numerical range (107.1b)")?;
+            .ok_or_else(|| crate::Unsupported("supplied mana exceeds the engine numerical range".into()))?;
         match equivalent(&selected, cost) {
             Some(()) => Ok((left, with.restricted.clone())),
             // a pool too short whatever is chosen, or one nothing was chosen from
@@ -231,8 +231,8 @@ mod explicit_pool_tests {
         };
         assert_eq!(refusal(&mut g, 0), "your mana pool cannot pay that cost (118.3a): {U}");
         assert_eq!(refusal(&mut g, 1), "your mana pool cannot pay that cost (118.3a): {3}");
-        assert_eq!(refusal(&mut g, 2), "no mana was chosen from your mana pool to pay that cost (601.2h): {1}{G}");
-        assert_eq!(refusal(&mut g, 3), "no mana was chosen from your mana pool to pay that cost (601.2h): {R/U}");
+        assert_eq!(refusal(&mut g, 2), "no mana was chosen from your mana pool to pay that cost (118.3a): {1}{G}");
+        assert_eq!(refusal(&mut g, 3), "no mana was chosen from your mana pool to pay that cost (118.3a): {R/U}");
         assert_eq!(g.players[0].pool.total(), 2, "neither refusal spends any of it");
     }
 
@@ -253,7 +253,7 @@ mod explicit_pool_tests {
         // R and G could pay {1}; the player did not say which (601.2h): an omission, not a
         // shortfall, and the engine does not choose for them
         let before = format!("{g:?}");
-        assert_eq!(g.act(0, cast.clone()).unwrap_err(), "no mana was chosen from your mana pool to pay that cost (601.2h): {1}");
+        assert_eq!(g.act(0, cast.clone()).unwrap_err(), "no mana was chosen from your mana pool to pay that cost (118.3a): {1}");
         assert_eq!(format!("{g:?}"), before, "omission refuses atomically (733.1)");
         let both = g.players[0].pool.clone();
         assert_eq!(g.act(0, Move::Paying(both, Box::new(cast.clone()))).unwrap_err(),
@@ -313,7 +313,7 @@ mod explicit_pool_tests {
         let body = g.put(0, 0, Zone::Hand);
         let gift = g.put(0, 1, Zone::Hand);
         assert_eq!(g.act(0, Move::Cast { card: gift, targets: vec![] }).unwrap_err(), "your mana pool cannot pay that cost (118.3a): {G}");
-        assert_eq!(g.act(0, Move::Cast { card: body, targets: vec![] }).unwrap_err(), "no mana was chosen from your mana pool to pay that cost (601.2h): {G}");
+        assert_eq!(g.act(0, Move::Cast { card: body, targets: vec![] }).unwrap_err(), "no mana was chosen from your mana pool to pay that cost (118.3a): {G}");
         assert_eq!(g.players[0].pool.restricted.len(), 1, "neither refusal spends it");
     }
 }

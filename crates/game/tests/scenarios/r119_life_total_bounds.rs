@@ -29,7 +29,7 @@ const BATTERY: usize = 13;
 const WAGER: usize = 14;
 const PLEDGE: usize = 15;
 
-const RANGE: &str = "life total exceeds the supported numerical range (107.1b)";
+const RANGE: &str = "life total exceeds the engine numerical range";
 
 fn game() -> Game {
     let defs: Vec<CardDef> = [
@@ -120,7 +120,7 @@ fn r120_3f_a_lifelink_gain_past_the_range_refuses_the_whole_damage_event() {
     cite!(["120.3a", "120.3f"]; assert_eq!((g.players[0].life, g.players[1].life), (i32::MAX, 19)));
     let (events, before) = (life_events(&g), format!("{g:?}"));
     // the gain is a result of the same damage event (120.3): none of that event happens
-    cite!(["120.3f", "107.1b"]; refused("exceeds the supported numerical range (107.1b)"): g.try_damage(leech, Target::Player(1), 1).map_err(|e| e.0));
+    cite!(["120.3f", "107.1b"]; refused("exceeds the engine numerical range"): g.try_damage(leech, Target::Player(1), 1).map_err(|e| e.0));
     assert_eq!(format!("{g:?}"), before);
     assert_eq!((g.players[1].life, life_events(&g)), (19, events));
 }
@@ -152,7 +152,7 @@ fn r119_3_life_lost_this_turn_is_counted_exactly_and_refused_past_its_range() {
     g.gain_life(0, u32::MAX).unwrap();
     cite!(["119.3"]; assert_eq!((g.players[0].life, g.life_lost_this_turn(0)), (i32::MAX, u32::MAX)));
     let (events, before) = (life_events(&g), format!("{g:?}"));
-    cite!(["119.3", "107.1b"]; refused("life lost this turn exceeds the supported numerical range (107.1b)"): g.lose_life(0, 1).map_err(|e| e.0));
+    cite!(["119.3", "107.1b"]; refused("life lost this turn exceeds the engine numerical range"): g.lose_life(0, 1).map_err(|e| e.0));
     assert_eq!((g.players[0].life, life_events(&g), format!("{g:?}")), (i32::MAX, events, before));
 }
 
@@ -214,7 +214,7 @@ fn r119_3_the_life_one_instruction_makes_its_players_lose_is_counted_up_to_its_r
     // 4294967296 in all, which the engine does not count: refused, and no life is lost
     let mut g = game();
     let (result, before) = resolve(&mut g, RUIN, None);
-    cite!(["119.3", "107.1b"]; refused("life lost exceeds the supported numerical range (107.1b)"): result);
+    cite!(["119.3", "107.1b"]; refused("life lost exceeds the engine numerical range"): result);
     assert_eq!(format!("{g:?}"), before);
     assert_eq!((g.players[0].life, g.players[1].life, life_events(&g)), (20, 20, 0));
 }
