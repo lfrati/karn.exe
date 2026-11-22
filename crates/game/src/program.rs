@@ -2102,7 +2102,7 @@ enum TextStep<'a> { Reflexive(&'a Sentence, &'a [Sentence], Option<&'a ir::Event
 fn cast_rider(rule: &ir::statics::Static) -> Option<Vec<ir::CardType>> {
     let ir::statics::Static::Replacement(r) = rule else { return None };
     if r.next_time || r.while_.is_some() || r.this_turn || r.instead_first { return None; }
-    let p = &r.event;
+    let p = r.single_event()?;
     if p.counted() || p.during.is_some() || p.condition.is_some() || p.cause.is_some() { return None; }
     let ([s], [ir::EventAction::PutIntoGraveyard { into, from: None }]) = (p.subjects.as_slice(), p.actions.as_slice()) else { return None };
     if !crate::select::is_you(into) || !matches!(s.quant, Quant::Indefinite(Count::Exactly(Amount::Const(1))) | Quant::Definite(Ref::Anaphor(ir::Anaphor::That))) || s.set.domain != Domain::Spell

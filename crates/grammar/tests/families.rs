@@ -905,3 +905,45 @@ fn r603_2c_plural_graveyard_event_destinations() {
         "Whenever one or more players are put into graveyards from anywhere, draw a card.",
     ] { declines(text); }
 }
+
+
+/// CR 614.1a and 700.4: complete alternative events keep their subject/action correlation.
+#[test]
+fn r614_1a_correlated_replacement_event_alternatives() {
+    let (value, _) = read("If a nontoken creature an opponent owns would die or a creature card not on the battlefield would be put into an opponent's graveyard, exile that card instead.");
+    let ir::Ability::Text(effect) = value else { panic!() };
+    let [ir::Sentence::Static(rule)] = effect.0.as_slice() else { panic!() };
+    let ir::Static::Replacement(replacement) = &**rule else { panic!() };
+    assert_eq!(replacement.event.conj, ir::Conj::Or);
+    let [battlefield, elsewhere] = replacement.event.items.as_slice() else { panic!() };
+    assert!(replacement.single_event().is_none());
+    assert_eq!(battlefield.subjects.len(), 1);
+    assert_eq!(battlefield.subjects[0].set.domain, ir::Domain::Permanent);
+    assert!(battlefield.subjects[0].set.owner.is_some());
+    let [ir::EventAction::Deed(deed)] = battlefield.actions.as_slice() else { panic!() };
+    assert_eq!(deed.verb, ir::Verb::Die);
+    assert!(!deed.passive && deed.args.is_empty());
+    assert_eq!(elsewhere.subjects.len(), 1);
+    assert_eq!(elsewhere.subjects[0].set.domain, ir::Domain::Card);
+    assert!(elsewhere.subjects[0].set.owner.is_none());
+    let ir::Filter::All(filters) = &elsewhere.subjects[0].set.filter else { panic!() };
+    assert!(filters.iter().any(|f| matches!(f, ir::Filter::Not(inner)
+        if matches!(&**inner, ir::Filter::Atom(ir::Atom::InZone(zone)) if zone.zone() == Some(ir::Zone::Battlefield)))));
+    let [ir::EventAction::PutIntoGraveyard { into, from: None }] = elsewhere.actions.as_slice() else { panic!() };
+    assert_ne!(into.as_ref(), &ir::Selector::you());
+    // A shared subject with alternative verbs remains the existing single event pattern.
+    let (shared, _) = read("If a creature would die or be exiled, exile it instead.");
+    let ir::Ability::Text(effect) = shared else { panic!() };
+    let ir::Sentence::Static(rule) = &effect.0[0] else { panic!() };
+    let ir::Static::Replacement(replacement) = &**rule else { panic!() };
+    assert_eq!(replacement.single_event().unwrap().actions.len(), 2);
+    read("The first time you would draw a card each turn, instead draw two cards.");
+    let (short, _) = read("Exile a creature card not on the battlefield.");
+    let (relative, _) = read("Exile a creature card that isn't on the battlefield.");
+    assert_eq!(short, relative);
+    for text in [
+        "If a creature would die and a card would be exiled, draw a card instead.",
+        "The first time a creature would die or a card would be exiled each turn, instead draw a card.",
+        "If a creature would die or a player would die, draw a card instead.",
+    ] { declines(text); }
+}

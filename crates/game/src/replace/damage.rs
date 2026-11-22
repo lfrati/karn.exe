@@ -61,7 +61,8 @@ pub(super) fn compile(a: &Ability, support: &Support<'_>) -> Option<Res<Replacem
     let Ability::Text(Effect(sentences)) = a else { return None };
     let [Sentence::Static(statement)] = sentences.as_slice() else { return None };
     let Static::Replacement(r) = statement.as_ref() else { return None };
-    let [EventAction::DealsDamage { kind, amount: None, to: Some(to) }] = r.event.actions.as_slice() else {
+    let event = r.single_event()?;
+    let [EventAction::DealsDamage { kind, amount: None, to: Some(to) }] = event.actions.as_slice() else {
         return None;
     };
     Some((|| {
@@ -69,14 +70,14 @@ pub(super) fn compile(a: &Ability, support: &Support<'_>) -> Option<Res<Replacem
             || r.this_turn
             || r.instead_first
             || r.while_.is_some()
-            || r.event.counted()
-            || r.event.during.is_some()
-            || r.event.condition.is_some()
-            || r.event.cause.is_some()
+            || event.counted()
+            || event.during.is_some()
+            || event.condition.is_some()
+            || event.cause.is_some()
         {
             return unsupported("damage replacement: only unconditional amount changes");
         }
-        let [source] = r.event.subjects.as_slice() else {
+        let [source] = event.subjects.as_slice() else {
             return unsupported("damage replacement: one source");
         };
         let Substitute::Body(body) = &r.with else {

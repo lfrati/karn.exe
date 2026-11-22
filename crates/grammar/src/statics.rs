@@ -2009,11 +2009,12 @@ fn replacement_of(event: &P<EventPattern>, with: &P<Substitute>, bare: bool) -> 
                 }
                 event.nth_each_turn = Some(1);
                 event.during = during;
-                Some(Static::Replacement(Box::new(Replacement { next_time: false, event, while_: None, this_turn: false, with, instead_first })))
+                Some(Static::Replacement(Box::new(Replacement { next_time: false, event: ir::Coord::one(event), while_: None, this_turn: false, with, instead_first })))
             },
             |x| match x {
-                Static::Replacement(r) if r.event.nth_each_turn == Some(1) && !r.next_time && r.while_.is_none() && !r.this_turn => {
-                    let mut event = r.event.clone();
+                Static::Replacement(r) if !r.next_time && r.while_.is_none() && !r.this_turn => {
+                    let mut event = r.single_event()?.clone();
+                    if event.nth_each_turn != Some(1) { return None; }
                     event.nth_each_turn = None;
                     let during = event.during.take();
                     Some((((event, during), r.instead_first), r.with.clone()))
@@ -2021,7 +2022,17 @@ fn replacement_of(event: &P<EventPattern>, with: &P<Substitute>, bare: bool) -> 
                 _ => None,
             },
         );
-    let said_if = head.then(event)
+    // Only "or" relates complete replacement-event alternatives. The first-time ordinal
+    // above still takes one pattern: assigning it independently to each arm changes scope.
+    let one = event.map(|event| Some(ir::Coord::one(event)), |events: &ir::Coord<EventPattern>| {
+        match events.items.as_slice() { [event] if events.conj == ir::Conj::And => Some(event.clone()), _ => None }
+    });
+    let alternatives = event.list("or").map(
+        |items| Some(ir::Coord { items, conj: ir::Conj::Or }),
+        |events: &ir::Coord<EventPattern>| (events.conj == ir::Conj::Or && events.items.len() >= 2).then(|| events.items.clone()),
+    );
+    let events = alt("replacement events", vec![one, alternatives]);
+    let said_if = head.then(&events)
         .then(&while_)
         .then(&lit("this turn").opt())
         .skip(&lit(","))

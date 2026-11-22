@@ -3058,7 +3058,8 @@ fn post(prep: ZonePrep, n: Number, player_sg: &P<Selector>, player_pl: &P<Select
                 },
             ),
             // "creature cards you own that aren't on the battlefield"
-            lit(if n == Number::Sg { "that isn't" } else { "that aren't" }).then_keep(&zone_spec(ZonePrep::In, player_sg)).map(
+            alt("not in zone", vec![lit(if n == Number::Sg { "that isn't" } else { "that aren't" }), lit("not").alias()])
+                .then_keep(&zone_spec(ZonePrep::In, player_sg)).map(
                 |z| Some(Post::With(Filter::Not(Box::new(Filter::Atom(Atom::InZone(z)))))),
                 |p| match p {
                     Post::With(Filter::Not(b)) => match b.as_ref() {
