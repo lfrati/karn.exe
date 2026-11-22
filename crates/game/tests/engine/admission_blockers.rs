@@ -34,24 +34,24 @@ fn every_refusal_of_a_card_is_listed_after_the_first() {
 
 #[test]
 fn r113_2c_each_paragraph_is_its_own_ability_and_each_refused_one_is_a_blocker() {
-    // Fear (702.36) and "tap or untap" are both unimplemented: each paragraph is a separate
+    // Banding (702.22) and "tap or untap" are both unimplemented: each paragraph is a separate
     // ability (113.2c), lowered on its own, so the second is analyzed past the first's refusal.
     // Neither hides anything: the first paragraph is the one keyword, and the second's one
     // instruction is the one refused
-    let d = CardDef::new("Odd", "{2}", "Creature — Bear", "Fear\n{T}: Tap or untap target permanent.", Some((2, 2))).expect("the grammar reads it");
+    let d = CardDef::new("Odd", "{2}", "Creature — Bear", "Banding\n{T}: Tap or untap target permanent.", Some((2, 2))).expect("the grammar reads it");
     let all = blockers(&d);
-    cite!(["113.2c"]; assert_eq!(reasons(&all), ["keyword: Fear", "program: action not lowered: TapOrUntap"]));
+    cite!(["113.2c"]; assert_eq!(reasons(&all), ["keyword: Banding", "program: action not lowered: TapOrUntap"]));
     assert_eq!(check(&d).unwrap_err().0, all[0].reason);
     assert!(all.iter().all(|b| b.unanalyzed.is_empty()), "{all:?}");
 }
 
 #[test]
 fn r113_2c_each_keyword_strung_on_one_line_is_its_own_ability_and_blocker() {
-    // keyword abilities strung together on one line are each an ability (113.2c): fear
-    // (702.36) and shadow (702.28) are both refused, each on its own, and neither hides the other
-    let d = CardDef::new("Odd", "{2}", "Creature — Bear", "Fear, shadow", Some((2, 2))).expect("the grammar reads it");
+    // keyword abilities strung together on one line are each an ability (113.2c): banding
+    // (702.22) and mutate (702.140) are both refused, each on its own, and neither hides the other
+    let d = CardDef::new("Odd", "{2}", "Creature — Bear", "Banding, mutate", Some((2, 2))).expect("the grammar reads it");
     let all = blockers(&d);
-    cite!(["113.2c"]; assert_eq!(reasons(&all), ["keyword: Fear", "keyword: Shadow"]));
+    cite!(["113.2c"]; assert_eq!(reasons(&all), ["keyword: Banding", "keyword: Mutate"]));
     assert_eq!(check(&d).unwrap_err().0, all[0].reason);
     assert!(all.iter().all(|b| b.unanalyzed.is_empty()), "{all:?}");
 }
@@ -90,9 +90,9 @@ fn r700_2_a_refused_mode_leaves_the_modes_after_it_unanalyzed() {
 fn r714_2_a_refusal_that_skips_an_ability_says_so_and_the_next_ability_is_still_checked() {
     // a chapter ability is a Saga's (714.2): on another permanent the engine skips the rest of
     // that ability's checks, and says it did; the next paragraph (113.2c) is still checked
-    let d = CardDef::new("Odd", "{2}", "Enchantment", "I — Draw a card.\nFear", None).expect("the grammar reads it");
+    let d = CardDef::new("Odd", "{2}", "Enchantment", "I — Draw a card.\nBanding", None).expect("the grammar reads it");
     let all = blockers(&d);
-    cite!(["714.2", "113.2c"]; assert_eq!(reasons(&all), ["chapter ability of a permanent that is not a Saga", "keyword: Fear"]));
+    cite!(["714.2", "113.2c"]; assert_eq!(reasons(&all), ["chapter ability of a permanent that is not a Saga", "keyword: Banding"]));
     assert_eq!(all[0].unanalyzed, ["the rest of Odd, ability 1: its checks are skipped"]);
 }
 

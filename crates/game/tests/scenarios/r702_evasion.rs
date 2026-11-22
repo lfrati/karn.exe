@@ -1,0 +1,27 @@
+//! Evasion keywords lower to ordinary combat restrictions and read effective characteristics.
+use crate::support::{cite, oracle};
+use game::state::Decision;
+use game::{CardDef, Game, Move, Target, Zone};
+
+fn declaration(attacker: CardDef, blocker: CardDef) -> Result<(), String> {
+    let mut g = Game::new(vec![attacker, blocker], 2, 20);
+    let a = g.put(0, 0, Zone::Battlefield);
+    let b = g.put(1, 1, Zone::Battlefield);
+    while g.decision != Some(Decision::Attackers { player: 0 }) {
+        g.act(g.priority, Move::Pass).unwrap();
+    }
+    g.act(0, Move::Attack(vec![(a, Target::Player(1))])).unwrap();
+    while g.decision != Some(Decision::Blockers { player: 1 }) {
+        g.act(g.priority, Move::Pass).unwrap();
+    }
+    g.act(1, Move::Block(vec![(b, a)]))
+}
+
+#[test]
+fn r702_36b_fear_allows_black_and_artifacts_but_refuses_other_colors() {
+    let attacker = oracle("Squirming Mass");
+    for blocker in ["Walking Corpse", "Memnite"] {
+        cite!(["702.36b"]; ok: declaration(attacker.clone(), oracle(blocker)));
+    }
+    cite!(["702.36b"]; refused("Squirming Mass has fear (702.36b, 509.1b)"): declaration(attacker, oracle("Grizzly Bears")));
+}
