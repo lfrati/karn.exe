@@ -14,7 +14,8 @@ fn r115_1c_daretti_copies_one_artifact_from_either_zone_without_copying_state() 
     for zone in [Zone::Battlefield, Zone::Graveyard] {
         let mut g = Game::new(defs.to_vec(), 2, 20);
         let daretti = g.put(0, 0, Zone::Battlefield);
-        g.put_counters(daretti, "loyalty", 4);
+        // Trusted setup skips entry actions, including the printed loyalty counters.
+        g.put_counters(daretti, "loyalty", 7);
         let artifact = g.put(1, 1, zone);
         let nonartifact = g.put(1, 2, zone);
         if zone == Zone::Battlefield {
