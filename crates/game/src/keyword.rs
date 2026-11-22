@@ -23,7 +23,6 @@ pub(crate) use declaration::*;
 const SENTENCES: &[(&str, &str, &str)] = &[
     ("Defender", "702.3b", "This creature can't attack."),
     ("Horsemanship", "702.31b", "This creature can't be blocked except by creatures with horsemanship."),
-    ("Intimidate", "702.13b", "This creature can't be blocked except by artifact creatures and/or creatures that share a color with it."),
     ("Fear", "702.36b", "This creature can't be blocked except by artifact creatures and/or black creatures."),
     ("Flying", "702.9b", "This creature can't be blocked except by creatures with flying and/or reach."),
     ("Menace", "702.111b", "This creature can't be blocked except by two or more creatures."),
@@ -82,6 +81,7 @@ fn read() -> &'static Vec<(Keyword, Ability)> {
 /// The rule that states a keyword's sentence: "702.9b" for flying.
 pub(crate) fn sentence_rule(k: Keyword) -> Option<&'static str> {
     if k.name() == "Shadow" { return Some("702.28b"); }
+    if k.name() == "Intimidate" { return Some("702.13b"); }
     SENTENCES.iter().find(|(name, _, _)| Keyword::from_name(name) == Some(k)).map(|(_, rule, _)| *rule)
 }
 
@@ -104,12 +104,33 @@ fn split_second_rules() -> &'static [Ability] {
     rules
 }
 
+/// 702.13b: either an artifact creature, or one sharing a color with the attacker.
+/// Keep the two alternatives and the explicit source referent separate in typed syntax.
+fn intimidate_rule() -> &'static Ability {
+    static RULE: OnceLock<Ability> = OnceLock::new();
+    crate::token::init(&RULE, || {
+        use ir::{Atom, Filter, ObjectSet, Quant, Ref, Selector};
+        let source = Selector::new(Quant::Definite(Ref::This), ObjectSet::of(ir::Domain::Permanent));
+        let blocker = |quality| Selector::new(Quant::Indefinite(ir::Count::Exactly(ir::Amount::Const(1))), ObjectSet {
+            filter: Filter::All(vec![Filter::Atom(Atom::Type(ir::CardType::Creature)), Filter::Atom(quality)]),
+            ..ObjectSet::of(ir::Domain::Permanent)
+        });
+        Ability::Text(ir::Effect(vec![ir::Sentence::Do(ir::effect::Body {
+            first: ir::effect::Clause { subject: Some(ir::Subject::Selector(source.clone())), may: false, also: false,
+                first: ir::effect::Act { action: ir::Action::Cant(vec![ir::statics::Forbidden {
+                    event: ir::EventAction::BecomesBlocked { by: vec![blocker(Atom::Type(ir::CardType::Artifact)),
+                        blocker(Atom::Shares { what: ir::amount::Characteristic::Color, with: Box::new(source) })], except: true }, within: None,
+                }]), mods: vec![], may: false }, rest: vec![] }, rest: vec![],
+        })]))
+    })
+}
+
 /// Shadow constrains both sides of a block (702.28b); both are ordinary restrictions.
 fn shadow_rules() -> &'static [Ability] {
     static RULES: OnceLock<Vec<Ability>> = OnceLock::new();
     crate::token::init(&RULES, || CardDef::new("Shadow rule", "", "Creature",
         "This creature can't be blocked except by creatures with shadow.\nThis creature can block only creatures with shadow.", None)
-        .expect("the grammar reads both restrictions of 702.28b").abilities.clone())
+        .expect("the grammar reads both restrictions of 702.28b").abilities.clone()).as_slice()
 }
 
 /// Does the engine give this keyword ability its meaning?

@@ -65,7 +65,7 @@ fn r702_45_bushido_triggers_once_when_blocked_by_multiple_creatures_and_when_blo
     let b = g.put(1, 1, Zone::Battlefield);
     attack(&mut g, &[avenger]);
     blockers(&mut g, vec![(a, avenger), (b, avenger)]);
-    cite!(["702.45a", "509.5c"]; assert_eq!((g.power(avenger), g.toughness(avenger)), (Some(4), Some(4))));
+    cite!(["702.45a", "509.3c"]; assert_eq!((g.power(avenger), g.toughness(avenger)), (Some(4), Some(4))));
     let mut g = fixture(vec![oracle("Jade Avenger"), oracle("Grizzly Bears")]);
     let bear = g.put(0, 1, Zone::Battlefield);
     let avenger = g.put(1, 0, Zone::Battlefield);

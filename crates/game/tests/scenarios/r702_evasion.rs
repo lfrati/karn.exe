@@ -36,7 +36,7 @@ fn r702_13b_intimidate_uses_shared_colors_and_artifact_creatures() {
     cite!(["702.13b"]; refused("Krenko's Enforcer has intimidate (702.13b, 509.1b)"): declaration(attacker, oracle("Walking Corpse")));
     let colorless = CardDef::new("Colorless intimidator", "{0}", "Creature", "Intimidate", Some((2, 2))).unwrap();
     game::play::check(&colorless).unwrap();
-    cite!(["702.13b", "105.2c"]; refused("Colorless intimidator has intimidate (702.13b, 509.1b)"): declaration(colorless, oracle("Ugin's Conjurant")));
+    cite!(["702.13b", "105.2c"]; refused("Colorless intimidator has intimidate (702.13b, 509.1b)"): declaration(colorless, oracle("Kozilek's Channeler")));
 }
 
 #[test]

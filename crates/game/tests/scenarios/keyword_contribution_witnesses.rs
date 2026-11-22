@@ -123,11 +123,11 @@ fn granted_rebound_and_printed_flashback_apply_only_to_their_own_casts() {
 }
 
 /// Keyword counters (122.1b) give their keyword to the permanent. One whose meaning the engine
-/// does not implement (decayed, exalted, shadow) is held as before, not a panic while its
+/// does not implement (decayed, banding, soulbond) is held as before, not a panic while its
 /// characteristics are read; supported ones (flying) keep functioning.
 #[test]
 fn unsupported_keyword_counter_does_not_panic_reading_abilities() {
-    for kind in ["flying", "shadow", "exalted", "decayed"] {
+    for kind in ["flying", "banding", "soulbond", "decayed"] {
         let mut g = stocked(vec![bear(), land()]);
         let bear = g.put(0, 0, Zone::Battlefield);
         g.put_counters(bear, kind, 1);

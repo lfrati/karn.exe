@@ -49,6 +49,7 @@ impl Filter {
                 Atom::Chosen(_) => I::UNKNOWN, // Binding kind chooses type/color; no narrower proof yet.
                 Atom::SameName(of) => recipient(P::NAME) | of.inputs() | I::at(D::Objects, P::NAME),
                 Atom::SharesCreatureType(of) => recipient(P::TYPES) | of.inputs() | I::at(D::Objects, P::TYPES),
+                Atom::SharesColor(of) => recipient(P::COLORS) | of.inputs() | I::at(D::Objects, P::COLORS),
                 Atom::Named(_) => recipient(P::NAME),
                 Atom::EnteredThisTurn => recipient(P::HISTORY) | context(P::TURN),
                 // trigger patterns: no complete property walker (as conditions' Happened)

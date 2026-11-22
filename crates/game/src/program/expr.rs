@@ -962,7 +962,8 @@ impl Atom {
             },
             Atom::SharesColor(with) => {
                 let own = colors();
-                with.objects(game, ctx, locals).any(|other| ctx.seen_for(game, other, Aspect::Colors).colors.iter().any(|color| own.colors.contains(color)))
+                let others: Vec<_> = with.objects(game, ctx, locals).collect();
+                !others.is_empty() && others.iter().all(|other| ctx.seen_for(game, *other, Aspect::Colors).colors.iter().any(|color| own.colors.contains(color)))
             },
             Atom::SameName(with) => {
                 let others: Vec<_> = with.objects(game, ctx, locals).collect();
