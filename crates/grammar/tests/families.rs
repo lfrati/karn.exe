@@ -630,3 +630,21 @@ fn r115_1c_bare_type_and_untyped_target_heads() {
     declines("Airbend up to one other target creature or player.");
     declines("Sacrifice target creature or spell.");
 }
+
+/// CR 111.3 and 305.6: a token's relative clause retains a whole subtype class.
+#[test]
+fn r111_3_whole_subtype_class_in_token_description() {
+    let (relative, _) = read("Whenever ~ enters or attacks, create a tapped colorless land token named Everywhere that is every basic land type.");
+    let (with, _) = read("Whenever ~ enters or attacks, create a tapped colorless land token named Everywhere with all basic land types.");
+    assert_eq!(relative, with);
+    let json = serde_json::to_string(&relative).unwrap();
+    assert!(json.contains("Every") && json.contains("BasicLandTypes") && json.contains("Everywhere"));
+    for text in [
+        "Create two land tokens that are every nonbasic land type.",
+        "Create a 1/1 colorless Shapeshifter creature token that's every creature type.",
+        "Create a land token with flying that is every land type.",
+    ] { read(text); }
+    declines("Create a land token that is every color.");
+    declines("Create a creature token that is every card type.");
+    declines("Create two land tokens that is every basic land type.");
+}

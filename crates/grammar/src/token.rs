@@ -350,7 +350,20 @@ fn described(n: Number) -> P<TokenKind> {
         },
     );
     let name_last = abilities().then(&named).map(|(keywords, name)| Some((Some(name), keywords)), |_| None).alias();
-    let tail = alt("name and abilities", vec![name_first, name_last]);
+    // A relative names the same whole subtype class as "with all ... types".
+    let copula = if n == Number::Sg {
+        alt("token relative", vec![lit("that is"), lit("that's")])
+    } else { lit("that are") };
+    let with_class = name_first.then(
+        &copula.then_keep(&crate::becomes::every(false, &crate::becomes::LAND_AND_CREATURE)),
+    ).map(
+        |((name, mut abilities), class)| {
+            abilities.push(Granted::Every(class));
+            Some((name, abilities))
+        },
+        |_: &(Option<String>, Vec<Granted>)| None,
+    ).alias();
+    let tail = alt("name and abilities", vec![name_first, name_last, with_class]);
     supertype
         .many()
         .then(&pt().opt())
