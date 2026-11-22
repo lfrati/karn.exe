@@ -175,9 +175,14 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
         }
         // "You may cast this card from your hand by paying [cost] rather than its mana cost",
         // and if it was, the delayed exile of the permanent it becomes (702.185a): a rule of
-        // the resolving spell, created with [`crate::Game::warp_resolved`]
+        // the resolving spell, created with [`crate::Game::alternative_resolved`]
         // An effect may give it to cards in a hand ("Artifact cards and red creature cards in
         // your hand have warp {2}{R}"): held there, and cast for as [`crate::Game::given_alternatives`]
+        "Dash" => {
+            let Some(cost) = route_cost(item) else { return refused(item) };
+            Ok(Declared::new(vec![(stack, Gives::Alternative { cost, from: None }),
+                (bf, Gives::Ability(dash_haste()))], vec![Context::PermanentsOnly, Context::PrintedOnly]))
+        }
         "Warp" => {
             let Some(cost) = route_cost(item) else { return refused(item) };
             Ok(Declared::new(vec![(hand, Gives::Asked), (stack, Gives::Alternative { cost, from: Some(Zone::Hand) })], vec![Context::PermanentsOnly]))
@@ -450,6 +455,13 @@ fn casualty_trigger() -> Ability {
             sentence(Action::ChooseNewTargets { for_: ir::Objects { items: vec![copy], conj: ir::Conj::And }, one: false }, true),
         ]),
     }
+}
+/// 702.109a: copied spell announcements retain whether the dash cost was paid.
+fn dash_haste() -> Ability {
+    static HASTE: std::sync::OnceLock<Ability> = std::sync::OnceLock::new();
+    crate::token::init(&HASTE, || CardDef::new("Dash rule", "", "Creature",
+        "If this creature's dash cost was paid, this creature has haste.", None)
+        .expect("the grammar reads rule 702.109a's conditional haste").abilities[0].clone()).clone()
 }
 fn evoke_trigger() -> Ability {
     static EVOKE: std::sync::OnceLock<Ability> = std::sync::OnceLock::new();

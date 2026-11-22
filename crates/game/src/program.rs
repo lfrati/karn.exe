@@ -8126,6 +8126,8 @@ pub(crate) fn keyword_delayed_identity(program: &Arc<Program>) -> Option<(&'stat
         Some(("Rebound", "702.88a", "At the beginning of your next upkeep, you may cast this card from exile without paying its mana cost."))
     } else if same_instance(program, warp_program()) {
         Some(("Warp", "702.185a", "At the beginning of the next end step, exile the permanent this spell becomes. Its owner may cast this card after the current turn has ended for as long as it remains exiled."))
+    } else if same_instance(program, dash_program()) {
+        Some(("Dash", "702.109a", "At the beginning of the next end step, return the permanent this spell becomes to its owner's hand."))
     } else { None }
 }
 
@@ -8134,13 +8136,27 @@ pub(crate) fn keyword_delayed_identity(program: &Arc<Program>) -> Option<(&'stat
 /// exiled." Only that permanent is exiled (400.7); a card that never reached exile this way
 /// is given nothing.
 pub(crate) fn warp_exile(game: &Game, ctx: Ctx<'static>, permanent: ObjId) -> Captured {
+    alternative_delayed(game, ctx, permanent, warp_program())
+}
+/// 702.109a: retain the resulting permanent, not a later incarnation of its card.
+pub(crate) fn dash_return(game: &Game, ctx: Ctx<'static>, permanent: ObjId) -> Captured {
+    alternative_delayed(game, ctx, permanent, dash_program())
+}
+fn alternative_delayed(game: &Game, ctx: Ctx<'static>, permanent: ObjId, program: &Arc<Program>) -> Captured {
     let keyword_producer=ctx.source.zip(ctx.ability.as_ref()).and_then(|(source,key)|
         Some(Arc::new((game.frozen_definition(source,&key.origin)?,key.clone()))));
     // a warp an effect gave the card in its hand (613.1f), kept as it was cast for its cost
     let granted_keyword=ctx.source.filter(|_| keyword_producer.is_none())
         .and_then(|spell| game.obj(spell).cast_announcement.as_ref()?.given_alternative.clone());
-    Captured {ctx,body:Body::Plain(warp_program().clone()),intervening:None,triggered:true,chapter:false,
+    Captured {ctx,body:Body::Plain(program.clone()),intervening:None,triggered:true,chapter:false,
         values:vec![Some(Value::Subjects(vec![Target::Object(permanent)]))],keyword_producer,granted_keyword,sparse_checked:false}
+}
+fn dash_program() -> &'static Arc<Program> {
+    static PROGRAM: std::sync::OnceLock<Arc<Program>> = std::sync::OnceLock::new();
+    PROGRAM.get_or_init(|| Arc::new(Program::with_initial(vec![
+        Instr::Action { action: action::Action::Move { groups: vec![(vec![action::Operand::Reference(0)], action::Destination::Zone(Zone::Hand))], said: ir::action::MoveVerb::Return }, created: None, attempt: None },
+    ], vec![ActSpan { end:1, moves:true, keeps_x:false }], Vec::new(), vec![Some(Kind::Subjects)])
+        .expect("dash returns with the ordinary move instruction")))
 }
 fn warp_program() -> &'static Arc<Program> {
     static PROGRAM: std::sync::OnceLock<Arc<Program>> = std::sync::OnceLock::new();

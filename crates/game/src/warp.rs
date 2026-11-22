@@ -1,5 +1,5 @@
-//! 702.185a: a permanent spell cast for its warp cost makes, as it resolves, a delayed
-//! triggered ability that exiles the permanent it became at the beginning of the next end step.
+//! Alternative-cost spells create delayed consequences as they resolve: Warp exiles its
+//! permanent (702.185a), while Dash returns it to its owner's hand (702.109a).
 use crate::{Game,ObjId};
 use crate::select::{Ctx,Support};
 impl Game {
@@ -52,10 +52,12 @@ impl Game {
         }
         out
     }
-    /// The spell became this permanent: if its warp cost was paid, the delayed trigger that
-    /// exiles it. Its static ability made it, not an enters trigger (702.185a, 603.7).
-    pub(crate) fn warp_resolved(&mut self,spell:ObjId,permanent:ObjId) {
-        if !self.warp_paid(spell) { return; }
+    /// The resolving spell creates the delayed consequence of its paid alternative cost;
+    /// it is independent of enters triggers and later ability loss (702.109a, 702.185a).
+    pub(crate) fn alternative_resolved(&mut self,spell:ObjId,permanent:ObjId) {
+        let name = if self.warp_paid(spell) { "Warp" }
+            else if ir::Keyword::from_name("Dash").is_some_and(|dash| self.paid_for(spell, dash)) { "Dash" }
+            else { return; };
         let controller=self.obj(spell).controller;
         let mut ctx=Ctx::for_spell(controller,spell);
         // The paid alternative is the declaring keyword row, not a guessed ability
@@ -63,14 +65,15 @@ impl Game {
         if let Some(row)=self.obj(spell).alternative {
             let origin=self.copy_origin(spell);
             if self.definition(spell,&origin).is_some_and(|def|
-                ir::Keyword::from_name("Warp").is_some_and(|warp|
-                    crate::keyword::alternative_rows(def,warp).contains(&row))) {
+                ir::Keyword::from_name(name).is_some_and(|keyword|
+                    crate::keyword::alternative_rows(def,keyword).contains(&row))) {
                 ctx=ctx.with_key(crate::binding::AbilityKey{origin,index:row});
             }
         }
         let pattern=crate::trigger::DelayedPattern::step(ir::Step::End,&ir::StepOwner::The{next:true},&Support::runtime(self,&ctx))
-            .expect("warp watches the next end step");
-        let captured=crate::program::warp_exile(self,ctx,permanent);
+            .expect("alternative casting costs watch the next end step");
+        let captured=if name == "Warp" { crate::program::warp_exile(self,ctx,permanent) }
+            else { crate::program::dash_return(self,ctx,permanent) };
         self.delayed.push(crate::state::Delayed{source:spell,controller,pattern,subjects:Vec::new(),
             captured,bound:Default::default(),lasts:crate::state::Lasts::Indefinite,once:true});
     }

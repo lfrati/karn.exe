@@ -1744,7 +1744,7 @@ impl Game {
                 if effect.affected.contains(&id) { effect.affected.push(permanent); }
             }
             // its warp cost was paid: the delayed exile of what it became (702.185a)
-            self.warp_resolved(id, permanent);
+            self.alternative_resolved(id, permanent);
         }
         let attacking = entry.attacking;
         let frozen_counters = entry.frozen_counters.clone();
