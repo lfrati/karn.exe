@@ -6,9 +6,13 @@ use crate::select::{Ctx, Support};
 use crate::{CardDef, Game, ObjId, PlayerId, Res, Target, Zone, unsupported};
 #[derive(Debug, Clone)]
 pub(crate) struct Condition {
-    each: Filter,
-    has: Filter,
+    deck: DeckCondition,
     cost: crate::cost::Plan,
+}
+#[derive(Debug, Clone)]
+enum DeckCondition {
+    Each { each: Filter, has: Filter },
+    NoRepeatedManaSymbol,
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Chosen {
@@ -31,33 +35,31 @@ fn characteristic(f: &ir::Filter) -> bool {
     }
 }
 pub(crate) fn compile(def: &CardDef) -> Option<Res<Condition>> {
-    let all = def
-        .abilities
-        .iter()
-        .filter_map(|a| if let ir::Ability::Companion { each, has } = a { Some((each, has)) } else { None })
-        .collect::<Vec<_>>();
-    if all.is_empty() {
-        return None;
-    }
+    let all = def.abilities.iter().filter(|a| matches!(a, ir::Ability::Companion { .. } | ir::Ability::CompanionRule(_))).collect::<Vec<_>>();
+    if all.is_empty() { return None; }
     Some((|| {
-        let [(each, has)] = all.as_slice() else {
-            return unsupported("one companion condition per card");
-        };
-        let mut bare = (*each).clone();
-        bare.filter = ir::Filter::any_object();
-        if bare != ir::ObjectSet::of(ir::Domain::Card) || !characteristic(&each.filter) || !characteristic(has) {
-            return unsupported("companion: starting-deck printed characteristic predicate");
-        }
+        let [rule] = all.as_slice() else { return unsupported("one companion condition per card"); };
         let support = Support::definition(def, None);
+        let deck = match rule {
+            ir::Ability::Companion { each, has } => {
+                let mut bare = each.clone();
+                bare.filter = ir::Filter::any_object();
+                if bare != ir::ObjectSet::of(ir::Domain::Card) || !characteristic(&each.filter) || !characteristic(has) {
+                    return unsupported("companion: starting-deck printed characteristic predicate");
+                }
+                DeckCondition::Each {
+                    each: Filter::compile(&each.filter, &support, &mut expr::linked(&support))?,
+                    has: Filter::compile(has, &support, &mut expr::linked(&support))?,
+                }
+            }
+            ir::Ability::CompanionRule(ir::ability::CompanionRule::NoRepeatedManaSymbol) => DeckCondition::NoRepeatedManaSymbol,
+            _ => return unsupported("companion: a starting-deck condition the engine does not check (702.139)"),
+        };
         let cost = crate::cost::Plan::compile(
             &ir::Cost(vec![ir::CostPart::Mana(ir::mana::ManaCost(vec![ir::mana::ManaSymbol::Generic(3)]))]),
             &support,
         )?;
-        Ok(Condition {
-            cost,
-            each: Filter::compile(&each.filter, &support, &mut expr::linked(&support))?,
-            has: Filter::compile(has, &support, &mut expr::linked(&support))?,
-        })
+        Ok(Condition { cost, deck })
     })())
 }
 impl Game {
@@ -74,9 +76,11 @@ impl Game {
         for card in &self.players[player].library {
             let ctx = Ctx::new(player, *card);
             let target = Target::Object(*card);
-            if condition.each.matches(self, &ctx, &expr::NoLocals, target)
-                && !condition.has.matches(self, &ctx, &expr::NoLocals, target)
-            {
+            let allowed = match &condition.deck {
+                DeckCondition::Each { each, has } => !each.matches(self, &ctx, &expr::NoLocals, target) || has.matches(self, &ctx, &expr::NoLocals, target),
+                DeckCondition::NoRepeatedManaSymbol => self.def(*card).expect("starting-deck card").cost().is_none_or(|cost| cost.0.iter().enumerate().all(|(index, symbol)| !cost.0[..index].contains(symbol))),
+            };
+            if !allowed {
                 return Err(Refused::illegal(format!("starting deck does not meet companion condition: {}", self.obj(*card).chars.name)));
             }
         }

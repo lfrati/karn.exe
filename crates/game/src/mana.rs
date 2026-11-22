@@ -58,6 +58,18 @@ impl Requirement for ReducedCost {
     fn convoke(&self) -> [u32;5] { self.convoke }
 }
 
+/// A single unconditional production followed by its non-generic cost-component rider.
+/// Wider control flow needs a producer binding before it can name "this mana" safely.
+pub(crate) fn non_generic(effect: &Effect) -> bool {
+    let [Sentence::Do(body), Sentence::Static(rule)] = effect.0.as_slice() else { return false };
+    if !matches!(rule.as_ref(), ir::statics::Static::ManaCantBeSpent(ir::mana::SpendOn::Generic)) { return false; }
+    let clause = &body.first;
+    body.rest.is_empty() && clause.rest.is_empty() && !clause.may && !clause.also
+        && !clause.first.may && clause.first.mods.is_empty()
+        && clause.subject.as_ref().is_none_or(|s| matches!(s, ir::Subject::Selector(s) if crate::select::is_you(s)))
+        && matches!(clause.first.action, ir::Action::AddMana(_))
+}
+
 /// "Spend this mana only to …", when that is a sentence of this text.
 pub(crate) fn spend_only(effect: &Effect) -> Option<&Rider> {
     effect.0.iter().find_map(|s| match s {
@@ -99,28 +111,27 @@ fn equivalent(pool: &Pool, cost: &dyn Requirement) -> Option<()> { pays(pool, co
 /// the player still says which mana pays (601.2h).
 fn suffices<'a>(pool: &Pool, spendable: impl Iterator<Item = &'a Restricted>, cost: &dyn Requirement) -> bool {
     let mut all = Pool { colors: pool.colors, colorless: pool.colorless, restricted: Vec::new() };
-    for unit in spendable {
-        let Some(count) = plain(&mut all, unit.mana) else { continue };
-        *count = count.saturating_add(1);
-    }
+    all.restricted = spendable.cloned().collect();
     pays(&all, cost, true).is_some()
 }
 
 /// Whether the units pay one equivalent of the requirement: all of them, or with `over`, some.
 fn pays(pool: &Pool, cost: &dyn Requirement, over: bool) -> Option<()> {
-    type State = (usize, [u32; 5], u32, u32, [u32;5], [u32;6]);
+    type State = (usize, [u32; 5], u32, u32, [u32;5], [u32;6], [u32;6]);
     #[allow(clippy::too_many_arguments)]
     fn search(pool: &Pool, symbols: &[ManaSymbol], at: usize, generic: u32, reduction: u32, typed_reduction: [u32;6], minimum: u32, substitution: u32, convoke: [u32;5],
-        over: bool, chosen: &mut Vec<ManaSymbol>, failed: &mut std::collections::HashSet<State>) -> Option<()> {
+        non_generic: [u32;6], over: bool, chosen: &mut Vec<ManaSymbol>, failed: &mut std::collections::HashSet<State>) -> Option<()> {
         let available = pool.colors.iter().sum::<u32>() + pool.colorless;
         if available.saturating_add(substitution) < generic.saturating_sub(reduction + typed_reduction.iter().sum::<u32>()) { return None; }
-        let state = (at, pool.colors, pool.colorless, generic, convoke, typed_reduction);
+        let state = (at, pool.colors, pool.colorless, generic, convoke, typed_reduction, non_generic);
         if failed.contains(&state) { return None; }
         let Some(symbol) = symbols.get(at) else {
             if convoke.iter().any(|n|*n!=0) {return None;}
             let typed = chosen.iter().filter(|s| !matches!(s, ManaSymbol::Generic(_))).count() as u32;
             let generic = generic.saturating_sub(reduction + typed_reduction.iter().sum::<u32>()).max(minimum.saturating_sub(typed)).checked_sub(substitution)?;
-            return (available == generic || (over && available > generic)).then_some(());
+            let reserved = non_generic.iter().sum::<u32>();
+            return if over { (available - reserved >= generic).then_some(()) }
+                else { (reserved == 0 && available == generic).then_some(()) };
         };
         let (first, second) = symbol.mana_payments()?;
         for payment in std::iter::once(first).chain(second) {
@@ -128,6 +139,7 @@ fn pays(pool: &Pool, cost: &dyn Requirement, over: bool) -> Option<()> {
             let mut generic = generic;
             let mut convoke=convoke;
             let mut typed_reduction = typed_reduction;
+            let mut non_generic = non_generic;
             let typed = match payment { ManaSymbol::Color(c) => Some(c as usize), ManaSymbol::Colorless => Some(5), _ => None };
             let reduced = typed.is_some_and(|c| typed_reduction[c] > 0);
             if reduced { typed_reduction[typed.unwrap()] -= 1; }
@@ -139,16 +151,27 @@ fn pays(pool: &Pool, cost: &dyn Requirement, over: bool) -> Option<()> {
                     let have = plain(&mut left, payment)?;
                     if *have == 0 { continue; }
                     *have -= 1;
+                    if let Some(color) = typed { non_generic[color] = non_generic[color].saturating_sub(1); }
                 }
             }
             if !reduced { chosen.push(payment); }
-            if let Some(found) = search(&left, symbols, at + 1, generic, reduction, typed_reduction, minimum, substitution, convoke, over, chosen, failed) { return Some(found); }
+            if let Some(found) = search(&left, symbols, at + 1, generic, reduction, typed_reduction, minimum, substitution, convoke, non_generic, over, chosen, failed) { return Some(found); }
             if !reduced { chosen.pop(); }
         }
         failed.insert(state);
         None
     }
-    search(pool, cost.symbols(), 0, 0, cost.reduction(), cost.typed_reduction(), cost.minimum(), cost.substitution(), cost.convoke(), over, &mut Vec::new(), &mut std::collections::HashSet::new())
+    let mut available = Pool { colors: pool.colors, colorless: pool.colorless, restricted: Vec::new() };
+    let mut non_generic = [0u32;6];
+    for unit in &pool.restricted {
+        let count = plain(&mut available, unit.mana)?;
+        *count = count.checked_add(1)?;
+        if !unit.only.generic_allowed() {
+            let color = match unit.mana { ManaSymbol::Color(color) => color as usize, ManaSymbol::Colorless => 5, _ => return None };
+            non_generic[color] = non_generic[color].checked_add(1)?;
+        }
+    }
+    search(&available, cost.symbols(), 0, 0, cost.reduction(), cost.typed_reduction(), cost.minimum(), cost.substitution(), cost.convoke(), non_generic, over, &mut Vec::new(), &mut std::collections::HashSet::new())
 }
 
 /// One mana of a type from the plain counts of a pool.
@@ -188,14 +211,15 @@ impl Game {
             }
             left.restricted.remove(at);
         }
-        let mut selected = Pool { colors: with.colors, colorless: with.colorless, restricted: Vec::new() };
         for unit in &with.restricted {
-            let count = plain(&mut selected, unit.mana).ok_or("a supplied mana unit must have a mana type (106.1)")?;
-            *count = count.checked_add(1).ok_or_else(|| crate::Unsupported("supplied mana exceeds the engine numerical range".into()))?;
+            if !matches!(unit.mana, ManaSymbol::Color(_) | ManaSymbol::Colorless) { return Err("a supplied mana unit must have a mana type (106.1)".into()); }
         }
-        selected.colors.iter().chain(std::iter::once(&selected.colorless))
+        let units = u32::try_from(with.restricted.len()).ok();
+        with.colors.iter().chain(std::iter::once(&with.colorless))
             .try_fold(0u32, |total, count| total.checked_add(*count))
+            .and_then(|plain| units.and_then(|units| plain.checked_add(units)))
             .ok_or_else(|| crate::Unsupported("supplied mana exceeds the engine numerical range".into()))?;
+        let selected = with.clone();
         match equivalent(&selected, cost) {
             Some(()) => Ok((left, with.restricted.clone())),
             // a pool too short whatever is chosen, or one nothing was chosen from

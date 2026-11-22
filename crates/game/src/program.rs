@@ -2069,6 +2069,8 @@ enum TextStep<'a> { Reflexive(&'a Sentence, &'a [Sentence], Option<&'a ir::Event
     ExiledInstead(&'a Selector),
     /// One optional retained-card selection for each card type, committed together.
     CardTypes(&'a Sentence),
+    /// A cost-component rider attached to the body's one proved mana producer.
+    ManaGenericForbidden,
     /// A keyword cost defined by the recipient's own mana cost (702.34a).
     KeywordCost(ir::Keyword, &'a Selector) }
 
@@ -2359,6 +2361,7 @@ fn text_steps<'a>(effect: &'a Effect, support: &Support<'_>) -> Res<Vec<TextStep
                 out.push(TextStep::Later(*step,whose,rest,&[],sentence));
             }
             Sentence::Led { lead, .. } => return unsupported(format!("program: lead not lowered: {}", crate::select::name(lead))),
+            Sentence::Static(rule) if matches!(rule.as_ref(), ir::statics::Static::ManaCantBeSpent(ir::mana::SpendOn::Generic)) => out.push(TextStep::ManaGenericForbidden),
             Sentence::Rider(ir::effect::Rider::SpendOnly { .. }) => {},
             Sentence::Rider(ir::effect::Rider::TriggersOnlyOnceEachTurn | ir::effect::Rider::DoThisOnlyOnceEachTurn) => {},
             // "Damage can't be prevented this turn.": a rule the effect puts in force
@@ -3739,6 +3742,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
     if expanded.0.len() == effect.0.len() { binder.paragraphs = support.paragraph_starts().into_iter().map(|start| binder.sentences + start).collect(); }
     if let Some(first) = expanded.0.first() && let Some(own) = conditioned_self(first) { expanded.to_mut().0[0] = own; }
     let effect: &Effect = &expanded;
+    let non_generic = crate::mana::non_generic(effect);
     if crate::ability_limit::Limit::of(effect)?.is_some() && !matches!(support.ability(), Some(ir::Ability::Triggered { .. })) {
         return unsupported("turn limit on a non-triggered body");
     }
@@ -3860,6 +3864,10 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             _ => { binder.clause = None; binder.at = (usize::MAX, index); }
         }
         let (clause, act, alone) = match part {
+            TextStep::ManaGenericForbidden => {
+                if !non_generic { return unsupported("mana: non-generic spending rider needs one unconditional producer"); }
+                continue;
+            }
             TextStep::CardTypes(rest) => {
                 value_iteration::hand_selection(rest, support, &mut e, &mut binder)?;
                 e.end_act(true, None);
@@ -6329,6 +6337,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             } else { mana::Production::compile(spec, support)? };
             if let Some(n) = each { production = production.each(quantity(n, support, &binder)?)?; }
             if let Some(rider) = crate::mana::spend_only(effect) { production = production.spend_only(rider, support)?; }
+            if non_generic { production = production.non_generic()?; }
             if let Some(kept) = crate::mana::kept(effect) { production = production.kept(kept); }
             e.instrs.push(Instr::Mana { players, production });
             e.end_act(false, optional_branch);

@@ -85,16 +85,18 @@ pub struct Spend {
 /// What restricted mana may be spent on (106.6): any of the spells its text describes, as
 /// that text was lowered. Nothing of the text is read again as mana is spent.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Only(Vec<Use>);
+pub struct Only { on: Vec<Use>, generic: bool }
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Use { Any, Spell(expr::Filter), Ability(Option<expr::Set>), Activation(crate::activate::ActivationFilter) }
 
 impl Only {
+    /// A unit constrained to non-generic symbols cannot fill the generic remainder.
+    pub(crate) fn generic_allowed(&self) -> bool { self.generic }
 
     /// Restrictions describe the announced spell or the source of an activated ability.
     /// Paying an instruction during resolution is neither casting nor activating (106.6).
     pub(crate) fn allows(&self, game: &Game, ctx: &Ctx, on: Spent) -> bool {
-        self.0.iter().any(|u| match (u, on) {
+        self.on.iter().any(|u| match (u, on) {
             (Use::Any, _) => true,
             (Use::Spell(filter), Spent::Spell(card, cast_as)) => {
                 let ctx = Ctx { casting: Some((card, cast_as)), ..ctx.clone() };
@@ -158,7 +160,7 @@ impl Spend {
                 SpendOn::Generic => return unsupported("spend this mana only: the generic component (106.6)"),
             }
         }
-        Ok(Spend { only: Only(only), uncounterable: *uncounterable, trigger: None, kept: None })
+        Ok(Spend { only: Only { on: only, generic: true }, uncounterable: *uncounterable, trigger: None, kept: None })
     }
 
     /// This mana as it is in a pool: it remembers whose text added it, what "the chosen
@@ -310,12 +312,20 @@ impl Production {
         Ok(Production::Restricted { production: Box::new(self), spend: Spend::compile(rider, support)? })
     }
 
+    /// "This mana can't be spent to pay generic mana costs" (106.6).
+    pub(crate) fn non_generic(self) -> Res<Production> {
+        if matches!(self, Production::Restricted { .. }) { return unsupported("mana: restricted twice"); }
+        Ok(Production::Restricted { production: Box::new(self), spend: Spend {
+            only: Only { on: vec![Use::Any], generic: false }, uncounterable: false, trigger: None, kept: None,
+        } })
+    }
+
     /// "Until end of combat, you don't lose this mana as steps and phases end" (106.4): the
     /// mana added is kept in its pool until then.
     pub(crate) fn kept(self, kept: crate::state::Kept) -> Production {
         match self {
             Production::Restricted { production, mut spend } => { spend.kept = Some(kept); Production::Restricted { production, spend } }
-            other => Production::Restricted { production: Box::new(other), spend: Spend { only: Only(vec![Use::Any]), uncounterable: false, trigger: None, kept: Some(kept) } },
+            other => Production::Restricted { production: Box::new(other), spend: Spend { only: Only { on: vec![Use::Any], generic: true }, uncounterable: false, trigger: None, kept: Some(kept) } },
         }
     }
 
@@ -331,7 +341,7 @@ impl Production {
         if let Production::Restricted { spend, .. } = self { spend.trigger = Some((condition, program)); }
         else {
             *self = Production::Restricted { production: Box::new(self.clone()), spend: Spend {
-                only: Only(vec![Use::Any]), uncounterable: false, trigger: Some((condition, program)), kept: None,
+                only: Only { on: vec![Use::Any], generic: true }, uncounterable: false, trigger: Some((condition, program)), kept: None,
             }};
         }
         Ok(())

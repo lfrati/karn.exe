@@ -745,12 +745,8 @@ fn check_face_as(def: &CardDef, alternative: bool, r: &mut Refusals) -> Res<()> 
             r.stop("an act done as this permanent enters (614.1c)")?;
             continue;
         }
-        if matches!(a, Ability::CompanionRule(_)) {
-            r.stop("companion: a starting-deck condition the engine does not check (702.139)")?;
-            continue;
-        }
         match a {
-            Ability::Companion { .. } => {},
+            Ability::Companion { .. } | Ability::CompanionRule(_) => {},
             _ if def.library_permissions.iter().any(|p| p.ability==i) => {r.several(def.library_permissions.iter().find(|p|p.ability==i).unwrap().result.as_ref().map_err(Clone::clone), stated(def, i), "instructions")?;},
             _ if def.cast_permissions.iter().any(|p| p.ability == i) => { r.several(def.cast_permissions.iter().find(|p|p.ability==i).unwrap().result.as_ref().map_err(Clone::clone), stated(def, i), "instructions")?; },
             a if crate::functions::casting_cost(a).is_some() || crate::functions::optional_cost(a).is_some() || crate::functions::casting_zone(a).is_some() => {},
