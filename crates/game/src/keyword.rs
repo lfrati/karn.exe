@@ -691,6 +691,17 @@ fn vanishing(item: &ir::token::KeywordInstance) -> Option<Vec<Ability>> {
     Some(abilities)
 }
 
+/// 702.43a: transfer the actual last-known counters, independently of printed N.
+fn modular(item: &ir::token::KeywordInstance) -> Option<Vec<Ability>> {
+    let KeywordParam::Number(ir::Amount::Const(count)) = item.param else { return None };
+    static RULE: OnceLock<Vec<Ability>> = OnceLock::new();
+    let mut abilities = crate::token::init(&RULE, || CardDef::new("Modular rule", "", "Artifact Creature",
+        "This permanent enters with a +1/+1 counter on it.\nWhen this permanent is put into a graveyard from the battlefield, you may put a +1/+1 counter on target artifact creature for each +1/+1 counter on this permanent.", Some((0, 0)))
+        .expect("the grammar reads rule 702.43a").abilities).clone();
+    entry_counter_count(&mut abilities[0], count);
+    Some(abilities)
+}
+
 /// Fixed counter entry replacements share the same ordinary typed arrival.
 fn entry_counter_count(ability: &mut Ability, count: u32) {
     let Ability::Text(ir::Effect(sentences)) = ability else { unreachable!("entry rule is static") };
