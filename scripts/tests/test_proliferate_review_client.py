@@ -4,25 +4,10 @@ players and permanents that have a counter, without targeting; each chosen one g
 counter of each kind it has, all at once. A counter replacement is chosen by the affected
 object's controller (616.1), and a spell whose only target is gone does nothing (608.2b)."""
 import unittest
-# the module, not its class, so that class's own tests are not collected here again
-import test_multiplayer_outcome_client as helpers
+from client_support import ClientTestCase
 
 
-def shared(name):
-    return getattr(helpers.MultiplayerOutcomeClientTests, name)
-
-
-class ProliferateReviewClientTests(unittest.TestCase):
-    setUpClass = classmethod(shared("setUpClass").__func__)
-    setUp = shared("setUp")
-    close_engine = shared("close_engine")
-    new = shared("new")
-    view = shared("view")
-    ids = shared("ids")
-    cast = shared("cast")
-    pass_round = shared("pass_round")
-    reject = shared("reject")
-
+class ProliferateReviewClientTests(ClientTestCase):
     def one(self, name):
         found = [o for o in self.ids(name) if o in self.engine.state["battlefield"]]
         self.assertEqual(len(found), 1, name)

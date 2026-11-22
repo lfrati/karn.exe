@@ -4,21 +4,10 @@ lands go to the graveyard in that order, the first nonland card stays on top (ru
 948c4fe5), and the counter triggers for those lands are asked about only once the upkeep
 ability has finished resolving (603.3, ruling 78f6e66c)."""
 import unittest
-# the module, not its class, so that class's own tests are not collected here again
-import test_multiplayer_outcome_client as helpers
+from client_support import ClientTestCase
 
 
-def shared(name):
-    return getattr(helpers.MultiplayerOutcomeClientTests, name)
-
-
-class RepeatProcessClientTests(unittest.TestCase):
-    setUpClass = classmethod(shared("setUpClass").__func__)
-    setUp = shared("setUp")
-    close_engine = shared("close_engine")
-    view = shared("view")
-    ids = shared("ids")
-
+class RepeatProcessClientTests(ClientTestCase):
     def names(self, state, objects):
         return [state["objects"][str(o)]["name"] for o in objects]
 

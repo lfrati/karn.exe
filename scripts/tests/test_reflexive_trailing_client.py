@@ -1,22 +1,10 @@
 """A sentence after "When you do," belongs to the reflexive ability (603.12),
 through the audited JSON client with Terror of Towashi (ruling 64f15a4f73fb18e1)."""
 import unittest
-import test_grant_client as helpers
+from client_support import ClientTestCase
 
-class ReflexiveTrailingSentenceClientTests(unittest.TestCase):
-    setUpClass=classmethod(helpers.GrantClientTests.setUpClass.__func__)
-    setUp=helpers.GrantClientTests.setUp
-    close_engine=helpers.GrantClientTests.close_engine
-    new=helpers.GrantClientTests.new
-    view=helpers.GrantClientTests.view
-    ids=helpers.GrantClientTests.ids
-    object=helpers.GrantClientTests.object
-    pass_round=helpers.GrantClientTests.pass_round
-    choose=helpers.GrantClientTests.choose
-    reject=helpers.GrantClientTests.reject
-    advance=helpers.GrantClientTests.advance
-    step=helpers.GrantClientTests.step
 
+class ReflexiveTrailingSentenceClientTests(ClientTestCase):
     def attack(self):
         self.new([{'battlefield':['Terror of Towashi']+['Swamp']*4,'graveyard':['Grizzly Bears']},{},{}])
         source=self.ids('Terror of Towashi')[0]

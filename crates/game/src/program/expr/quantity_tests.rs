@@ -1,6 +1,7 @@
 //! Direct-instruction checks: these are verified programs, not admitted cards.
 //! CR 107.1b keeps signed intermediate values and uses zero for negative action counts.
 //! Unrepresentable values are support refusals, never substitute Magic quantities.
+use crate::program::execute::step;
 use crate::program::*;
 use super::{Amount, Number};
 use crate::CardDef;

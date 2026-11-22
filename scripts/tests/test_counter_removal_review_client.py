@@ -5,25 +5,10 @@ the real audited client. Effect removal takes what is there (609.3). Coalition R
 stack. Axebane Guardian's mana ability asks the same per-color choices above three mana, as
 one activation."""
 import unittest
-# the module, not its class, so that class's own tests are not collected here again
-import test_multiplayer_outcome_client as helpers
+from client_support import ClientTestCase
 
 
-def shared(name):
-    return getattr(helpers.MultiplayerOutcomeClientTests, name)
-
-
-class CounterRemovalReviewClientTests(unittest.TestCase):
-    setUpClass = classmethod(shared("setUpClass").__func__)
-    setUp = shared("setUp")
-    close_engine = shared("close_engine")
-    new = shared("new")
-    view = shared("view")
-    ids = shared("ids")
-    cast = shared("cast")
-    pass_round = shared("pass_round")
-    reject = shared("reject")
-
+class CounterRemovalReviewClientTests(ClientTestCase):
     def on_battlefield(self, name):
         return [o for o in self.ids(name) if o in self.engine.state["battlefield"]]
 

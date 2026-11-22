@@ -8,11 +8,12 @@ and protection can't prevent it (Sunspine Lynx ruling 2972b803). Effects that la
 end at cleanup (514.2), and a permanent that left and returned is a new object (400.7)."""
 import unittest
 import test_toxic_review_client as base
+from client_support import ClientTestCase
 
 HELPERS = {k: v for k, v in vars(base.ToxicReviewClientTests).items() if not k.startswith("test_") and not k.startswith("__")}
 
 
-class PreventionReviewClientTests(unittest.TestCase):
+class PreventionReviewClientTests(ClientTestCase):
     locals().update(HELPERS)
 
     def new(self, seats):

@@ -1,24 +1,8 @@
 """Full Transpose and rebound through the actual Python/JSON client."""
-import unittest
-from test_grant_client import GrantClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class ReboundClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    object = Helpers.object
-    pass_round = Helpers.pass_round
-    choose = Helpers.choose
-    reject = Helpers.reject
-    cast = Helpers.cast
-    advance = Helpers.advance
-    step = Helpers.step
-
+class ReboundClientTests(ClientTestCase):
     def setup_transpose(self, opponent=None, extra=None):
         self.new([{"hand": ["Transpose", "Sol Ring", "Island"] + (extra or []),
                    "battlefield": ["Swamp"] * 3 + ["Plains"]}, opponent or {}, {}])
@@ -126,6 +110,3 @@ class ReboundClientTests(unittest.TestCase):
         self.assertEqual(len(self.engine.state["exile"]), 1)
         self.upkeep()
         self.choose("no")
-
-
-del Helpers

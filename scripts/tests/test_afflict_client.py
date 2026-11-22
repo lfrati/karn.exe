@@ -1,21 +1,8 @@
 """Afflict life loss through explicit multiplayer combat choices."""
-import unittest
-from test_round_keywords_client import RoundKeywordsClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class AfflictClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    object = Helpers.object
-    pass_round = Helpers.pass_round
-    step = Helpers.step
-    advance = Helpers.advance
-
+class AfflictClientTests(ClientTestCase):
     def test_two_blockers_cause_one_afflict_occurrence(self):
         # CR 702.130a,509.3c: becoming blocked occurs once for this attacker.
         self.new([{'battlefield':['Khenra Eternal']},{'battlefield':['Grizzly Bears']*2}])
@@ -29,6 +16,3 @@ class AfflictClientTests(unittest.TestCase):
         self.pass_round()
         self.assertEqual(self.engine.state['players'][1]['life'],19)
         self.assertEqual(self.engine.state['players'][0]['life'],20)
-
-
-del Helpers

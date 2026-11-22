@@ -1,20 +1,8 @@
 """Modular targets and optional last-known counter placement through the player client."""
-import unittest
-from test_round_keywords_client import RoundKeywordsClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class ModularClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    object = Helpers.object
-    pass_round = Helpers.pass_round
-    cast = Helpers.cast
-
+class ModularClientTests(ClientTestCase):
     def test_self_sacrificed_ravager_offers_the_opponents_artifact_creature_and_optional_transfer(self):
         # CR 702.43a, 113.7a, 608.2h: the activated source has left before either
         # ability resolves. Modular retains its one counter and explicitly chooses.
@@ -36,6 +24,3 @@ class ModularClientTests(unittest.TestCase):
                 self.engine.act({'kind': 'choose', 'answer': 'yes' if accept else 'no'})
                 self.assertEqual(self.object(artifact)['counters'], {'+1/+1': 1} if accept else {})
                 self.assertEqual(self.ids('Arcbound Ravager', zone='battlefield'), [])
-
-
-del Helpers

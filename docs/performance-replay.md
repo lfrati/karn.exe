@@ -117,3 +117,39 @@ and SHA-256 provenance are retained under `.cache/goal-work/`: `profiling-histor
 `profiling-history-diagnostic-v2.json`, `profiling-core-diagnostic.json` and
 `history-optimization-perf/`. Instrumented profiles are diagnostic only. These reports
 were collected without competing builds or tests; their rates apply only to their workloads.
+
+## November 22 keyword-round snapshot and compiler cleanup
+
+The snapshot at `6f32ac1` and its compiler cleanup (`398f0c9`) were compared with
+`round-start` (`500f3bf`). These are the three existing complete-game supplied-action
+traces; work landed by other builders after the snapshot is outside this comparison.
+All binaries used the uninstrumented `fast` profile with incremental compilation disabled.
+
+Measurements used CPU 0 and the order R,B,C,C,B,R: round start, before cleanup,
+candidate, candidate, before cleanup, round start. Every phase ran each trace 15 times,
+giving 30 samples per trace and binary. Each phase waited for a quiet window; no competing
+build or game process was observed during any accepted phase. The table compares the
+medians of those 30 samples. Positive time changes are slower.
+
+| Trace | Candidate vs. round start | Candidate vs. before cleanup |
+| --- | ---: | ---: |
+| Bant | +1.06% | -1.34% |
+| Vivi | +0.86% | -2.96% |
+| Torch | +1.43% | -0.37% |
+
+These samples show small changes on the three recorded workloads. They establish no
+general speedup. Every accepted replay passed its typed final-snapshot checks.
+Initial balanced attempts were contaminated by compiler, admission and game processes;
+their timings are excluded and their reports retained.
+
+Raw phase results, commands, binary and trace hashes, and competing-process observations
+are retained in `.cache/quality/phase-gated-performance/comparison.json`; the initial
+contended attempts are in `.cache/quality/round-performance/` and
+`.cache/quality/cleanup-performance/`. `.cache/quality/environment.json` records the
+build environment. `.cache/quality/run-phase-gated.py` is the local measurement driver.
+
+The cleanup also preserved byte-identical canonical program dumps for all 20,536 admitted
+faces and admission results for all 32,872 corpus faces against `6f32ac1`.
+`.cache/quality/verification.json` records that comparison and the passing Rust and
+Python/tooling checks. Generated targets and the temporary round-start source archive
+were removed after validation; rebuilding them is necessary to repeat a measurement.

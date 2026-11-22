@@ -71,6 +71,10 @@ t.expect().zone_exact(0, Zone::Graveyard, &["Lightning Bolt"])
 
 ## Engine tests through the JSON server
 
+Shared client fixtures live in `scripts/tests/client_support.py`; scenario modules inherit
+`ClientTestCase` rather than borrowing methods from other scenario test classes. Tests with
+custom process lifetimes can use its individual helpers without inheriting its setup.
+
 Modules of `scripts/tests/` start `game-serve` and drive it through `scripts/play.py`, a
 JSON-lines client that sends explicit requests and never chooses an action. They check what a
 player is asked and told: the question and its candidates, what each seat may see, the events

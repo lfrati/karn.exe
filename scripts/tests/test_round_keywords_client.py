@@ -1,25 +1,9 @@
 """New keyword mechanisms through the existing explicit Python/JSON player boundary."""
-import unittest
 import play
-from test_grant_client import GrantClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class RoundKeywordsClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    object = Helpers.object
-    pass_round = Helpers.pass_round
-    choose = Helpers.choose
-    reject = Helpers.reject
-    cast = Helpers.cast
-    step = Helpers.step
-    advance = Helpers.advance
-
+class RoundKeywordsClientTests(ClientTestCase):
     def test_improvise_taps_artifacts_and_keeps_the_colored_mana_payment(self):
         # 702.126a-b: six artifacts pay {6}; the Swamp still pays Fen Hauler's {B}.
         self.new([{"hand": ["Fen Hauler"], "battlefield": ["Darksteel Relic"] * 6 + ["Swamp"]}, {}])
@@ -201,6 +185,3 @@ class RoundKeywordsClientTests(unittest.TestCase):
         for _ in range(3):
             self.pass_round()
         self.assertEqual([p["life"] for p in self.engine.state["players"]], [35, 32])
-
-
-del Helpers

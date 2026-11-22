@@ -6,11 +6,12 @@ applies first, then it enters tapped. Kismet alone applies once and asks nothing
 """
 import unittest
 import test_toxic_review_client as base
+from client_support import ClientTestCase
 
 HELPERS = {k: v for k, v in vars(base.ToxicReviewClientTests).items() if not k.startswith("test_") and not k.startswith("__")}
 
 
-class TokenEntryOrderReviewClientTests(unittest.TestCase):
+class TokenEntryOrderReviewClientTests(ClientTestCase):
     locals().update(HELPERS)
 
     def strike_it_rich(self, mine, theirs=()):

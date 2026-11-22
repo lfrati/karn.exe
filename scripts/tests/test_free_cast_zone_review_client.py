@@ -9,14 +9,15 @@ competes with buyback as a replacement its controller chooses between (616.1). E
 routes (Hidetsugu and Kairi, Shiko) are contrasts that must keep working."""
 import unittest
 import test_toxic_review_client as base
-import test_multiplayer_outcome_client as explicit
+import client_support as explicit
+from client_support import ClientTestCase
 
 HELPERS = {k: v for k, v in vars(base.ToxicReviewClientTests).items() if not k.startswith("test_") and not k.startswith("__")}
 
 
-class FreeCastZoneReviewClientTests(unittest.TestCase):
+class FreeCastZoneReviewClientTests(ClientTestCase):
     locals().update(HELPERS)
-    validate_action = explicit.MultiplayerOutcomeClientTests.validate_action
+    validate_action = explicit.ClientTestCase.validate_action
 
     # --- reading the state
 

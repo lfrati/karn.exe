@@ -1,22 +1,8 @@
 """Black Market/changeling coverage through the actual Python/JSON client."""
-import unittest
-from test_grant_client import GrantClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class ChangelingClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    cast = Helpers.cast
-    pass_round = Helpers.pass_round
-    reject = Helpers.reject
-    object = Helpers.object
-    step = Helpers.step
-    advance = Helpers.advance
-
+class ChangelingClientTests(ClientTestCase):
     def market(self, seat=None, life=20):
         self.engine.ask({"cmd": "new", "life": life, "players": [
             {"library": ["Forest"] * 16, "battlefield": ["Black Market Connections"] + (seat or {}).get("battlefield", []),
@@ -140,6 +126,3 @@ class ChangelingClientTests(unittest.TestCase):
         self.pass_round()
         self.assertEqual(self.engine.state["players"][0]["life"], -5)
         self.assertTrue(self.engine.state["players"][0]["lost"])
-
-
-del Helpers

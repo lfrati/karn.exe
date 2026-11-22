@@ -9,9 +9,9 @@ counts only if it is there as the spell finishes resolving (ruling ce120f88), an
 (fb734c65). A graveyard-only "exile it instead" rider likewise competes with buyback (616.1)."""
 import unittest
 import test_toxic_review_client as base
+from client_support import ClientTestCase
 
 HELPERS = {k: v for k, v in vars(base.ToxicReviewClientTests).items() if not k.startswith("test_") and not k.startswith("__")}
-
 
 
 def effects(asked: dict) -> list[str]:
@@ -19,7 +19,7 @@ def effects(asked: dict) -> list[str]:
     object whose effect it is (its `source` and ability row), or the rule that makes it."""
     return [entry["effect"] if isinstance(entry, dict) else entry for entry in asked["among"]]
 
-class BuybackReviewClientTests(unittest.TestCase):
+class BuybackReviewClientTests(ClientTestCase):
     locals().update(HELPERS)
 
     # --- reading the state

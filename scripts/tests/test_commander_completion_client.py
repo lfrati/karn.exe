@@ -1,24 +1,8 @@
 """Multiplayer format witnesses beyond seeded full-deck games."""
-import unittest
-from test_grant_client import GrantClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class CommanderCompletionClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    object = Helpers.object
-    pass_round = Helpers.pass_round
-    choose = Helpers.choose
-    reject = Helpers.reject
-    cast = Helpers.cast
-    step = Helpers.step
-    advance = Helpers.advance
-
+class CommanderCompletionClientTests(ClientTestCase):
     def test_eliminated_seat_cannot_act_or_be_targeted_and_future_turn_is_skipped(self):
         self.engine.ask({"cmd": "new", "life": 3, "players": [
             {"library": ["Forest"] * 8, "battlefield": ["Mountain", "Mountain"],
@@ -95,6 +79,3 @@ class CommanderCompletionClientTests(unittest.TestCase):
         self.cast("Isamaru, Hound of Konda", card=returned, mana=self.ids("Plains", "battlefield", 1), spend={'W': 3})
         self.pass_round()
         self.assertEqual(self.engine.state["players"][1]["commanders"][0]["casts"], [0, 2, 0])
-
-
-del Helpers

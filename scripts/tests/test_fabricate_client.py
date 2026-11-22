@@ -1,20 +1,8 @@
 """Fabricate's resolving choice and Cayth's granted instance through the client."""
-import unittest
-from test_round_keywords_client import RoundKeywordsClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class FabricateClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    object = Helpers.object
-    pass_round = Helpers.pass_round
-    cast = Helpers.cast
-
+class FabricateClientTests(ClientTestCase):
     def test_weaponcraft_chooses_after_entry_and_resolves_the_whole_branch(self):
         # CR 702.123a and pinned Enthusiast ruling: enter0/1, then choose during
         # resolution; the answer immediately places counters or creates Servos.
@@ -73,6 +61,3 @@ class FabricateClientTests(unittest.TestCase):
         self.assertEqual(self.object(bear)['counters'], {'+1/+1': 1})
         self.assertEqual(self.object(cayth)['counters'], {})
         self.assertEqual(len(self.ids('Servo Token', zone='battlefield')), 1)
-
-
-del Helpers

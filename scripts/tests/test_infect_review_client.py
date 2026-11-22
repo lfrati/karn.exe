@@ -8,11 +8,12 @@ creature's power is not itself a source with infect."""
 import unittest
 # the module, not its class, so that its own tests are not collected here again
 import test_wither_review_client as base
+from client_support import ClientTestCase
 
 HELPERS = {k: v for k, v in vars(base.WitherReviewClientTests).items() if not k.startswith("test_") and not k.startswith("__")}
 
 
-class InfectReviewClientTests(unittest.TestCase):
+class InfectReviewClientTests(ClientTestCase):
     locals().update(HELPERS)
 
     def poison(self, player, viewer=None):

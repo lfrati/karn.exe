@@ -1,52 +1,8 @@
 """Full-card grant regressions through the real Python/JSON client."""
-import unittest
-from test_multiplayer_outcome_client import MultiplayerOutcomeClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class GrantClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    pass_round = Helpers.pass_round
-    choose = Helpers.choose
-    reject = Helpers.reject
-    cast = Helpers.cast
-
-    def object(self, obj):
-        return self.engine.state["objects"][str(obj)]
-
-    def activate(self, source, targets, *, ability, mana=(), paying=(), spend=None, **choices):
-        self.engine.act({"kind": "activate", "source": source, "ability": ability,
-                         "targets": targets, "plan": [{"source": o, "ability": 0} for o in mana],
-                         "paying": list(paying), **({"mana": spend} if spend is not None else {}), **choices})
-
-    def step(self):
-        state = self.engine.state
-        asked = state["asked"]
-        kind = asked["kind"]
-        if kind == "mulligan":
-            self.engine.act({"kind": "keep"})
-        elif kind == "attackers":
-            self.engine.act({"kind": "attack", "attacks": []})
-        elif kind == "blockers":
-            self.engine.act({"kind": "block", "blocks": []})
-        elif kind == "discard":
-            self.engine.act({"kind": "discard", "cards": self.hand(asked["player"])[:asked["count"]]})
-        else:
-            self.assertEqual(kind, "priority", state)
-            self.engine.act({"kind": "pass"})
-
-    def advance(self, predicate):
-        for _ in range(600):
-            if predicate(self.engine.state):
-                return
-            self.step()
-        self.fail("did not reach checkpoint")
-
+class GrantClientTests(ClientTestCase):
     def helm_ping(self, blue_only=False):
         self.new([{"hand": ["Helm of the Ghastlord", "Disenchant"], "battlefield": ["Island"] + ["Forest"] * 4 + ["Plains"]},
                   {"hand": ["Cerulean Wisps"], "battlefield": ["Baleful Strix", "Viridian Longbow", "Forest", "Forest", "Forest", "Island"]},
@@ -201,6 +157,3 @@ class GrantClientTests(unittest.TestCase):
         self.pass_round()
         self.assertEqual(self.object(commander)["power"], 4, "direct +2 excludes self from other-commanders bonus")
         self.assertEqual(self.object(hero)["power"], 1)
-
-
-del Helpers

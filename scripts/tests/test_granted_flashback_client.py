@@ -2,21 +2,10 @@
 import unittest
 
 import play
-import test_grant_client as helpers
+from client_support import ClientTestCase
 
 
-class GrantedFlashbackClientTests(unittest.TestCase):
-    setUpClass = classmethod(helpers.GrantClientTests.setUpClass.__func__)
-    setUp = helpers.GrantClientTests.setUp
-    close_engine = helpers.GrantClientTests.close_engine
-    new = helpers.GrantClientTests.new
-    view = helpers.GrantClientTests.view
-    ids = helpers.GrantClientTests.ids
-    hand = helpers.GrantClientTests.hand
-    cast = helpers.GrantClientTests.cast
-    pass_round = helpers.GrantClientTests.pass_round
-    reject = helpers.GrantClientTests.reject
-
+class GrantedFlashbackClientTests(ClientTestCase):
     def grant(self, recipient):
         self.new([{'hand': ['Snapcaster Mage'], 'graveyard': [recipient],
                    'battlefield': ['Island'] * 5}, {}, {}])

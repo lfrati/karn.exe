@@ -19,7 +19,7 @@ rejected with a reason.
 ## Where it stands
 
 <!-- implementation-progress:start -->
-<!-- Measurement inputs: dfbf7190de210b62f0351d1acc30dddabae78ff03f78a0e2bc92c5785b1dcde6 -->
+<!-- Measurement inputs: 60312221842698631c63fad30d75380a37fe1fc8b7bec97ab08feb89b9def1fe -->
 Snapshot: 2026-11-22. Card corpus dated 2026-10-11; deck roster dated 2026-10-08.
 
 | Goal | Measure | Count |
@@ -136,7 +136,7 @@ Rules, Oracle text, rulings and the published deck lists are checked into
 
 <!-- testing-inventory:start -->
 Repository inventory: **4,052 rule-cited tests**,
-**55 active MGN scenarios or game prefixes**, and
+**58 active MGN scenarios or game prefixes**, and
 **3 complete MGN game recordings**. These are counts of tests
 and recordings, not current test results or a measure of coverage.
 <!-- testing-inventory:end -->

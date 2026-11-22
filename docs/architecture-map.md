@@ -14,7 +14,9 @@ and vocabulary; separate lowering and runtime stages implement the behavior.
 | Bidirectional grammar | [grammar](../crates/grammar/src/lib.rs); [how it is extended](grammar.md) |
 | Immutable definition compilation and admission | [card.rs](../crates/game/src/card.rs), [play.rs](../crates/game/src/play.rs) |
 | State and object incarnations | [state.rs](../crates/game/src/state.rs), [state/arena.rs](../crates/game/src/state/arena.rs) |
-| Compilation, binding and execution frames | [program.rs](../crates/game/src/program.rs), [binding](../crates/game/src/binding.rs) |
+| Immutable programs, definition registrations and execution frames | [program.rs](../crates/game/src/program.rs), [binding](../crates/game/src/binding.rs) |
+| Syntax lowering and lexical binding scopes | [program/compile.rs](../crates/game/src/program/compile.rs) |
+| Instruction execution | [program/execute.rs](../crates/game/src/program/execute.rs) |
 | Suspended parent/child execution | [procedure.rs](../crates/game/src/procedure.rs) |
 | Evaluated mutations and replacement proposals | [perform.rs](../crates/game/src/perform.rs), [operation.rs](../crates/game/src/operation.rs) |
 | Events and triggers | [event.rs](../crates/game/src/event.rs), [trigger.rs](../crates/game/src/trigger.rs) |

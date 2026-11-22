@@ -5,10 +5,10 @@ import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import play
-import test_multiplayer_outcome_client as helpers
+import client_support as helpers
 
 def shared(name):
-    return getattr(helpers.MultiplayerOutcomeClientTests, name)
+    return getattr(helpers.ClientTestCase, name)
 
 class CloakDreadReviewClientTests(unittest.TestCase):
     new = shared("new")

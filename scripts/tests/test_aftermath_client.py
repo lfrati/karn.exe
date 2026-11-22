@@ -1,23 +1,8 @@
 """Real Aftermath halves through existing native cast choices and permissions."""
-import unittest
 import play
-from test_grant_client import GrantClientTests as Helpers
+from client_support import ClientTestCase
 
-class AftermathClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    object = Helpers.object
-    pass_round = Helpers.pass_round
-    reject = Helpers.reject
-    cast = Helpers.cast
-    step = Helpers.step
-    advance = Helpers.advance
-
+class AftermathClientTests(ClientTestCase):
     def split(self, zone, part):
         return next(o for o in self.engine.state["players"][0][zone] if part in self.object(o)["name"])
 
@@ -67,5 +52,3 @@ class AftermathClientTests(unittest.TestCase):
         self.pass_round()
         self.assertTrue(self.split("graveyard", "Claim"))
         self.assertFalse(self.engine.state["exile"])
-
-del Helpers

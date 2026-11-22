@@ -2,22 +2,10 @@
 - Its enters trigger can't target the enchanted creature ("any other target").
 - Its damage is the enchanted creature's power at resolution, with responses that pump the
   creature or destroy it. Each case checks exact damage records and both viewers."""
-import unittest
-from test_grant_client import GrantClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class AttachedDealerReviewClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    pass_round = Helpers.pass_round
-    reject = Helpers.reject
-    cast = Helpers.cast
-
+class AttachedDealerReviewClientTests(ClientTestCase):
     def dealt(self):
         return sorted((e["source"], next(iter(e["to"].items())), e["amount"])
                       for e in self.engine.state["events"] if e["event"] == "damage")
@@ -70,6 +58,3 @@ class AttachedDealerReviewClientTests(unittest.TestCase):
         self.pass_round()
         self.assertEqual(self.dealt(), [(giant, ("player", 1), 3)])
         self.assertEqual(self.life(1), [17, 17])
-
-
-del Helpers

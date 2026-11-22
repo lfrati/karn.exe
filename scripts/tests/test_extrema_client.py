@@ -1,24 +1,8 @@
 """Papalymo regressions through the real Python/JSON client."""
-import unittest
-from test_grant_client import GrantClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class ExtremaClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    object = Helpers.object
-    pass_round = Helpers.pass_round
-    choose = Helpers.choose
-    reject = Helpers.reject
-    cast = Helpers.cast
-    step = Helpers.step
-    advance = Helpers.advance
-
+class ExtremaClientTests(ClientTestCase):
     def fixture(self):
         self.new([{"battlefield": ["Papalymo Totolymo", "Sol Ring", "Sol Ring", "Forest", "Forest"],
                    "hand": ["Ornithopter", "Sol Ring", "Giant Growth"]},
@@ -89,6 +73,3 @@ class ExtremaClientTests(unittest.TestCase):
         self.assertEqual(self.engine.state["asked"]["kind"], "priority")
         self.assertEqual(len(self.engine.state["players"][1]["graveyard"]), 0)
         self.assertEqual(len(self.engine.state["players"][2]["graveyard"]), 0)
-
-
-del Helpers

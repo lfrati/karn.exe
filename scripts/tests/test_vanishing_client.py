@@ -1,22 +1,8 @@
 """Vanishing entry, upkeep and last-counter suspension through the player client."""
-import unittest
-from test_round_keywords_client import RoundKeywordsClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class VanishingClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    object = Helpers.object
-    pass_round = Helpers.pass_round
-    cast = Helpers.cast
-    step = Helpers.step
-    advance = Helpers.advance
-
+class VanishingClientTests(ClientTestCase):
     def test_riftwatcher_sacrifice_is_a_separate_stack_occurrence(self):
         # CR 702.63a, 603.3, 701.21a; full Oracle gains2 on both entry and leave.
         self.new([{'hand': ['Aven Riftwatcher'], 'battlefield': ['Plains'] * 3}, {}])
@@ -38,7 +24,3 @@ class VanishingClientTests(unittest.TestCase):
         self.assertEqual(self.ids('Aven Riftwatcher', zone='battlefield'), [])
         self.pass_round()
         self.assertEqual(self.engine.state['players'][0]['life'], 24)
-
-
-
-del Helpers

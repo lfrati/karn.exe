@@ -1,20 +1,10 @@
 """Full-card object/group contrasts through the audited native client."""
 import unittest
 import play
-import test_grant_client as helpers
+from client_support import ClientTestCase
 
 
-class OtherAntecedentsClientTests(unittest.TestCase):
-    setUpClass = classmethod(helpers.GrantClientTests.setUpClass.__func__)
-    setUp = helpers.GrantClientTests.setUp
-    close_engine = helpers.GrantClientTests.close_engine
-    new = helpers.GrantClientTests.new
-    ids = helpers.GrantClientTests.ids
-    cast = helpers.GrantClientTests.cast
-    pass_round = helpers.GrantClientTests.pass_round
-    view = helpers.GrantClientTests.view
-    object = helpers.GrantClientTests.object
-
+class OtherAntecedentsClientTests(ClientTestCase):
     def test_martial_coup_spares_its_created_tokens_for_every_seat(self):
         self.new([{'hand': ['Martial Coup'], 'battlefield': ['Plains'] * 7},
                   {'battlefield': ['Grizzly Bears']}, {}])

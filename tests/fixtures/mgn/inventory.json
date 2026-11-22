@@ -410,6 +410,30 @@
    },
    "disposition": "active",
    "premise": "faithful"
+  },
+  {
+   "record": "scenario-cascade-preserves-suspended-card/record.json",
+   "recorded_from": {
+    "draft": "scenario-cascade-preserves-suspended-card/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "scenario-cascade-random-remainder/record.json",
+   "recorded_from": {
+    "draft": "scenario-cascade-random-remainder/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
+  },
+  {
+   "record": "scenario-suspend-hand-action/record.json",
+   "recorded_from": {
+    "draft": "scenario-suspend-hand-action/draft.json"
+   },
+   "disposition": "active",
+   "premise": "faithful"
   }
  ]
 }

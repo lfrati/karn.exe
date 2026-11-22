@@ -1,22 +1,10 @@
 """701.6/614.15: complete counterspells through supplied JSON moves and seat views."""
 import unittest
 import play
-import test_grant_client as helpers
+from client_support import ClientTestCase
 
 
-class CounterDestinationClientTests(unittest.TestCase):
-    setUpClass = classmethod(helpers.GrantClientTests.setUpClass.__func__)
-    setUp = helpers.GrantClientTests.setUp
-    close_engine = helpers.GrantClientTests.close_engine
-    new = helpers.GrantClientTests.new
-    view = helpers.GrantClientTests.view
-    ids = helpers.GrantClientTests.ids
-    hand = helpers.GrantClientTests.hand
-    cast = helpers.GrantClientTests.cast
-    pass_round = helpers.GrantClientTests.pass_round
-    step = helpers.GrantClientTests.step
-    advance = helpers.GrantClientTests.advance
-
+class CounterDestinationClientTests(ClientTestCase):
     def respond(self, counter, target):
         self.engine.act({'kind': 'pass'})
         self.cast(counter, [[{'object': target}]], mana=self.ids('Island', zone='battlefield', controller=1), spend={'U': 2})

@@ -1,20 +1,8 @@
 """Original-card amounts versus returned-object identity through audited JSON."""
-import unittest
-import test_grant_client as helpers
+from client_support import ClientTestCase
 
-class ReturnReferenceClientTests(unittest.TestCase):
-    setUpClass=classmethod(helpers.GrantClientTests.setUpClass.__func__)
-    setUp=helpers.GrantClientTests.setUp
-    close_engine=helpers.GrantClientTests.close_engine
-    new=helpers.GrantClientTests.new
-    view=helpers.GrantClientTests.view
-    ids=helpers.GrantClientTests.ids
-    object=helpers.GrantClientTests.object
-    cast=helpers.GrantClientTests.cast
-    pass_round=helpers.GrantClientTests.pass_round
-    choose=helpers.GrantClientTests.choose
-    reject=helpers.GrantClientTests.reject
 
+class ReturnReferenceClientTests(ClientTestCase):
     def test_reanimate_clone_reads_graveyard_card_value_after_entry_copy_choice(self):
         self.new([{'hand':['Reanimate'],'battlefield':['Swamp'],'graveyard':['Clone']},
                   {'battlefield':['Colossal Dreadmaw']}, {}])

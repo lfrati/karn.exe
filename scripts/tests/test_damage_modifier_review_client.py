@@ -9,11 +9,12 @@ unless damage can't be prevented."""
 import unittest
 # the module, not its class, so that its own tests are not collected here again
 import test_toxic_review_client as base
+from client_support import ClientTestCase
 
 HELPERS = {k: v for k, v in vars(base.ToxicReviewClientTests).items() if not k.startswith("test_") and not k.startswith("__")}
 
 
-class DamageModifierReviewClientTests(unittest.TestCase):
+class DamageModifierReviewClientTests(ClientTestCase):
     locals().update(HELPERS)
 
     def new(self, seats):

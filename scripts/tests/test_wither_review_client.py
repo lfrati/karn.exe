@@ -7,11 +7,12 @@ undying read; +1/+1 and -1/-1 counters on a survivor cancel (704.5q)."""
 import unittest
 # the module, not its class, so that its own tests are not collected here again
 import test_proliferate_review_client as base
+from client_support import ClientTestCase
 
 HELPERS = {k: v for k, v in vars(base.ProliferateReviewClientTests).items() if not k.startswith("test_") and not k.startswith("__")}
 
 
-class WitherReviewClientTests(unittest.TestCase):
+class WitherReviewClientTests(ClientTestCase):
     locals().update(HELPERS)
 
     def obj(self, o):

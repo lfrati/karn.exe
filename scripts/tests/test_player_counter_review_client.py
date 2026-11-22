@@ -1,22 +1,10 @@
 """Poison thresholds and simultaneous losses, through the
 real audited JSON client."""
-import unittest
-import test_multiplayer_outcome_client as helpers
-
-H = helpers.MultiplayerOutcomeClientTests
+from client_support import ClientTestCase
 
 
-class PlayerCounterReviewClientTests(unittest.TestCase):
-    setUpClass = classmethod(H.setUpClass.__func__)
-    setUp = H.setUp
-    close_engine = H.close_engine
-    new = H.new
-    view = H.view
-    hand = H.hand
-    ids = H.ids
-    cast = H.cast
-    pass_round = H.pass_round
 
+class PlayerCounterReviewClientTests(ClientTestCase):
     def counters(self, viewer):
         return [p["counters"] for p in self.view(viewer)["players"]]
 
@@ -45,6 +33,3 @@ class PlayerCounterReviewClientTests(unittest.TestCase):
         self.assertEqual(puts, [({"player": 1}, 1), ({"player": 2}, 1)])
         for viewer in (0, 1, 2):
             self.assertEqual(self.counters(viewer)[1:], [{"poison": 10}, {"poison": 10}])
-
-
-del H

@@ -7,14 +7,15 @@ empty (Aether Hub ruling 414b6b24); you can't pay more than you have (7ea9ff64).
 resolves immediately (605.3b)."""
 import unittest
 import test_toxic_review_client as base
-import test_multiplayer_outcome_client as explicit
+import client_support as explicit
+from client_support import ClientTestCase
 
 HELPERS = {k: v for k, v in vars(base.ToxicReviewClientTests).items() if not k.startswith("test_") and not k.startswith("__")}
 
 
-class EnergyPaymentReviewClientTests(unittest.TestCase):
+class EnergyPaymentReviewClientTests(ClientTestCase):
     locals().update(HELPERS)
-    validate_action = explicit.MultiplayerOutcomeClientTests.validate_action
+    validate_action = explicit.ClientTestCase.validate_action
 
     def energy(self, player, viewer=None):
         state = self.engine.state if viewer is None else self.view(viewer)

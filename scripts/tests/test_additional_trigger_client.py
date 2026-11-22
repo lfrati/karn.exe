@@ -1,25 +1,8 @@
 """Delney regressions through the actual Python/JSON client."""
-import unittest
-from test_grant_client import GrantClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class AdditionalTriggerClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    hand = Helpers.hand
-    ids = Helpers.ids
-    cast = Helpers.cast
-    pass_round = Helpers.pass_round
-    choose = Helpers.choose
-    reject = Helpers.reject
-    object = Helpers.object
-    activate = Helpers.activate
-    step = Helpers.step
-    advance = Helpers.advance
-
+class AdditionalTriggerClientTests(ClientTestCase):
     def tokens(self, name):
         return [self.object(o) for o in self.engine.state["battlefield"] if name in self.object(o)["name"]]
 
@@ -144,6 +127,3 @@ class AdditionalTriggerClientTests(unittest.TestCase):
         self.assertIn(bear, option["blocks"])
         self.assertNotIn(delney, option["blocks"])
         self.engine.act({"kind": "block", "blocks": [[giant, bear]]})
-
-
-del Helpers

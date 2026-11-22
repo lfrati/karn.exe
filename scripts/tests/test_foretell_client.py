@@ -1,23 +1,10 @@
 """Foretell checks through the actual Python/JSON client: Demon Bolt is
 foretold during its player's turn with a spell on the stack (116.2h, 702.143a), only that player
 is shown it (406.3), and on the next turn it is cast for its foretell cost {R} (702.143a)."""
-import unittest
-from test_grant_client import GrantClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class ForetellClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    ids = Helpers.ids
-    hand = Helpers.hand
-    pass_round = Helpers.pass_round
-    choose = Helpers.choose
-    reject = Helpers.reject
-    cast = Helpers.cast
-
+class ForetellClientTests(ClientTestCase):
     def foretell(self):
         """Player 0 casts Lightning Bolt at player 1, then foretells Demon Bolt with it on the
         stack: the foretold card's id."""
@@ -61,6 +48,3 @@ class ForetellClientTests(unittest.TestCase):
         self.pass_round()
         self.assertNotIn(bears, self.view(1)["battlefield"])
         self.assertIn("Demon Bolt", [self.view(1)["objects"][str(o)]["name"] for o in self.view(1)["players"][0]["graveyard"]])
-
-
-del Helpers

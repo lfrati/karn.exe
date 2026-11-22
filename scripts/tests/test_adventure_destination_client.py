@@ -1,19 +1,10 @@
 """715.3d/616.1: choosing Adventure's exile is what grants its play permission."""
 import unittest
 import play
-import test_grant_client as helpers
+from client_support import ClientTestCase
 
 
-class AdventureDestinationClientTests(unittest.TestCase):
-    setUpClass = classmethod(helpers.GrantClientTests.setUpClass.__func__)
-    setUp = helpers.GrantClientTests.setUp
-    close_engine = helpers.GrantClientTests.close_engine
-    new = helpers.GrantClientTests.new
-    ids = helpers.GrantClientTests.ids
-    cast = helpers.GrantClientTests.cast
-    pass_round = helpers.GrantClientTests.pass_round
-    view = helpers.GrantClientTests.view
-
+class AdventureDestinationClientTests(ClientTestCase):
     def compete(self, player, replacement):
         for effect in ['adventure', 'graveyard:0']:
             with self.subTest(effect=effect):

@@ -2,18 +2,10 @@
 crew 1 is offered as a choice of untapped other creatures with each one's power (702.122a), a
 selection short of the total power is refused, and the crewed Copter is a 3/3 artifact
 creature (301.7b) that both seats see crewed (702.122b, e)."""
-import unittest
-from test_grant_client import GrantClientTests as Helpers
+from client_support import ClientTestCase
 
 
-class CrewClientTests(unittest.TestCase):
-    setUpClass = classmethod(Helpers.setUpClass.__func__)
-    setUp = Helpers.setUp
-    close_engine = Helpers.close_engine
-    new = Helpers.new
-    view = Helpers.view
-    pass_round = Helpers.pass_round
-
+class CrewClientTests(ClientTestCase):
     def ids(self, name):
         return sorted(int(i) for i, o in self.view(0)["objects"].items() if o["name"] == name)
 
@@ -47,6 +39,3 @@ class CrewClientTests(unittest.TestCase):
             events = [e["event"] for e in told[seat]]
             self.assertIn("crews", events)
             self.assertIn("became_crewed", events)
-
-
-del Helpers

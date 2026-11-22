@@ -1,24 +1,9 @@
 """Non-targeted permanent selections through the actual JSON client."""
 import unittest
-import test_grant_client as helpers
+from client_support import ClientTestCase
 
-class SelectedPermanentActionClientTests(unittest.TestCase):
-    setUpClass=classmethod(helpers.GrantClientTests.setUpClass.__func__)
-    setUp=helpers.GrantClientTests.setUp
-    close_engine=helpers.GrantClientTests.close_engine
-    new=helpers.GrantClientTests.new
-    view=helpers.GrantClientTests.view
-    hand=helpers.GrantClientTests.hand
-    ids=helpers.GrantClientTests.ids
-    object=helpers.GrantClientTests.object
-    cast=helpers.GrantClientTests.cast
-    activate=helpers.GrantClientTests.activate
-    pass_round=helpers.GrantClientTests.pass_round
-    choose=helpers.GrantClientTests.choose
-    reject=helpers.GrantClientTests.reject
-    advance=helpers.GrantClientTests.advance
-    step=helpers.GrantClientTests.step
 
+class SelectedPermanentActionClientTests(ClientTestCase):
     def play_sanctuary(self):
         card=self.ids('Selesnya Sanctuary')[0]
         self.engine.act({'kind':'play','card':card});self.pass_round()

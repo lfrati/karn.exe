@@ -3,22 +3,10 @@ through the real audited client. Hexproof on a player: its opponents' spells and
 can't target it (702.11c); shroud: no spell or ability can (702.18a); the target is checked
 again on resolution (608.2b)."""
 import unittest
-# the module, not its class, so that class's own tests are not collected here again
-import test_multiplayer_outcome_client as helpers
+from client_support import ClientTestCase
 
 
-class PlayerHexproofReviewClientTests(unittest.TestCase):
-    setUpClass = classmethod(helpers.MultiplayerOutcomeClientTests.setUpClass.__func__)
-    setUp = helpers.MultiplayerOutcomeClientTests.setUp
-    close_engine = helpers.MultiplayerOutcomeClientTests.close_engine
-    new = helpers.MultiplayerOutcomeClientTests.new
-    ids = helpers.MultiplayerOutcomeClientTests.ids
-    cast = helpers.MultiplayerOutcomeClientTests.cast
-    validate_action = helpers.MultiplayerOutcomeClientTests.validate_action
-    pass_round = helpers.MultiplayerOutcomeClientTests.pass_round
-    reject = helpers.MultiplayerOutcomeClientTests.reject
-    view = helpers.MultiplayerOutcomeClientTests.view
-
+class PlayerHexproofReviewClientTests(ClientTestCase):
     def bolt(self):
         state = self.engine.state
         actor = state["asked"]["player"]

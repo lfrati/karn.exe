@@ -1,22 +1,12 @@
 """701.20a: cost disclosures remain public for the announcing stack object's lifetime."""
 import unittest
-import test_grant_client as helpers
+from client_support import ClientTestCase
 
 
 KINDLE = 'Kindle the Inner Flame'
 
 
-class CostRevealClientTests(unittest.TestCase):
-    setUpClass = classmethod(helpers.GrantClientTests.setUpClass.__func__)
-    setUp = helpers.GrantClientTests.setUp
-    close_engine = helpers.GrantClientTests.close_engine
-    new = helpers.GrantClientTests.new
-    ids = helpers.GrantClientTests.ids
-    cast = helpers.GrantClientTests.cast
-    pass_round = helpers.GrantClientTests.pass_round
-    view = helpers.GrantClientTests.view
-    hand = helpers.GrantClientTests.hand
-
+class CostRevealClientTests(ClientTestCase):
     def revealed(self, *cards):
         other = self.view(1)
         self.assertTrue(set(cards).issubset(other['publicly_revealed']))
