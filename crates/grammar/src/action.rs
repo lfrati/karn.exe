@@ -1582,7 +1582,7 @@ fn build(form: Form, base: &P<Action>) -> P<Action> {
         let (own, other) = if form == Form::Third { ("their", "your") } else { ("your", "their") };
         let pronoun = |o: &str| if o == "your" { "you" } else { "they" };
         let tail = |o: &'static str| lit(&format!("cards from the top of {o} library until {}", pronoun(o))).skip(&lit(base));
-        v(third, base)
+        let active = v(third, base)
             .then_keep(&alt("until", vec![tail(own), tail(other).alias()]))
             .then_keep(&np(Verb::RevealUntil, Role::What))
             .map(
@@ -1591,7 +1591,19 @@ fn build(form: Form, base: &P<Action>) -> P<Action> {
                     Action::Until { verb: w, until } if *w == verb => Some((**until).clone()),
                     _ => None,
                 },
-            )
+            );
+        // "until a creature card is revealed" has the same stop selector as "until they
+        // reveal a creature card". Keep grammatical number and the declared card role.
+        let participle = match verb { UntilVerb::Reveal => "revealed", UntilVerb::Exile => "exiled" };
+        let stopped = alt("passive until", vec![
+            slot_one(&s.singular, Verb::RevealUntil, Role::What).skip(&lit(&format!("is {participle}"))),
+            slot_one(&s.plural, Verb::RevealUntil, Role::What).skip(&lit(&format!("are {participle}"))),
+        ]);
+        let passive = v(third, base)
+            .skip(&lit(&format!("cards from the top of {own} library until")))
+            .then_keep(&stopped)
+            .map(move |until| Some(Action::Until { verb, until: Box::new(until) }), |_| None).alias();
+        alt("until wording", vec![active, passive])
     };
     let until = alt(
         "until",

@@ -947,3 +947,25 @@ fn r614_1a_correlated_replacement_event_alternatives() {
         "If a creature would die or a player would die, draw a card instead.",
     ] { declines(text); }
 }
+
+
+/// CR 608.2c: a passive stop condition preserves the reveal loop and its counted selection.
+#[test]
+fn r608_2c_passive_reveal_until() {
+    read("Destroy X target artifacts and/or creatures. For each permanent destroyed this way, its controller reveals cards from the top of their library until an artifact or creature card is revealed and exiles that card. Those players put the exiled cards onto the battlefield, then shuffle.");
+    read("Target opponent reveals cards from the top of their library until four land cards are revealed. That player puts all cards revealed this way into their graveyard.");
+    read("Choose a card name. Target player reveals cards from the top of their library until a card with that name is revealed.");
+    let (passive, _) = read("Target opponent reveals cards from the top of their library until a creature card is revealed.");
+    let (active, _) = read("Target opponent reveals cards from the top of their library until they reveal a creature card.");
+    assert_eq!(passive, active);
+    let (passive, _) = read("Reveal cards from the top of your library until a nonland card is revealed.");
+    let (active, _) = read("Reveal cards from the top of your library until you reveal a nonland card.");
+    assert_eq!(passive, active);
+    for text in [
+        "Target opponent reveals cards from the top of their library until four land cards is revealed.",
+        "Target opponent reveals cards from the top of their library until a creature card are revealed.",
+        "Reveal cards from the top of your library until a player is revealed.",
+        "Reveal cards from the top of their library until a creature card is revealed.",
+        "Target opponent reveals cards from the top of their library until an artifact card or X cards are revealed, whichever comes first.",
+    ] { declines(text); }
+}
