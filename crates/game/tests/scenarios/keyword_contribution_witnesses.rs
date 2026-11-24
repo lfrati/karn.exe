@@ -146,7 +146,8 @@ fn unsupported_keyword_counter_does_not_panic_reading_abilities() {
             // Uncited (admission): supported flying and cosmetic named counters compile.
             game::play::check(&placement).unwrap();
         }
-        if kind != "flying" {
+        // a printed soulbond runs (702.95); banding and decayed are still refused
+        if matches!(kind, "banding" | "decayed") {
             let printed = CardDef::new("Unsupported", "{0}", "Creature — Bear", &name, Some((2, 2))).unwrap();
             crate::support::refused(game::play::check(&printed).map_err(|e|e.0),&format!("keyword: {name}"));
             let text = format!("Target creature gains {} until end of turn.", kind);
