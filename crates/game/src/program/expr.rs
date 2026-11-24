@@ -1821,20 +1821,23 @@ impl Set {
 }
 
 /// A description of a card: "a card", "a creature card" (108.2). The action or the zone it
-/// names says where to look (a card is discarded from a hand, 701.9a).
+/// names says where to look (a card is discarded from a hand, 701.9a). `other`: "another
+/// card", "other creature cards in your graveyard": not the card whose text it is, nor the
+/// card it became in that zone (400.7).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Cards {
     filter: Filter,
+    other: bool,
 }
 
 impl Cards {
     pub(crate) fn has_quality(&self) -> bool { self.filter.has_quality() }
-    pub(super) fn any_card() -> Self {Self {filter: Filter::All(Vec::new())}}
+    pub(super) fn any_card() -> Self {Self {filter: Filter::All(Vec::new()), other: false}}
     pub(crate) fn compile(set: &ir::ObjectSet, support: &Support<'_>, bind: Bind<'_>) -> Res<Cards> {
         if set.domain != ir::Domain::Card || set.controller.is_some() || set.owner.is_some() || set.caster.is_some() || set.zone.is_some() {
             return unsupported("noun phrase: a card with an owner, a controller or a zone");
         }
-        Ok(Cards { filter: Filter::compile(&set.filter, support, bind)? })
+        Ok(Cards { filter: Filter::compile(&set.filter, support, bind)?, other: set.other })
     }
 
     pub(crate) fn reads(&self) -> Reads { self.filter.reads() }
@@ -1842,6 +1845,7 @@ impl Cards {
     /// Is this card one the description names?
     pub fn contains(&self, game: &Game, ctx: &Ctx, locals: &dyn Locals, card: ObjId) -> bool {
         (game.is(Target::Object(card), Sort::Card) || ctx.was == Some(card) && game.obj(card).card.is_some() && game.obj(card).ability.is_none())
+            && !(self.other && ctx.source.is_some_and(|source| card == source || game.became(source) == Some(card)))
             && self.filter.matches(game, ctx, locals, Target::Object(card))
     }
 

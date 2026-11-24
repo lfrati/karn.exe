@@ -472,6 +472,7 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     static NINJUTSU: OnceLock<Ability> = OnceLock::new();
     static TRANSMUTE: OnceLock<Ability> = OnceLock::new();
     static UNEARTH: OnceLock<Ability> = OnceLock::new();
+    static SCAVENGE: OnceLock<Ability> = OnceLock::new();
     let (kept, type_line, rule, number) = match item.keyword.name() {
         "Ninjutsu" => (&NINJUTSU, "Creature", "{0}, Reveal this card from your hand, Return an unblocked attacking creature you control to its owner's hand: Put this card from your hand onto the battlefield tapped attacking the same player, planeswalker, or battle as that creature.", "702.49a-c"),
         "Transmute" => (&TRANSMUTE, "Artifact", "{0}, Discard this card: Search your library for a card with mana value equal to this card's mana value, reveal it, put it into your hand, then shuffle. Activate only as a sorcery.", "702.53a"),
@@ -485,6 +486,10 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
         // It functions while the card is in a graveyard: "Return this card from your graveyard
         // …" (702.84a, 113.6m).
         "Unearth" => (&UNEARTH, "Creature", "{0}: Return ~ from your graveyard to the battlefield. It gains haste. Exile it at the beginning of the next end step. If it would leave the battlefield, exile it instead of putting it anywhere else. Activate only as a sorcery.", "702.84a"),
+        // "Scavenge [cost]" means "[Cost], Exile this card from your graveyard: Put a number of
+        // +1/+1 counters equal to the power of the card you exiled on target creature. Activate
+        // only as a sorcery." (702.97a): its power as it last existed in the graveyard (608.2h)
+        "Scavenge" => (&SCAVENGE, "Creature", "{0}, Exile this card from your graveyard: Put a number of +1/+1 counters equal to this card's power on target creature. Activate only as a sorcery.", "702.97a"),
         _ => return None,
     };
     let cost = match &item.param {
