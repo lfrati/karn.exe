@@ -472,6 +472,7 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if let Some(ability) = fabricate(item) { return Some(ability); }
     if let Some(ability) = blocked_trigger(item) { return Some(ability); }
     if let Some(ability) = soulshift(item) { return Some(ability); }
+    if let Some(ability) = afterlife(item) { return Some(ability); }
     if let Some(ability) = renown(item) { return Some(ability); }
     if let Some(ability) = annihilator(item) { return Some(ability); }
     if let Some(ability) = station(item) { return Some(ability.clone()); }
@@ -690,6 +691,26 @@ fn soulshift(item: &ir::token::KeywordInstance) -> Option<Ability> {
         .expect("the grammar reads rule 702.46a").abilities[0].clone())
 }
 
+/// "Afterlife N" means "When this permanent is put into a graveyard from the battlefield,
+/// create N 1/1 white and black Spirit creature tokens with flying." (702.135a); each
+/// instance triggers separately (702.135b).
+fn afterlife(item: &ir::token::KeywordInstance) -> Option<Ability> {
+    if item.keyword.name() != "Afterlife" { return None; }
+    let KeywordParam::Number(ir::Amount::Const(n)) = item.param else { return None };
+    let (count, plural) = counted(n)?;
+    let text = format!("When this permanent is put into a graveyard from the battlefield, create {count} 1/1 white and black Spirit creature token{plural} with flying.");
+    Some(CardDef::new("Afterlife rule", "", "Creature", &text, None)
+        .expect("the grammar reads rule 702.135a").abilities[0].clone())
+}
+
+/// A rule's N in words as its text says it, "a" for one, with the plural ending of what it
+/// counts; None for none or past ten, which no printed instance reaches.
+pub(crate) fn counted(n: u32) -> Option<(&'static str, &'static str)> {
+    const WORDS: [&str; 10] = ["a", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+    let word = *WORDS.get(n.checked_sub(1)? as usize)?;
+    Some((word, if n == 1 { "" } else { "s" }))
+}
+
 /// 702.100a/c: both participants must have creature characteristics to compare them.
 /// The ordinary intervening-if is checked when triggering and again on resolution (603.4).
 fn evolve() -> &'static Ability {
@@ -757,10 +778,10 @@ fn battle_cry() -> &'static Ability {
 pub(crate) fn hideaway(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if item.keyword.name() != "Hideaway" { return None; }
     let KeywordParam::Number(ir::Amount::Const(n)) = item.param else { return None };
-    const WORDS: [&str; 10] = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
     // every printed hideaway number is 4 or 5 (702.75b)
-    if !(2..=10).contains(&n) { return None; }
-    let text = format!("When this permanent enters, look at the top {} cards of your library. Exile one of them face down and put the rest on the bottom of your library in a random order.", WORDS[n as usize - 1]);
+    if n < 2 { return None; }
+    let (count, _) = counted(n)?;
+    let text = format!("When this permanent enters, look at the top {count} cards of your library. Exile one of them face down and put the rest on the bottom of your library in a random order.");
     let def = CardDef::new("Hideaway rule", "", "Artifact", &text, None).expect("the grammar reads rule 702.75a");
     Some(def.abilities[0].clone())
 }
@@ -1026,10 +1047,9 @@ fn blocked_trigger(item: &ir::token::KeywordInstance) -> Option<Ability> {
 /// separately; the first to resolve makes it renowned (702.112c).
 fn renown(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if item.keyword.name() != "Renown" { return None; }
-    let KeywordParam::Number(ir::Amount::Const(n @ 1..=10)) = item.param else { return None };
-    const WORDS: [&str; 10] = ["a", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
-    let text = format!("When this creature deals combat damage to a player, if it isn't renowned, put {} +1/+1 counter{} on it and it becomes renowned.",
-        WORDS[n as usize - 1], if n == 1 { "" } else { "s" });
+    let KeywordParam::Number(ir::Amount::Const(n)) = item.param else { return None };
+    let (count, plural) = counted(n)?;
+    let text = format!("When this creature deals combat damage to a player, if it isn't renowned, put {count} +1/+1 counter{plural} on it and it becomes renowned.");
     let def = CardDef::new("Renown rule", "", "Creature", &text, Some((0, 0))).expect("the grammar reads rule 702.112a");
     Some(def.abilities[0].clone())
 }
@@ -1038,10 +1058,9 @@ fn renown(item: &ir::token::KeywordInstance) -> Option<Ability> {
 /// permanents." (702.86a); each instance triggers separately (702.86b).
 fn annihilator(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if item.keyword.name() != "Annihilator" { return None; }
-    let KeywordParam::Number(ir::Amount::Const(n @ 1..=10)) = item.param else { return None };
-    const WORDS: [&str; 10] = ["a permanent", "two permanents", "three permanents", "four permanents", "five permanents",
-        "six permanents", "seven permanents", "eight permanents", "nine permanents", "ten permanents"];
-    let text = format!("Whenever this creature attacks, defending player sacrifices {}.", WORDS[n as usize - 1]);
+    let KeywordParam::Number(ir::Amount::Const(n)) = item.param else { return None };
+    let (count, plural) = counted(n)?;
+    let text = format!("Whenever this creature attacks, defending player sacrifices {count} permanent{plural}.");
     let def = CardDef::new("Annihilator rule", "", "Creature", &text, Some((0, 0))).expect("the grammar reads rule 702.86a");
     Some(def.abilities[0].clone())
 }

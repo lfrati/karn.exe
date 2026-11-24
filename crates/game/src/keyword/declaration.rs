@@ -351,7 +351,7 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
         }
         "Transmute" | "Scavenge" | "Reinforce" | "Embalm" | "Eternalize" => generated(ability(item)?, true, vec![Context::PrintedOnly]),
         "Unearth" => generated(ability(item)?, true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
-        "Soulshift" => generated(ability(item)?, true, vec![Context::PermanentsOnly]),
+        "Soulshift" | "Afterlife" => generated(ability(item)?, true, vec![Context::PermanentsOnly]),
         "Miracle" => {
             let Some(cost) = crate::miracle::cost(item) else { return refused(item) };
             let ability = crate::miracle::trigger(&cost?);
@@ -589,12 +589,10 @@ fn evoke_trigger() -> Ability {
 /// was paid. The rule's "it" after "and" is said as "this permanent", which the grammar reads.
 /// None for a number the rule text is not read with.
 fn impending(n: u32) -> Option<Vec<Ability>> {
-    const WORDS: [&str; 10] = ["a", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
-    if !(1..=10).contains(&n) { return None; }
-    let text = format!("If its impending cost was paid, this permanent enters with {} time counter{} on it.\n\
+    let (count, plural) = crate::keyword::counted(n)?;
+    let text = format!("If its impending cost was paid, this permanent enters with {count} time counter{plural} on it.\n\
         As long as its impending cost was paid and this permanent has a time counter on it, this permanent isn't a creature.\n\
-        At the beginning of your end step, if its impending cost was paid and this permanent has a time counter on it, remove a time counter from this permanent.",
-        WORDS[n as usize - 1], if n == 1 { "" } else { "s" });
+        At the beginning of your end step, if its impending cost was paid and this permanent has a time counter on it, remove a time counter from this permanent.");
     let def = CardDef::new("Impending rule", "", "Enchantment Creature", &text, Some((0, 0))).expect("the grammar reads rule 702.176a");
     Some(def.abilities.clone())
 }
