@@ -1476,3 +1476,19 @@ fn r122_1_fewer_than_three_counters_on_it() {
     let (two, _) = read("Whenever you cast a red spell, if ~ has two or fewer +1/+1 counters on it, put a +1/+1 counter on ~.");
     assert_eq!(fewer, two);
 }
+
+/// CR 608.2c: "Then repeat this process for an enchantment and a planeswalker" runs the
+/// instructions again for each of those kinds in turn (Invoke Despair); "for artifacts and
+/// creatures" does the same with plural kinds (Equipoise).
+#[test]
+fn r608_2c_repeat_this_process_for_other_kinds() {
+    let text = "Target opponent sacrifices a creature of their choice. If they can't, they lose 2 life and you draw a card. Then repeat this process for an enchantment and a planeswalker.";
+    let (others, printed) = read(text);
+    assert_eq!(printed, text);
+    let (again, _) = read("Target opponent sacrifices a creature of their choice. If they can't, they lose 2 life and you draw a card. Then repeat this process.");
+    assert_ne!(others, again);
+    let (artifacts, printed) = read("Draw a card. Repeat this process for artifacts and creatures.");
+    assert_eq!(printed, "Draw a card. Repeat this process for artifacts and creatures.");
+    let (one, _) = read("Draw a card. Repeat this process for an artifact.");
+    assert_ne!(artifacts, one);
+}

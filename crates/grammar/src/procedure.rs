@@ -108,10 +108,33 @@ fn repeat(form: Form) -> P<Action> {
             _ => None,
         },
     );
+    // "for an enchantment and a planeswalker", "for artifacts and creatures": kinds of object,
+    // one ("an enchantment") or all of a kind ("artifacts"), each a kind of its own (not the
+    // union "artifacts and creatures")
+    fn plain(set: &ir::ObjectSet) -> bool {
+        let union = |f: &ir::Filter| matches!(f, ir::Filter::Any(_));
+        !matches!(set.domain, ir::Domain::Union(_)) && match &set.filter {
+            ir::Filter::All(v) => !v.iter().any(union),
+            f => !union(f),
+        }
+    }
+    fn kind(w: &ir::Who) -> bool {
+        match w {
+            ir::Who::One(s) => s.quant == ir::Quant::Indefinite(ir::Count::Exactly(Amount::Const(1))) && s.chooser.is_none() && s.random.is_none() && plain(&s.set),
+            ir::Who::Set(set) => plain(set),
+        }
+    }
+    let kinds = crate::mana::who().map(|w| kind(&w).then_some(w), |w| kind(w).then(|| w.clone()));
+    let others = lit("for").then_keep(&alt("kinds", vec![kinds.map(|w| Some(vec![w]), |v: &Vec<ir::Who>| (v.len() == 1).then(|| v[0].clone())), kinds.list("and")]))
+        .map(|v| Some(Repeats::For(v)), |r| match r {
+            Repeats::For(v) => Some(v.clone()),
+            _ => None,
+        });
     let how = alt(
         "repeats",
         vec![
             lit("once").to(Repeats::Times(Amount::Const(1))),
+            others,
             times,
             lit("any number of times").to(Repeats::AnyNumber),
             lit("until")

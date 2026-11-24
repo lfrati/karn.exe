@@ -21,6 +21,10 @@ pub enum Repeats {
     AnyNumber,
     /// "repeat this process until no one pays life": run again until the condition holds.
     Until(Box<Condition>),
+    /// "repeat this process for an enchantment and a planeswalker", "… for artifacts and
+    /// creatures": run again for each of these in turn, each in place of the kind of object the
+    /// process names ("a creature", "land") (Invoke Despair, Equipoise).
+    For(Vec<crate::statics::Who>),
 }
 
 /// A pile of objects. "Some effects cause objects to be temporarily grouped into piles" (CR

@@ -5955,6 +5955,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
         // "If it's a land card, put it into your graveyard and repeat this process": "this
         // process" is the ability's instructions before it, from its start (608.2c)
         if let Action::Repeat(how) = &act.action {
+            if matches!(how, ir::procedure::Repeats::For(_)) { return unsupported("repeat this process: for other kinds of object is not lowered"); }
             if *how != ir::procedure::Repeats::Process { return unsupported("repeat this process: a number of times, any number or until is not lowered"); }
             if branches.len() != 1 || optional_groups != 0 || !durations.is_empty() || binder.each.is_some() || !after_turns.is_empty()
                 || !act.mods.is_empty() || act.may || clause.may || !controller_only(clause.subject.as_ref()) {
