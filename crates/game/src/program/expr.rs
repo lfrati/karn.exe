@@ -704,8 +704,10 @@ impl Filter {
                 }
                 ir::Atom::Counters { kind, count } => {
                     use ir::{Amount::Const, selector::Count};
-                    // a bare number of counters is at least that many: "a +1/+1 counter"
+                    // a bare number of counters is at least that many: "a +1/+1 counter"; "no
+                    // counters" is none at all
                     let (min, max) = match count {
+                        Count::Exactly(Const(0)) => (0, 0),
                         Count::Exactly(Const(n)) | Count::AtLeast(Const(n)) => (*n, u32::MAX),
                         Count::UpTo(Const(n)) => (0, *n),
                         Count::Precisely(Const(n)) => (*n, *n),
