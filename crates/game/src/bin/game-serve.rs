@@ -537,7 +537,7 @@ fn payment(plan: &[Step]) -> Value {
 
 
 
-fn zone_name(z: Zone) -> &'static str { match z { Zone::Library => "library", Zone::Hand => "hand", Zone::Battlefield => "battlefield", Zone::Graveyard => "graveyard", Zone::Stack => "stack", Zone::Exile => "exile", Zone::Command => "command", Zone::Gone => "gone" } }
+fn zone_name(z: Zone) -> &'static str { match z { Zone::Library => "library", Zone::Hand => "hand", Zone::Battlefield => "battlefield", Zone::Graveyard => "graveyard", Zone::Stack => "stack", Zone::Exile => "exile", Zone::Command => "command", Zone::PhasedOut => "phased out", Zone::Gone => "gone" } }
 
 /// Where chosen objects go: `{"zone":"hand"}`, `{"zone":"library","position":"top"}`, or
 /// `{"zone":"library","from_top":2}` (400.3, 401.4).
@@ -795,6 +795,8 @@ fn event(g: &Game, viewer: Option<usize>, e: &Event) -> Value {
         Event::LifeLost { player, amount } => ("life_lost", json!({ "player": pid(*player), "amount": amount })),
         Event::Tapped { object } => ("tapped", json!({ "object": o(object) })),
         Event::Untapped { object } => ("untapped", json!({ "object": o(object) })),
+        Event::PhasedOut { object } => ("phased_out", json!({ "object": o(object) })),
+        Event::PhasedIn { object } => ("phased_in", json!({ "object": o(object) })),
         Event::Transformed { object } => ("transformed", json!({ "object": o(object) })),
         Event::BecameLevel { object, level } => ("became_level", json!({ "object": o(object), "level": level })),
         Event::Designated { object, designation } => ("designated", json!({ "object": o(object), "designation": match designation {
@@ -1269,6 +1271,7 @@ fn render_view(seen: &Snapshot) -> Value {
         }).collect::<Vec<_>>(),
         "players": players,
         "battlefield": ids(&seen.battlefield),
+        "phased_out": ids(&seen.phased_out),
         "exile": ids(&seen.exile),
         "command": ids(&seen.command),
         "stack": ids(&seen.stack),

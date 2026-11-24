@@ -64,6 +64,7 @@ pub(crate) enum Action {
     Create(Vec<crate::creation::Request>),
     /// A regeneration shield for each (701.19a).
     Regenerate(Vec<ObjId>),
+    PhaseOut(Vec<ObjId>),
     /// Each attachment, and what it is attached to (701.3a).
     Attach(Vec<(ObjId, Target)>),
     /// Two creatures to pair, by the player who controls the soulbond ability (702.95a).
@@ -259,6 +260,7 @@ pub(crate) fn run(game: &mut Game, action: Action) -> crate::Res<Result<Complete
         Action::Create(requests) => return game.create_tokens(requests,crate::operation::EventOrigin::Effect),
         Action::Prevent(effect) => game.begin_prevention(effect),
         Action::Regenerate(objects) => { for object in objects { game.regenerate(object); } },
+        Action::PhaseOut(objects) => game.phase_out(&objects),
         // an attachment that is not legal, or that is already there, does nothing (701.3b)
         // what becomes attached together is given its timestamps at once (613.7e, 613.7m)
         Action::Attach(attachments) => {

@@ -167,6 +167,8 @@ pub enum Action {
     Prevent { to: Vec<Operand>, by: Vec<Operand>, to_or_by: bool, kind: ir::event::DamageKind, next: Option<u32> },
     /// A regeneration shield for each permanent (701.19a).
     Regenerate { objects: Vec<Operand> },
+    /// The permanents phase out (702.26b).
+    PhaseOut { objects: Vec<Operand> },
     /// Each Aura or Equipment named is attached to the one object or player `to` names
     /// (701.3a).
     Attach { objects: Vec<Operand>, to: Operand },
@@ -248,7 +250,7 @@ impl Action {
             Self::BecomeMonarch { .. } | Self::WinGame { .. } | Self::LoseGame { .. } | Self::IncreaseSpeed { .. } | Self::GetEmblem { .. }
             | Self::ExileUntil { .. } | Self::Draw { .. } | Self::GainLife { .. }
             | Self::Tap { .. } | Self::Transform { .. } | Self::Level { .. } | Self::Unprepare { .. } | Self::Designate { .. } | Self::TurnFace { .. }
-            | Self::Prevent { .. } | Self::PutCounters { .. } | Self::Regenerate { .. }
+            | Self::Prevent { .. } | Self::PutCounters { .. } | Self::Regenerate { .. } | Self::PhaseOut { .. }
             | Self::Attach { .. } | Self::Pair { .. } | Self::Distribute { .. } => None,
         }
     }
@@ -276,7 +278,7 @@ impl Action {
                 if let Token::Copy { of, .. } = token { Some(of.as_ref()) } else { None })).chain(attached.as_ref())
                 .chain(defenders.as_ref().map(|d| &d.players)).collect(),
             Action::Move { groups, .. } => groups.iter().flat_map(|(objects, _)| objects).collect(),
-            Action::Tap { objects, .. } | Action::Transform { objects } | Action::Level { objects, .. } | Action::Unprepare { objects } | Action::Designate { objects, .. } | Action::TurnFace { objects, .. } | Action::Destroy { objects, .. } | Action::Counter { objects, .. } | Action::ExileUntil { objects } | Action::Regenerate { objects } => objects.iter().collect(),
+            Action::Tap { objects, .. } | Action::Transform { objects } | Action::Level { objects, .. } | Action::Unprepare { objects } | Action::Designate { objects, .. } | Action::TurnFace { objects, .. } | Action::Destroy { objects, .. } | Action::Counter { objects, .. } | Action::ExileUntil { objects } | Action::Regenerate { objects } | Action::PhaseOut { objects } => objects.iter().collect(),
             Action::Attach { objects, to } => objects.iter().chain(std::iter::once(to)).collect(),
             Action::Pair { one, other } => vec![one, other],
             Action::Damage { source, hits } => std::iter::once(source).chain(hits.iter().flat_map(|(to, _)| to)).collect(),
@@ -295,7 +297,7 @@ impl Action {
             Action::Draw { amount, .. } | Action::Mill { amount, .. } | Action::GainLife { amount, .. }
             | Action::LoseLife { amount, .. } => vec![amount],
             Action::Tap { .. } | Action::Fight { .. } | Action::Transform { .. } | Action::Level { .. } | Action::Unprepare { .. } | Action::Designate { .. } | Action::TurnFace { .. } | Action::Destroy { .. } | Action::Counter { .. } | Action::ExileUntil { .. }
-            | Action::Prevent { .. } | Action::RemoveCounters { .. } | Action::BecomeMonarch { .. } | Action::WinGame { .. } | Action::LoseGame { .. } | Action::IncreaseSpeed { .. } | Action::Regenerate { .. } | Action::Attach { .. } | Action::Pair { .. } | Action::GetEmblem { .. }
+            | Action::Prevent { .. } | Action::RemoveCounters { .. } | Action::BecomeMonarch { .. } | Action::WinGame { .. } | Action::LoseGame { .. } | Action::IncreaseSpeed { .. } | Action::Regenerate { .. } | Action::PhaseOut { .. } | Action::Attach { .. } | Action::Pair { .. } | Action::GetEmblem { .. }
             | Action::DealDivided { .. } | Action::Distribute { .. } => Vec::new(),
             Action::Damage { hits, .. } => hits.iter().map(|(_, n)| n).collect(),
             Action::PutCounters { placements, .. } => placements.iter().flat_map(|(_, counters)| counters.iter().map(|(_, n)| n)).collect(),
@@ -338,6 +340,7 @@ impl Action {
             Action::Tap { tapped, .. } => no(Operand::Controller, if *tapped { "tap a player" } else { "untap a player" }),
             Action::Destroy { .. } | Action::Counter { .. } | Action::ExileUntil { .. } | Action::Move { .. } | Action::Transform { .. } | Action::Level { .. } | Action::Unprepare { .. } | Action::Designate { .. } | Action::TurnFace { .. } => no(Operand::Controller, "an object action on a player"),
             Action::Regenerate { .. } => no(Operand::Controller, "regenerate a player"),
+            Action::PhaseOut { .. } => no(Operand::Controller, "phase out a player"),
             Action::Pair { .. } => no(Operand::Controller, "pair a player"),
             Action::Attach { objects, to } => {
                 // what is attached is an object; what it is attached to may be a player (303.4)
@@ -480,10 +483,11 @@ pub(super) fn named(game: &Game, f: &Frame, operand: &Operand) -> Vec<Target> {
 }
 
 /// Information projections may read departed identities (608.2h); actions cannot act on
-/// their former incarnations (400.7). Do not silently follow a zone-change successor.
+/// their former incarnations (400.7). Do not silently follow a zone-change successor. Nor
+/// can they act on a phased-out permanent, which can't be affected by anything (702.26b).
 pub(super) fn found(game: &Game, f: &Frame, operand: &Operand) -> Vec<Target> {
     named(game, f, operand).into_iter().filter(|t| match t {
-        Target::Object(o) => game.obj(*o).zone != Zone::Gone,
+        Target::Object(o) => !matches!(game.obj(*o).zone, Zone::Gone | Zone::PhasedOut),
         Target::Player(p) => !game.players[*p].lost,
     }).collect()
 }
@@ -526,7 +530,8 @@ pub(super) fn objects(game: &Game, f: &Frame, operands: &[Operand]) -> Vec<ObjId
 /// the one a madness trigger left the discarded card (400.7k). Reading characteristics still
 /// uses the original identity for last known information.
 pub(super) fn move_identity(game: &Game, f: &Frame, old: ObjId) -> Option<ObjId> {
-    let live = |o: ObjId| game.obj(o).zone != Zone::Gone;
+    // a phased-out permanent is no zone change and can't be affected (702.26b, d)
+    let live = |o: ObjId| !matches!(game.obj(o).zone, Zone::Gone | Zone::PhasedOut);
     if live(old) { return Some(old); }
     // Follow only public transitions caused by this occurrence (400.7e/j), never
     // the game's unrelated identity lineage. Every zone change creates a fresh ID.
@@ -758,6 +763,10 @@ pub(super) fn evaluate(game: &Game, f: &Frame, action: &Action) -> crate::Res<pe
         // a permanent is regenerated (701.19a): what is named elsewhere gets no shield
         Action::Regenerate { objects: of } => {
             perform::Action::Regenerate(objects(game, f, of).into_iter().filter(|o| game.obj(*o).zone == Zone::Battlefield).collect())
+        }
+        // a permanent phases out (702.26b): what is not on the battlefield does not
+        Action::PhaseOut { objects: of } => {
+            perform::Action::PhaseOut(objects(game, f, of).into_iter().filter(|o| game.obj(*o).zone == Zone::Battlefield).collect())
         }
         Action::Attach { objects: what, to } => {
             // The destination is the identity the text names, where it still is: a departed

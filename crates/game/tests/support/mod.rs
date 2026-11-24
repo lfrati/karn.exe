@@ -205,7 +205,7 @@ impl T {
     }
     fn live(&self, id: ObjId) -> ObjId {
         let o = self.g.get_object(id).unwrap_or_else(|| panic!("retired object {id:?}"));
-        assert!(o.zone != Zone::Gone && self.zone_list(if o.zone == Zone::Battlefield { self.g.controller(id) } else { o.owner }, o.zone).contains(&id),
+        assert!(o.zone != Zone::Gone && self.zone_list(if matches!(o.zone, Zone::Battlefield | Zone::PhasedOut) { self.g.controller(id) } else { o.owner }, o.zone).contains(&id),
             "stale incarnation {id:?} ({}) has departed; bind its new object explicitly", o.chars.name);
         id
     }
@@ -244,6 +244,7 @@ impl T {
             Zone::Exile => self.g.exile.iter().copied().filter(|o| self.g.obj(*o).owner == p).collect(),
             Zone::Command => self.g.command.iter().copied().filter(|o| self.g.obj(*o).owner == p).collect(),
             Zone::Stack => self.g.stack.iter().copied().filter(|o| self.g.controller(*o) == p).collect(),
+            Zone::PhasedOut => self.g.phased_out.iter().copied().filter(|o| self.g.controller(*o) == p).collect(),
             Zone::Gone => Vec::new(),
         }
     }

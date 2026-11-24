@@ -68,6 +68,7 @@ mod plot;
 mod suspend;
 mod miracle;
 pub mod foretell;
+pub mod phasing;
 mod saga;
 mod soulbond;
 mod history;

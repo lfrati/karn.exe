@@ -27,7 +27,7 @@ fn move_to(g: &mut Game, card: ObjId, zone: Zone) -> ObjId {
         Zone::Command => &g.command,
         Zone::Exile => &g.exile,
         Zone::Stack => &g.stack,
-        Zone::Gone => unreachable!(),
+        Zone::PhasedOut | Zone::Gone => unreachable!(),
     }.last().unwrap()
 }
 fn cast(g: &mut Game, card: ObjId, units: &str) { g.act(0, paid(units, Move::Cast { card, targets: vec![] })).unwrap(); }

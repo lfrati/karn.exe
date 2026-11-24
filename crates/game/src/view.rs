@@ -91,7 +91,7 @@ impl Game {
     /// [`Game::sees`].
     pub fn perceives(&self, viewer: PlayerId, o: ObjId) -> bool {
         let obj = self.obj(o);
-        (matches!(obj.zone, Zone::Battlefield | Zone::Stack) && matches!(obj.face, crate::face::Face::Down(_)))
+        (matches!(obj.zone, Zone::Battlefield | Zone::PhasedOut | Zone::Stack) && matches!(obj.face, crate::face::Face::Down(_)))
             // also once it has left: every player saw it leave, whatever it became
             || ((if obj.zone == Zone::Gone { obj.left } else { Some(obj.zone) }) == Some(Zone::Exile) && obj.hidden.is_some())
             || self.sees(viewer, o)
@@ -125,10 +125,10 @@ impl Game {
         // effects show is looked for among the stack, the triggers and what is resolving.
         let by_zone = match if obj.zone == Zone::Gone { obj.left } else { Some(obj.zone) } {
             // its controller may look at it at any time (708.5)
-            Some(zone @ (Zone::Battlefield | Zone::Stack)) if obj.zone == zone && matches!(obj.face, crate::face::Face::Down(_)) => self.controller(o) == viewer,
+            Some(zone @ (Zone::Battlefield | Zone::PhasedOut | Zone::Stack)) if obj.zone == zone && matches!(obj.face, crate::face::Face::Down(_)) => self.controller(o) == viewer,
             // only a player allowed to look at it, until it leaves exile (406.3)
             Some(Zone::Exile) if obj.hidden.is_some() => obj.hidden.as_ref().is_some_and(|h| h.lookers.contains(&viewer)),
-            Some(Zone::Battlefield | Zone::Stack | Zone::Graveyard | Zone::Exile | Zone::Command) => true,
+            Some(Zone::Battlefield | Zone::PhasedOut | Zone::Stack | Zone::Graveyard | Zone::Exile | Zone::Command) => true,
             Some(Zone::Hand) => obj.owner == viewer,
             Some(Zone::Library | Zone::Gone) | None => false,
         };

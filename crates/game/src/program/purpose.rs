@@ -95,6 +95,7 @@ pub(super) fn done_by(instr: &Instr) -> Option<(Verb, Option<Placement>)> {
             A::Distribute { .. } => (Verb::Distribute, None),
             A::Create { .. } => (Verb::Create, None),
             A::Regenerate { .. } => (Verb::Regenerate, None),
+            A::PhaseOut { .. } => (Verb::PhaseOut, None),
             A::Attach { .. } => (Verb::Attach, None),
             A::Pair { .. } => (Verb::Pair, None),
             A::IncreaseSpeed { .. } | A::GetEmblem { .. } | A::Level { .. } | A::Unprepare { .. } | A::Designate { .. } | A::Prevent { .. } => return None,

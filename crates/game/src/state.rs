@@ -61,6 +61,10 @@ pub enum Zone {
     Exile,
     /// Emblems live in this public zone (114.2, 400.2).
     Command,
+    /// On the battlefield, phased out (702.26b): treated as though it does not exist, so
+    /// nothing that looks at the battlefield finds it. It is no zone change: the object, its
+    /// id, its status, counters and history all go on (702.26d), and it phases in where it was.
+    PhasedOut,
     /// It left its zone: this id is what it was (400.7).
     Gone,
 }
@@ -119,6 +123,8 @@ pub struct Object {
     /// Of an exiled card: foretold, by whom and on which turn (702.143). What it becomes
     /// elsewhere is not.
     pub foretold: Option<crate::foretell::Foretold>,
+    /// Of a phased-out permanent: how it phased out (702.26).
+    pub phased: Option<crate::phasing::Phased>,
     pub owner: PlayerId,
     pub controller: PlayerId,
     pub zone: Zone,
@@ -842,6 +848,8 @@ pub struct GameState {
     objects: arena::Arena,
     pub players: Vec<Player>,
     pub battlefield: Vec<ObjId>,
+    /// The phased-out permanents (702.26b), apart from those the battlefield shows.
+    pub phased_out: Vec<ObjId>,
     pub exile: Vec<ObjId>,
     pub command: Vec<ObjId>,
     /// The top of the stack is last.
@@ -1153,6 +1161,7 @@ impl Game {
                 objects: arena::Arena::default(),
                 players,
                 battlefield: Vec::new(),
+                phased_out: Vec::new(),
                 command: Vec::new(),
                 exile: Vec::new(),
                 stack: Vec::new(),
@@ -1267,6 +1276,7 @@ impl Game {
             Zone::Hand => &mut self.players[owner].hand,
             Zone::Graveyard => &mut self.players[owner].graveyard,
             Zone::Battlefield => &mut self.battlefield,
+            Zone::PhasedOut => &mut self.phased_out,
             Zone::Exile => &mut self.exile,
             Zone::Command => &mut self.command,
             Zone::Stack => &mut self.stack,
@@ -1299,6 +1309,7 @@ impl Game {
             face: crate::face::Face::Up,
             hidden: None,
             foretold: None,
+            phased: None,
             emblem: None,
             owner,
             controller,
@@ -2399,7 +2410,7 @@ impl Game {
 
     fn sba_batch(&self) -> SbaBatch {
         // and a copy of a card that is neither on the stack nor on the battlefield (707.10a)
-        let tokens = self.objects.iter().filter(|o| o.token() && !matches!(o.zone, Zone::Battlefield | Zone::Gone)
+        let tokens = self.objects.iter().filter(|o| o.token() && !matches!(o.zone, Zone::Battlefield | Zone::PhasedOut | Zone::Gone)
             || o.card_copy && !matches!(o.zone, Zone::Stack | Zone::Battlefield | Zone::Gone) && self.prepared_copy_controller(o.id).is_none())
             .map(|o| o.id).collect();
         let mut names: BTreeMap<(PlayerId, String), Vec<ObjId>> = BTreeMap::new();
@@ -2661,6 +2672,9 @@ impl Game {
             self.obj_mut(id).left = Some(zone);
             self.combat.remove(id);
         }
+        // what phased out under their control, and is not theirs, is not exiled: it phases in
+        // later (702.26n)
+        self.phased_out_under_departed(player);
         // 800.4a: effects giving the departing player control end before objects
         // they still control are exiled. Earlier control effects become visible again.
         let previous = self.control_snapshot();

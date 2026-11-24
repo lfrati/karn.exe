@@ -96,6 +96,9 @@ pub enum Event {
     LifeLost { player: PlayerId, amount: u32 },
     Tapped { object: ObjId },
     Untapped { object: ObjId },
+    /// A permanent phased out (702.26b) or in (702.26c).
+    PhasedOut { object: ObjId },
+    PhasedIn { object: ObjId },
     /// A double-faced permanent's other face is up (701.27a).
     Transformed { object: ObjId },
     /// A permanent's level became this number (716.2a).
@@ -228,6 +231,9 @@ impl Event {
             | Event::Skipped { .. }
             // nothing here asks about turning face down
             | Event::TurnedFaceDown { .. }
+            // what triggers on phasing is not lowered (603.10b)
+            | Event::PhasedOut { .. }
+            | Event::PhasedIn { .. }
             | Event::SpeedChanged { .. }
             | Event::Designated { .. }
             | Event::Conceded { .. }
@@ -292,6 +298,7 @@ impl crate::retention::Trace for Event {
             | Self::Destroyed { object } | Self::Regenerated { object }
             | Self::Exiled { object } | Self::Moved { object, .. }
             | Self::Tapped { object } | Self::Untapped { object } | Self::Transformed { object } | Self::BecameLevel { object, .. } | Self::Designated { object, .. } | Self::Unlocked { object, .. } | Self::TurnedFaceUp { object } | Self::TurnedFaceDown { object }
+            | Self::PhasedOut { object } | Self::PhasedIn { object }
             | Self::Sacrificed { object, .. } | Self::Connived { object, .. } | Self::Explored { object, .. } => object.trace(visit),
             Self::Attached { aura, to } => { aura.trace(visit); to.trace(visit); },
             Self::Plotted { card, .. } | Self::Foretold { card, .. } | Self::Drew { card, .. } | Self::Milled { card, .. } => card.trace(visit),

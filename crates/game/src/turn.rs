@@ -492,6 +492,8 @@ impl Game {
             // (502.4), so what triggers here waits for the upkeep (503.1a)
             // (all but those an effect keeps from untapping)
             Part::Untap => {
+                // first, phasing (502.1)
+                self.untap_step_phasing();
                 let untap: Vec<ObjId> =
                     self.battlefield.iter().copied().filter(|id| self.controller(*id) == self.active && !self.kept_tapped(*id)).collect();
                 // all at once: one event (502.3, 603.2c)
@@ -566,6 +568,8 @@ impl Game {
             // saddled until the end of the turn (702.171b)
             self.obj_mut(id).saddled = false;
         }
+        // including phased-out permanents (514.2)
+        for id in self.phased_out.clone() { self.obj_mut(id).damage = 0; }
         self.end_turn_rules();
         self.end_turn_permissions();
         self.delayed.retain(|d| d.lasts != crate::state::Lasts::ThisTurn);

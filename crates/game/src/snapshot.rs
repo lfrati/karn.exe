@@ -220,6 +220,9 @@ pub struct Snapshot {
     pub publicly_revealed: Vec<ObjId>,
     pub players: Vec<Player>,
     pub battlefield: Vec<ObjId>,
+    /// The phased-out permanents (702.26b), on the battlefield but treated as though they do
+    /// not exist.
+    pub phased_out: Vec<ObjId>,
     pub exile: Vec<ObjId>,
     pub command: Vec<ObjId>,
     pub stack: Vec<ObjId>,
@@ -256,7 +259,7 @@ impl Snapshot {
         // Enumerate only library faces some player currently knows, then apply the viewer filter.
         let known_library = g.players.iter().flat_map(|p| &p.library)
             .filter(|id| (0..g.players.len()).any(|p| g.sees(p, **id)));
-        let shown = g.players.iter().flat_map(|p| p.hand.iter().chain(&p.graveyard)).chain(&g.battlefield).chain(&g.exile).chain(&g.command).chain(&g.stack).chain(known_library);
+        let shown = g.players.iter().flat_map(|p| p.hand.iter().chain(&p.graveyard)).chain(&g.battlefield).chain(&g.phased_out).chain(&g.exile).chain(&g.command).chain(&g.stack).chain(known_library);
         let mut ids: Vec<ObjId> = Vec::new();
         // a face-down permanent is there for everyone, its face for whoever may look (708.5)
         for id in shown.copied().filter(|id| viewer.is_none_or(|v| g.perceives(v, *id))).chain(offered.iter().copied()) {
@@ -308,6 +311,7 @@ impl Snapshot {
             choices_made: g.public_choices().cloned().collect(),
             players,
             battlefield: g.battlefield.clone(),
+            phased_out: g.phased_out.clone(),
             exile: g.exile.clone(),
             command: g.command.clone(),
             stack: g.stack.clone(),

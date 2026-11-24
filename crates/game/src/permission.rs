@@ -257,7 +257,7 @@ impl Game {
         }
         let zone = match o.zone {
             Zone::Library => "in a library", Zone::Graveyard => "in a graveyard", Zone::Exile => "in exile",
-            Zone::Battlefield => "on the battlefield", Zone::Stack => "on the stack", Zone::Command => "in the command zone",
+            Zone::Battlefield => "on the battlefield", Zone::PhasedOut => "phased out", Zone::Stack => "on the stack", Zone::Command => "in the command zone",
             Zone::Hand | Zone::Gone => unreachable!("answered above"),
         };
         format!("that card is not in your hand: it is {zone}, and no rule or effect lets you {verb} it from there ({rule})")

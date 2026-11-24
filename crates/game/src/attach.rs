@@ -108,10 +108,11 @@ impl Game {
     }
 
     /// The object or player attached to, including an ability's source as it last existed
-    /// (301.5f, 303.4m, 608.2h). A reference to an object that left its zone names nothing now.
+    /// (301.5f, 303.4m, 608.2h). A reference to an object that left its zone names nothing now,
+    /// nor one to a phased-out permanent, which is treated as though it does not exist (702.26b).
     pub fn attached_to(&self, source: ObjId) -> Option<Target> {
         self.obj(source).attached_to.filter(|t| match *t {
-            Target::Object(o) => self.obj(o).zone != Zone::Gone,
+            Target::Object(o) => !matches!(self.obj(o).zone, Zone::Gone | Zone::PhasedOut),
             Target::Player(p) => !self.players[p].lost,
         })
     }

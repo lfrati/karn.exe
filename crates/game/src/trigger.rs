@@ -226,6 +226,8 @@ pub(crate) fn facts(game: &Game, e: &Event) -> Vec<Fact> {
         Event::TurnedFaceUp { object } => vec![Fact::new(Verb::TurnFace, None, what(O(*object)))],
         // no trigger condition the engine reads is about turning face down
         Event::TurnedFaceDown { .. } | Event::Designated { .. } => Vec::new(),
+        // what triggers on phasing is not lowered (603.10b)
+        Event::PhasedOut { .. } | Event::PhasedIn { .. } => Vec::new(),
         Event::Untapped { object } => vec![Fact::new(Verb::Untap, None, what(O(*object)))],
         Event::CountersPut { on, kind, count, before, by, recipient } => vec![Fact { counters: Some((kind.clone(), *count)), had: Some(*before),
             counter_recipient: recipient.clone(),

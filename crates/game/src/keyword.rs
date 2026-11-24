@@ -57,7 +57,8 @@ const SENTENCES: &[(&str, &str, &str)] = &[
 /// dealt by a source with lifelink also causes its controller to gain that much life (702.15b,
 /// 120.3f); wither or infect damage to a creature causes its source controller to put -1/-1
 /// counters instead of marking damage (702.80a, 702.90c, 120.3d); infect damage to a player
-/// gives poison instead of life loss (702.90b, 120.3b); a card with flash is cast any time an instant could be (702.8a, 117.1a).
+/// gives poison instead of life loss (702.90b, 120.3b); a card with flash is cast any time an instant could be (702.8a, 117.1a); a permanent with
+/// phasing phases out in its controller's untap step (702.26a, 502.1).
 const ASKED: &[(&str, &str)] = &[
     ("Reach", "702.17b"),
     ("Retrace", "702.81a"),
@@ -75,6 +76,7 @@ const ASKED: &[(&str, &str)] = &[
     ("Wither", "702.80a"),
     ("Infect", "702.90b"),
     ("Flash", "702.8a"),
+    ("Phasing", "702.26a"),
 ];
 
 /// Each sentence read by the grammar, once.

@@ -1189,7 +1189,7 @@ fn whose(yours: bool, verb: &str) -> String {
 fn zone_said(zone: Zone) -> &'static str {
     match zone {
         Zone::Library => "library", Zone::Hand => "hand", Zone::Battlefield => "battlefield", Zone::Graveyard => "graveyard",
-        Zone::Stack => "stack", Zone::Exile => "exile", Zone::Command => "command zone", Zone::Gone => "nowhere",
+        Zone::Stack => "stack", Zone::Exile => "exile", Zone::Command => "command zone", Zone::PhasedOut => "battlefield, phased out", Zone::Gone => "nowhere",
     }
 }
 

@@ -70,7 +70,7 @@ impl Game {
     fn trace_roots(&self, visit: &mut dyn FnMut(ObjId)) {
         // Keep this inventory exhaustive: a new retained field needs an explicit ownership
         // decision here. Procedures/prospective state are guarded before this function.
-        let super::GameState { objects, players, battlefield, exile, command, stack, until, combat, lasting, log,
+        let super::GameState { objects, players, battlefield, phased_out, exile, command, stack, until, combat, lasting, log,
             triggered, delayed, decision, this_turn, lookbacks, completed_choices,
             defs: _, active: _, turn_schedule: _, starting_life: _, part: _, turn: _, monarch: _, another_cleanup: _, parts_begun: _,
             // the turn plan names phases and players, never objects; a skip effect keeps the
@@ -86,6 +86,7 @@ impl Game {
         // Zone membership is authoritative, including fixture objects not in a zone list.
         for object in objects.iter().filter(|o| o.zone != Zone::Gone) { visit(object.id); }
         battlefield.trace(visit);
+        phased_out.trace(visit);
         exile.trace(visit);
         command.trace(visit);
         stack.trace(visit);
@@ -114,7 +115,7 @@ impl Game {
 
 impl Trace for Object {
     fn trace(&self, visit: &mut dyn FnMut(ObjId)) {
-        let Self { attached_to, targets, ability, invocations, bound, choices, cast_exiled, hidden, harmonized, cast_announcement, foretold: _, delayed: _,
+        let Self { attached_to, targets, ability, invocations, bound, choices, cast_exiled, hidden, harmonized, cast_announcement, foretold: _, phased: _, delayed: _,
             cast_as: _, id: _, card: _, card_id: _, chars: _, copy_acquisition: _, copied: _, copy_effects: _, token_faces: _, card_copy: _, stack_copy_of, face: _, emblem: _, owner: _, controller: _, zone: _,
             tapped: _, damage: _, deathtouched: _, counters: _, counter_stamps: _, since: _, control_acquisitions: _, stamp: _, last: _, last_attachments: _,
             flashback: _, cast_rider: _, transformed: _, transformed_at: _, level: _, unlocked: _, monstrous: _, renowned: _, solved: _, prepared: _, prepared_copy, prepare_source, saddled: _, cast_from: _, cast_by: _, cast_ordinal: _, entered: _, activation_uses: _, x: _, spell_x: _, kicked: _, optional_paid: _, alternative: _, bestowed: _, buyback_paid: _, entwined: _, replicated: _, gift: _, announced: _, left: _, arrived: _, successor: _, uncounterable: _, mana_paid: _, modes: _, division: _ } = self;
