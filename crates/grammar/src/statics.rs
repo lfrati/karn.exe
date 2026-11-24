@@ -323,7 +323,29 @@ fn forbidden(form: Form) -> P<Forbidden> {
             _ => None,
         },
     );
-    alt("forbidden", vec![plain, limited, blocked])
+    // "you can't get poison counters", "players can't get counters": none of them, as the
+    // event "gets one or more poison counters" says (122.1)
+    let kind = alt(
+        "counters a player gets",
+        vec![
+            counter_kind().skip(&lit("counters")).map(
+                |k| Some(Some(ir::PlayerCounter::Named(k))),
+                |k: &Option<ir::PlayerCounter>| match k {
+                    Some(ir::PlayerCounter::Named(k)) => Some(k.clone()),
+                    _ => None,
+                },
+            ),
+            lit("counters").to(None),
+        ],
+    );
+    let get = lit("get").then_keep(&kind).map(
+        |kind| Some(Forbidden { event: EventAction::GetsCounters { kind }, within: None }),
+        |f: &Forbidden| match (&f.event, f.within) {
+            (EventAction::GetsCounters { kind }, None) if !matches!(kind, Some(ir::PlayerCounter::Energy)) => Some(kind.clone()),
+            _ => None,
+        },
+    );
+    alt("forbidden", vec![get, plain, limited, blocked])
 }
 
 /// "can't attack", "can't attack or block", "can't be blocked by creatures with flying", "can't

@@ -1714,3 +1714,20 @@ fn r702_11c_hexproof_of_a_player_and_permanents() {
     assert_eq!(printed, "You and permanents you control gain hexproof until end of turn.");
     declines("You, Ninjas, and Rogues you control have hexproof.");
 }
+
+/// CR 122.1: a player who can't get counters gets none of them; "can't get poison counters" is
+/// the prohibition of the event "gets one or more poison counters" (Melira, Sylvok Outcast;
+/// Solemnity; Suncleanser), and prints as the Oracle says it.
+#[test]
+fn r122_1_players_who_cant_get_counters() {
+    let (poison, printed) = read("You can't get poison counters.");
+    assert_eq!(printed, "You can't get poison counters.");
+    let (again, _) = read("You can't get one or more poison counters.");
+    assert_eq!(poison, again);
+    let (any, printed) = read("Players can't get counters.");
+    assert_eq!(printed, "Players can't get counters.");
+    assert_ne!(poison, any);
+    let text = "Target opponent loses all counters. That player can't get counters for as long as ~ remains on the battlefield.";
+    let (_, printed) = read(text);
+    assert_eq!(printed, text);
+}
