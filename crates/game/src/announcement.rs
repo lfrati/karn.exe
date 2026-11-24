@@ -118,6 +118,14 @@ impl TargetSpec {
                 _ => false,
             }
         }
+        // "two target cards from an opponent's graveyard": one opponent's graveyard, all of
+        // them (the Deadeye Tracker ruling), not one card from each of several opponents'
+        fn one_opponents_graveyard(set: &ir::ObjectSet, bounds: (u32, u32)) -> bool {
+            bounds.1 > 1 && set.zone.as_ref().is_some_and(|zone| zone.zones.items == [ir::Zone::Graveyard]
+                && zone.owner.as_deref().is_some_and(|who| who.chooser.is_none() && who.random.is_none()
+                    && matches!(who.quant, ir::Quant::Indefinite(ir::Count::Exactly(ir::Amount::Const(1))))
+                    && crate::select::controlled_by_you(who) == Some(false)))
+        }
         let mut unary = selector.set.clone();
         let different_mana_values = extract_mana_values(&mut unary.filter);
         let pair_filter = ir::Filter::All(vec![
@@ -136,7 +144,7 @@ impl TargetSpec {
                 return crate::unsupported("different mana values: one explicit graveyard target group required");
             }
             Some(TargetRelation::DifferentManaValues)
-        } else if extract(&mut unary.filter) {
+        } else if extract(&mut unary.filter) || one_opponents_graveyard(&unary, bounds) {
             if unary.domain != ir::Domain::Card || unary.zone.as_ref().is_none_or(|zone|
                 zone.zones.items != [ir::Zone::Graveyard] || zone.slice.is_some()) {
                 return crate::unsupported("same zone target group: explicit graveyard cards required");

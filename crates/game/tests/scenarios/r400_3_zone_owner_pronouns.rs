@@ -65,3 +65,16 @@ fn r601_2c_loaming_shaman_stays_refused_until_a_target_can_depend_on_the_target_
     crate::support::refused(game::play::check(&oracle_read("Loaming Shaman")).map_err(|e| e.0), "noun phrase: a zone owner's pronoun with no player named before it");
 }
 
+#[test]
+fn r601_2c_deadeye_trackers_two_targets_are_in_one_opponents_graveyard() {
+    // "Exile two target cards from an opponent's graveyard": one opponent's, both of them (the
+    // Deadeye Tracker ruling: it can't be activated targeting one card in each of two).
+    let mut t = Board::new(3).battlefield(0, &["Deadeye Tracker"]).graveyard(1, &["Grizzly Bears", "Forest"])
+        .graveyard(2, &["Hill Giant"]).build();
+    let (bears, forest, giant) = (t.find_in(1, Zone::Graveyard, "Grizzly Bears"), t.find_in(1, Zone::Graveyard, "Forest"), t.find_in(2, Zone::Graveyard, "Hill Giant"));
+    let tracker = t.find_in_battlefield("Deadeye Tracker");
+    let activate = |targets: Vec<Target>| Move::Paying(mana_pool("{1}{B}"), Box::new(Move::Activate { source: tracker, ability: 0, targets: vec![targets], paying: vec![] }));
+    t.mana(0, "{1}{B}");
+    cite!(["601.2c", "115.1"]; refused("cards in a single graveyard"): t.g.act(0, activate(vec![Target::Object(bears), Target::Object(giant)])));
+    cite!(["601.2c"]; ok: t.g.act(0, activate(vec![Target::Object(bears), Target::Object(forest)])));
+}
