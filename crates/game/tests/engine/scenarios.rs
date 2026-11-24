@@ -339,7 +339,7 @@ fn text_the_engine_does_not_run_is_refused_with_the_reason() {
         // card's wording, and the grammar does not read it (106.1b)
         ("Add two mana in any combination of colors for each creature you control.", "variable color choices"),
         ("Target creature gets +3/+3 until your next turn.", "duration"),
-        ("Discard a card at random.", "random"),
+        ("Discard any number of cards at random.", "random"),
     ] {
         let d = CardDef::new("Test", "{1}", "Instant", text, None).expect(text);
         let u = check(&d).expect_err(text);

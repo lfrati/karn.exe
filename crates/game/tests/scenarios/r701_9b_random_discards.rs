@@ -133,6 +133,35 @@ fn r118_12_balduvian_horde_a_random_discard_keeps_it() {
     t.expect().rules(["118.12"]).zone(0, Zone::Battlefield, &["Balduvian Horde"]).check();
 }
 
+// Rules: 118.12, 701.9b
+// Given: Pillaging Horde cast by a player holding two other cards, or none.
+// When: its enters trigger resolves.
+// Expect: its controller chooses whether to pay. Paying discards one of the two cards, picked at
+// random, and no one picks it; the Horde stays. Declining, or holding no card, sacrifices it.
+#[test]
+fn r118_12_pillaging_horde_stays_only_if_a_random_card_is_discarded() {
+    for (cards, pays) in [(&["Lightning Bolt", "Giant Growth"][..], true), (&["Lightning Bolt", "Giant Growth"][..], false), (&[][..], false)] {
+        let mut hand = vec!["Pillaging Horde"];
+        hand.extend_from_slice(cards);
+        let mut t = Board::new(2).hand(0, &hand).build();
+        t.mana(0, "{2}{R}{R}").cast(0, "Pillaging Horde", vec![], mana_pool("CCRR")).unwrap();
+        t.pass_all();
+        t.pass_all();
+        let case = format!("{} cards, pays {pays}", cards.len());
+        if cards.is_empty() {
+            cite!(["118.12"]; case: case; assert!(t.asked().is_none_or(|(_, a)| matches!(a, Asked::Priority)), "{:?}", t.asked()));
+        } else {
+            let Some((0, Asked::May)) = t.asked() else { panic!("{case}: whether to discard is asked: {:?}", t.asked()) };
+            t.answer(0, if pays { Answer::Yes } else { Answer::No }).unwrap();
+            cite!(["701.9b"]; case: case.clone(); assert!(!matches!(t.asked(), Some((_, Asked::Objects { .. } | Asked::OptionalObjects { .. } | Asked::Select { .. }))), "no one picks the card: {:?}", t.asked()));
+        }
+        t.resolve();
+        let kept = t.g.battlefield.iter().any(|o| t.g.obj(*o).chars.name == "Pillaging Horde");
+        let discarded = if pays { 1 } else { 0 };
+        cite!(["118.12", "701.9b"]; case: case; assert_eq!((kept, t.g.players[0].hand.len()), (pays, cards.len() - discarded)));
+    }
+}
+
 /// Pass until a declaration of attackers is asked.
 fn to_attackers(t: &mut T) {
     for _ in 0..20 {

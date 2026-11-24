@@ -24,6 +24,7 @@ const VANGUARD: usize = 9;
 const HUMAN: usize = 10;
 const SHIELD: usize = 11;
 const MOUNTAIN: usize = 12;
+const CLERIC: usize = 13;
 
 fn defs() -> Vec<CardDef> {
     let faces = oracle::corpus::load(&oracle::corpus::default_path()).unwrap();
@@ -44,6 +45,8 @@ fn defs() -> Vec<CardDef> {
         card("Human", "Creature — Human Soldier", "", Some((1, 1))),
         card("Shield", "Instant", "Target creature you control gains ward {2} until end of turn.", None),
         CardDef::new("Mountain", "", "Basic Land — Mountain", "({T}: Add {R}.)", None).unwrap(),
+        // Alpharael, Stonechosen's ward; the card itself is refused for its void ability
+        card("Warded Cleric", "Creature — Human Cleric", "Ward—Discard a card at random.", Some((3, 3))),
     ]
 }
 
@@ -230,6 +233,37 @@ fn r702_21a_ward_discard_a_card() {
         cite!(["702.21a"]; assert!(matches!(g.asked(), Some((1, Asked::Objects { count: 1, .. }))), "{:?}", g.asked()));
         g.act(1, Move::Choose(Answer::Objects(vec![cards[1]]))).unwrap();
         cite!(["702.21a", "701.9a"]; assert_eq!((g.players[1].hand.clone(), g.stack.clone()), (vec![cards[0]], vec![spell])));
+    }
+}
+
+#[test]
+fn r702_21a_ward_discard_a_card_at_random() {
+    // "Ward—Discard a card at random." (Alpharael, Stonechosen): the targeting player chooses
+    // whether to pay; if they do, a card picked at random is discarded, and no one picks it
+    // (701.9b). Declining or having no card counters the spell.
+    for (hand, pays) in [(2, true), (2, false), (0, false)] {
+        let mut g = game();
+        let cleric = g.put(0, CLERIC, Zone::Battlefield);
+        let cards: Vec<ObjId> = (0..hand).map(|_| g.put(1, BEAR, Zone::Hand)).collect();
+        let spell = shock(&mut g, 1, Target::Object(cleric));
+        until_asked(&mut g);
+        let case = format!("hand {hand}, pays {pays}");
+        if hand == 0 {
+            cite!(["702.21a", "118.3"]; case: case; assert!(g.stack.is_empty() && g.battlefield.contains(&cleric), "{:?}", g.asked()));
+            continue;
+        }
+        cite!(["702.21a", "118.12"]; case: case.clone(); assert!(matches!(g.asked(), Some((1, Asked::May))), "{:?}", g.asked()));
+        if !pays {
+            g.act(1, Move::Choose(Answer::No)).unwrap();
+            cite!(["702.21a", "701.6a"]; case: case; assert!(g.stack.is_empty() && g.players[1].hand == cards));
+            continue;
+        }
+        g.act(1, Move::Choose(Answer::Yes)).unwrap();
+        cite!(["701.9b"]; assert!(!matches!(g.asked(), Some((_, Asked::Objects { .. } | Asked::OptionalObjects { .. } | Asked::Select { .. }))), "no one picks the card: {:?}", g.asked()));
+        let discarded: Vec<ObjId> = cards.iter().copied().filter(|c| g.obj(*c).zone != Zone::Hand).collect();
+        cite!(["702.21a", "701.9b"]; assert_eq!((discarded.len(), g.players[1].hand.len(), g.players[1].graveyard.len(), g.stack.clone()), (1, 1, 1, vec![spell])));
+        until_asked(&mut g);
+        assert_eq!(g.obj(cleric).damage, 2, "Shock resolved");
     }
 }
 

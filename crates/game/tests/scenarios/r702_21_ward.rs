@@ -61,15 +61,16 @@ fn r702_21_sire_is_admitted_and_unsupported_ward_costs_are_refused() {
     // costs whose payment the engine doesn't perform; ward {X} chooses no X (702.21b)
     for (text, why) in [
         ("Ward {X}", "keyword: Ward"),
-        ("Ward—Discard a card at random.", "choice: at random selection not lowered"),
+        ("Ward—Discard any number of cards at random.", "choice: at random selection not lowered"),
         ("Ward—Get five poison counters.", "unless: a payment of GetCounters"),
         ("Ward—Collect evidence 4.", "unless: a payment of Numbered"),
     ] {
         let d = CardDef::new("Probe", "{0}", "Creature — Bear", text, Some((1, 1))).unwrap();
         assert_eq!(check(&d).map_err(|u| u.0), Err(why.to_string()), "{text}");
     }
-    // Ward—Waterbend {4}: r701_67_waterbend
-    for text in ["Ward—Waterbend {4}.", "Ward—Discard a card.", "Ward—Sacrifice a creature.", "Ward—Sacrifice three permanents.", "Ward—Pay life equal to this creature's power."] {
+    // Ward—Waterbend {4}: r701_67_waterbend; Ward—Discard a card at random:
+    // r702_21_ward_granted_costs
+    for text in ["Ward—Waterbend {4}.", "Ward—Discard a card.", "Ward—Discard a card at random.", "Ward—Sacrifice a creature.", "Ward—Sacrifice three permanents.", "Ward—Pay life equal to this creature's power."] {
         let d = CardDef::new("Probe", "{0}", "Creature — Bear", text, Some((1, 1))).unwrap();
         cite!(["702.21a"]; case: text; assert!(check(&d).is_ok()));
     }

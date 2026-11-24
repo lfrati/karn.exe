@@ -214,7 +214,7 @@ fn r118_12a_esper_sentinel_draws_only_when_the_caster_does_not_pay_x() {
 fn r118_12a_the_or_form_and_at_random_payments_are_refused() {
     for (text, reason) in [
         ("Each opponent loses 3 life unless they discard a card or sacrifice a creature.", "unless: alternative payments"),
-        ("You lose 3 life unless you discard a card at random.", "choice: at random selection not lowered"),
+        ("You lose 3 life unless you discard any number of cards at random.", "choice: at random selection not lowered"),
     ] {
         let d = CardDef::new("Procedure", "{0}", "Sorcery", text, None).unwrap();
         assert_eq!(game::play::check(&d).expect_err("unsupported unless payment").0,reason,"{text}");

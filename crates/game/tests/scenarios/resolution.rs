@@ -548,10 +548,11 @@ fn what_only_a_creature_has_is_said_of_the_creature_in_a_list_of_types() {
 
 #[test]
 fn what_a_target_player_would_do_is_checked_before_any_player_is_chosen() {
-    // "Target player discards two cards at random.": the engine does not discard at random
-    // yet, and says so before the card is cast, when there is no target player to walk the
-    // instruction for; it was found out as the spell resolved
-    let d = CardDef::new("Hymn to Tourach", "{B}{B}", "Sorcery", "Target player discards two cards at random.", None).unwrap();
+    // "Target player discards any number of cards at random.": the engine does not discard
+    // a number of cards at random that is no number, and says so before the card is cast,
+    // when there is no target player to walk the instruction for; it was found out as the
+    // spell resolved
+    let d = CardDef::new("Probe", "{B}{B}", "Sorcery", "Target player discards any number of cards at random.", None).unwrap();
     assert!(check(&d).unwrap_err().0.contains("at random"));
     let d = CardDef::new("Mind Rot", "{2}{B}", "Sorcery", "Target player discards two cards.", None).unwrap();
     check(&d).unwrap();
