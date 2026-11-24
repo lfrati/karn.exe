@@ -467,6 +467,7 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if let Some(ability) = firebending(item) { return Some(ability); }
     if let Some(ability) = mobilize(item) { return Some(ability); }
     if let Some(ability) = reinforce(item) { return Some(ability); }
+    if item.keyword.name() == "Riot" && item.param == KeywordParam::None { return Some(riot().clone()); }
     static EQUIP: OnceLock<Ability> = OnceLock::new();
     static LEVEL_UP: OnceLock<Ability> = OnceLock::new();
     static OUTLAST: OnceLock<Ability> = OnceLock::new();
@@ -621,6 +622,26 @@ fn myriad() -> &'static Ability {
     crate::token::init(&RULE, || CardDef::new("Myriad rule", "", "Creature",
         "Whenever this creature attacks, for each opponent other than defending player, you may create a token that's a copy of this creature that's tapped and attacking that player or a planeswalker they control. If one or more tokens are created this way, exile the tokens at end of combat.", None)
         .expect("the grammar reads rule 702.116a").abilities[0].clone())
+}
+
+/// "Riot" means "You may have this permanent enter with an additional +1/+1 counter on it.
+/// If you don't, it gains haste." (702.136a): a replacement effect its controller chooses
+/// with as it enters ([`crate::replace::AsEnters::Have`]).
+fn riot() -> &'static Ability {
+    static RULE: OnceLock<Ability> = OnceLock::new();
+    crate::token::init(&RULE, || CardDef::new("Riot rule", "", "Creature",
+        "You may have this permanent enter with an additional +1/+1 counter on it. If you don't, it gains haste.", None)
+        .expect("the grammar reads rule 702.136a").abilities[0].clone())
+}
+
+/// "Unleash" means "You may have this permanent enter with an additional +1/+1 counter on
+/// it" and "This permanent can't block as long as it has a +1/+1 counter on it." (702.98a):
+/// any +1/+1 counter, not only the one it may enter with.
+pub(crate) fn unleash() -> &'static Vec<Ability> {
+    static RULE: OnceLock<Vec<Ability>> = OnceLock::new();
+    crate::token::init(&RULE, || CardDef::new("Unleash rule", "", "Creature",
+        "You may have this permanent enter with an additional +1/+1 counter on it.\nThis permanent can't block as long as it has a +1/+1 counter on it.", None)
+        .expect("the grammar reads rule 702.98a").abilities)
 }
 
 /// 702.115a: the damaged player exiles one library card, regardless of damage amount.

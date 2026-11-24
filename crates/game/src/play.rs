@@ -743,7 +743,7 @@ fn check_face_as(def: &CardDef, alternative: bool, r: &mut Refusals) -> Res<()> 
     }
     // the choices are made one at a time before the permanent enters (614.12a); the game asks
     // one of a card
-    if def.abilities.iter().filter(|a| crate::replace::as_enters(a).is_some()).count() > 1 {
+    if def.abilities.iter().chain(def.keyword_abilities.iter().map(|(_, a)| a)).filter(|a| crate::replace::as_enters(a).is_some()).count() > 1 {
         r.say("as this enters: more than one choice")?;
     }
     if def.replacements.iter().filter(|r| matches!(&r.result, Ok(crate::replace::Replacement::CopyEntry(_)))).count() > 1 {

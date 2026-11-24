@@ -45,6 +45,13 @@ pub(crate) enum Enters {
     /// "with two +1/+1 counters on it", "with an additional +1/+1 counter on it": on top of
     /// what it enters with anyway.
     Counters { kind: String, count: expr::Amount },
+    /// "If you don't, it gains haste." (riot, 702.136a): what it has from as it enters, for
+    /// as long as it is on the battlefield, whoever controls it.
+    Gains(Vec<crate::keyword::Held>),
+    /// What it gains when it was to enter with counters of this kind but can't have them put
+    /// on it: riot's ruling, "If a creature entering the battlefield has riot but can't have a
+    /// +1/+1 counter put onto it, it gains haste."
+    GainsUnless { kind: String, gains: Vec<crate::keyword::Held> },
 }
 
 impl Enters {
@@ -77,6 +84,8 @@ impl Enters {
             Enters::Tapped => entry.tapped = true,
             Enters::Prepared => entry.enters_prepared = true,
             Enters::Counters { kind, count } => entry.counters.push((kind.clone(), count.checked(game, ctx, &NoLocals)?)),
+            Enters::Gains(gains) => entry.gains.extend(gains.iter().cloned()),
+            Enters::GainsUnless { kind, gains } => entry.gains_unless.push((kind.clone(), gains.clone())),
         }        Ok(())
     }
 }
@@ -86,6 +95,9 @@ impl Enters {
 pub(crate) enum Asked {
     /// The life its controller may pay, and how it enters when they don't.
     Life { life: expr::Amount, otherwise: Vec<Enters> },
+    /// "You may have this creature enter with an additional +1/+1 counter on it. If you
+    /// don't, it gains haste." (riot, unleash): how it enters if they choose to, and if not.
+    Have { chosen: Vec<Enters>, otherwise: Vec<Enters> },
     /// Reveal a qualifying card from hand, or use the fallback entry modification.
     Reveal { card: expr::Set, otherwise: Vec<Enters> },
     /// Behold: a qualifying card of the hand or permanent its controller controls (701.4a),
@@ -237,6 +249,11 @@ impl Replacement {
                         Asked::Behold { cards: expr::Cards::compile(&cards, support, &mut linked(support))?,
                             permanents: expr::Set::compile(&permanents, support, &mut linked(support))?, otherwise: arrive(otherwise)? }
                     }
+                    AsEnters::Have(chosen, gains) => Asked::Have { chosen: arrive(chosen)?,
+                        otherwise: if gains.is_empty() { Vec::new() } else { vec![Enters::Gains(gains.iter().map(|item| match item {
+                            ir::action::Granted::Keyword(item) => crate::keyword::Held::compile(item, support),
+                            _ => unsupported("entry: gaining other than a keyword"),
+                        }).collect::<Res<Vec<_>>>()?)] } },
                     AsEnters::Value(kind) => Asked::Value(kind),
                     AsEnters::ValueThenLife(kind, life, otherwise) => Asked::ValueThenLife {
                         kind, life: expr::Amount::compile(life, support, &mut linked(support))?, otherwise: arrive(otherwise)?,
@@ -750,6 +767,10 @@ pub(crate) struct Entry {
     pub(crate) frozen_counters: Option<crate::operation::EntryInventory>,
     /// Values chosen before entry, with producer and chooser (614.12a, 607.2d).
     pub(crate) values: Vec<Record>,
+    /// Keywords it gains as it enters, and those it gains unless it can have counters of a
+    /// kind put on it then ([`Enters::Gains`], [`Enters::GainsUnless`]).
+    gains: Vec<crate::keyword::Held>,
+    gains_unless: Vec<(String, Vec<crate::keyword::Held>)>,
     /// What permanents already on the battlefield say of how permanents they describe enter:
     /// whose statement it is, of what, and what it says. Whether the one entering is
     /// described is asked of it as it would exist on the battlefield (614.12).
@@ -798,6 +819,8 @@ pub(crate) struct Entering {
 pub(crate) enum Asks {
     /// Whether to pay this much life, and how it enters if they don't.
     Life { life: u32, otherwise: Vec<Enters> },
+    /// Whether it enters this way, and how it enters if not.
+    Have { chosen: Vec<Enters>, otherwise: Vec<Enters> },
     Reveal { among: Vec<ObjId>, private: bool, otherwise: Vec<Enters> },
     /// Which of these cards of the hand and permanents to behold (701.4a), if any, and how it
     /// enters if none.
@@ -815,6 +838,7 @@ impl Asks {
         match self {
             Asks::Copy { effect, among } => Some(Choice::Select { among: among.clone(), min: usize::from(!effect.optional && !among.is_empty()), max: usize::from(!among.is_empty()) }),
             Asks::Life { life, .. } => payments.can_reserve(game, player, *life).then_some(Choice::May { possible: true }),
+            Asks::Have { .. } => Some(Choice::May { possible: true }),
             Asks::Reveal { among, private, .. } | Asks::Behold { among, private, .. } =>
                 (*private || !among.is_empty()).then(|| Choice::Select { among: among.clone(), min: 0, max: 1 }),
             Asks::Value { kind, .. } if kind.kind == Kind::Player => Some(Choice::Player { among: players(game, player, *kind) }),
@@ -845,6 +869,16 @@ impl Asks {
             (Asks::Life { life, otherwise, .. }, None) if !payments.can_reserve(game, player, *life) => {
                 chosen.arrivals.extend(otherwise.clone());
             }
+            // with what it gains if not when it can't have the counters it was to enter with
+            (Asks::Have { chosen: how, otherwise }, Some(Answer::Yes)) => {
+                chosen.arrivals.extend(how.iter().cloned());
+                let gains: Vec<_> = otherwise.iter().flat_map(|e| match e { Enters::Gains(gains) => gains.clone(), _ => Vec::new() }).collect();
+                if !gains.is_empty() {
+                    chosen.arrivals.extend(how.iter().filter_map(|e| match e {
+                        Enters::Counters { kind, .. } => Some(Enters::GainsUnless { kind: kind.clone(), gains: gains.clone() }), _ => None }));
+                }
+            }
+            (Asks::Have { otherwise, .. }, Some(Answer::No)) => chosen.arrivals.extend(otherwise.clone()),
             (Asks::Reveal { among, otherwise, .. }, Some(Answer::Objects(objects))) if objects.len() <= 1
                 && objects.iter().all(|o| among.contains(o)) => {
                 if let Some(card) = objects.first() { payments.reveal(player, *card); }
@@ -961,6 +995,11 @@ pub enum AsEnters<'a> {
     Behold(&'a Selector, &'a [Arrival]),
     /// A single typed value, referred to by linked abilities (607.2d).
     Value(crate::binding::Domain),
+    /// "You may have this creature enter with an additional +1/+1 counter on it. If you
+    /// don't, it gains haste." (riot, 702.136a), "You may have this permanent enter with an
+    /// additional +1/+1 counter on it" (unleash, 702.98a): how it may enter, and what it gains
+    /// when it doesn't.
+    Have(&'a [Arrival], &'a [ir::action::Granted]),
     /// "As this land enters, choose a basic land type. Then you may pay 2 life. If you
     /// don't, it enters tapped.": the value, then the life and how it enters without it.
     ValueThenLife(crate::binding::Domain, &'a Amount, &'a [Arrival]),
@@ -984,6 +1023,18 @@ pub fn as_enters(a: &Ability) -> Option<AsEnters<'_>> {
                 _ => None,
             }
         }
+        [Sentence::Do(offer)] => Some(AsEnters::Have(have(offer)?, &[])),
+        [Sentence::Do(offer), Sentence::Led { lead: Lead::Modifier(Modifier::If(Condition::Did { who, outcome: ir::condition::Outcome::Didnt })), rest: then }]
+            if who.quant == Quant::Definite(Ref::You) => {
+            let arrivals = have(offer)?;
+            let Sentence::Do(then) = then.as_ref() else { return None };
+            match &then.first {
+                Clause { subject: Some(Subject::Selector(it)), may: false, also: false, first: Act { action: Action::Gains(gains), mods, may: false }, rest }
+                    if matches!(it.quant, Quant::Definite(Ref::This | Ref::Anaphor(Anaphor::It))) && mods.is_empty() && rest.is_empty() && then.rest.is_empty() =>
+                    Some(AsEnters::Have(arrivals, gains)),
+                _ => None,
+            }
+        }
         [Sentence::Led { lead: Lead::AsEnters(it), rest: offer }, Sentence::Led { lead: Lead::Modifier(Modifier::If(unpaid)), rest: then }] if this(it) => {
             match offered(offer, unpaid, then)? {
                 (Action::PayLife(n), enters) => Some(AsEnters::Life(n, enters)),
@@ -994,6 +1045,16 @@ pub fn as_enters(a: &Ability) -> Option<AsEnters<'_>> {
         }
         _ => None,
     }
+}
+
+/// "You may have this creature enter with an additional +1/+1 counter on it": how its
+/// controller may have it enter, when that is all the instruction says.
+fn have(offer: &ir::Body) -> Option<&[Arrival]> {
+    let Clause { subject: Some(Subject::Selector(you)), may: true, also: false, first: Act { action: Action::Have { who, action }, mods, may: false }, rest } = &offer.first
+    else { return None };
+    if you.quant != Quant::Definite(Ref::You) || who.quant != Quant::Definite(Ref::This) || !mods.is_empty() || !rest.is_empty() || !offer.rest.is_empty() { return None; }
+    let arrivals = arrivals(action)?;
+    arrivals.iter().all(|a| matches!(a, Arrival::Counters(_))).then_some(arrivals)
 }
 
 /// "choose a creature type": the one typed value a sentence has its subject's controller
@@ -1105,6 +1166,7 @@ impl Game {
             let Replacement::AsEnters(asked) = replacement else { return None };
             let asks = match asked {
                 Asked::Life { life, otherwise } => Asks::Life { life: life.evaluate(self, &ctx.clone().with_key(key), &NoLocals), otherwise: otherwise.clone() },
+                Asked::Have { chosen, otherwise } => Asks::Have { chosen: chosen.clone(), otherwise: otherwise.clone() },
                 // applied already, with its question after the value asked
                 Asked::ValueThenLife { .. } if chosen.values.iter().any(|r| r.link == LinkId(key.clone())) => return None,
                 Asked::ValueThenLife { kind, life, otherwise } => Asks::Value { kind: *kind, link: LinkId(key.clone()),
@@ -1215,6 +1277,17 @@ impl Game {
         let o = self.obj_mut(permanent);
         o.tapped |= entry.tapped;
         if entry.enters_prepared { self.prepare(permanent); }
+        // it is on the battlefield as it would exist: whether counters can be put on it is
+        // asked of it as it is (614.12)
+        let controller = self.controller(permanent);
+        let mut gains = std::mem::take(&mut entry.gains);
+        for (kind, unless) in std::mem::take(&mut entry.gains_unless) {
+            if !self.may_place(Target::Object(permanent), &kind, controller) { gains.extend(unless); }
+        }
+        if !gains.is_empty() {
+            self.begin_effect_from(vec![crate::layers::Change::Gains(gains)], vec![permanent],
+                crate::layers::Lifetime::SourcePresent { source: permanent }, None);
+        }
         Ok(entry.counters)
     }
 
