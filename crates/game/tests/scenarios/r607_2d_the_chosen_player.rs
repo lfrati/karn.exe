@@ -105,3 +105,122 @@ fn r607_2d_black_vise_triggers_at_the_chosen_players_upkeep() {
     t.to_no_combat(1, Part::Upkeep);
     t.expect().rules(["503.1a", "607.2d"]).life(1, 18).check();
 }
+
+/// Play on to player `p`'s next declaration of attackers, declaring none and passing.
+fn to_attackers(t: &mut T, p: usize) {
+    let turn = t.g.turn;
+    for _ in 0..2000 {
+        match t.g.decision.clone() {
+            Some(Decision::Attackers { player }) if player == p && t.g.turn > turn => return,
+            Some(Decision::Attackers { player }) => { t.g.act(player, Move::Attack(vec![])).unwrap(); }
+            Some(Decision::Blockers { player }) => { t.g.act(player, Move::Block(vec![])).unwrap(); }
+            _ => { t.g.act(t.g.decision_maker(t.g.priority), Move::Pass).unwrap(); }
+        }
+    }
+    panic!("never reached player {p}'s attackers");
+}
+
+/// True-Name Nemesis entered for player 0 with player 1 chosen, in a three-player game where
+/// players 1 and 2 each control Grizzly Bears; it attacks `defender` on its controller's next
+/// turn, and the game is past the declaration of attackers.
+fn nemesis_attacks(defender: usize) -> (T, ObjId) {
+    let mut t = Board::new(3).hand(0, &["True-Name Nemesis"]).battlefield(1, &["Grizzly Bears"])
+        .battlefield(2, &["Grizzly Bears"]).fill(5).build();
+    enters_choosing(&mut t, "True-Name Nemesis", "{1}{U}{U}", "CUU", vec![0, 1, 2], 1);
+    to_attackers(&mut t, 0);
+    let nemesis = t.find_in_battlefield("True-Name Nemesis");
+    t.g.act(0, Move::Attack(vec![(nemesis, Target::Player(defender))])).unwrap();
+    (t, nemesis)
+}
+
+/// Pass priority until `done` holds.
+fn pass_until(t: &mut T, done: impl Fn(&Game) -> bool) {
+    for _ in 0..20 {
+        if done(&t.g) { return; }
+        t.g.act(t.g.decision_maker(t.g.priority), Move::Pass).unwrap();
+    }
+    panic!("never reached");
+}
+
+// Rules: 607.2d, 702.16f, 510.1a
+// Given: True-Name Nemesis (3/1), with player 1 chosen, attacks player 1, who controls
+// Grizzly Bears.
+// When: combat goes on.
+// Expect: the Bears can't block it, a creature the chosen player controls; it is unblocked
+// and deals 3 damage to player 1.
+#[test]
+fn r702_16f_the_chosen_players_creatures_cant_block_true_name_nemesis() {
+    let (mut t, nemesis) = nemesis_attacks(1);
+    let bears = t.find_in(1, Zone::Battlefield, "Grizzly Bears");
+    cite!(["702.16f"]; assert!(t.g.cant_block(bears, nemesis, &[bears])));
+    pass_until(&mut t, |g| matches!(g.decision, Some(Decision::Blockers { .. })) || g.players[1].life < 20);
+    if let Some(Decision::Blockers { player }) = t.g.decision {
+        cite!(["702.16f"]; refused("can't block"): t.g.act(player, Move::Block(vec![(bears, nemesis)])));
+        t.g.act(player, Move::Block(vec![])).unwrap();
+        pass_until(&mut t, |g| g.players[1].life < 20);
+    }
+    t.expect().rules(["510.1a"]).life(1, 17).zone(1, Zone::Battlefield, &["Grizzly Bears"]).check();
+}
+
+// Rules: 607.2d, 702.16f, 510.2
+// Given: True-Name Nemesis (3/1), with player 1 chosen, attacks player 2, who controls
+// Grizzly Bears (2/2).
+// When: player 2 blocks with the Bears and combat damage is dealt.
+// Expect: the block stands: protection is from player 1 only; each deals its damage to the
+// other, and both die.
+#[test]
+fn r702_16f_another_players_creature_blocks_true_name_nemesis() {
+    let (mut t, nemesis) = nemesis_attacks(2);
+    let bears = t.find_in(2, Zone::Battlefield, "Grizzly Bears");
+    pass_until(&mut t, |g| matches!(g.decision, Some(Decision::Blockers { .. })));
+    assert_eq!(t.g.decision, Some(Decision::Blockers { player: 2 }));
+    cite!(["702.16f"]; ok: t.g.act(2, Move::Block(vec![(bears, nemesis)])));
+    for _ in 0..10 {
+        if !t.g.battlefield.contains(&nemesis) { break; }
+        t.g.act(t.g.decision_maker(t.g.priority), Move::Pass).unwrap();
+    }
+    t.expect().rules(["510.2", "704.5g"]).zone(0, Zone::Graveyard, &["True-Name Nemesis"])
+        .zone(2, Zone::Graveyard, &["Grizzly Bears"]).zone(1, Zone::Battlefield, &["Grizzly Bears"]).check();
+}
+
+// Rules: 607.2d, 702.16c, 704.5m
+// Given: True-Name Nemesis, with player 1 chosen, enchanted by its controller's Holy Strength.
+// When: player 1 casts Kefnet's Last Word to gain control of Holy Strength.
+// Expect: an Aura the chosen player controls can't enchant it: Holy Strength is put into its
+// owner's graveyard as a state-based action, and the Nemesis is 3/1 again.
+#[test]
+fn r702_16c_an_aura_the_chosen_player_controls_falls_off_true_name_nemesis() {
+    let mut t = Board::new(2).hand(0, &["True-Name Nemesis", "Holy Strength"]).hand(1, &["Kefnet's Last Word"]).fill(5).build();
+    enters_choosing(&mut t, "True-Name Nemesis", "{1}{U}{U}", "CUU", vec![0, 1], 1);
+    t.mana(0, "{W}").cast(0, "Holy Strength", vec!["True-Name Nemesis".into()], mana_pool("W")).unwrap();
+    t.resolve();
+    t.expect().rules(["303.4"]).pt("True-Name Nemesis", 4, 3).check();
+    t.to_no_combat(1, Part::PrecombatMain);
+    t.mana(1, "{2}{U}{U}").cast(1, "Kefnet's Last Word", vec!["Holy Strength".into()], mana_pool("CCUU")).unwrap();
+    t.resolve();
+    t.expect().rules(["702.16c", "704.5m"]).zone(0, Zone::Graveyard, &["Holy Strength"])
+        .zone(1, Zone::Battlefield, &[]).pt("True-Name Nemesis", 3, 1).check();
+}
+
+// Rules: 607.2d, 702.16d, 704.5n
+// Given: True-Name Nemesis, with player 1 chosen, equipped with its controller's Bonesplitter.
+// When: player 1 casts Kefnet's Last Word to gain control of Bonesplitter.
+// Expect: Equipment the chosen player controls can't equip it: Bonesplitter becomes
+// unattached as a state-based action and stays on the battlefield under player 1's control,
+// and the Nemesis is 3/1 again.
+#[test]
+fn r702_16d_equipment_the_chosen_player_controls_becomes_unattached_from_true_name_nemesis() {
+    let mut t = Board::new(2).hand(0, &["True-Name Nemesis"]).battlefield(0, &["Bonesplitter"]).hand(1, &["Kefnet's Last Word"]).fill(5).build();
+    enters_choosing(&mut t, "True-Name Nemesis", "{1}{U}{U}", "CUU", vec![0, 1], 1);
+    let splitter = t.find_in_battlefield("Bonesplitter");
+    let equip = t.g.abilities(splitter).iter().position(|a| matches!(&**a, ir::Ability::Activated { .. })).expect("equip");
+    t.mana(0, "{1}").activate(0, "Bonesplitter", equip, vec!["True-Name Nemesis".into()], mana_pool("C")).unwrap();
+    t.resolve();
+    t.expect().rules(["702.6a"]).pt("True-Name Nemesis", 5, 1).check();
+    t.to_no_combat(1, Part::PrecombatMain);
+    t.mana(1, "{2}{U}{U}").cast(1, "Kefnet's Last Word", vec!["Bonesplitter".into()], mana_pool("CCUU")).unwrap();
+    t.resolve();
+    let splitter = t.find_in_battlefield("Bonesplitter");
+    cite!(["702.16d", "704.5n"]; assert_eq!((t.g.controller(splitter), t.g.attached_to(splitter)), (1, None)));
+    t.expect().rules(["702.16d"]).pt("True-Name Nemesis", 3, 1).check();
+}

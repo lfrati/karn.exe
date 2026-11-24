@@ -273,7 +273,8 @@ fn r702_16a_unimplemented_protection_qualities_stay_refused() {
         "Protection from artifacts or from the color of your choice",
     ] {
         let card = CardDef::new("Unsupported", "{W}", "Creature — Spirit", text, Some((2, 2))).unwrap();
-        let reason=if text=="Protection from the chosen color" {"linked choice: no ability identity"}else{"keyword: Protection"};
+        // nothing chose the color or the player these name: no ability links a choice to them (607.2d)
+        let reason=if text=="Protection from the chosen color" || text=="Protection from the chosen player" {"linked choice: no ability identity"}else{"keyword: Protection"};
         crate::support::refused(game::play::check(&card).map_err(|e|e.0),reason);
     }
 }

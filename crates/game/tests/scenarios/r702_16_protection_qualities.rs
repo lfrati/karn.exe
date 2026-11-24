@@ -224,7 +224,8 @@ fn r702_16_what_protection_does_not_yet_say_stays_refused() {
             assert_eq!(CardDef::new("Unsupported","{W}",kind,text,Some((2,2))).expect_err("unsupported name-choice grammar"),"text the grammar does not read");
         } else {
             let card=CardDef::new("Unsupported","{W}",kind,text,if kind.starts_with("Creature") {Some((2,2))}else{None}).unwrap();
-            let reason=if text=="Protection from the chosen color" {"linked choice: no ability identity"}else{"keyword: Protection"};
+            // nothing chose the color or the player these name: no ability links a choice to them (607.2d)
+            let reason=if text=="Protection from the chosen color" || text=="Protection from the chosen player" {"linked choice: no ability identity"}else{"keyword: Protection"};
             crate::support::refused(game::play::check(&card).map_err(|e|e.0),reason);
         }
     }
