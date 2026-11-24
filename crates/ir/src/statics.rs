@@ -24,9 +24,10 @@ use serde::Serialize;
 /// A sentence that sets up a continuous, replacement or prevention effect, or changes a rule.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub enum Static {
-    /// "Spells and abilities your opponents control can't cause you to sacrifice permanents."
-    /// The causing sources, affected player and forbidden event remain separate descriptions.
-    CantCause { sources: ObjectSet, player: Selector, event: EventAction },
+    /// "Spells and abilities your opponents control can't cause you to sacrifice permanents",
+    /// "… to discard cards or sacrifice permanents": each of the events is forbidden. The
+    /// causing sources, affected player and forbidden events remain separate descriptions.
+    CantCause { sources: ObjectSet, player: Selector, events: Vec<EventAction> },
     /// "~'s power and toughness are each equal to the number of creatures you control", "~'s
     /// power is equal to …": a characteristic-defining ability (604.3) or a power/toughness
     /// setting effect (613.4b); `None` leaves that value alone.

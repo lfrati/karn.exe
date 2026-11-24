@@ -1269,13 +1269,13 @@ fn instant_activations() -> P<Static> {
 fn cant_cause() -> P<Static> {
     let s = selectors();
     let player = alt("player", vec![lit("you").to(Selector::you()), s.singular.clone(), s.plural.clone()]);
-    s.set_pl.skip(&lit("can't cause")).then(&player).skip(&lit("to")).then(&crate::event::rule_action(Form::Cant, false)).map(
-        |((sources, player), event)| {
-            let pattern = EventPattern::new(vec![player.clone()], vec![event.clone()]);
-            pattern.typed().then_some(Static::CantCause { sources, player, event })
+    s.set_pl.skip(&lit("can't cause")).then(&player).skip(&lit("to")).then(&one_or_list(&crate::event::rule_action(Form::Cant, false), "or")).map(
+        |((sources, player), events)| {
+            let typed = events.iter().all(|e| EventPattern::new(vec![player.clone()], vec![e.clone()]).typed());
+            typed.then_some(Static::CantCause { sources, player, events })
         },
         |stated| match stated {
-            Static::CantCause { sources, player, event } => Some(((sources.clone(), player.clone()), event.clone())),
+            Static::CantCause { sources, player, events } => Some(((sources.clone(), player.clone()), events.clone())),
             _ => None,
         },
     )

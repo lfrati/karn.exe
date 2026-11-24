@@ -231,9 +231,10 @@ impl Restriction {
         }
         if let Ability::Text(ir::Effect(rows)) = a
             && let [ir::Sentence::Static(stated)] = rows.as_slice()
-            && let ir::statics::Static::CantCause { sources, player, event } = stated.as_ref()
+            && let ir::statics::Static::CantCause { sources, player, events } = stated.as_ref()
         {
             return Some((|| {
+                let [event] = events.as_slice() else { return unsupported("causal prohibition: several events"); };
                 let subject = Subject::compile(&ir::Subject::Selector(player.clone()), support, &mut linked(support))?;
                 let rule = Rule::cant_cause(sources, event, support, &mut linked(support))?;
                 Ok(Restriction { scope: crate::functions::scope(a, modes)?, subject, acts: vec![(When::Always, rule)] })

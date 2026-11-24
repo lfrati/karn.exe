@@ -1492,3 +1492,15 @@ fn r608_2c_repeat_this_process_for_other_kinds() {
     let (one, _) = read("Draw a card. Repeat this process for an artifact.");
     assert_ne!(artifacts, one);
 }
+
+/// CR 101.2: "can't cause you to discard cards or sacrifice permanents" forbids each of the
+/// events (Tamiyo, Collector of Tales), as "… to sacrifice permanents" forbids one (Tajuru
+/// Preserver).
+#[test]
+fn r101_2_cant_cause_you_to_discard_or_sacrifice() {
+    let text = "Spells or abilities your opponents control can't cause you to discard cards or sacrifice permanents.";
+    let (both, printed) = read(text);
+    assert_eq!(printed, text);
+    let (sacrifice, _) = read("Spells or abilities your opponents control can't cause you to sacrifice permanents.");
+    assert_ne!(both, sacrifice);
+}
