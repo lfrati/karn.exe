@@ -466,6 +466,7 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if let Some(ability) = station(item) { return Some(ability.clone()); }
     if let Some(ability) = firebending(item) { return Some(ability); }
     if let Some(ability) = mobilize(item) { return Some(ability); }
+    if let Some(ability) = reinforce(item) { return Some(ability); }
     static EQUIP: OnceLock<Ability> = OnceLock::new();
     static LEVEL_UP: OnceLock<Ability> = OnceLock::new();
     static OUTLAST: OnceLock<Ability> = OnceLock::new();
@@ -932,6 +933,25 @@ fn entry_counter_count(ability: &mut Ability, count: u32) {
     let ir::statics::StaticAct::Enters(arrivals) = action.as_mut() else { unreachable!("entry counters") };
     let [ir::statics::Arrival::Counters(on)] = arrivals.as_mut_slice() else { unreachable!("one counter kind") };
     on.counters.count = ir::Amount::Const(count);
+}
+
+/// "Reinforce N—[cost]" means "[Cost], Discard this card: Put N +1/+1 counters on target
+/// creature." (702.77a); N may be X, the X of its cost ("Reinforce X—{X}{W}{W}").
+fn reinforce(item: &ir::token::KeywordInstance) -> Option<Ability> {
+    if item.keyword.name() != "Reinforce" { return None; }
+    let KeywordParam::NumberAndMana(n, mana) = &item.param else { return None };
+    static RULE: OnceLock<Ability> = OnceLock::new();
+    let rule = crate::token::init(&RULE, || CardDef::new("Reinforce rule", "", "Creature",
+        "{0}, Discard this card: Put two +1/+1 counters on target creature.", None)
+        .expect("the grammar reads rule 702.77a").abilities[0].clone());
+    let Ability::Activated { cost, effect } = rule else { unreachable!("reinforce is an activated ability") };
+    let mut cost = cost.clone();
+    cost.0[0] = ir::CostPart::Mana(mana.clone());
+    let mut effect = effect.clone();
+    let [ir::Sentence::Do(body)] = effect.0.as_mut_slice() else { unreachable!("one instruction") };
+    let ir::Action::PutCounters(placements) = &mut body.first.first.action else { unreachable!("reinforce puts counters") };
+    placements[0].counters[0].count = n.clone();
+    Some(Ability::Activated { cost, effect })
 }
 
 /// A combat trigger of a fixed N, read from its rule with N written in. 702.23a/b: Rampage
