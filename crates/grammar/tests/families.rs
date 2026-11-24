@@ -1400,3 +1400,16 @@ fn r708_2_is_face_down() {
     assert_ne!(down, up);
     assert!(serde_json::to_string(&down).unwrap().contains("FaceDown"));
 }
+
+/// CR 702.16a: protection from a quality the permanent's choice names: "the chosen card name"
+/// (Runed Halo), "the chosen card type" (Serra's Emissary).
+#[test]
+fn r702_16a_protection_from_the_chosen_card_name_or_type() {
+    for text in ["You have protection from the chosen card name.", "You and creatures you control have protection from the chosen card type."] {
+        let (_, printed) = read(text);
+        assert_eq!(printed, text);
+    }
+    let (name, _) = read("You have protection from the chosen card name.");
+    let (opponents, _) = read("You have protection from each of your opponents.");
+    assert_ne!(name, opponents);
+}

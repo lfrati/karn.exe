@@ -225,6 +225,10 @@ fn quality() -> P<Quality> {
             lit("everything").to(Quality::Everything),
             lit("the chosen color").to(Quality::ChosenColor),
             lit("the chosen player").to(Quality::ChosenPlayer),
+            // "protection from the chosen card name" (Runed Halo), "… the chosen card type"
+            // (Serra's Emissary): from what has that name or is of that type (702.16a)
+            lit("the chosen card name").to(Quality::Filter(Filter::Atom(Atom::Reference(ir::reference::UnresolvedRef::choice(ir::reference::Kind::CardName))))),
+            lit("the chosen card type").to(Quality::Filter(Filter::Atom(Atom::Reference(ir::reference::UnresolvedRef::choice(ir::reference::Kind::Type))))),
             lit("the color of your choice").to(Quality::ColorOfChoice),
             // "Choose a color. … gains hexproof from that color"
             lit("that color").to(Quality::ChosenColor).alias(),
