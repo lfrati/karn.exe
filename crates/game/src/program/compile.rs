@@ -2579,19 +2579,25 @@ fn targeted_move_origins(effect: &mut Effect) -> Res<()> {
 /// characteristics or existence of a token previously created. Bind only one explicit
 /// earlier template; conditional counts therefore reuse it without a runtime search.
 fn token_references(effect: &mut Effect) -> Res<()> {
-    fn visit(said: &mut Sentence, earlier: &mut Vec<ir::token::TokenKind>) -> Res<()> {
+    /// What "those tokens" are: the earlier template, and how it said they enter ("create two
+    /// tapped 2/2 black Horror creature tokens. … instead create X of those tokens": tapped).
+    type Template = (ir::token::TokenKind, bool, Option<ir::token::Combat>);
+    fn visit(said: &mut Sentence, earlier: &mut Vec<Template>) -> Res<()> {
         match said {
             Sentence::Led { rest, .. } => visit(rest, earlier)?,
             Sentence::Do(body) => for act in acts_mut(body) {
                 if let Action::Create(tokens) = &mut act.action {
                     for token in &mut tokens.items {
                         if token.kind == ir::token::TokenKind::Those {
-                            let [kind] = earlier.as_slice() else {
+                            let [(kind, tapped, combat)] = earlier.as_slice() else {
                                 return unsupported("token reference: absent or ambiguous earlier token template");
                             };
                             token.kind = kind.clone();
-                        } else if !earlier.contains(&token.kind) {
-                            earlier.push(token.kind.clone());
+                            token.tapped |= *tapped;
+                            if token.combat.is_none() { token.combat = combat.clone(); }
+                        } else {
+                            let template = (token.kind.clone(), token.tapped, token.combat.clone());
+                            if !earlier.contains(&template) { earlier.push(template); }
                         }
                     }
                 }
