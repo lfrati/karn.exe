@@ -949,6 +949,25 @@ pub fn sentence(body: &P<Body>) -> P<Static> {
                 _ => None,
             },
         );
+    // "Players can't pay life or sacrifice nonland permanents to cast spells or activate
+    // abilities": the acts as costs only (601.2h, 602.2b); "Players can't pay life" alone is
+    // the prohibition on the act itself
+    fn player(w: &Who) -> bool {
+        match w {
+            Who::One(p) => p.set.domain == ir::Domain::Player,
+            Who::Set(p) => p.domain == ir::Domain::Player,
+        }
+    }
+    let players = who().map(|w| player(&w).then_some(w), |w| player(w).then(|| w.clone()));
+    let cant_pay = players.skip(&lit("can't")).then(&one_or_list(&forbidden(Form::Base), "or"))
+        .skip(&lit("to")).then(&one_or_list(&spend_on(), "or"))
+        .map(
+            |((who, costs), to)| Some(Static::CantPayCosts { who, costs, to }),
+            |x| match x {
+                Static::CantPayCosts { who, costs, to } => Some(((who.clone(), costs.clone()), to.clone())),
+                _ => None,
+            },
+        );
     let redirect = prevention(true).skip(&lit("is dealt to")).then(&party()).skip(&lit("instead")).map(
         |(damage, onto)| Some(Static::Redirect { damage, onto }),
         |x| match x {
@@ -1211,6 +1230,7 @@ pub fn sentence(body: &P<Body>) -> P<Static> {
             following.clone(),
             after,
             no_more,
+            cant_pay,
             pt(),
             alternative_cost(),
             alternative_keyword_cost(),

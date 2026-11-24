@@ -1440,3 +1440,18 @@ fn r508_1c_no_more_than_one_creature_can_attack_it() {
     let (any, _) = read("No more than one creature can attack each combat.");
     assert_ne!(it, any);
 }
+
+/// CR 601.2h and 602.2b: "can't pay life or sacrifice nonland permanents to cast spells or
+/// activate abilities" forbids those acts as costs (Yasharn, Angel of Jubilation), not the acts
+/// an effect has a player do (Yasharn rulings of 2020-09-25).
+#[test]
+fn r601_2h_cant_pay_life_or_sacrifice_to_cast_or_activate() {
+    let text = "Players can't pay life or sacrifice nonland permanents to cast spells or activate abilities.";
+    let (costs, printed) = read(text);
+    assert_eq!(printed, text);
+    assert!(serde_json::to_string(&costs).unwrap().contains("CantPayCosts"), "{printed}");
+    let (creatures, _) = read("Players can't pay life or sacrifice creatures to cast spells or activate abilities.");
+    assert_ne!(costs, creatures);
+    let (acts, _) = read("Players can't pay life or sacrifice nonland permanents.");
+    assert_ne!(costs, acts);
+}

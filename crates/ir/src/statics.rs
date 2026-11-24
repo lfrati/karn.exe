@@ -171,6 +171,11 @@ pub enum Static {
     /// "No more than two creatures can attack you each combat", "No more than one creature can
     /// attack ~ each combat" (508.1c): at most `count` creatures attack `defender`.
     NoMoreThanAttack { count: Amount, defender: Selector },
+    /// "Players can't pay life or sacrifice nonland permanents to cast spells or activate
+    /// abilities" (Yasharn, Implacable Earth; Angel of Jubilation): those acts can't be done as costs of what `to`
+    /// says (601.2h, 602.2b), so a spell or ability with such a cost can't be cast or activated;
+    /// an effect may still have them done (Yasharn rulings of 2020-09-25).
+    CantPayCosts { who: Who, costs: Vec<Forbidden>, to: Vec<SpendOn> },
     /// "~ can be attached only to a creature with toughness 4 or greater." (301.5, 303.4)
     AttachOnlyTo(Selector),
     /// "You may activate abilities of creatures you control as though those creatures had
