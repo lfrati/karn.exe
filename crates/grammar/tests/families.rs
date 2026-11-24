@@ -1122,3 +1122,27 @@ fn r702_29_a_cycling_ability_and_a_card_not_cycled() {
         "If a card would be put into your graveyard from anywhere and it wasn't cycle, exile it instead.",
     ] { declines(text); }
 }
+
+/// CR 614.1a: "you may instead create …" is the optional replacement "instead you may create …"
+/// says, "instead" after the subject.
+#[test]
+fn r614_1a_you_may_instead_is_instead_you_may() {
+    let (said, printed) = read("If you would draw a card, you may instead put the top card of your library into your graveyard.");
+    let (other, _) = read("If you would draw a card, instead you may put the top card of your library into your graveyard.");
+    assert_eq!(said, other);
+    assert_eq!(printed, "If you would draw a card, instead you may put the top card of your library into your graveyard.");
+    for text in [
+        "If you would draw a card, you may instead you put the top card of your library into your graveyard.",
+        "Draw a card, you may instead discard a card.",
+    ] { declines(text); }
+}
+
+/// CR 401.1: "the top three cards" after the text spoke of a library are that library's ("exile
+/// the top three cards instead").
+#[test]
+fn r401_1_the_top_cards_of_the_library_said_before() {
+    let (unsaid, printed) = read("Exile the top two cards of your library. If ~'s additional cost was paid, exile the top three cards instead.");
+    let (said, _) = read("Exile the top two cards of your library. If ~'s additional cost was paid, exile the top three cards of that library instead.");
+    assert_eq!(unsaid, said);
+    assert!(printed.ends_with("exile the top three cards of that library instead."), "{printed}");
+}

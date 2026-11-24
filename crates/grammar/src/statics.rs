@@ -2036,16 +2036,29 @@ fn replacement_of(event: &P<EventPattern>, with: &P<Substitute>, bare: bool) -> 
         move |i| (!(bare && i.is_some())).then_some(i.is_some()),
         move |b| (!(bare && *b)).then(|| b.then_some(())),
     );
+    // "you may instead create that many tokens": what "instead you may create" says, "instead"
+    // after the optional subject (Abundance, Jinnie Fay), and printed as that
+    let may_instead = lit("you may instead").then_keep(with).map(
+        move |with| match with {
+            Substitute::Body(mut b) if !bare && b.first.subject.is_none() && !b.first.may && !b.first.also && !b.first.first.may => {
+                b.first.subject = Some(ir::effect::Subject::Selector(Selector::you()));
+                b.first.may = true;
+                Some((true, Substitute::Body(b)))
+            }
+            _ => None,
+        },
+        |_| None,
+    );
+    let with = &alt("instead", vec![instead.then(with), may_instead.alias()]);
     // "The first time you would draw a card each turn, instead …": the first such event of each
     // turn, or of each of the turns the scope names
     let first_time = lit("the first time")
         .then_keep(event)
         .then(&crate::event::scope())
         .skip(&lit(","))
-        .then(&instead)
         .then(with)
         .map(
-            |(((mut event, during), instead_first), with)| {
+            |((mut event, during), (instead_first, with))| {
                 if event.nth_each_turn.is_some() || event.during.is_some() {
                     return None;
                 }
@@ -2059,7 +2072,7 @@ fn replacement_of(event: &P<EventPattern>, with: &P<Substitute>, bare: bool) -> 
                     if event.nth_each_turn != Some(1) { return None; }
                     event.nth_each_turn = None;
                     let during = event.during.take();
-                    Some((((event, during), r.instead_first), r.with.clone()))
+                    Some(((event, during), (r.instead_first, r.with.clone())))
                 }
                 _ => None,
             },
@@ -2078,10 +2091,9 @@ fn replacement_of(event: &P<EventPattern>, with: &P<Substitute>, bare: bool) -> 
         .then(&while_)
         .then(&lit("this turn").opt())
         .skip(&lit(","))
-        .then(&instead)
         .then(with)
         .map(
-            |(((((next_time, event), while_), this_turn), instead_first), with)| {
+            |((((next_time, event), while_), this_turn), (instead_first, with))| {
                 Some(Static::Replacement(Box::new(Replacement {
                     next_time,
                     event,
@@ -2093,8 +2105,8 @@ fn replacement_of(event: &P<EventPattern>, with: &P<Substitute>, bare: bool) -> 
             },
             |x| match x {
                 Static::Replacement(r) => Some((
-                    ((((r.next_time, r.event.clone()), r.while_.clone()), r.this_turn.then_some(())), r.instead_first),
-                    r.with.clone(),
+                    (((r.next_time, r.event.clone()), r.while_.clone()), r.this_turn.then_some(())),
+                    (r.instead_first, r.with.clone()),
                 )),
                 _ => None,
             },

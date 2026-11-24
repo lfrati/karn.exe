@@ -3823,7 +3823,16 @@ fn slice(player_sg: &P<Selector>) -> P<Selector> {
                     .then(|| (kind.clone(), owner))
             },
         );
-    let by_count = alt("slice", vec![the_top, from_top]).then(&zone_said(player_sg)).skip(&lit("library")).map(
+    // "Exile the top two cards of your library. If …, exile the top three cards instead": the
+    // library the text spoke of, unsaid; the same cards as "the top three cards of that library"
+    let unsaid = lit("the")
+        .then_keep(&end)
+        .then(&how_many)
+        .not_before(&lit("of"))
+        .map(|top_n| Some((top_n, that_zone())), |_| None)
+        .alias();
+    let said = alt("slice", vec![the_top, from_top]).then(&zone_said(player_sg)).skip(&lit("library"));
+    let by_count = alt("slice", vec![said, unsaid]).map(
         |((top, n), owner)| {
             let mut set = ObjectSet::of(Domain::Card);
             set.zone = Some(ZoneSpec {
