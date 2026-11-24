@@ -771,8 +771,8 @@ pub enum Becoming {
     Level(u32),
     /// "is the chosen type", "are the chosen type in addition to their other types".
     ChosenType(Keeps),
-    /// "is the chosen color".
-    ChosenColor,
+    /// "is the chosen color"; `added`: "in addition to its other colors" (105.3).
+    ChosenColor { added: bool },
     /// "is goaded" (701.15b).
     Goaded,
     /// "plotted" (702.170).

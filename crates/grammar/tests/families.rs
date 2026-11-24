@@ -1413,3 +1413,16 @@ fn r702_16a_protection_from_the_chosen_card_name_or_type() {
     let (opponents, _) = read("You have protection from each of your opponents.");
     assert_ne!(name, opponents);
 }
+
+/// CR 109.1 and 110.1: "all cards that aren't on the battlefield, spells, and permanents" is
+/// every object of those three kinds, the arms joined as one union (Mycosynth Lattice,
+/// Painter's Servant).
+#[test]
+fn r109_1_cards_not_on_the_battlefield_spells_and_permanents() {
+    let (and, _) = read("All cards that aren't on the battlefield, spells, and permanents are colorless.");
+    let (or, _) = read("All cards that aren't on the battlefield, spells, or permanents are colorless.");
+    assert_eq!(and, or);
+    let (two, _) = read("All spells and permanents are colorless.");
+    assert_ne!(and, two);
+    read("All cards that aren't on the battlefield, spells, and permanents are the chosen color in addition to their other colors.");
+}

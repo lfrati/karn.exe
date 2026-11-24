@@ -61,6 +61,10 @@ pub struct Selectors {
     pub set_sg: P<ObjectSet>,
     /// A bare plural set description: a static's affected set ("Creatures you control").
     pub set_pl: P<ObjectSet>,
+    /// [`Selectors::set_pl`] as a clause's subject: a union of complete arms prints with "and"
+    /// ("Noble creatures you control and Lesson spells you control have lifelink"), where
+    /// elsewhere it prints with "or" ("black spells or abilities from black sources").
+    pub subject_pl: P<ObjectSet>,
     /// A bare plural set whose zone is spelled "from …": "cards from the top of your library".
     pub set_pl_from: P<ObjectSet>,
     /// A bare singular set after "each" in "for each": unions print with "and", as after the
@@ -4360,12 +4364,14 @@ fn build() -> Selectors {
                     },
                 )
         };
+        // the set; the set as a plural subject; its unions of complete arms alone, as a
+        // plural subject says them
         let coordinated = |num, union| {
             let plain = one(num, union);
             // Migrate bare plurals first. Singular type heads can scope across a union
             // ("instant or sorcery spell"); that surface stays with the existing core
             // until its head/modifier boundary is represented explicitly.
-            if num == Number::Sg { return plain; }
+            if num == Number::Sg { return (plain.clone(), plain.clone(), plain); }
             // Different domains require complete arms: a source qualifier belongs to an
             // ability arm (113.7a), not to a neighboring spell. Same-domain noun unions
             // retain their existing shared-head/property grammar.
@@ -4373,12 +4379,34 @@ fn build() -> Selectors {
                 |s| (!matches!(s.domain, Domain::Union(_))).then_some(s),
                 |s| (!matches!(s.domain, Domain::Union(_))).then(|| s.clone()),
             );
-            alt("set union", vec![plain.clone(), arm.list("or").map(join_sets, split_sets)])
+            // "All cards that aren't on the battlefield, spells, and permanents": "and" joins
+            // the arms of a plural subject as "or" does (one union); with a qualified arm only,
+            // where shared-head coordination can't read it
+            let qualified = |arms: &Vec<ObjectSet>| arms.iter().any(|a| unfold_posts(a, &None, None).is_some_and(|(_, posts)| !posts.is_empty()));
+            let and_arms = arm.list("and").map(
+                move |arms| if qualified(&arms) { join_sets(arms) } else { None },
+                move |set: &ObjectSet| split_sets(set).filter(|arms| qualified(arms)),
+            );
+            let or_arms = arm.list("or").map(join_sets, split_sets);
+            if union != Union::And {
+                let set = alt("set union", vec![plain.clone(), or_arms.clone()]);
+                return (set.clone(), set, or_arms);
+            }
+            // "black spells or abilities from black sources" prints "or" where it is something
+            // acted on or by; a plural subject prints "and" where an arm is qualified, as Oracle
+            // says it ("Noble creatures you control and Lesson spells you control have
+            // lifelink")
+            let set = alt("set union", vec![plain.clone(), or_arms.clone(), and_arms.clone()]);
+            let subject = alt("set union", vec![plain.clone(), and_arms.clone(), or_arms.clone()]);
+            (set, subject, alt("complete arms", vec![and_arms, or_arms]))
         };
+        let (pl, subject_pl, arms_pl) = coordinated(Number::Pl, Union::And);
         (
-            coordinated(Number::Sg, Union::Or).named("set"),
-            coordinated(Number::Pl, Union::And).named("plural set"),
-            coordinated(Number::Sg, Union::And).named("set"),
+            coordinated(Number::Sg, Union::Or).0.named("set"),
+            pl.named("plural set"),
+            subject_pl.named("plural set"),
+            coordinated(Number::Sg, Union::And).0.named("set"),
+            arms_pl,
         )
     };
 
@@ -4393,8 +4421,15 @@ fn build() -> Selectors {
         ],
     );
     let (part_sg, part_pl) = (partitive(Number::Sg, &any_sel.rule()), partitive(Number::Pl, &any_sel.rule()));
-    let (set_sg, set_pl, set_each) = set(ZonePrep::In);
-    let (set_sg_from, set_pl_from, _) = set(ZonePrep::From);
+    let (set_sg, set_pl, subject_pl, set_each, arms_pl) = set(ZonePrep::In);
+    let (set_sg_from, set_pl_from, _, _, _) = set(ZonePrep::From);
+    // "All cards that aren't on the battlefield, spells, and permanents are colorless": every
+    // object of a union whose arms each say all they are (109.1); after the noun phrases with
+    // one head, which print first
+    let all_arms = lit("all").then_keep(&arms_pl).map(
+        |set| Some(Selector::new(Quant::All, set)),
+        |s: &Selector| (s.quant == Quant::All && s.chooser.is_none() && s.random.is_none() && matches!(s.set.domain, Domain::Union(_))).then(|| s.set.clone()),
+    );
     let sg = alt("selector", vec![branch(Number::Sg, ZonePrep::In), target_union(&set_sg), slices.clone(), part_sg.clone()]);
     // "your opponents" is how Oracle says all opponents; listed first so it prints that way
     let your_opponents = lit("your opponents").to(your_opponents());
@@ -4413,7 +4448,7 @@ fn build() -> Selectors {
             _ => None,
         },
     );
-    let pl = alt("plural selector", vec![your_opponents.clone(), opponents_of, branch(Number::Pl, ZonePrep::In), part_pl.clone()]);
+    let pl = alt("plural selector", vec![your_opponents.clone(), opponents_of, branch(Number::Pl, ZonePrep::In), all_arms, part_pl.clone()]);
     sg_in.define(sg.clone());
     pl_in.define(pl.clone());
     let selector = alt("selector", vec![sg.clone(), pl.clone(), special.clone(), zones.clone(), either.clone()]);
@@ -4476,6 +4511,7 @@ fn build() -> Selectors {
         selector_from,
         set_sg,
         set_pl,
+        subject_pl,
         set_pl_from,
         set_each,
     }

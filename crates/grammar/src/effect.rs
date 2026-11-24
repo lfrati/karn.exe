@@ -72,7 +72,7 @@ fn subjects() -> Vec<(P<Option<Subject>>, Form)> {
             },
         )
     };
-    let set = s.set_pl.map(
+    let set = s.subject_pl.map(
         |s| Some(Some(Subject::Set(s))),
         |s: &Option<Subject>| match s {
             Some(Subject::Set(s)) => Some(s.clone()),

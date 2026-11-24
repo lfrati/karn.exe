@@ -497,6 +497,14 @@ pub fn becoming(numbers: &[Number]) -> P<Becoming> {
             _ => None,
         },
     );
+    // "are the chosen color in addition to their other colors" (Painter's Servant)
+    let chosen_color = lit("the chosen color").then_keep(&additional_colors.opt()).map(
+        |added| Some(Becoming::ChosenColor { added: added.is_some() }),
+        |b| match b {
+            Becoming::ChosenColor { added } => Some(added.then_some(())),
+            _ => None,
+        },
+    );
     let still = alt(
         "still",
         numbers
@@ -543,9 +551,9 @@ pub fn becoming(numbers: &[Number]) -> P<Becoming> {
             chosen_type,
             // "Choose a creature type. Target creature becomes that type …"
             lit("that type").to(Becoming::ChosenType(Keeps::Nothing)).alias(),
-            lit("the chosen color").to(Becoming::ChosenColor),
+            chosen_color,
             // "Add one mana of any color. ~ becomes that color …"
-            lit("that color").to(Becoming::ChosenColor).alias(),
+            lit("that color").to(Becoming::ChosenColor { added: false }).alias(),
             is,
             still,
             colors,
