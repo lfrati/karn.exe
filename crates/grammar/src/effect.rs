@@ -788,6 +788,26 @@ fn additional_cast_clause() -> P<Clause> {
         .alias()
 }
 
+/// "Each spell costs {3} more to cast except during its controller's turn." (Defense Grid): the
+/// spells whose controller isn't the active player, so their controller's turn is not now
+/// (102.1, 601.2f); said as "each spell the active player doesn't control".
+fn except_controller_turn_cost_clause() -> P<Clause> {
+    let more = alt("more or less", vec![lit("more").to(true), lit("less").to(false)]);
+    lit("each").then_keep(&selectors().set_sg).skip(&lit("costs")).then(&crate::mana::mana_cost()).then(&more)
+        .skip(&lit("to cast except during its controller's turn"))
+        .map(
+            |((mut set, by), more)| {
+                if set.domain != ir::Domain::Spell || set.controller.is_some() { return None; }
+                let active = Selector::new(ir::Quant::Definite(ir::Ref::ActivePlayer), ir::ObjectSet::of(ir::Domain::Player));
+                set.controller = Some(ir::selector::Relation { who: Box::new(active), negated: true, past: false });
+                let cost = ir::Action::Static(Box::new(ir::StaticAct::CostChange { more, by, of: ir::CostOf::Cast }));
+                Some(Clause { subject: Some(Subject::Selector(Selector::new(ir::Quant::Each, set))), may: false, also: false, first: Act { action: cost, mods: Vec::new(), may: false }, rest: Vec::new() })
+            },
+            |_: &Clause| None,
+        )
+        .alias()
+}
+
 /// "after this phase, there is an additional combat phase", "after this main phase, there are two
 /// additional combat phases followed by an additional main phase", "there is an additional
 /// beginning phase after this phase": phases added directly after the one named (500.8). Nobody
@@ -878,6 +898,7 @@ fn build() -> Effects {
     clauses.push(life_total_clause());
     clauses.push(life_floor_clause());
     clauses.push(additional_cast_clause());
+    clauses.push(except_controller_turn_cost_clause());
     clauses.push(additional_phase_clause());
     let any_clause = alt("clause", clauses);
     // a later clause names its subject (an instruction after an object's clause, "All creatures

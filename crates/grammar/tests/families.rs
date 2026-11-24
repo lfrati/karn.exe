@@ -1279,3 +1279,14 @@ fn r101_2_who_has_cast_a_spell_cant_cast_additional_ones() {
     assert_eq!(printed, "Each player can't cast more than one nonartifact spell each turn.");
     declines("Each player who has cast a nonartifact spell this turn can't cast additional creature spells.");
 }
+
+/// CR 102.1 and 601.2f: "except during its controller's turn" exempts a spell while its
+/// controller is the active player, so it is the spells the active player doesn't control
+/// (Defense Grid).
+#[test]
+fn r102_1_except_during_its_controllers_turn() {
+    let (grid, printed) = read("Each spell costs {3} more to cast except during its controller's turn.");
+    assert_eq!(printed, "Each spell the active player doesn't control costs {3} more to cast.");
+    let (all, _) = read("Each spell costs {3} more to cast.");
+    assert_ne!(grid, all);
+}
