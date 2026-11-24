@@ -1267,3 +1267,15 @@ fn r106_12_tapped_for_two_or_more_mana() {
     assert_ne!(two, any);
     declines("If a land is tapped for two or more life, it produces {C} instead of any other type and amount.");
 }
+
+/// CR 101.2: "Each player who has cast a nonartifact spell this turn can't cast additional
+/// nonartifact spells" is "can't cast more than one nonartifact spell each turn", counting the
+/// spells cast before the ability applied (Ethersworn Canonist rulings of 2020-08-07).
+#[test]
+fn r101_2_who_has_cast_a_spell_cant_cast_additional_ones() {
+    let (canonist, printed) = read("Each player who has cast a nonartifact spell this turn can't cast additional nonartifact spells.");
+    let (cap, _) = read("Each player can't cast more than one nonartifact spell each turn.");
+    assert_eq!(canonist, cap);
+    assert_eq!(printed, "Each player can't cast more than one nonartifact spell each turn.");
+    declines("Each player who has cast a nonartifact spell this turn can't cast additional creature spells.");
+}

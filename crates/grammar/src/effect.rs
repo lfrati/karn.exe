@@ -765,6 +765,29 @@ fn life_floor_clause() -> P<Clause> {
     )
 }
 
+/// "Each player who has cast a nonartifact spell this turn can't cast additional nonartifact
+/// spells": each turn, each player may cast one such spell and no more, counting those cast
+/// before the ability applied (Ethersworn Canonist rulings of 2020-08-07). That is the
+/// prohibition (101.2) "Each player can't cast more than one nonartifact spell each turn" says,
+/// and it is printed as that.
+fn additional_cast_clause() -> P<Clause> {
+    let s = selectors();
+    let a = alt("a", vec![lit("a"), lit("an").alias()]);
+    lit("each player who has cast").skip(&a).then_keep(&s.set_sg)
+        .skip(&lit("this turn can't cast additional")).then(&s.set_pl)
+        .map(
+            |(one, more)| {
+                if one != more || one.domain != ir::Domain::Spell { return None; }
+                let spells = Selector::new(ir::Quant::Indefinite(ir::Count::AtLeast(Amount::Const(2))), one);
+                let cant = ir::Action::Cant(vec![ir::Forbidden { event: ir::EventAction::does(ir::Verb::Cast, spells), within: Some(ir::Within::EachTurn) }]);
+                let players = Selector::new(ir::Quant::Each, ir::ObjectSet::of(ir::Domain::Player));
+                Some(Clause { subject: Some(Subject::Selector(players)), may: false, also: false, first: Act { action: cant, mods: Vec::new(), may: false }, rest: Vec::new() })
+            },
+            |_: &Clause| None,
+        )
+        .alias()
+}
+
 /// "after this phase, there is an additional combat phase", "after this main phase, there are two
 /// additional combat phases followed by an additional main phase", "there is an additional
 /// beginning phase after this phase": phases added directly after the one named (500.8). Nobody
@@ -854,6 +877,7 @@ fn build() -> Effects {
     clauses.extend(all.iter().map(|(s, f)| clause(s, *f)));
     clauses.push(life_total_clause());
     clauses.push(life_floor_clause());
+    clauses.push(additional_cast_clause());
     clauses.push(additional_phase_clause());
     let any_clause = alt("clause", clauses);
     // a later clause names its subject (an instruction after an object's clause, "All creatures
