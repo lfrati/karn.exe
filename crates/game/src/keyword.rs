@@ -478,6 +478,7 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     let cost = match &item.param {
         KeywordParam::Mana(mana) => ir::Cost(vec![ir::CostPart::Mana(mana.clone())]),
         KeywordParam::Cost(cost) => cost.clone(),
+        KeywordParam::EquipQuality(_, mana) if item.keyword.name() == "Equip" => ir::Cost(vec![ir::CostPart::Mana(mana.clone())]),
         _ => return None,
     };
     let template = crate::token::init(kept, || {
@@ -493,7 +494,25 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
         ir::CostPart::Action(ir::Action::Reveal(objects)) => ir::CostPart::RevealUntilLeavesStack(objects),
         other => other,
     }));
-    Some(Ability::Activated { cost, effect: effect.clone() })
+    let mut effect = effect.clone();
+    if let KeywordParam::EquipQuality(quality, _) = &item.param { equip_quality(&mut effect, quality)?; }
+    Some(Ability::Activated { cost, effect })
+}
+
+/// "Equip [quality] [cost]" (702.6c): the equip ability whose target is a creature you control
+/// with that quality: "Equip legendary creature", "Equip Knight". Only the target is
+/// restricted, never what the Equipment may be attached to. "Equip planeswalker" targets a
+/// planeswalker as though it were a creature (702.6e), and is refused.
+fn equip_quality(effect: &mut ir::Effect, quality: &ir::ObjectSet) -> Option<()> {
+    if quality.controller.is_some() || quality.owner.is_some() || quality.caster.is_some() || quality.zone.is_some() || quality.other { return None; }
+    // "Equip Shaman, Warlock, or Wizard": one quality of several
+    let quality = match &quality.filter { ir::Filter::All(all) => all.clone(), other => vec![other.clone()] };
+    if quality.iter().any(|f| matches!(f, ir::Filter::Atom(ir::Atom::Type(t)) if *t != ir::CardType::Creature)) { return None; }
+    let Some(ir::Sentence::Do(body)) = effect.0.first_mut() else { unreachable!("equip attaches") };
+    let ir::Action::Attach { to, .. } = &mut body.first.first.action else { unreachable!("equip attaches") };
+    let ir::Filter::All(target) = &mut to.set.filter else { unreachable!("equip targets a creature") };
+    for f in quality { if !target.contains(&f) { target.push(f); } }
+    Some(())
 }
 
 /// 702.127a: the selected half grants its ordinary graveyard self-permission.

@@ -171,12 +171,6 @@ fn r702_6d_multiple_equip_abilities_keep_their_own_costs() {
 }
 
 #[test]
-fn r702_6c_quality_restricted_equip_remains_refused_until_its_restriction_is_modeled() {
-    let d = CardDef::new("Harness", "{0}", "Artifact — Equipment", "Equip legendary creature {1}", None).unwrap();
-    assert_eq!(game::play::check(&d).expect_err("qualified equip remains unsupported").0, "keyword: Equip");
-}
-
-#[test]
 fn r400_7_an_equip_ability_does_not_attach_a_source_that_left_and_returned() {
     let mut g = game("Equipped creature gets +1/+0.\nEquip {0}");
     let equipment = g.put(0, 0, Zone::Battlefield);

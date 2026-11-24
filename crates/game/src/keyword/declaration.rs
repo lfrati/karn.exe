@@ -429,7 +429,10 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
         // held as ward is: "gains firebending 4 until end of turn" grants the trigger (613.1f)
         "Firebending" => generated(ability(item)?, true, vec![Context::PermanentsOnly]),
         "Mobilize" => generated(ability(item)?, true, vec![Context::PermanentsOnly]),
-        "Partner" | "Equip" | "Level Up" | "Outlast" | "Ninjutsu" | "Crew" | "Saddle" | "Station" => generated(ability(item)?, false, vec![Context::PermanentsOnly]),
+        // held as ward is: "Equipment you control have equip {1}", "Clues you control ... have
+        // equip {2}" grant the activated ability (613.1f), its "this permanent" the recipient
+        "Equip" => generated(ability(item)?, true, vec![Context::PermanentsOnly]),
+        "Partner" | "Level Up" | "Outlast" | "Ninjutsu" | "Crew" | "Saddle" | "Station" => generated(ability(item)?, false, vec![Context::PermanentsOnly]),
         _ => {
             if plain && let Some(rule) = meaning(item.keyword) {
                 return one(bf, Gives::Rule(rule), vec![Context::PermanentsOnly]);
