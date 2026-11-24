@@ -1617,6 +1617,11 @@ fn counter_destination_rider<'a>(condition: &ir::Condition, clause: &Clause, act
 }
 
 
+/// The slots of one library scan ([`Emit::library_scan`]): every card it exiled, its hit, the
+/// card it designated (701.57c), the bound it was made with, and the hit still exiled.
+#[derive(Clone, Copy)]
+struct Scan { all: Slot, hit: Slot, designated: Slot, bound: Slot, subjects: Slot }
+
 struct Emit {
     instrs: Vec<Instr>,
     acts: Vec<ActSpan>,
@@ -1852,6 +1857,16 @@ impl Emit {
     fn slot(&mut self) -> Slot {
         self.next += 1;
         self.next - 1
+    }
+    /// The library scan of Discover and of Cascade's "exile cards from the top of your library
+    /// until you exile a nonland card with mana value less than …" (701.57a, 702.85a): one
+    /// retained instruction, then its hit, while it is still exiled, as what follows refers to.
+    fn library_scan(&mut self, by: Who, amount: expr::Amount, limit: ScanLimit) -> Scan {
+        let scan = Scan { all: self.slot(), hit: self.slot(), designated: self.slot(), bound: self.slot(), subjects: self.slot() };
+        let Scan { all, hit, designated, bound, subjects } = scan;
+        self.instrs.push(Instr::LibraryScan { by, amount, limit, all, hit, designated, bound });
+        self.instrs.push(Instr::Subjects { cards: hit, out: subjects, still_in: Some(Zone::Exile) });
+        scan
     }
     /// "From among the cards exiled this way" said after two instructions exiled cards: the
     /// groups of both, as one, each card still where its instruction put it (608.2c). Groups
@@ -4336,10 +4351,8 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             let actor = e.slot();
             e.instrs.push(Instr::Capture { operand: player.clone(), out: actor });
             let by = Who::Of(actor);
-            let (all, hit, designated, bound, subjects, offered, cast, possible, rest, designated_subjects) =
-                (e.slot(), e.slot(), e.slot(), e.slot(), e.slot(), e.slot(), e.slot(), e.slot(), e.slot(), e.slot());
-            e.instrs.push(Instr::LibraryScan { by, amount, limit: ScanLimit::AtMost, all, hit, designated, bound });
-            e.instrs.push(Instr::Subjects { cards: hit, out: subjects, still_in: Some(Zone::Exile) });
+            let Scan { all, hit, designated, bound, subjects } = e.library_scan(by, amount, ScanLimit::AtMost);
+            let (offered, cast, possible, rest, designated_subjects) = (e.slot(), e.slot(), e.slot(), e.slot(), e.slot());
             e.instrs.push(Instr::Subjects { cards: designated, out: designated_subjects, still_in: None });
             e.instrs.push(Instr::Cast { player, cards: vec![action::Operand::Reference(subjects)],
                 offered, costs: crate::permission::Costs::Free, cast, possible, from: CastOrigin::Fixed(Zone::Exile), rider: None, haste: false, one: true, ceiling: Some(bound) });
@@ -4743,9 +4756,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             if parts.len() != 2 || !parts.contains(&nonland) { return unsupported("exile until: additional stopping constraints not implemented"); }
             let (value, limit) = ((*value).clone(), *limit);
             let amount = quantity(&value, support, &binder)?;
-            let (all, hit, designated, bound, subjects) = (e.slot(), e.slot(), e.slot(), e.slot(), e.slot());
-            e.instrs.push(Instr::LibraryScan { by: Who::Controller, amount, limit, all, hit, designated, bound });
-            e.instrs.push(Instr::Subjects { cards: hit, out: subjects, still_in: Some(Zone::Exile) });
+            let Scan { all, subjects, .. } = e.library_scan(Who::Controller, amount, limit);
             binder.groups.push(Group { slot: all, paragraph: binder.paragraph(), by: Verb::Exile, zone: Zone::Exile, taken: Vec::new() });
             binder.result = Some((subjects, until.set.clone(), 1));
             binder.name(subjects, until.set.clone(), (0, 1), false);
