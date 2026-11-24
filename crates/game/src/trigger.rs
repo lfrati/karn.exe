@@ -942,11 +942,19 @@ impl Pattern {
         self.nth.is_none_or(|n| ordinal(f) == Some(n)).then_some(matched)
     }
 
-    /// What or who it happened to, of an event one of the pattern's actions describes, whatever
-    /// the pattern says its subject is: "a card put into a graveyard this turn" is that card.
-    pub(crate) fn subject_of(&self, game: &Game, ctx: &Ctx, f: &Fact) -> Option<Target> {
+    /// Did an event one of the pattern's actions describes happen to `t`, whatever the pattern
+    /// says its subject is? "a card put into a graveyard this turn" is that card. A permanent
+    /// that left the battlefield in it is what the event is said of, as it last was there
+    /// (603.10a); the card it became where it went is a new object (400.7), and it is still the
+    /// card that was put there: "creature cards in all graveyards that were put there from the
+    /// battlefield this turn" (Cry of the Carnarium, Faith's Reward).
+    pub(crate) fn happened_to(&self, game: &Game, ctx: &Ctx, f: &Fact, t: Target) -> bool {
         let ctx = f.context(ctx.clone());
-        self.actions.iter().find_map(|a| a.matches(game, &ctx, f)?.subject)
+        match self.actions.iter().find_map(|a| a.matches(game, &ctx, f)?.subject) {
+            Some(subject) if subject == t => true,
+            Some(Target::Object(was)) => f.was == Some(was) && matches!(t, Target::Object(now) if game.became(was) == Some(now)),
+            _ => false,
+        }
     }
 
     /// Does what happened match the pattern? Some: it does, as this one of the pattern's

@@ -558,7 +558,7 @@ impl Game {
     /// Did an event of this turn the pattern describes happen to this object or player, as the
     /// object it is now (400.7)? "a card that was put into a graveyard from anywhere this turn"
     pub(crate) fn happened_to(&self, ctx: &Ctx, pattern: &Pattern, t: crate::event::Target) -> bool {
-        self.facts_of(Turn::This).any(|f| pattern.subject_of(self, ctx, &f) == Some(t))
+        self.facts_of(Turn::This).any(|f| pattern.happened_to(self, ctx, &f, t))
     }
 
     /// Which such event of the turn this one is, among those of the same subject ("your
