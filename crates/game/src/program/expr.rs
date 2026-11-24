@@ -1250,7 +1250,8 @@ fn card_zones(set: &ir::ObjectSet) -> Res<Option<(Vec<Zone>, bool, bool)>> {
             ir::Zone::Graveyard => Ok(Zone::Graveyard),
             ir::Zone::Library => Ok(Zone::Library),
             ir::Zone::Hand => Ok(Zone::Hand),
-            ir::Zone::Exile if zone.owner.is_none() => Ok(Zone::Exile),
+            // "from graveyards or exile": exile with every player as an owner is all of it
+            ir::Zone::Exile if zone.owner.as_deref().is_none_or(|who| players(who) && who.quant == Quant::Each) => Ok(Zone::Exile),
             _ => unsupported("noun phrase: an unsupported card zone"),
         }).collect::<Res<Vec<_>>>()?
     };

@@ -1219,3 +1219,39 @@ fn r115_1_any_target_of_an_opponents_choice() {
     assert_ne!(witches, plain);
     declines("{T}: ~ deals 1 damage to any target of an opponent's choosing.");
 }
+
+/// CR 601.2a: "from anywhere other than their hands" is each one's own hand, as "their hand"
+/// says it of each of them (Drannith Magistrate).
+#[test]
+fn r601_2a_their_hands_is_each_ones_hand() {
+    let (hands, printed) = read("Your opponents can't cast spells from anywhere other than their hands.");
+    let (hand, _) = read("Your opponents can't cast spells from anywhere other than their hand.");
+    assert_eq!(hands, hand);
+    assert_eq!(printed, "Your opponents can't cast spells from anywhere other than their hand.");
+    declines("Your opponents can't cast spells from anywhere other than their exiles.");
+}
+
+/// CR 400.1 and 406.1: "from graveyards or exile" is from any graveyard or from exile, as
+/// "from graveyards or from exile" says it too (Soulless Jailer, Aven Interrupter).
+#[test]
+fn r400_1_from_graveyards_or_exile() {
+    let (exile, printed) = read("Players can't cast noncreature spells from graveyards or exile.");
+    let (from_exile, _) = read("Players can't cast noncreature spells from graveyards or from exile.");
+    assert_eq!(exile, from_exile);
+    assert_eq!(printed, "Players can't cast noncreature spells from graveyards or exile.");
+    let (graveyards, _) = read("Players can't cast noncreature spells from graveyards.");
+    assert_ne!(exile, graveyards);
+}
+
+/// CR 601.2a and 400.1: "spells cast from graveyards or from exile" are cast from any
+/// graveyard or from exile (Aven Interrupter).
+#[test]
+fn r601_2a_cast_from_graveyards_or_from_exile() {
+    let text = "Spells your opponents cast from graveyards or from exile cost {2} more to cast.";
+    let (both, printed) = read(text);
+    assert_eq!(printed, text);
+    let (short, _) = read("Spells your opponents cast from graveyards or exile cost {2} more to cast.");
+    assert_eq!(both, short);
+    let (exile, _) = read("Spells your opponents cast from exile cost {2} more to cast.");
+    assert_ne!(both, exile);
+}

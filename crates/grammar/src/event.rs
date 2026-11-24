@@ -185,13 +185,29 @@ pub fn zone_phrase() -> P<ZoneSpec> {
             _ => None,
         },
     );
+    // "Players can't cast noncreature spells from graveyards or exile": any graveyard, or exile,
+    // whose cards each have an owner too (400.3)
+    let (every2, every3) = (Selector::new(Quant::Each, ObjectSet::of(Domain::Player)), Selector::new(Quant::Each, ObjectSet::of(Domain::Player)));
+    let or_exile = lit("graveyards or exile").map(
+        move |()| Some(ZoneSpec { zones: ir::Coord { items: vec![Zone::Graveyard, Zone::Exile], conj: ir::Conj::Or }, owner: Some(Box::new(every2.clone())), slice: None }),
+        move |z: &ZoneSpec| (z.zones.items == [Zone::Graveyard, Zone::Exile] && z.zones.conj == ir::Conj::Or
+            && z.owner.as_deref() == Some(&every3) && z.slice.is_none()).then_some(()),
+    );
+    // "Your opponents can't cast spells from anywhere other than their hands": each one's own
+    // hand, as "their hand" says it of each of them
+    let their_pl = lit("their").then_keep(&crate::action::coord(&crate::selector::zone_noun(crate::words::Number::Pl))).map(
+        |zones| Some(ZoneSpec { zones, owner: Some(Box::new(Selector::new(Quant::Definite(ir::Ref::Anaphor(Anaphor::They)), ObjectSet::of(Domain::Player)))), slice: None }),
+        |_: &ZoneSpec| None,
+    ).alias();
     let shared = |text: &str, zone: Zone| lit(text).to(ZoneSpec::of(zone, None));
     alt(
         "zone",
         vec![
             owned,
             twice,
+            or_exile,
             plural,
+            their_pl,
             shared("exile", Zone::Exile),
             shared("the battlefield", Zone::Battlefield),
             shared("the command zone", Zone::Command),
@@ -210,6 +226,12 @@ pub fn from_zone() -> P<ZoneArg> {
                 |zone| Some(ZoneArg { zone, other_than: false }),
                 |f| (!f.other_than).then(|| f.zone.clone()),
             ),
+            // "Spells your opponents cast from graveyards or from exile": the same zones
+            lit("from graveyards or from exile").map(
+                |()| Some(ZoneArg { zone: ZoneSpec { zones: ir::Coord { items: vec![Zone::Graveyard, Zone::Exile], conj: ir::Conj::Or },
+                    owner: Some(Box::new(Selector::new(Quant::Each, ObjectSet::of(Domain::Player)))), slice: None }, other_than: false }),
+                |_: &ZoneArg| None,
+            ).alias(),
             lit("from anywhere other than").then_keep(&zone).map(
                 |zone| Some(ZoneArg { zone, other_than: true }),
                 |f| f.other_than.then(|| f.zone.clone()),

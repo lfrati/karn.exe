@@ -2451,7 +2451,15 @@ fn zone_spec(prep: ZonePrep, player_sg: &P<Selector>) -> P<ZoneSpec> {
         |z| Some(ZoneSpec::of(z, Some(Selector::new(Quant::Each, ObjectSet::of(Domain::Player))))),
         |_: &ZoneSpec| None,
     ).alias();
+    // "from graveyards or from exile": any graveyard, or exile (Aven Interrupter)
+    let any_player = Selector::new(Quant::Each, ObjectSet::of(Domain::Player));
+    let or_exile_spec = ZoneSpec { zones: ir::Coord { items: vec![Zone::Graveyard, Zone::Exile], conj: ir::Conj::Or }, owner: Some(Box::new(any_player)), slice: None };
+    let or_exile = alt("graveyards or exile", vec![
+        lit(&format!("{p} graveyards or {p} exile")),
+        lit(&format!("{p} graveyards or exile")).alias(),
+    ]).to(or_exile_spec);
     let mut v = vec![
+        or_exile,
         exile_and,
         owned,
         again,

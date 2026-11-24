@@ -135,7 +135,9 @@ enum Cant {
     ReceiveCounters(Option<String>),
     /// Casting any spell, optionally from described source zones (601.3), optionally only
     /// spells with these characteristics, as the spell would have them (601.3e).
-    Cast { from: Option<expr::Set>, except: bool, spell: Option<expr::Filter> },
+    /// `own`: the zones are the caster's own ("can't cast spells from anywhere other than their
+    /// hands": each caster's hand, 601.2a), not any player's.
+    Cast { from: Option<expr::Set>, except: bool, spell: Option<expr::Filter>, own: bool },
 }
 
 impl Cant {
@@ -194,9 +196,18 @@ impl Cant {
                 }
                 let spell = (what.set.filter != ir::Filter::All(vec![])).then(|| expr::Filter::compile(&what.set.filter, support, &mut *bind)).transpose()?;
                 let from = d.zone(Role::From);
-                let set = from.map(|from| ObjectSet { zone: Some(from.zone.clone()), ..ObjectSet::of(Domain::Card) });
+                // "their hands" after a subject of players: the pronoun is the subject's, so each
+                // one's own hand; the zones are of any player, and the card is its caster's
+                let they = |o: &Selector| o.quant == Quant::Definite(Ref::Anaphor(ir::selector::Anaphor::They))
+                    && o.set == ObjectSet::of(Domain::Player) && o.chooser.is_none() && o.random.is_none();
+                let own = from.is_some_and(|f| f.zone.owner.as_deref().is_some_and(they));
+                let set = from.map(|from| {
+                    let mut zone = from.zone.clone();
+                    if own { zone.owner = Some(Box::new(Selector::new(Quant::Each, ObjectSet::of(Domain::Player)))); }
+                    ObjectSet { zone: Some(zone), ..ObjectSet::of(Domain::Card) }
+                });
                 Cant::Cast { from: set.as_ref().map(|s| expr::Set::compile(s, support, bind)).transpose()?,
-                    except: from.is_some_and(|f| f.other_than), spell }
+                    except: from.is_some_and(|f| f.other_than), spell, own }
             }
             EventAction::CountersPut { kind, one_or_more: false, nth: None } => Cant::ReceiveCounters(kind.as_ref().map(|k|k.0.clone())),
             EventAction::GainsLife { amount: None } => Cant::Happen(Happening::GainsLife),
@@ -998,10 +1009,11 @@ impl Game {
                     Cant::ReceiveCounters(kind) if would.verb() == Verb::PutCounters =>
                         kind.as_ref().is_none_or(|kind|would.counter_kind()==Some(kind.as_str()))
                             && would.role(Role::On).is_some_and(|holder|r.affects(self,holder)),
-                    Cant::Cast { from, except, spell } if would.verb() == Verb::Cast => {
+                    Cant::Cast { from, except, spell, own } if would.verb() == Verb::Cast => {
                         would.doer().is_some_and(|player| r.affects(self, player))
                             && would.role(Role::What).is_some_and(|card| from.as_ref().is_none_or(|set|
-                                set.contains(self, &r.ctx, &r.locals, card) != *except)
+                                (set.contains(self, &r.ctx, &r.locals, card)
+                                    && (!own || matches!((card, would.doer()), (Target::Object(c), Some(Target::Player(p))) if self.obj(c).owner == p))) != *except)
                                 // as the card is, without an announced face (see [`Game::cast_forbidden`])
                                 && spell.as_ref().is_none_or(|filter| filter.matches(self, &r.ctx, &r.locals, card)))
                     }
@@ -1017,9 +1029,10 @@ impl Game {
     pub(crate) fn cast_forbidden(&self, player: PlayerId, card: ObjId, cast_as: crate::card::CastAs, x: Option<u32>) -> bool {
         self.in_force().iter().any(|r| {
             r.rule.cants().iter().any(|item| {
-                let Cant::Cast { from, except, spell } = item else { return false };
+                let Cant::Cast { from, except, spell, own } = item else { return false };
                 r.affects(self, Target::Player(player))
-                    && from.as_ref().is_none_or(|set| set.contains(self, &r.ctx, &r.locals, Target::Object(card)) != *except)
+                    && from.as_ref().is_none_or(|set| (set.contains(self, &r.ctx, &r.locals, Target::Object(card))
+                        && (!own || self.obj(card).owner == player)) != *except)
                     && spell.as_ref().is_none_or(|filter| {
                         let ctx = Ctx { casting: Some((card, cast_as)), x, ..r.ctx.clone() };
                         filter.matches(self, &ctx, &r.locals, Target::Object(card))
