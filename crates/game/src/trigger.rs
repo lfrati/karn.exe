@@ -1642,10 +1642,12 @@ impl Game {
                     let ctx = Ctx::new(controller, source);
                     for (key, template) in &watching {
                         let (ctx, AbilityKey { origin, index }) = (ctx.clone().with_key(key.clone()), key.clone());
-                        if self.functions_as(source, key.clone()) && template.watch.begins(self, &ctx, *part) && template.holds(self, &ctx) && template.take(self, &ctx, &mut uses) {
-                            // the step is the active player's: "that player"
-                            let mut bound = Bound::default();
-                            bound.inputs.push((crate::program::input::Input::Subject, vec![Target::Player(self.active)]));
+                        // the step is the active player's: "that player", in its intervening
+                        // "if" too ("if that player has two or fewer cards in hand", 603.4)
+                        let mut bound = Bound::default();
+                        bound.inputs.push((crate::program::input::Input::Subject, vec![Target::Player(self.active)]));
+                        if self.functions_as(source, key.clone()) && template.watch.begins(self, &ctx, *part)
+                            && template.intervening.as_ref().is_none_or(|c| c.evaluate(self, &ctx, &bound)) && template.take(self, &ctx, &mut uses) {
                             found.extend(std::iter::repeat_n(Triggered { source: Some(source), controller, origin, index, bound, delayed: None, captured: Some(crate::program::capture(self, ctx.clone())) }, self.trigger_count(&ctx, template, membership_changed)));
                         }
                     }

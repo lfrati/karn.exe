@@ -295,6 +295,9 @@ enum Asks {
     Controlled { players: Players, what: expr::Subject, negated: bool },
     /// "there is a creature with power 4 or greater on the battlefield"
     Exists { what: expr::Set, count: Quantity },
+    /// "you have no cards in hand", "an opponent has eight or more cards in their graveyard":
+    /// how many of these cards are in each player's own zone, the cards they own there (400.3).
+    Has { players: Players, cards: expr::Set, count: Quantity },
     /// "~ is tapped", "~ is a creature", "~ isn't attacking"
     /// `past`: asked of what it was as it last existed (608.2h), a permanent that has left
     /// being described as the permanent it was.
@@ -543,6 +546,37 @@ impl Asks {
             }
             ir::Condition::Exists { what } => {
                 Asks::Exists { what: expr::Set::compile_root(&what.set, support, &mut *bind)?, count: Quantity::compile(&what.quant, support, bind)? }
+            }
+            ir::Condition::Has { player, what } => {
+                if what.chooser.is_some() || what.random.is_some() { return unsupported("condition: has, a chosen or random selection"); }
+                let count = Quantity::compile(&what.quant, support, &mut *bind)?;
+                match what.set.domain {
+                    // "you have two or more opponents"
+                    ir::Domain::Player if player.quant == Quant::Definite(Ref::You) && player.chooser.is_none() =>
+                        Asks::Exists { what: expr::Set::compile_root(&what.set, support, &mut *bind)?, count },
+                    ir::Domain::Card => {
+                        // "in hand", "in their graveyard", "in your library": the zone of the
+                        // player said to have them
+                        let Some(zone) = &what.set.zone else { return unsupported("condition: has cards, in no zone") };
+                        let own = match zone.owner.as_deref() {
+                            None => true,
+                            Some(owner) => matches!(owner.quant, Quant::Definite(Ref::Anaphor(ir::Anaphor::They | ir::Anaphor::That)))
+                                && owner.set == ir::ObjectSet::of(ir::Domain::Player) && owner.chooser.is_none()
+                                || *owner == **player && player.quant == Quant::Definite(Ref::You),
+                        };
+                        let zones = [ir::Zone::Hand, ir::Zone::Graveyard, ir::Zone::Library];
+                        if !own || zone.slice.is_some() || !zone.zones.items.iter().all(|z| zones.contains(z)) || zone.zones.items.len() != 1
+                            || what.set.owner.is_some() || what.set.controller.is_some() {
+                            return unsupported("condition: has cards, in a zone other than that player's hand, graveyard or library");
+                        }
+                        // every player's, each card counted for its owner
+                        let mut set = what.set.clone();
+                        let every = Selector::new(Quant::Each, ir::ObjectSet::of(ir::Domain::Player));
+                        set.zone = Some(ir::ZoneSpec { owner: Some(Box::new(every)), ..zone.clone() });
+                        Asks::Has { players: Players::compile(player, support, &mut *bind)?, cards: expr::Set::compile_root(&set, support, &mut *bind)?, count }
+                    }
+                    _ => return unsupported("condition: has, of what is not cards"),
+                }
             }
             ir::Condition::CastWas { what, fact: ir::condition::CastFact::Kicked, negated }
                 if support.has_kicker() && matches!(what.quant, Quant::Definite(Ref::This | Ref::Anaphor(_))) => Asks::Kicked { negated: *negated },
@@ -896,6 +930,13 @@ impl Asks {
             }
             Asks::Gift { negated } => ctx.source.is_some_and(|source| game.obj(source).gift.is_some()) != *negated,
             Asks::Exists { what, count } => count.is(game, ctx, locals, what.members(game, ctx, locals).len()),
+            Asks::Has { players, cards, count } => {
+                let members = cards.members(game, ctx, locals);
+                players.hold(players.players(game, ctx, locals).into_iter().map(|p| {
+                    let theirs = members.iter().filter(|t| matches!(t, Target::Object(o) if game.obj(*o).owner == p)).count();
+                    count.is(game, ctx, locals, theirs)
+                }))
+            }
             Asks::HadCounters { kind, count, negated } => {
                 let Some(object) = ctx.source else { return false; };
                 let source = game.obj(object);
@@ -1046,6 +1087,11 @@ impl Asks {
                 out.extend(what.scalars());
                 count.scalars(out);
             }
+            Asks::Has { players, cards, count } => {
+                players.scalars(out);
+                out.extend(cards.scalars());
+                count.scalars(out);
+            }
             Asks::Is { what, is, .. } => {
                 if let Thing::Named(subject) = what { subject.scalars(out); }
                 match is { Is::Adjective(f) | Is::Card(f) => f.scalars(out), Is::A(set) => out.extend(set.scalars()), Is::Designated(_) | Is::Zone(_) => {} }
@@ -1108,6 +1154,7 @@ impl Asks {
             Asks::ManaSpent { test, .. } => Reads::HISTORY | match test { PaidTest::Count(_, q) => quantity(q), PaidTest::Symbols(_) => Reads::NONE },
             Asks::Controls { players: who, what, .. } => what.iter().fold(players(who), |all, (set, count)| all | set.reads() | quantity(count)),
             Asks::Exists { what, count } => what.reads() | quantity(count),
+            Asks::Has { players: who, cards, count } => players(who) | cards.reads() | quantity(count),
             Asks::Is { is: Is::Adjective(f) | Is::Card(f), .. } => f.reads(),
             Asks::Is { is: Is::A(set), .. } => set.reads(),
             Asks::Is { is: Is::Designated(_) | Is::Zone(_), .. } => Reads::NONE,

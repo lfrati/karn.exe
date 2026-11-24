@@ -26,6 +26,7 @@ impl Asks {
             Self::And(v) | Self::Or(v) => v.iter().fold(I::NONE, |a,b|a | b.inputs()),
             Self::Controls { players, what, .. } => what.iter().fold(players.inputs() | I::at(D::Objects,P::CONTROL | P::COLLECTIONS), |a,(s,q)|a | s.inputs() | q.inputs()),
             Self::Exists { what, count } => what.inputs() | count.inputs(),
+            Self::Has { players, cards, count } => players.inputs() | cards.inputs() | count.inputs() | I::at(D::Objects,P::ZONE | P::OWNER | P::COLLECTIONS),
             Self::Controlled { players, what, .. } => players.inputs() | what.inputs() | I::at(D::Objects,P::CONTROL) | I::at(D::Context,P::HISTORY),
             Self::Is { what, is, past, .. } => {
                 let of = match what { Thing::Source => I::at(D::Source,P::IDENTITY), Thing::Controller => I::at(D::Context,P::CONTROL), Thing::Named(s) => s.inputs() };
