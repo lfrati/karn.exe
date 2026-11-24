@@ -283,7 +283,11 @@ impl Restriction {
                 if matches!(action, Action::DoesntUntap { next: true, .. }) {
                     return unsupported("a static ability about a next untap step");
                 }
-                acts.push((When::compile(when, support, &mut linked(support))?, rule));
+                // "This creature can't block as long as it has a +1/+1 counter on it": the
+                // pronoun is the statement's explicit subject
+                let mut linked = linked(support);
+                let mut bind = expr::SourceBinding { parent: &mut linked, source: subject == Subject::Source };
+                acts.push((When::compile(when, support, &mut bind)?, rule));
             }
             Ok(Restriction { scope, subject, acts })
         })())
@@ -439,7 +443,11 @@ impl Characteristic {
                     matches!(change, Change::Fixed(crate::layers::Change::Inherits(_)))) {
                     return unsupported("inherited abilities: scaled acquisition is not modeled");
                 }
-                acts.push((When::compile(when, support, &mut linked(support))?, scale, changes));
+                // "This creature gets +1/+1 as long as it's enchanted": the pronoun is the
+                // statement's explicit subject
+                let mut linked = linked(support);
+                let mut bind = expr::SourceBinding { parent: &mut linked, source: subject == Subject::Source };
+                acts.push((When::compile(when, support, &mut bind)?, scale, changes));
             }
             // An unconditional self color definition is a CDA (604.3a), including in
             // hidden zones and before the game. Keep that classification on the compiled
