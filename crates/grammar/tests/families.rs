@@ -1593,3 +1593,21 @@ fn r608_2c_instead_only() {
     assert_eq!(only, plain);
     read("All creatures get -2/-2 until end of turn. If you have the city's blessing, instead only creatures your opponents control get -2/-2 until end of turn.");
 }
+
+/// CR 608.2d: what a player chooses on resolution "from among" a group is chosen out of that
+/// group, and after a list the phrase is said of each one listed: "an artifact, a creature, an
+/// enchantment, and a planeswalker from among the nonland permanents they control" (Cataclysmic
+/// Gearhulk) are all permanents that player controls; Cataclysm says it first.
+#[test]
+fn r608_2d_from_among_said_of_each() {
+    let text = "When ~ enters, each player chooses an artifact, a creature, an enchantment, and a planeswalker from among the nonland permanents they control, then sacrifices the rest.";
+    let (_, printed) = read(text);
+    assert_eq!(printed, text);
+    let (after, _) = read("Each player chooses an artifact, a creature, an enchantment, and a land from among the permanents they control, then sacrifices the rest.");
+    let (first, printed) = read("Each player chooses from among the permanents they control an artifact, a creature, an enchantment, and a land, then sacrifices the rest.");
+    assert_eq!(after, first);
+    assert_eq!(printed, "Each player chooses an artifact, a creature, an enchantment, and a land from among the permanents they control, then sacrifices the rest.");
+    let (list, _) = read("Choose a creature card and a land card from among them.");
+    let (each, _) = read("Choose a creature card from among them and a land card from among them.");
+    assert_eq!(list, each);
+}

@@ -57,9 +57,75 @@ pub(crate) fn coord<T: crate::kernel::Val>(one: &P<T>) -> P<Coord<T>> {
 }
 
 /// One selector, several joined by "and", or alternatives joined by "or" (each with its own
-/// determiner: "another creature or an enchantment").
+/// determiner: "another creature or an enchantment"). "from among …" after the last of them is
+/// said of each ("an artifact, a creature, an enchantment, and a planeswalker from among the
+/// nonland permanents they control", "a creature card and/or a land card from among them").
 pub(crate) fn objects(one: &P<Selector>) -> P<Objects> {
-    coord(one)
+    coord(one).map(|o| distribute_among(o), |o| undistribute_among(o))
+}
+
+/// "from among …": what one of several objects is chosen out of.
+fn among_atom(f: &ir::Filter) -> bool {
+    use ir::{Atom, Filter};
+    matches!(f, Filter::Atom(Atom::Among(_) | Atom::AmongSet(_)))
+        || matches!(f, Filter::Atom(Atom::Reference(r)) if *r == ir::reference::UnresolvedRef::cards(ir::reference::RefForm::Anaphor))
+}
+
+fn last_among(s: &Selector) -> Option<&ir::Filter> {
+    match &s.set.filter {
+        ir::Filter::All(v) => v.last().filter(|f| among_atom(f)),
+        _ => None,
+    }
+}
+
+fn bare_of_among(s: &Selector) -> bool {
+    s.set.zone.is_none() && match &s.set.filter {
+        ir::Filter::All(v) => !v.iter().any(among_atom),
+        f => !among_atom(f),
+    }
+}
+
+fn distribute_among(mut o: Objects) -> Option<Objects> {
+    let Some((last, earlier)) = o.items.split_last() else { return Some(o) };
+    let Some(among) = last_among(last).cloned() else { return Some(o) };
+    if earlier.is_empty() || !earlier.iter().all(bare_of_among) {
+        return Some(o);
+    }
+    let n = o.items.len();
+    for s in &mut o.items[..n - 1] {
+        s.set.filter = match std::mem::replace(&mut s.set.filter, ir::Filter::All(Vec::new())) {
+            ir::Filter::All(mut v) => {
+                v.push(among.clone());
+                ir::Filter::All(v)
+            }
+            f => ir::Filter::All(vec![f, among.clone()]),
+        };
+    }
+    Some(o)
+}
+
+/// The printing of [`distribute_among`]'s reading: "from among …" once, after the last; never
+/// a list where only the last is from among them, which would read as all of them.
+fn undistribute_among(o: &Objects) -> Option<Objects> {
+    let Some((last, earlier)) = o.items.split_last() else { return Some(o.clone()) };
+    let Some(among) = last_among(last) else { return Some(o.clone()) };
+    if earlier.is_empty() {
+        return Some(o.clone());
+    }
+    let mut o = o.clone();
+    let n = o.items.len();
+    for s in &mut o.items[..n - 1] {
+        match &mut s.set.filter {
+            ir::Filter::All(v) if v.last() == Some(among) => {
+                v.pop();
+            }
+            _ => return None,
+        }
+        if !bare_of_among(s) {
+            return None;
+        }
+    }
+    Some(o)
 }
 
 // What a slot takes comes from the lexicon ([`ir::lexicon`]): each action states there what it
@@ -528,8 +594,9 @@ fn build(form: Form, base: &P<Action>) -> P<Action> {
     // a number of things that is not a numeral: "a number of cards … equal to its power"
     let measured = measured_objects();
     let object = objects(&alt("object", vec![s.selector.clone(), measured.clone()]));
-    // a zone after the object is spelled "from" ("exile ~ from your graveyard")
-    let from = objects(&alt("object", vec![s.selector_from.clone(), s.selector.clone(), measured]));
+    // a zone after the object is spelled "from" ("exile ~ from your graveyard"); where none
+    // follows, both selectors read the object alike, once for a list of them
+    let from = objects(&alt("object", vec![s.selector_from.clone(), s.selector.clone(), measured]).distinct());
     // a verb with what it is done to, typed by the lexicon entry of the same name (or `$verb`)
     macro_rules! verb_objects {
         ($third:literal, $base:literal, $objects:expr, $variant:ident) => {

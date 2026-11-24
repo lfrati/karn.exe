@@ -203,7 +203,23 @@ pub(crate) fn choice(objects: &P<Objects>, modes: &P<Modes>, set_sg: &P<ObjectSe
             _ => None,
         },
     );
-    let single = alt("choice", vec![of_objects, of_each, one_member, one, any_name, several, number, words, among_colors, among_types, among_keywords, color_of, modal]);
+    // "chooses from among the permanents they control an artifact, a creature, an enchantment,
+    // and a land" (Cataclysm): "from among …" first, said of each, as when it follows them
+    let among_first = lit("from among").then_keep(&crate::selector::selectors().selector).then(objects).map(
+        |(from, mut o)| {
+            let among = crate::selector::among(from);
+            for s in &mut o.items {
+                let ir::Filter::All(v) = &mut s.set.filter else { return None };
+                if s.set.zone.is_some() || v.iter().any(|f| matches!(f, ir::Filter::Atom(ir::Atom::Among(_) | ir::Atom::AmongSet(_)))) {
+                    return None;
+                }
+                v.push(among.clone());
+            }
+            Some(Choice::Objects(o))
+        },
+        |_| None,
+    ).alias();
+    let single = alt("choice", vec![of_objects, among_first, of_each, one_member, one, any_name, several, number, words, among_colors, among_types, among_keywords, color_of, modal]);
     // "a color and an opponent": two kinds of thing; objects joined to objects are one object phrase
     let together = single.list("and").map(
         |v| (!v.iter().any(|c| matches!(c, Choice::All(_))) && !v.windows(2).any(|w| matches!(w, [Choice::Objects(_), Choice::Objects(_)])))

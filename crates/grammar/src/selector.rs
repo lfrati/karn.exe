@@ -2634,7 +2634,7 @@ fn event_verb(form: crate::event::Form, plural: bool) -> P<EventAction> {
 }
 
 /// Membership in a named group; an unqualified pronoun awaits lexical binding.
-fn among(s: Selector) -> Filter {
+pub(crate) fn among(s: Selector) -> Filter {
     let them = Selector::new(Quant::Definite(Ref::Anaphor(Anaphor::Them)), ObjectSet::of(Domain::Object));
     if s == them {
         Filter::Atom(Atom::Reference(UnresolvedRef::cards(RefForm::Anaphor)))

@@ -564,6 +564,35 @@ impl Imp for Map {
     }
 }
 
+/// The readings of `inner` with each (value, end) once: alternatives that say the same thing
+/// the same way would otherwise multiply the readings of whatever repeats them.
+struct Distinct {
+    inner: Rule,
+    same: fn(&dyn Any, &dyn Any) -> bool,
+}
+
+fn same_value<T: Val>(a: &dyn Any, b: &dyn Any) -> bool {
+    a.downcast_ref::<T>() == b.downcast_ref::<T>()
+}
+
+impl Imp for Distinct {
+    fn parse(&self, cx: &mut Cx, pos: usize) -> Readings {
+        let mut out: Readings = Vec::new();
+        for (v, e) in parse_rule(&self.inner, cx, pos).iter() {
+            if !out.iter().any(|(w, f)| f == e && (self.same)(&**w, &**v)) {
+                out.push((v.clone(), *e));
+            }
+        }
+        out
+    }
+    fn print(&self, v: &dyn Any, out: &mut Out) -> bool {
+        print_rule(&self.inner, v, out)
+    }
+    fn sample(&self, g: &mut Gen) -> Option<V> {
+        sample_rule(&self.inner, g)
+    }
+}
+
 /// Packing a list of values into the rule's `Vec<T>` and back.
 #[derive(Clone, Copy)]
 struct VecOf {
@@ -1028,6 +1057,12 @@ impl<T: Val> P<T> {
     pub fn not_before(&self, guard: &P<()>) -> P<T> {
         let canonical = self.rule.canonical;
         typed(make(self.name().to_string(), canonical, Box::new(NotBefore(self.rule.clone(), guard.rule.clone()))))
+    }
+
+    /// The same readings, each value at each end once (see [`Distinct`]).
+    pub fn distinct(&self) -> P<T> {
+        let canonical = self.rule.canonical;
+        typed(make(self.name().to_string(), canonical, Box::new(Distinct { inner: self.rule.clone(), same: same_value::<T> })))
     }
 
     /// Sequence: `self` then `next`.
