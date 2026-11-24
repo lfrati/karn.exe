@@ -1569,14 +1569,19 @@ fn damage_kind() -> P<DamageKind> {
     )
 }
 
-/// "Damage can't be prevented this turn", "The damage can't be prevented", "Damage that would be
-/// dealt by ~ can't be prevented".
+/// "Damage can't be prevented this turn", "Combat damage can't be prevented", "The damage can't
+/// be prevented", "Damage that would be dealt by ~ can't be prevented".
 fn unpreventable() -> P<Static> {
     let none = |amount: Prevented| Prevention { amount, kind: DamageKind::Any, to: None, by: None, to_or_by: false, this_turn: None };
+    let plain = |p: &Prevention| p.amount == Prevented::All && p.to.is_none() && p.by.is_none() && !p.to_or_by && p.this_turn.is_none();
     let damage = alt(
         "damage",
         vec![
-            lit("damage").to(none(Prevented::All)),
+            // all damage, or all of one kind: combat damage is the damage combat deals (510.2)
+            damage_kind().map(
+                move |kind| Some(Prevention { kind, ..none(Prevented::All) }),
+                move |p: &Prevention| plain(p).then_some(p.kind),
+            ),
             lit("the damage").to(none(Prevented::That)),
             // "damage that would be dealt by ~": the prevention phrase without its "all"
             damage_kind().skip(&lit("that would be dealt")).then(&alt(

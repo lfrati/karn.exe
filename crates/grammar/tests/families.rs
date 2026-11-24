@@ -1651,3 +1651,14 @@ fn r608_2d_one_of_them_chosen_at_random() {
     let (any, _) = read("Whenever enchanted player casts a noncreature spell, attach ~ to another one of your opponents.");
     assert_ne!(another, any);
 }
+
+/// CR 615.12: "Combat damage can't be prevented" says it of the damage combat deals (510.2),
+/// not of all damage (Frenzied Baloth).
+#[test]
+fn r615_12_combat_damage_cant_be_prevented() {
+    let (combat, printed) = read("Combat damage can't be prevented.");
+    assert_eq!(printed, "Combat damage can't be prevented.");
+    let (all, _) = read("Damage can't be prevented.");
+    assert_ne!(combat, all);
+    read("Noncombat damage can't be prevented this turn.");
+}
