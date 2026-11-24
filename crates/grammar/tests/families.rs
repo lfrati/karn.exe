@@ -1455,3 +1455,14 @@ fn r601_2h_cant_pay_life_or_sacrifice_to_cast_or_activate() {
     let (acts, _) = read("Players can't pay life or sacrifice nonland permanents.");
     assert_ne!(costs, acts);
 }
+
+/// CR 614.1a and 122.6: "that many -1/-1 counters minus one are put on it instead" puts one
+/// fewer (Vizier of Remedies), as "that many plus one" puts one more (Hardened Scales).
+#[test]
+fn r614_1a_that_many_counters_minus_one() {
+    let text = "If one or more -1/-1 counters would be put on a creature you control, that many -1/-1 counters minus one are put on it instead.";
+    let (minus, printed) = read(text);
+    assert_eq!(printed, text);
+    let (plus, _) = read("If one or more -1/-1 counters would be put on a creature you control, that many plus one -1/-1 counters are put on it instead.");
+    assert_ne!(minus, plus);
+}

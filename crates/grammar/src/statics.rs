@@ -1847,6 +1847,16 @@ fn substitute(body: &P<Body>) -> P<Substitute> {
             _ => None,
         },
     );
+    // "that many -1/-1 counters minus one are put on it instead" (Vizier of Remedies): one fewer
+    let fewer = Amount::Minus(Box::new(Amount::That { many: true }), Box::new(Amount::Const(1)));
+    let fewer2 = fewer.clone();
+    let minus_one = lit("that many").then_keep(&counter_kind()).skip(&lit("counters minus one are put on")).then(&selectors().selector).skip(&lit("instead")).map(
+        move |(kind, on)| Some(Substitute::CountersPut { count: fewer.clone(), kinds: CounterKinds::Named(kind), on, voice: CounterVoice::Passive }),
+        move |s| match s {
+            Substitute::CountersPut { count, kinds: CounterKinds::Named(kind), on, voice: CounterVoice::Passive } if *count == fewer2 => Some((kind.clone(), on.clone())),
+            _ => None,
+        },
+    );
     let inventory = |prefix: P<()>, wording: &str, voice| {
         prefix.then_keep(&count).skip(&lit(wording)).then(&selectors().selector).skip(&lit("instead")).map(
             move |(count, on)| Some(Substitute::CountersPut { count, kinds: CounterKinds::EachProposed, on, voice }),
@@ -1873,7 +1883,7 @@ fn substitute(body: &P<Body>) -> P<Substitute> {
     let each_passive = inventory(empty(), "of each of those kinds of counters are put on", CounterVoice::Passive);
     let each_active = inventory(lit("put"), "of each of those kinds of counters on", CounterVoice::Imperative);
     let effect = inventory(lit("it puts"), "of those counters on", CounterVoice::Cause);
-    alt("substitute", vec![instructions, tokens, effect_tokens, plus, active_plus, counters, gets, each_passive, each_active, effect])
+    alt("substitute", vec![instructions, tokens, effect_tokens, plus, active_plus, counters, minus_one, gets, each_passive, each_active, effect])
 }
 
 /// "it produces {B} instead of any other type and amount", "it produces twice as much of that mana
