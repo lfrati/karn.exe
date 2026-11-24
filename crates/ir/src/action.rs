@@ -220,6 +220,9 @@ pub enum Action {
     /// "pay {1}{G} any number of times": the payment made as often as the player likes; "that
     /// many" afterwards is how often.
     AnyNumberOfTimes(Box<Action>),
+    /// "pay {G} up to three times": as often as the player likes, but no more than that many
+    /// times; "that many" afterwards is how often.
+    UpToTimes(Box<Action>, Amount),
     /// "exchange control of target land you control and target land an opponent controls" (701.12b).
     ExchangeControl(Objects),
     /// "exchange life totals with target opponent", "two target players exchange life totals"

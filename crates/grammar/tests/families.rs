@@ -1303,3 +1303,16 @@ fn r500_7_during_your_first_second_or_third_turns() {
     let (your_turn, _) = read("You can't cast ~ during your turn.");
     assert_ne!(during, your_turn);
 }
+
+/// CR 603.12 and 700.2: a payment made up to N times, then a reflexive trigger choosing up to
+/// as many modes as it was paid (Tranquil Frillback).
+#[test]
+fn r603_12_pay_up_to_three_times_choose_up_to_that_many() {
+    let text = "When ~ enters, you may pay {G} up to three times. When you pay this cost one or more times, choose up to that many —";
+    let (up_to, printed) = read(text);
+    assert_eq!(printed, text);
+    let (any, _) = read("When ~ enters, you may pay {G} any number of times. When you pay this cost one or more times, choose up to that many —");
+    assert_ne!(up_to, any);
+    let (two, _) = read("When ~ enters, you may pay {G} up to three times. When you pay this cost one or more times, choose up to two —");
+    assert_ne!(up_to, two);
+}

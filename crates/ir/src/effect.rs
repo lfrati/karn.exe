@@ -138,6 +138,9 @@ pub enum Modes {
     /// "up to five {P} worth of modes": any modes whose pawprints together are at most that
     /// many (700.2i).
     Pawprints(u32),
+    /// "choose up to that many —": no more modes than the times a cost was paid before
+    /// ("When you pay this cost one or more times, choose up to that many —").
+    UpToThatMany,
 }
 
 /// Clauses of one sentence: "You draw a card and you lose 1 life" (each later clause has its own

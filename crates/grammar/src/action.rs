@@ -703,6 +703,14 @@ fn build(form: Form, base: &P<Action>) -> P<Action> {
             _ => None,
         },
     );
+    // "pay {G} up to three times"
+    let pay_up_to = pay.clone().skip(&lit("up to")).then(&crate::words::count_amount()).skip(&lit("times")).map(
+        |(a, n)| Some(Action::UpToTimes(Box::new(a), n)),
+        |a| match a {
+            Action::UpToTimes(a, n) => Some(((**a).clone(), n.clone())),
+            _ => None,
+        },
+    );
     // "choose a counter on target permanent", "choose a kind of counter on a creature you control"
     let choose_counter = v("chooses", "choose")
         .skip(&alt("a counter on", vec![lit("a counter on"), lit("a kind of counter on").alias()]))
@@ -1725,6 +1733,7 @@ fn build(form: Form, base: &P<Action>) -> P<Action> {
             choose_counter,
             or_remove,
             pay_times,
+            pay_up_to,
             look_and_cast,
             play_among,
             gain_no_life,

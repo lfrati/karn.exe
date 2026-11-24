@@ -134,6 +134,7 @@ fn count(modes: &Modes, n: usize, repeats: bool) -> Res<(usize, usize)> {
         Modes::Both => (2, 2),
         Modes::AnyNumber => (0, n),
         Modes::X => return unsupported("modes: X of them"),
+        Modes::UpToThatMany => return unsupported("modes: up to as many as a cost was paid"),
         Modes::UpTo(k) => (0, *k as usize),
         // each mode is at least one {P}: at most that many modes (700.2i)
         Modes::Pawprints(k) => (0, if repeats { *k as usize } else { (*k as usize).min(n) }),

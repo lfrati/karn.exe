@@ -1181,6 +1181,7 @@ fn build() -> Effects {
             lit("both").to(Modes::Both),
             lit("any number").to(Modes::AnyNumber),
             lit("X").to(Modes::X),
+            lit("up to that many").to(Modes::UpToThatMany),
             // "Choose up to five {P} worth of modes." (700.2i)
             lit("up to").then_keep(&crate::words::number_words())
                 .skip(&crate::kernel::leaf("{P}", |k| matches!(k, oracle::token::Kind::Symbol(s) if s == "P").then_some(()), |()| Some(oracle::token::Kind::Symbol("P".into()))))
