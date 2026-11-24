@@ -243,7 +243,13 @@ pub(crate) fn facts(game: &Game, e: &Event) -> Vec<Fact> {
             ]
         }
         Event::SpellCopied { copy, by, .. } | Event::AbilityCopied { copy, by, .. } => vec![Fact::new(Verb::Copy, Some(P(*by)), what(O(*copy)))],
-        Event::Cast { spell, by } => vec![Fact::new(Verb::Cast, Some(P(*by)), what(O(*spell)))],
+        // to play a card is to play it as a land or cast it as a spell (701.18b): a cast is
+        // also a play, so "when you play a card" sees spells; a land-only phrase still asks
+        // for a land, and a cast copy is not a card (707.12)
+        Event::Cast { spell, by } => vec![
+            Fact::new(Verb::Cast, Some(P(*by)), what(O(*spell))),
+            Fact::new(Verb::Play, Some(P(*by)), what(O(*spell))),
+        ],
         Event::LandPlayed { land, by } => vec![Fact::new(Verb::Play, Some(P(*by)), what(O(*land)))],
         Event::Discarded { player, card, .. } => vec![Fact::new(Verb::Discard, Some(P(*player)), what(O(*card)))],
         // what was sacrificed is described as it last was on the battlefield (603.10a)
