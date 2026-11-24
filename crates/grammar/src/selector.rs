@@ -2022,21 +2022,30 @@ fn partitive(num: Number, group: &P<Selector>) -> P<Selector> {
     } else {
         alt("another", Vec::new())
     };
-    // "one of them at random"
-    let at_random = plain.skip(&lit("at random")).map(
-        |mut s: Selector| {
-            s.random = Some(ir::selector::Random::AtRandom);
-            Some(s)
-        },
-        |s: &Selector| {
-            (s.random == Some(ir::selector::Random::AtRandom)).then(|| {
+    // "one of them at random", "one of them chosen at random", "another one of your opponents
+    // chosen at random": the member picked at random, spelled as after a noun
+    let random = alt(
+        "at random",
+        vec![
+            lit("at random").to(ir::selector::Random::AtRandom),
+            lit("chosen at random").to(ir::selector::Random::ChosenAtRandom),
+        ],
+    );
+    let at_random = |p: &P<Selector>| {
+        p.then(&random).map(
+            |(mut s, r): (Selector, ir::selector::Random)| {
+                s.random = Some(r);
+                Some(s)
+            },
+            |s: &Selector| {
+                let r = s.random?;
                 let mut plain = s.clone();
                 plain.random = None;
-                plain
-            })
-        },
-    );
-    alt("partitive", vec![plain, at_random, another])
+                Some((plain, r))
+            },
+        )
+    };
+    alt("partitive", vec![plain.clone(), at_random(&plain), another.clone(), at_random(&another)])
 }
 
 /// "attached to it", "attached to a creature you control"; "that's attached to" is an alternate

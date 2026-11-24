@@ -1633,3 +1633,21 @@ fn r603_2c_and_or_trigger_subjects() {
     assert_eq!(printed, "Exile two creatures you control and/or creature cards in your graveyard.");
     declines("Whenever ~ and/or another Vampire you control enter, create a Blood token.");
 }
+
+/// CR 608.2d: a member of a group the text named may be picked at random, "one of them chosen
+/// at random" as "one of them at random" (Chaos Defiler), and so may another one of a group
+/// (Maddening Hex); "at random" and "chosen at random" each print as written.
+#[test]
+fn r608_2d_one_of_them_chosen_at_random() {
+    let text = "When ~ enters or dies, for each opponent, choose a nonland permanent that player controls. Destroy one of them chosen at random.";
+    let (chosen, printed) = read(text);
+    assert_eq!(printed, text);
+    let (at, printed) = read("When ~ enters or dies, for each opponent, choose a nonland permanent that player controls. Destroy one of them at random.");
+    assert_eq!(printed, "When ~ enters or dies, for each opponent, choose a nonland permanent that player controls. Destroy one of them at random.");
+    assert_ne!(chosen, at);
+    // "another one of" is a spelling of "another of"
+    let (another, printed) = read("Whenever enchanted player casts a noncreature spell, attach ~ to another one of your opponents chosen at random.");
+    assert_eq!(printed, "Whenever enchanted player casts a noncreature spell, attach ~ to another of your opponents chosen at random.");
+    let (any, _) = read("Whenever enchanted player casts a noncreature spell, attach ~ to another one of your opponents.");
+    assert_ne!(another, any);
+}
