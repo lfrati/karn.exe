@@ -633,19 +633,35 @@ impl Plan {
     pub(crate) fn mana(&self) -> ManaCost {
         ManaCost(self.parts.iter().flat_map(|p| if let Part::Mana(mana) = p { mana.0.clone() } else { Vec::new() }).collect())
     }
-    /// A plain generic-mana payment repeated by an effect's evaluated count. This
-    /// changes the locked payment, without assigning a value to the spell's X.
-    pub(crate) fn repeated_generic(mut self, count: u32) -> Res<Self> {
-        if !self.choices.is_empty() || self.parts.iter().any(|part|
-            !matches!(part, Part::Mana(mana) if mana.0.iter().all(|s| matches!(s, ManaSymbol::Generic(_))))) {
-            return unsupported("repeated payment: only fixed generic mana is implemented");
+    /// A payment of fixed mana and life repeated by an effect's evaluated count: "pay {U}{R}
+    /// for each age counter" is {U}{R} that many times, "pay 2 life for each" that many times
+    /// 2 life, all of it one payment (702.24a). This changes the locked payment, without
+    /// assigning a value to the spell's X. Hybrid symbols stay one each, each paid either way
+    /// (107.4e).
+    pub(crate) fn repeated(mut self, count: u32) -> Res<Self> {
+        let fixed = |s: &ManaSymbol| !matches!(s, ManaSymbol::Var(_)) && !phyrexian(s);
+        if !self.choices.is_empty() || self.parts.iter().any(|part| match part {
+            Part::Mana(mana) => !mana.0.iter().all(fixed),
+            Part::Life(_) => false,
+            _ => true,
+        }) {
+            return unsupported("repeated payment: only fixed mana and life are implemented");
         }
+        let large = || crate::Unsupported("repeated payment exceeds the engine integer representation".into());
         for part in &mut self.parts {
-            if let Part::Mana(mana) = part {
-                for symbol in &mut mana.0 {
-                    let ManaSymbol::Generic(n) = symbol else { unreachable!("validated generic payment") };
-                    *n = n.checked_mul(count).ok_or_else(|| crate::Unsupported("repeated payment exceeds the engine integer representation".into()))?;
+            match part {
+                Part::Mana(mana) => {
+                    let generic = mana.0.iter().map(|s| if let ManaSymbol::Generic(n) = s { *n } else { 0 }).try_fold(0u32, |sum, n| sum.checked_add(n)).ok_or_else(large)?;
+                    let other: Vec<ManaSymbol> = mana.0.iter().copied().filter(|s| !matches!(s, ManaSymbol::Generic(_))).collect();
+                    let times = usize::try_from(count).map_err(|_| large())?;
+                    if other.len().checked_mul(times).is_none_or(|n| n > u32::MAX as usize) { return Err(large()); }
+                    let mut symbols = Vec::with_capacity(other.len() * times + 1);
+                    if generic > 0 || other.is_empty() { symbols.push(ManaSymbol::Generic(generic.checked_mul(count).ok_or_else(large)?)); }
+                    for _ in 0..times { symbols.extend(other.iter().copied()); }
+                    *mana = ManaCost(symbols);
                 }
+                Part::Life(n) => *n = n.clone().times(expr::Amount::constant(count)),
+                _ => unreachable!("validated repeated payment"),
             }
         }
         Ok(self)

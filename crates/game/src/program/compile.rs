@@ -1726,7 +1726,7 @@ impl Emit {
                 if cost.x() > 0 && !support.x_available() { return unsupported("unless payment has no bound X"); }
                 if !cost.phyrexian().is_empty() { return unsupported("unless payment of Phyrexian mana"); }
                 let each = each.as_ref().map(|n| quantity(n, support, binder)).transpose()?;
-                if each.is_some() { cost.clone().repeated_generic(1)?; }
+                if each.is_some() { cost.clone().repeated(1)?; }
                 self.instrs.push(Instr::Pay { payer, cost, each, paid });
             }
             Unless::Objects(action) => {
@@ -4045,7 +4045,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 ir::effect::Modifier::WhereX(n) if x.is_none() => x = Some(n),
                 // "investigate twice": the keyword action done that many times (701.16a)
                 ir::effect::Modifier::Times(Amount::Const(_)) if matches!(act.action, Action::Keyword(ir::KeywordAction::Investigate | ir::KeywordAction::ManifestDread)) => {},
-                ir::effect::Modifier::ForEach(n) if each.is_none() && (lasting || matches!(act.action, Action::Counter(_) | Action::PayMana(_) | Action::AddMana(_) | Action::AddAdditionalMana(_) | Action::Draw(_) | Action::DrawAdditional(_) | Action::Mill(_) | Action::GainLife(_) | Action::LoseLife(_) | Action::DealDamage(_) | Action::PutCounters(_) | Action::GetCounters { .. } | Action::Create(_))) => each = Some(n),
+                ir::effect::Modifier::ForEach(n) if each.is_none() && (lasting || matches!(act.action, Action::Counter(_) | Action::PayMana(_) | Action::PayLife(_) | Action::AddMana(_) | Action::AddAdditionalMana(_) | Action::Draw(_) | Action::DrawAdditional(_) | Action::Mill(_) | Action::GainLife(_) | Action::LoseLife(_) | Action::DealDamage(_) | Action::PutCounters(_) | Action::GetCounters { .. } | Action::Create(_))) => each = Some(n),
                 // a modifier the engine does not follow is refused with the act it is said of
                 _ => return unsupported(format!("modifier: {} of {}", crate::select::name(modifier), crate::select::name(&act.action))),
             }
@@ -4473,7 +4473,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             if cost.x() > 0 && !support.x_available() { return unsupported("program: an effect's payment of {X} without a bound X"); }
             if !cost.phyrexian().is_empty() { return unsupported("program: an effect's payment of Phyrexian mana"); }
             let each = each.map(|n| quantity(n, support, &binder)).transpose()?;
-            if each.is_some() { cost.clone().repeated_generic(1)?; }
+            if each.is_some() { cost.clone().repeated(1)?; }
             let paid = e.slot();
             // Only Did/Didnt are admitted for mana payments; both read `paid`.
             // Couldnt is refused above rather than fabricating a feasibility result.

@@ -455,7 +455,7 @@ pub(super) fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt
             let Some(player) = action::players(game, f, payer).first().copied() else { outcome(f, false); return Ok(()) };
             let source = f.ctx.object_source();
             let cost = if cost.x()>0 { cost.clone().announced(f.ctx.x).map_err(crate::Unsupported)? } else { cost.clone() };
-            let cost = match each { Some(n) => cost.repeated_generic(n.checked(game, &f.ctx, f)?)?, None => cost };
+            let cost = match each { Some(n) => cost.repeated(n.checked(game, &f.ctx, f)?)?, None => cost };
             let mana = cost.mana();
             // life is paid only by a player whose life total is at least that (119.4)
             let Some(life) = cost.life(game, &f.ctx).filter(|life| game.can_pay_life(player, *life)) else { outcome(f, false); return Ok(()) };

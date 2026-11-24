@@ -717,16 +717,56 @@ fn affinity(item: &ir::token::KeywordInstance) -> Option<Ability> {
     })])))
 }
 
-/// 702.24a: put the age counter before computing one atomic generic-mana payment.
-/// Other costs remain refused until repeated payment choices have their own lowering.
+/// 702.24a: put the age counter, then offer the cost once for each age counter on the
+/// permanent, as one payment made whole or not at all. Mana and life are one payment that many
+/// times over. "{W} or {U}" is a choice made for each counter, as a {W/U} symbol for each is
+/// paid either way (107.4e). Sacrificing or discarding one object for each counter chooses that
+/// many different ones at once: none can be sacrificed or discarded twice. Other costs remain
+/// refused until a repeated payment of them has its own lowering.
 fn cumulative_upkeep(item: &ir::token::KeywordInstance) -> Option<Ability> {
+    use ir::mana::{ManaCost, ManaSymbol};
     if item.keyword.name() != "Cumulative Upkeep" { return None; }
-    let KeywordParam::Mana(mana) = &item.param else { return None; };
-    let generic = mana.0.iter().try_fold(0u32, |total, symbol| match symbol {
-        ir::mana::ManaSymbol::Generic(n) => total.checked_add(*n), _ => None,
-    })?;
-    let text = format!("At the beginning of your upkeep, if this permanent is on the battlefield, put an age counter on this permanent. You may pay {{{generic}}} for each age counter on this permanent. If you don't, sacrifice this permanent.");
+    const AGE: &str = "At the beginning of your upkeep, if this permanent is on the battlefield, put an age counter on this permanent.";
+    let symbols = |mana: &ManaCost| mana.0.iter().map(|s| format!("{{{}}}", s.text())).collect::<String>();
+    let each = |cost: String| format!("{AGE} You may pay {cost} for each age counter on this permanent. If you don't, sacrifice this permanent.");
+    let text = match &item.param {
+        KeywordParam::Mana(mana) if !mana.0.is_empty() => each(symbols(mana)),
+        KeywordParam::ManaList(ir::action::Coord { items, conj: ir::Conj::Or }) => match items.as_slice() {
+            [ManaCost(a), ManaCost(b)] => match (a.as_slice(), b.as_slice()) {
+                ([ManaSymbol::Color(a)], [ManaSymbol::Color(b)]) if a != b => each(symbols(&ManaCost(vec![ManaSymbol::Hybrid(*a, *b)]))),
+                _ => return None,
+            },
+            _ => return None,
+        },
+        KeywordParam::Cost(ir::Cost(parts)) => match parts.as_slice() {
+            [ir::CostPart::Action(ir::Action::PayLife(ir::Amount::Const(n)))] => each(format!("{n} life")),
+            [ir::CostPart::Action(action @ (ir::Action::Sacrifice(_) | ir::Action::Discard(_)))] => return objects_for_each_age_counter(action),
+            _ => return None,
+        },
+        _ => return None,
+    };
     CardDef::new("Cumulative upkeep rule", "", "Enchantment", &text, None).ok()?.abilities.into_iter().next()
+}
+
+/// Cumulative upkeep's "sacrifice a creature" or "discard a card" for each age counter: the
+/// rule's sacrifice unless its controller does that to X of them, X the age counters on it.
+fn objects_for_each_age_counter(action: &ir::Action) -> Option<Ability> {
+    let mut scaled = action.clone();
+    let (ir::Action::Sacrifice(objects) | ir::Action::Discard(objects)) = &mut scaled else { return None };
+    let [one] = objects.items.as_mut_slice() else { return None };
+    if one.quant != ir::Quant::Indefinite(ir::Count::Exactly(ir::Amount::Const(1))) || one.chooser.is_some() || one.random.is_some() { return None; }
+    one.quant = ir::Quant::Indefinite(ir::Count::Exactly(ir::Amount::X));
+    static RULE: OnceLock<Ability> = OnceLock::new();
+    let mut ability = crate::token::init(&RULE, || CardDef::new("Cumulative upkeep rule", "", "Enchantment",
+        "At the beginning of your upkeep, if this permanent is on the battlefield, put an age counter on this permanent. \
+         Sacrifice this permanent unless you sacrifice X permanents, where X is the number of age counters on this permanent.", None)
+        .expect("the grammar reads rule 702.24a").abilities[0].clone()).clone();
+    let Ability::Triggered { effect: ir::Effect(sentences), .. } = &mut ability else { unreachable!("cumulative upkeep is triggered") };
+    let Some(ir::Sentence::Do(body)) = sentences.last_mut() else { unreachable!("the payment statement") };
+    let Some(ir::effect::Modifier::Unless { actions, .. }) = body.first.first.mods.iter_mut().find(|m| matches!(m, ir::effect::Modifier::Unless { .. }))
+        else { unreachable!("the unless payment") };
+    actions.items = vec![scaled];
+    Some(ability)
 }
 
 /// 702.30a: a fixed mana echo cost is paid through the ordinary retained unless-payment.
