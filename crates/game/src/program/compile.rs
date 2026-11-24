@@ -1096,6 +1096,34 @@ impl Unless {
     }
 }
 
+/// Where the one card a described cast offers is: "from your graveyard", "from your hand", or
+/// "from among them", a group the text named before.
+#[derive(Clone, Copy)]
+enum DescribedCast { Zone(Zone), Among }
+
+fn described_cast_source(s: &Selector) -> Option<DescribedCast> {
+    match &s.set.zone {
+        Some(zone) if zone.slice.is_none() && zone.owner.as_deref().is_some_and(crate::select::is_you) => match zone.zones.items.as_slice() {
+            [ir::Zone::Graveyard] => Some(DescribedCast::Zone(Zone::Graveyard)),
+            [ir::Zone::Hand] if !matches!(s.quant, Quant::Target(_)) => Some(DescribedCast::Zone(Zone::Hand)),
+            _ => None,
+        },
+        Some(_) => None,
+        None => mention(&Selector { set: ObjectSet { domain: Domain::Card, ..s.set.clone() }, ..s.clone() }).map(|_| DescribedCast::Among),
+    }
+}
+
+/// Whether a description asks for a mana value.
+fn reads_mana_value(filter: &ir::Filter) -> bool {
+    match filter {
+        ir::Filter::All(items) | ir::Filter::Any(items) => items.iter().any(reads_mana_value),
+        ir::Filter::Not(inner) => reads_mana_value(inner),
+        ir::Filter::Atom(Atom::Stat { stat, .. }) => *stat == ir::Stat::ManaValue,
+        ir::Filter::Atom(Atom::Most { stat, .. }) => *stat == ir::Stat::ManaValue,
+        _ => false,
+    }
+}
+
 fn controller_only(subject: Option<&Subject>) -> bool {
     match subject {
         None => true,
@@ -3950,29 +3978,68 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
         // "You may cast it without paying its mana cost", "you may cast it by paying {R} rather
         // than paying its mana cost" (madness): cast as the effect is applied or not at all
         // (608.2g), for that cost.
-        // "You may cast an artifact, instant, or sorcery spell from your graveyard": one card of
-        // the player's own graveyard the description fits, cast now for ordinary costs or
-        // without its mana cost. The source zone is independent of that cost (608.2g).
+        // "You may cast an artifact, instant, or sorcery spell from your graveyard", "you may
+        // cast a spell with mana value 3 or less from your hand without paying its mana cost",
+        // "you may cast an instant or sorcery spell from among them": one card of the player's
+        // own graveyard or hand, or of the group the text named, cast now for ordinary costs or
+        // without its mana cost (608.2g). What the spell is described as is asked of it as
+        // each half or face would be cast (601.3e, 709.3a, 712.11c, 715.3a). The source zone is
+        // independent of that cost.
         if let Action::Cast { play: false, what, free } = &act.action
             && let [s] = what.items.as_slice()
             && matches!(s.quant, Quant::Indefinite(Count::Exactly(Amount::Const(1))) | Quant::Target(Count::Exactly(Amount::Const(1))))
             && matches!(s.set.domain, Domain::Spell | Domain::Card)
-            && s.set.zone.as_ref().is_some_and(|z| z.zones.items == [ir::Zone::Graveyard] && z.slice.is_none() && z.owner.as_deref().is_some_and(crate::select::is_you))
+            && let Some(source) = described_cast_source(s)
         {
             if !(clause.may || act.may) || !durations.is_empty() || !act.mods.is_empty() || !controller_only(clause.subject.as_ref())
                 || s.chooser.is_some() || s.random.is_some() || s.set.controller.is_some() || s.set.owner.is_some() || s.set.caster.is_some() {
-                return unsupported("program: a cast from a graveyard other than its controller's own optional one");
+                return unsupported("program: a described cast other than its controller's own optional one");
             }
             let player = e.clause_subject(clause, support, &mut binder)?;
-            // a card that would be such a spell: its card characteristics (601.3e)
-            let set = ObjectSet { domain: Domain::Card, ..s.set.clone() };
-            let cards = if matches!(s.quant, Quant::Target(_)) { vec![e.object(s, support, &mut binder)?] }
-                else { vec![action::Operand::Zone(expr::ZoneCards::compile(&set, support, &mut binder.scope(support))?)] };
+            let (cards, from, description) = match source {
+                DescribedCast::Zone(zone) if matches!(s.quant, Quant::Target(_)) => {
+                    if zone != Zone::Graveyard { return unsupported("program: a cast of a target card other than one in a graveyard"); }
+                    (vec![e.object(s, support, &mut binder)?], zone, None)
+                }
+                DescribedCast::Zone(zone) => {
+                    let all = ObjectSet { domain: Domain::Card, filter: ir::Filter::All(Vec::new()), ..s.set.clone() };
+                    (vec![action::Operand::Zone(expr::ZoneCards::compile(&all, support, &mut binder.scope(support))?)], zone,
+                        Some(ObjectSet { domain: Domain::Card, zone: None, ..s.set.clone() }))
+                }
+                DescribedCast::Among => {
+                    let card = Selector { set: ObjectSet { domain: Domain::Card, ..s.set.clone() }, ..s.clone() };
+                    let Some(mention) = mention(&card).filter(|m| m.taking == Taking::Exactly(1)) else {
+                        return unsupported("program: a cast from among a group other than one of its cards");
+                    };
+                    e.unite(&mention.reference, &mut binder);
+                    let group = binder.resolve(&mention.reference)?;
+                    let (slot, zone) = (group.slot, group.zone);
+                    // a card of a graveyard is offered only of its caster's own (601.3)
+                    if !matches!(zone, Zone::Library | Zone::Hand | Zone::Exile) {
+                        return unsupported("program: a cast from among cards in a graveyard");
+                    }
+                    let subjects = e.slot();
+                    e.instrs.push(Instr::Subjects { cards: slot, out: subjects, still_in: None });
+                    (vec![action::Operand::Reference(subjects)], zone, Some(mention.set))
+                }
+            };
+            // a card that would be such a spell, as each half or face would be cast (601.3e)
+            let fits = match description.filter(|d| d.filter != ir::Filter::All(Vec::new())) {
+                Some(description) => {
+                    // the X of a spell cast for its ordinary costs is announced as it is cast,
+                    // after the effect says what it may be (601.2b)
+                    if !*free && reads_mana_value(&description.filter) {
+                        return unsupported("program: a described cast for ordinary costs by its mana value");
+                    }
+                    Some(expr::Cards::compile(&description, support, &mut binder.scope(support))?)
+                }
+                None => None,
+            };
             let (offered, cast, possible) = (e.slot(), e.slot(), e.slot());
             binder.outcome = Some((player.clone(), cast, possible, e.instrs.len()));
             e.instrs.push(Instr::Cast { player, cards, offered,
                 costs: if *free { crate::permission::Costs::Free } else { crate::permission::Costs::Ordinary },
-                cast, possible, from: CastOrigin::Fixed(Zone::Graveyard), rider: None, haste: false, one: true, ceiling: None });
+                cast, possible, from: CastOrigin::Fixed(from), rider: None, haste: false, one: true, ceiling: None, fits });
             e.end_act(false, None);
             continue;
         }
@@ -4073,7 +4140,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                     if !supplied_hit { return unsupported("cascade: only its exact scan hit is offered"); }
                     Some(scan.1)
                 } else { None };
-                e.instrs.push(Instr::Cast { player, cards, offered, costs, cast, possible, from, rider: None, haste: support.suspend_offer(), one: false, ceiling });
+                e.instrs.push(Instr::Cast { player, cards, offered, costs, cast, possible, from, rider: None, haste: support.suspend_offer(), one: false, ceiling, fits: None });
                 e.end_act(false, None);
                 continue;
             }
@@ -4545,7 +4612,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             let (offered, cast, possible, rest, designated_subjects) = (e.slot(), e.slot(), e.slot(), e.slot(), e.slot());
             e.instrs.push(Instr::Subjects { cards: designated, out: designated_subjects, still_in: None });
             e.instrs.push(Instr::Cast { player, cards: vec![action::Operand::Reference(subjects)],
-                offered, costs: crate::permission::Costs::Free, cast, possible, from: CastOrigin::Fixed(Zone::Exile), rider: None, haste: false, one: true, ceiling: Some(bound) });
+                offered, costs: crate::permission::Costs::Free, cast, possible, from: CastOrigin::Fixed(Zone::Exile), rider: None, haste: false, one: true, ceiling: Some(bound), fits: None });
             e.instrs.push(Instr::Move { src: hit, to: Dest::Hand, by, when: Some(condition::Condition::outcome(cast, possible, ir::condition::Outcome::Didnt)) });
             e.instrs.push(Instr::Remainder { of: all, minus: vec![hit], still_in: Zone::Exile, out: rest });
             e.instrs.push(Instr::Move { src: rest, to: Dest::Library { position: LibraryPosition::Bottom, order: Some(Order::Random) }, by, when: None });

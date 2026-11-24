@@ -2208,6 +2208,10 @@ impl Game {
         };
         if !adding.is_empty() { return Err("mana is added by a mana ability, not a spell (605.3b)".into()); }
         if !cards.contains(&card) { return Err("the effect offers other cards to cast (608.2g)".into()); }
+        // a card of its caster's own hand is cast under the offer too, only as what it offers
+        if !self.cast_permissions(player, card, cast_as.unwrap_or_default()).any(|p| p.window == crate::permission::Window::Offered) {
+            return Err(self.not_permitted(player, card, cast_as.unwrap_or_default(), "cast").into());
+        }
         self.cast_begun();
         self.begin_cast(player, card, cast_as.unwrap_or_default(), route, &substitutions, cost.unwrap_or_default(), &modes, targets, &division, paying.as_deref().unwrap_or(&[]), with.as_ref(), plan.as_deref().unwrap_or(&[]), x, kicks, buyback, optional, entwine, replicate, gift, &life, &chose, branches.as_deref(), true).map_err(Into::into)
         // the offer stands until its effect goes on: a cast abandoned is offered again (733.1)

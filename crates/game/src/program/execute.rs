@@ -406,7 +406,7 @@ pub(super) fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt
             f.cast_results.push((*out, copies.iter().filter_map(|target| match target { Target::Object(card) => Some(*card), _ => None }).collect()));
             f.slots[*out] = Some(Value::Subjects(copies));
         }
-        Instr::Cast { player, cards, offered, costs, cast, possible, from, rider, one, ceiling, haste } => {
+        Instr::Cast { player, cards, offered, costs, cast, possible, from, rider, one, ceiling, haste, fits } => {
             // a spell was cast, or its cast abandoned: what is left is offered again. Whether
             // it was cast is its payment's result: a cast reversed (733.1) was not made.
             if let Some(Pending::Payment { result }) = &f.pending {
@@ -422,6 +422,19 @@ pub(super) fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt
                 f.slots[*possible] = Some(Value::Consent(false));
                 return Ok(())
             };
+            // the ways of casting each card that are the spell described (601.3e): the halves
+            // or faces as each would be cast, X 0 for one cast without paying its mana cost
+            // (107.3b); None, of no description
+            let faces = |game: &Game, f: &Frame, card: ObjId| -> Option<Vec<crate::card::CastAs>> {
+                let fits = fits.as_ref()?;
+                let hand = game.obj(card).zone == Zone::Hand;
+                let choices = game.def(card).map_or_else(Vec::new, |def| def.cast_choices(hand));
+                let free = *costs == crate::permission::Costs::Free;
+                Some(choices.into_iter().filter(|choice| {
+                    let ctx = Ctx { casting: Some((card, *choice)), casting_x: free.then_some(0), ..f.ctx.clone() };
+                    fits.contains(game, &ctx, f, card)
+                }).collect())
+            };
             if f.slots[*offered].is_none() {
                 // Bind only the retained result incarnation. Successful movement results
                 // capture their actual destination; explicit source constraints stay fixed.
@@ -431,7 +444,7 @@ pub(super) fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt
                             && (*zone != Zone::Graveyard || game.players[player].graveyard.contains(now)),
                         CastOrigin::Produced(slot) => f.cast_results.iter().any(|(out, arrived)| out == slot && arrived.contains(now)),
                         CastOrigin::Retained { original, .. } => action::moved(game, f, &[action::Operand::Reference(*original)]).contains(now),
-                    }
+                    } && faces(game, f, *now).is_none_or(|faces| !faces.is_empty())
                 }).collect();
                 f.cast_origins.retain(|(slot, _, _)| slot != offered);
                 f.cast_origins.extend(cards.iter().map(|card| (*offered, *card, game.obj(*card).zone)));
@@ -448,7 +461,12 @@ pub(super) fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt
             let done = *one && matches!(f.slots[*cast], Some(Value::Consent(true)));
             let left: Vec<ObjId> = all.iter().copied().filter(|c| !done && game.obj(*c).zone != Zone::Gone && f.cast_origins.iter().any(|(slot, card, zone)| slot == offered && card == c && game.obj(*c).zone == *zone) && !game.obj(*c).is(ir::CardType::Land)).collect();
             if f.pending.is_none() {
-                for card in &left { if !game.offered(player, *card) { game.offer(player, *card, *costs, rider.clone().map(|r| crate::permission::Rider { by: Some((f.ctx.source, f.ctx.ability.clone())), ..r }), ceiling.map(|slot| match f.slots[slot] { Some(Value::Number(n)) => n, _ => unreachable!("typed cast ceiling") })).haste = *haste; } }
+                for card in &left { if !game.offered(player, *card) {
+                    let faces = faces(game, f, *card);
+                    let permission = game.offer(player, *card, *costs, rider.clone().map(|r| crate::permission::Rider { by: Some((f.ctx.source, f.ctx.ability.clone())), ..r }), ceiling.map(|slot| match f.slots[slot] { Some(Value::Number(n)) => n, _ => unreachable!("typed cast ceiling") }));
+                    permission.haste = *haste;
+                    permission.faces = faces;
+                } }
             }
             // A cast is its own move and arrives as a child; an answer here declines.
             if !left.is_empty() { f.ask(player, Choice::Cast { cards: left })?; }

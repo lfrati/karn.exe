@@ -291,7 +291,10 @@ pub enum Instr {
     /// completed (601.2h), and `possible`, whether one was offered: "If you don't, …".
     /// `from`: the fixed source zone supplied by the bound card producer;
     /// `rider`: what a spell cast this way carries; `one`: "cast a spell": one cast at most.
-    Cast { player: action::Operand, cards: Vec<action::Operand>, offered: Slot, costs: crate::permission::Costs, cast: Slot, possible: Slot, from: CastOrigin, rider: Option<crate::permission::Rider>, one: bool, ceiling: Option<Slot>, haste: bool },
+    /// `fits`: "an instant or sorcery spell with mana value 3 or less": what the spell is, as
+    /// each half or face of a card would be cast (601.3e); a card no way of casting fits is not
+    /// offered.
+    Cast { player: action::Operand, cards: Vec<action::Operand>, offered: Slot, costs: crate::permission::Costs, cast: Slot, possible: Slot, from: CastOrigin, rider: Option<crate::permission::Rider>, one: bool, ceiling: Option<Slot>, haste: bool, fits: Option<expr::Cards> },
     /// "Copy it three times": for each of these cards, that many copies of it made in the
     /// zone it is in, for the controller to cast (707.12). `out`: the copies.
     CopyCards { cards: action::Operand, times: expr::Amount, out: Slot },
@@ -679,7 +682,7 @@ impl Program {
                         if let Scalar::Local { slot, kind } = scalar { need(&kinds, slot, kind)?; }
                     }
                 }
-                Instr::Cast { player, cards, offered, cast, possible, ceiling, from, .. } => {
+                Instr::Cast { player, cards, offered, cast, possible, ceiling, from, fits, .. } => {
                     if let CastOrigin::Produced(slot) | CastOrigin::Retained { moved: slot, .. } = from {
                         let kind = instrs[..pc].iter().find_map(|i| match i { Instr::MoveTogether { entered, .. } if entered.iter().any(|(_,out)|out==slot) => Some(Kind::Cards), _ => i.cast_result().filter(|(out, _)| out == slot).map(|(_, kind)| kind) })
                             .ok_or_else(|| crate::Unsupported("cast origin does not name an earlier successful card producer".into()))?;
@@ -695,7 +698,7 @@ impl Program {
                             return unsupported("retained cast origin does not name its exact movement input");
                         }
                     }
-                    for scalar in player.scalars().into_iter().chain(cards.iter().flat_map(action::Operand::scalars)) {
+                    for scalar in player.scalars().into_iter().chain(cards.iter().flat_map(action::Operand::scalars)).chain(fits.iter().flat_map(expr::Cards::scalars)) {
                         if let Scalar::Local { slot, kind } = scalar { need(&kinds, slot, kind)?; }
                     }
                     if let Some(slot) = ceiling { need(&kinds, *slot, Kind::Number)?; }
@@ -1679,7 +1682,7 @@ fn rebound_program() -> &'static Arc<Program> {
     PROGRAM.get_or_init(|| Arc::new(Program::with_initial(vec![Instr::Cast {
         player: action::Operand::Controller, cards: vec![action::Operand::Reference(0)],
         offered: 1, cast: 2, possible: 3, costs: crate::permission::Costs::Free,
-        from: CastOrigin::Fixed(Zone::Exile), rider: None, haste: false, one: true, ceiling: None,
+        from: CastOrigin::Fixed(Zone::Exile), rider: None, haste: false, one: true, ceiling: None, fits: None,
     }], vec![ActSpan{end:1,moves:true,keeps_x:false}], Vec::new(), vec![Some(Kind::Subjects)])
         .expect("rebound uses the ordinary retained free-cast instruction")))
 }
@@ -1934,7 +1937,7 @@ mod completion_tests {
             let mut instructions = prefix;
             instructions.push(Instr::Cast { player: Operand::Controller, cards: vec![], offered: 1,
                 costs: crate::permission::Costs::Free, cast: 2, possible: 3,
-                from: CastOrigin::Produced(slot), rider: None, haste: false, one: true, ceiling: None });
+                from: CastOrigin::Produced(slot), rider: None, haste: false, one: true, ceiling: None, fits: None });
             let end = instructions.len();
             let error = Program::new(instructions, vec![ActSpan { end, moves: false, keeps_x: false }]).unwrap_err();
             assert!(error.0.contains("cast origin does not name an earlier successful card producer"), "{error:?}");
@@ -1949,7 +1952,7 @@ mod completion_tests {
             Instr::Action { action: action::Action::Move { groups: vec![(vec![Operand::Reference(0)], action::Destination::Zone(Zone::Exile))], said: ir::action::MoveVerb::Put }, created: Some(1), attempt: None },
             Instr::Capture { operand: Operand::Controller, out: 2 },
             Instr::Cast { player: Operand::Controller, cards: vec![], offered: 3, costs: crate::permission::Costs::Free,
-                cast: 4, possible: 5, from: CastOrigin::Retained { original: 2, moved: 1 }, rider: None, haste: false, one: true, ceiling: None },
+                cast: 4, possible: 5, from: CastOrigin::Retained { original: 2, moved: 1 }, rider: None, haste: false, one: true, ceiling: None, fits: None },
         ];
         let end = instructions.len();
         let error = Program::new(instructions, vec![ActSpan { end, moves: true, keeps_x: false }]).unwrap_err();

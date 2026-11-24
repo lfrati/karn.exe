@@ -238,6 +238,18 @@ stay with each mechanism until actual Oracle cards run with tested behavior. Pub
 steps that pass `make check`, continuing immediately after a structural step while its cards
 remain refused. Continue until the user explicitly stops the builders.
 
+*Skipped:*
+
+- Described casts: "you may cast a spell with mana value 3 or less from your hand without
+  paying its mana cost", "an instant or sorcery spell from among them" offer one card of the
+  controller's hand or graveyard, or of a group the text named in a library, hand or exile,
+  and ask the description of the spell as it would be cast: of the half, face or Adventure
+  chosen (709.3a, 712.11c, 715.3a), with X 0 for a free spell (107.3b), even of a card in its
+  caster's own hand (601.3e). A cast from among graveyard cards, one for ordinary costs by
+  mana value, a description comparing or sharing with another object (Reinterpret, Baral and
+  Kari Zev, Counterlash), another player's cast and a cast of one of several groups remain
+  refused.
+
 #### Quality (worktree `quality`)
 
 Alongside the builders, from the review of the round before: the wrong play it left open

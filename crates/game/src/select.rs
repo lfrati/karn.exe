@@ -36,6 +36,10 @@ pub struct Ctx<'a> {
     pub x: Option<u32>,
     /// Characteristics of a split spell being announced before it moves (709.3a).
     pub casting: Option<(ObjId, crate::card::CastAs)>,
+    /// The X of the spell [`Ctx::casting`] names, where it is not the X the text says: 0, of
+    /// a spell to be cast without paying its mana cost (107.3b), asked of as the text's own X
+    /// is known ("a spell with mana value X or less").
+    pub casting_x: Option<u32>,
     /// Whether these targets belong to a spell (115.1a–d). An ability can have a spell
     /// as its source, so the source's zone does not answer this question.
     pub targeting_spell: bool,
@@ -122,7 +126,7 @@ impl<'a> Ctx<'a> {
     }
 
     pub(crate) fn mana_value(&self, game: &Game, o: ObjId) -> u32 {
-        self.spell(game, o).map_or(game.obj(o).chars.mana_value, |d| d.spell_mana_value(self.x))
+        self.spell(game, o).map_or(game.obj(o).chars.mana_value, |d| d.spell_mana_value(self.casting_x.or(self.x)))
     }
 
     pub fn for_spell(controller: PlayerId, source: ObjId) -> Ctx<'a> {
@@ -158,7 +162,7 @@ impl<'a> Ctx<'a> {
     }
 
     pub(crate) fn rule(controller: PlayerId, key: crate::binding::AbilityKey) -> Ctx<'a> {
-        Ctx { link_generation: None, view: None, controller, source: None, ability: Some(key.clone()), effect: Some(key.index), was: None, layer: None, x: None, casting: None, targeting_spell: false, face_then: None, then: None }
+        Ctx { link_generation: None, view: None, controller, source: None, ability: Some(key.clone()), effect: Some(key.index), was: None, layer: None, x: None, casting: None, casting_x: None, targeting_spell: false, face_then: None, then: None }
     }
 
     pub(crate) fn definition<'g>(&'g self, game: &'g Game) -> Option<&'g crate::CardDef> {
@@ -170,7 +174,7 @@ impl<'a> Ctx<'a> {
     }
 
     pub fn new(controller: PlayerId, source: ObjId) -> Ctx<'a> {
-        Ctx { link_generation: None, view: None, controller, source: Some(source), ability: None, effect: None, was: None, layer: None, x: None, casting: None, targeting_spell: false, face_then: None, then: None }
+        Ctx { link_generation: None, view: None, controller, source: Some(source), ability: None, effect: None, was: None, layer: None, x: None, casting: None, casting_x: None, targeting_spell: false, face_then: None, then: None }
     }
 }
 
@@ -610,7 +614,7 @@ mod support_tests {
 
 impl crate::retention::Trace for Ctx<'_> {
     fn trace(&self, visit: &mut dyn FnMut(ObjId)) {
-        let Self { source, was, casting, view, controller: _, ability: _, link_generation: _, effect: _, layer: _, x: _, targeting_spell: _, face_then, then } = self;
+        let Self { source, was, casting, view, controller: _, ability: _, link_generation: _, effect: _, layer: _, x: _, casting_x: _, targeting_spell: _, face_then, then } = self;
         assert!(view.is_none() && then.is_none(), "query-local views cannot be retained");
         source.trace(visit);
         was.trace(visit);

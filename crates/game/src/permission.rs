@@ -38,6 +38,10 @@ pub(crate) struct Permission {
     pub(crate) rider: Option<Rider>,
     /// Inclusive resulting-spell mana-value ceiling of this offer (701.57a, 702.85a).
     pub(crate) ceiling: Option<u32>,
+    /// "Cast an instant or sorcery spell with mana value 3 or less from among them": the
+    /// halves or faces of the card that are such a spell, as each would be cast (601.3e,
+    /// 709.3a, 712.11c, 715.3a). None: whichever it is cast as.
+    pub(crate) faces: Option<Vec<crate::card::CastAs>>,
     /// When an effect's permission ends (611.2a): the adventure and plot permissions have no
     /// stated deadline and say [`Until::EndOfTurn`] without being ended by it.
     pub(crate) until: Until,
@@ -161,7 +165,7 @@ impl Costs {
 impl Game {
     /// An effect lets this player play (or only cast) this exiled card until its deadline.
     pub(crate) fn permit(&mut self, player: PlayerId, object: ObjId, play: bool, until: Until) {
-        self.permissions.push(Permission { player, object, play, window: Window::Ordinary, costs: Costs::Ordinary, adventure: false, haste: false, zone: Zone::Exile, rider: None, ceiling: None, until });
+        self.permissions.push(Permission { player, object, play, window: Window::Ordinary, costs: Costs::Ordinary, adventure: false, haste: false, zone: Zone::Exile, rider: None, ceiling: None, faces: None, until });
     }
 
     /// [`Game::permit`], put in force now with the deadline the text states.
@@ -169,7 +173,7 @@ impl Game {
         match until {
             Deadline::Warped => {
                 let turn = self.turn;
-                self.permissions.push(Permission { player, object, play, window: Window::Warped(turn), costs: Costs::Ordinary, adventure: false, haste: false, zone: Zone::Exile, rider: None, ceiling: None, until: Until::EndOfTurn });
+                self.permissions.push(Permission { player, object, play, window: Window::Warped(turn), costs: Costs::Ordinary, adventure: false, haste: false, zone: Zone::Exile, rider: None, ceiling: None, faces: None, until: Until::EndOfTurn });
             }
             until => self.permit(player, object, play, until.from(self.turn)),
         }
@@ -185,17 +189,17 @@ impl Game {
     /// their graveyard), for these costs, now (608.2g); a spell cast so carries the rider.
     pub(crate) fn offer(&mut self, player: PlayerId, object: ObjId, costs: Costs, rider: Option<Rider>, ceiling: Option<u32>) -> &mut Permission {
         let zone = self.obj(object).zone;
-        self.permissions.push(Permission { player, object, play: false, window: Window::Offered, costs, adventure: false, haste: false, zone, rider, ceiling, until: Until::EndOfTurn });
+        self.permissions.push(Permission { player, object, play: false, window: Window::Offered, costs, adventure: false, haste: false, zone, rider, ceiling, faces: None, until: Until::EndOfTurn });
         self.permissions.last_mut().expect("the new resolution-time offer")
     }
 
     pub(crate) fn permit_adventure(&mut self, player: PlayerId, object: ObjId) {
-        self.permissions.push(Permission { player, object, play: true, window: Window::Ordinary, costs: Costs::Ordinary, adventure: true, haste: false, zone: Zone::Exile, rider: None, ceiling: None, until: Until::EndOfTurn });
+        self.permissions.push(Permission { player, object, play: true, window: Window::Ordinary, costs: Costs::Ordinary, adventure: true, haste: false, zone: Zone::Exile, rider: None, ceiling: None, faces: None, until: Until::EndOfTurn });
     }
 
     pub(crate) fn permit_plotted(&mut self, player: PlayerId, object: ObjId) {
         let turn = self.turn;
-        self.permissions.push(Permission { player, object, play: false, window: Window::Plotted(turn), costs: Costs::Free, adventure: false, haste: false, zone: Zone::Exile, rider: None, ceiling: None, until: Until::EndOfTurn });
+        self.permissions.push(Permission { player, object, play: false, window: Window::Plotted(turn), costs: Costs::Free, adventure: false, haste: false, zone: Zone::Exile, rider: None, ceiling: None, faces: None, until: Until::EndOfTurn });
     }
 
     /// A public designation of this exile incarnation, even before it can be cast (702.170c).
@@ -208,7 +212,8 @@ impl Game {
     pub(crate) fn cast_permissions(&self, player: PlayerId, card: ObjId, choice: crate::card::CastAs) -> impl Iterator<Item = &Permission> {
         self.permissions_of(player, card).filter(move |p| (!p.adventure || choice == crate::card::CastAs::Whole)
             && p.ceiling.is_none_or(|bound| self.def(card).is_some_and(|def|
-                def.spell(choice).is_ok_and(|spell| spell.spell_mana_value(Some(0)) <= bound))))
+                def.spell(choice).is_ok_and(|spell| spell.spell_mana_value(Some(0)) <= bound)))
+            && p.faces.as_ref().is_none_or(|faces| faces.contains(&choice)))
     }
 
     pub(crate) fn permitted_cast_from_exile(&self, player: PlayerId, card: ObjId, choice: crate::card::CastAs) -> bool {
@@ -240,14 +245,17 @@ impl Game {
             // a copy or token outside its zones, or an object otherwise gone (704.5d-e)
             return format!("that object has ceased to exist: there is nothing to {verb}");
         }
-        if o.zone == Zone::Hand {
-            return format!("that card is in another player's hand; you {verb} only from your own ({rule})");
-        }
         if self.permissions_of(player, card).next().is_some() && self.cast_permissions(player, card, choice).next().is_none() {
+            if self.permissions_of(player, card).any(|p| p.faces.as_ref().is_some_and(|faces| !faces.contains(&choice))) {
+                return "cast that way, it is not a spell the effect describes (601.3e, 709.3a, 712.11c, 715.3a)".into();
+            }
             if self.permissions_of(player, card).any(|p| p.ceiling.is_some()) {
                 return "the resulting spell's mana value exceeds the effect's bound (701.57a, 702.85a)".into();
             }
             return "it was exiled on an adventure: it may be cast as its creature or other main card, not as its Adventure (715.3d)".into();
+        }
+        if o.zone == Zone::Hand {
+            return format!("that card is in another player's hand; you {verb} only from your own ({rule})");
         }
         if self.permissions.iter().any(|p| p.object == card && p.zone == o.zone && p.player != player) {
             return format!("an effect lets another player {verb} that card, not you ({rule})");
