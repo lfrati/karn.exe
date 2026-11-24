@@ -99,30 +99,31 @@ impl Game {
     /// Live reveal grants belong to their original occurrences, separately from disclosures.
     /// Ninjutsu lasts on the stack; Miracle also spans pending triggers and resolution.
     pub(crate) fn reveal_grants(&self) -> impl Iterator<Item = ObjId> + '_ {
-        let through_resolution = self.stack.iter().map(|ability| &self.obj(*ability).bound)
+        self.stack.iter().flat_map(|ability| self.obj(*ability).bound.revealed.iter().copied())
+            .chain(self.revealed_through_resolution())
+    }
+    /// The cards still in a hand that an occurrence reveals until it has resolved: Miracle's
+    /// (702.94a), from its trigger to the end of its resolution.
+    fn revealed_through_resolution(&self) -> impl Iterator<Item = ObjId> + '_ {
+        self.stack.iter().map(|ability| &self.obj(*ability).bound)
             .chain(self.triggered.iter().map(|trigger| &trigger.bound))
             .chain(self.procedures.iter().filter_map(|procedure| match procedure {
                 crate::procedure::Procedure::Resolution(at) => Some(&at.bound), _ => None,
             })).flat_map(|bound| bound.revealed_through_resolution.iter().copied())
-            .filter(|card| self.obj(*card).zone == Zone::Hand);
-        self.stack.iter().flat_map(|ability| self.obj(*ability).bound.revealed.iter().copied())
-            .chain(through_resolution)
+            .filter(|card| self.obj(*card).zone == Zone::Hand)
+    }
+    /// Is this object one of the [`Game::reveal_grants`]? Only a card in a hand can be one
+    /// revealed through resolution, so the others are not looked for there.
+    fn reveal_granted(&self, o: ObjId) -> bool {
+        self.stack.iter().any(|ability| self.obj(*ability).bound.revealed.contains(&o))
+            || (self.obj(o).zone == Zone::Hand && self.revealed_through_resolution().any(|card| card == o))
     }
 
     fn sees_directly(&self, viewer: PlayerId, o: ObjId) -> bool {
         let obj = self.obj(o);
-        if obj.zone==Zone::Library && self.continuous_top_look(viewer,o){return true;}
-        if self.reveal_grants().any(|card| card == o) { return true; }
-        if self.resolving().is_some_and(|r| r.program_frame().is_some_and(|f| f.shown_to(self, viewer, o))) {
-            return true;
-        }
-        if let Some(Decision::Choose { player, choice: Choice::Arrange { cards, .. } | Choice::Search { cards, .. } }) = &self.decision
-            && *player == viewer
-            && cards.contains(&o)
-        {
-            return true;
-        }
-        match if obj.zone == Zone::Gone { obj.left } else { Some(obj.zone) } {
+        // What its zone shows, asked first: most objects are in a public zone, and what
+        // effects show is looked for among the stack, the triggers and what is resolving.
+        let by_zone = match if obj.zone == Zone::Gone { obj.left } else { Some(obj.zone) } {
             // its controller may look at it at any time (708.5)
             Some(zone @ (Zone::Battlefield | Zone::Stack)) if obj.zone == zone && matches!(obj.face, crate::face::Face::Down(_)) => self.controller(o) == viewer,
             // only a player allowed to look at it, until it leaves exile (406.3)
@@ -130,6 +131,12 @@ impl Game {
             Some(Zone::Battlefield | Zone::Stack | Zone::Graveyard | Zone::Exile | Zone::Command) => true,
             Some(Zone::Hand) => obj.owner == viewer,
             Some(Zone::Library | Zone::Gone) | None => false,
-        }
+        };
+        by_zone
+            || (obj.zone == Zone::Library && self.continuous_top_look(viewer, o))
+            || self.reveal_granted(o)
+            || self.resolving().is_some_and(|r| r.program_frame().is_some_and(|f| f.shown_to(self, viewer, o)))
+            || matches!(&self.decision, Some(Decision::Choose { player, choice: Choice::Arrange { cards, .. } | Choice::Search { cards, .. } })
+                if *player == viewer && cards.contains(&o))
     }
 }
