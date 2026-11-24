@@ -1657,8 +1657,14 @@ impl Emit {
         let mut instructions = Vec::new();
         let mut chosen = None;
         for selector in &objects.items {
-            if selector.random.is_some() { return unsupported("choice: at random selection not lowered"); }
+            // "discards two cards at random": no one chooses which (701.9b)
+            let random = selector.random.is_some();
+            if random && (!matches!(act.action, Action::Discard(_)) || selector.chooser.is_some()
+                || !matches!(selector.quant, Quant::Indefinite(Count::Exactly(_)))) {
+                return unsupported("choice: at random selection not lowered");
+            }
             let chooser = match selector.chooser.as_deref() {
+                None if random => choice::Chooser::Random,
                 None => choice::Chooser::Actor,
                 Some(s) if s.quant == Quant::Definite(Ref::You) => choice::Chooser::Controller,
                 Some(s) if matches!(s.quant, Quant::Definite(Ref::Anaphor(_))) => choice::Chooser::Actor,

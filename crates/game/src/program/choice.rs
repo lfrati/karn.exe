@@ -86,11 +86,12 @@ pub enum Count {
 }
 
 /// Who chooses: the player who acts (701.9b), or the controller of the effect ("of your
-/// choice").
+/// choice"); or no one: "discards two cards at random" (701.9b).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Chooser {
     Actor,
     Controller,
+    Random,
 }
 
 /// "Each player discards two cards", "target player sacrifices a creature of their choice".
@@ -225,6 +226,9 @@ struct Part {
     verb: Verb,
     selection: Option<crate::cost::Selection>,
     chooser: PlayerId,
+    /// What it is done to is picked at random among what it could be done to, each as
+    /// likely as any other; no one chooses (701.9b).
+    random: bool,
     among: Vec<ObjId>,
     /// The unfiltered choice pool contains identities concealed from another player.
     private_pool: bool,
@@ -357,15 +361,16 @@ impl Pending {
             let cause = crate::event::Cause { source: ctx.object_source(), controller: ctx.controller };
             let among: Vec<ObjId> = pool.into_iter().filter(|o| action.verb != Verb::Sacrifice || game.can_cause_sacrifice(cause, player, *o)).collect();
             let chooser = match action.chooser {
-                Chooser::Actor => player,
+                Chooser::Actor | Chooser::Random => player,
                 Chooser::Controller => f.ctx.controller,
             };
+            let random = action.chooser == Chooser::Random;
             let selection = if let Count::ManaValueAtLeast(n) = &action.count {
                 Some(crate::cost::Selection::ManaValueAtLeast { minimum: n.evaluate(game, ctx, f), values: Vec::new() }.evaluated(game, ctx, &among))
             } else if let Count::UpTo(n) = &action.count {
                 Some(crate::cost::Selection::UpTo((n.evaluate(game, ctx, f) as usize).min(among.len())))
             } else { None };
-            Part { player, verb: action.verb, selection, chooser, among, private_pool, count, chosen: None, consent: None }
+            Part { player, verb: action.verb, selection, chooser, random, among, private_pool, count, chosen: None, consent: None }
         }).collect();
         Pending { alternatives: None, compound: false, verb: action.verb, parts, done: false, optional: false, payment: false, started: false, source: f.ctx.object_source(), controller: f.ctx.controller, ability: f.ctx.ability.clone(), generation: f.ctx.link_generation, transitions: Vec::new(), actual: Vec::new(), waiting: false, completed: None }
     }
@@ -431,6 +436,9 @@ impl Pending {
             }
             // One permanent cannot be sacrificed twice for two descriptions (701.21a).
             part.among.retain(|o| !chosen_before.contains(o));
+            if part.open() && part.random && part.selection.is_none() {
+                part.chosen = Some(game.random_pick(part.player, &part.among, part.needed()));
+            }
             if part.open() {
                 let choice = if let Some(selection) = &part.selection {
                     Choice::ConstrainedObjects { verb: part.verb.said(), among: part.among.clone(), selection: selection.clone() }

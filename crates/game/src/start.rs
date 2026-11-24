@@ -526,6 +526,22 @@ impl Game {
     /// Randomize exactly a placement group, without shuffling its destination library.
     /// Capture before placement changes incarnations or replacements remove cards.
     pub(crate) fn random_library_order(&mut self, player: PlayerId, cards: &mut [ObjId], position: ir::action::LibraryPosition) {
+        self.random_order(player, cards, Some(position));
+    }
+
+    /// `count` of these cards, picked at random, each group of them as likely as any other:
+    /// "discards two cards at random" (701.9b). The pick is the first `count` of a random
+    /// order of all of them, recorded as that order.
+    pub(crate) fn random_pick(&mut self, player: PlayerId, among: &[ObjId], count: usize) -> Vec<ObjId> {
+        let mut cards = among.to_vec();
+        if count < cards.len() { self.random_order(player, &mut cards, None); }
+        cards.truncate(count);
+        cards
+    }
+
+    /// Put these cards of one owner in a random order: placed in a library at `position`, or
+    /// picked from in that order.
+    fn random_order(&mut self, player: PlayerId, cards: &mut [ObjId], position: Option<ir::action::LibraryPosition>) {
         // No choice among permutations exists for zero or one selected card. Unlike
         // an explicit shuffle (701.24e), this placement causes no shuffle event either.
         if cards.len() < 2 { return; }
@@ -552,7 +568,7 @@ impl Game {
         }
         if self.captured_random.is_some() {
             let order = cards.iter().map(|id| self.physical_card_identity(*id).expect("physical random-order card")).collect();
-            self.captured_random.as_mut().unwrap().push(CapturedRandom::Order { kind, player, position: Some(position), order });
+            self.captured_random.as_mut().unwrap().push(CapturedRandom::Order { kind, player, position, order });
         }
     }
 
