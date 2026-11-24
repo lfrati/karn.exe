@@ -148,6 +148,9 @@ pub enum Action {
     Damage { source: Operand, hits: Vec<(Vec<Operand>, expr::Amount)>, unpreventable: bool },
     /// Remove at most Some(n), or all with None, of one named kind (122.1, 609.3).
     RemoveCounters { from: Operand, counters: CounterRemoval },
+    /// `by` moves counters from one permanent onto another (122.5): this many of this kind,
+    /// or all of them, or with no kind every counter it has.
+    MoveCounters { by: Operand, from: Operand, onto: Operand, kind: Option<String>, count: Option<u32> },
     /// Counters put on supported holders: each group, and the counters put on each of its members.
     PutCounters { by: Operand, placements: Vec<(Operand, Vec<(String, expr::Amount)>)> },
     /// Damage the source deals divided among a target group as announced (601.2d): each
@@ -251,7 +254,7 @@ impl Action {
             Self::BecomeMonarch { .. } | Self::WinGame { .. } | Self::LoseGame { .. } | Self::IncreaseSpeed { .. } | Self::GetEmblem { .. }
             | Self::ExileUntil { .. } | Self::Draw { .. } | Self::GainLife { .. }
             | Self::Tap { .. } | Self::Transform { .. } | Self::Level { .. } | Self::Unprepare { .. } | Self::Designate { .. } | Self::TurnFace { .. }
-            | Self::Prevent { .. } | Self::PutCounters { .. } | Self::Regenerate { .. } | Self::PhaseOut { .. }
+            | Self::Prevent { .. } | Self::PutCounters { .. } | Self::MoveCounters { .. } | Self::Regenerate { .. } | Self::PhaseOut { .. }
             | Self::Attach { .. } | Self::Pair { .. } | Self::Distribute { .. } => None,
         }
     }
@@ -286,6 +289,7 @@ impl Action {
             Action::Prevent { to, by, .. } => to.iter().chain(by).collect(),
             Action::Fight { one, other } => std::iter::once(one).chain(other).collect(),
             Action::RemoveCounters { from, .. } => vec![from],
+            Action::MoveCounters { by, from, onto, .. } => vec![by, from, onto],
             Action::PutCounters { by, placements } => std::iter::once(by).chain(placements.iter().map(|(on, _)| on)).collect(),
             Action::DealDivided { source, .. } => vec![source],
             Action::Distribute { by, .. } => vec![by],
@@ -298,7 +302,7 @@ impl Action {
             Action::Draw { amount, .. } | Action::Mill { amount, .. } | Action::GainLife { amount, .. }
             | Action::LoseLife { amount, .. } => vec![amount],
             Action::Tap { .. } | Action::Fight { .. } | Action::Transform { .. } | Action::Level { .. } | Action::Unprepare { .. } | Action::Designate { .. } | Action::TurnFace { .. } | Action::Destroy { .. } | Action::Counter { .. } | Action::ExileUntil { .. }
-            | Action::Prevent { .. } | Action::RemoveCounters { .. } | Action::BecomeMonarch { .. } | Action::WinGame { .. } | Action::LoseGame { .. } | Action::IncreaseSpeed { .. } | Action::Regenerate { .. } | Action::PhaseOut { .. } | Action::Attach { .. } | Action::Pair { .. } | Action::GetEmblem { .. }
+            | Action::Prevent { .. } | Action::RemoveCounters { .. } | Action::MoveCounters { .. } | Action::BecomeMonarch { .. } | Action::WinGame { .. } | Action::LoseGame { .. } | Action::IncreaseSpeed { .. } | Action::Regenerate { .. } | Action::PhaseOut { .. } | Action::Attach { .. } | Action::Pair { .. } | Action::GetEmblem { .. }
             | Action::DealDivided { .. } | Action::Distribute { .. } => Vec::new(),
             Action::Damage { hits, .. } => hits.iter().map(|(_, n)| n).collect(),
             Action::PutCounters { placements, .. } => placements.iter().flat_map(|(_, counters)| counters.iter().map(|(_, n)| n)).collect(),
@@ -358,6 +362,7 @@ impl Action {
             Action::Damage { .. } | Action::Prevent { .. } | Action::DealDivided { .. } => Ok(()),
             Action::RemoveCounters { counters: CounterRemoval::Named { kind, .. }, .. } | Action::Distribute { kind, .. } => crate::layers::counter_ok(kind),
             Action::RemoveCounters { counters: CounterRemoval::All, .. } => Ok(()),
+            Action::MoveCounters { kind, .. } => kind.as_deref().map_or(Ok(()), crate::layers::counter_ok),
             Action::Fight { .. } => no(Operand::Controller, "a player that fights"),
             Action::PutCounters { placements, .. } => {
                 placements.iter().flat_map(|(_, counters)| counters).try_for_each(|(kind, _)| crate::layers::counter_ok(kind))
@@ -619,6 +624,16 @@ pub(super) fn evaluate(game: &Game, f: &Frame, action: &Action) -> crate::Res<pe
             perform::Action::Players { kind, players }
         }
         Action::RemoveCounters { from, counters } => perform::Action::RemoveCounters { from: found(game, f, from), counters: counters.clone() },
+        // one permanent and another, each where the text says it still is (122.5, 400.7)
+        Action::MoveCounters { by, from, onto, kind, count } => {
+            let one = |operand| match found(game, f, operand).as_slice() {
+                [Target::Object(o)] if game.obj(*o).zone == Zone::Battlefield => Some(*o),
+                _ => None,
+            };
+            let moving = one(from).zip(one(onto)).zip(players(game, f, by).first().copied())
+                .map(|((from, onto), by)| perform::Moving { from, onto, by });
+            perform::Action::MoveCounters { moving, kind: kind.clone(), count: *count }
+        }
         Action::Tap { objects: of, tapped } => perform::Action::Tap { objects: objects(game, f, of), tapped: *tapped },
         Action::Transform { objects: of } => {
             // an ability of the permanent itself, and when it was put on the stack (701.27f)

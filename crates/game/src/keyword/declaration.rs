@@ -444,6 +444,8 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
             true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
         "Modular" => generated_many(modular(item).ok_or_else(|| crate::Unsupported("keyword: Modular".into()))?,
             true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
+        "Graft" => generated_many(graft(item).ok_or_else(|| crate::Unsupported("keyword: Graft".into()))?,
+            true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
         "Soulbond" if plain => generated_many(crate::keyword::soulbond().to_vec(), true, vec![Context::PermanentsOnly]),
         // a permanent's own entry replacement: one a permanent on the battlefield would give
         // it is not asked of it as it enters (614.12), so they are printed only

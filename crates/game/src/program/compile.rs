@@ -3948,7 +3948,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             continue;
         }
         if !follows.is_empty() { return unsupported("delayed instruction: what follows it is not after a delayed return"); }
-        e.relative_targets = matches!(act.action, Action::DealDamage(_)).then_some(e.targets.len());
+        e.relative_targets = matches!(act.action, Action::DealDamage(_) | Action::MoveCounters { .. }).then_some(e.targets.len());
         let player_control = matches!(&act.action,Action::GainControl(of) if of.items.iter().all(|s|s.set.domain==Domain::Player));
         let extra_turn = matches!(act.action,Action::Keyword(ir::KeywordAction::ExtraTurn));
         if !after_turns.is_empty() && !extra_turn { return unsupported("after turn: only extra turns are scheduled at that boundary"); }
@@ -5723,6 +5723,19 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 Some(action::Action::RemoveCounters { from: holder, counters: action::CounterRemoval::All })
             }
             Action::RemoveCounters { .. } => return unsupported("counter removal: named fixed/all count or all kinds, explicit holder and no among required"),
+            // "move a +1/+1 counter from this creature onto target creature" (122.5)
+            Action::MoveCounters { count, kind, from, onto } => {
+                let count = match count { ir::CounterCount::Exactly(Amount::Const(n)) => Some(*n), ir::CounterCount::All => None,
+                    _ => return unsupported("counter move: a fixed count or all") };
+                if kind.is_none() && count.is_some() { return unsupported("counter move: a count of counters of any kind"); }
+                // one permanent and one other (122.5): "from all creatures" is several moves
+                if [from, onto].iter().any(|s| matches!(s.quant, Quant::Each | Quant::All)) { return unsupported("counter move: from or onto several objects"); }
+                if let Some(kind) = kind { crate::layers::counter_ok(&kind.0)?; }
+                let by = e.clause_subject(clause, support, &mut binder)?;
+                let from = e.operand(from, support, &mut binder)?;
+                let onto = e.operand(onto, support, &mut binder)?;
+                Some(action::Action::MoveCounters { by, from, onto, kind: kind.as_ref().map(|k| k.0.clone()), count })
+            }
             // to pay {E}, a player removes an energy counter from themselves (107.14)
             Action::PayEnergy(Amount::Const(n)) => {
                 let payer = e.clause_subject(clause, support, &mut binder)?;

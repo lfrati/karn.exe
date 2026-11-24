@@ -23,6 +23,25 @@ pub(crate) enum Movement {
     Exile { object: ObjId, source: ObjId, ability: Option<crate::binding::AbilityKey>, generation: Option<usize> },
 }
 
+/// The two permanents counters move between, and the player who moves them (122.5).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Moving { pub(crate) from: ObjId, pub(crate) onto: ObjId, pub(crate) by: PlayerId }
+
+impl Moving {
+    /// What moves: each kind and how many (122.5). Nothing moves from a permanent onto
+    /// itself, a kind it doesn't have, or a kind the other can't have put on it.
+    fn counters(&self, game: &Game, kind: &Option<String>, count: Option<u32>) -> Vec<(String, u32)> {
+        if self.from == self.onto { return Vec::new(); }
+        let have = game.counters(self.from);
+        let kinds: Vec<(String, u32)> = match kind {
+            Some(kind) => vec![(kind.clone(), count.unwrap_or(u32::MAX))],
+            None => have.iter().map(|(kind, n)| (kind.clone(), *n)).collect(),
+        };
+        kinds.into_iter().map(|(kind, n)| { let n = n.min(have.get(&kind).copied().unwrap_or(0)); (kind, n) })
+            .filter(|(kind, n)| *n > 0 && game.may_place(Target::Object(self.onto), kind, self.by)).collect()
+    }
+}
+
 /// An action with its operands evaluated.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Action {
@@ -62,6 +81,9 @@ pub(crate) enum Action {
     PutCounters(Vec<Placement>),
     /// A named kind with a bounded/all count, or every kind (122.1, 609.3).
     RemoveCounters { from: Vec<Target>, counters: CounterRemoval },
+    /// Counters removed from one permanent and put onto another (122.5); nothing when there
+    /// are not both.
+    MoveCounters { moving: Option<Moving>, kind: Option<String>, count: Option<u32> },
     /// Tokens created at once (701.7), as how they enter is replaced (614.12).
     Create(Vec<crate::creation::Request>),
     /// A regeneration shield for each (701.19a).
@@ -112,6 +134,10 @@ impl Action {
                     CounterRemoval::All => true,
                 }),
             Self::Move(moves) => !moves.is_empty(),
+            Self::MoveCounters { moving, kind, count } => moving.is_some_and(|m| {
+                let moved = m.counters(game, kind, *count);
+                !moved.is_empty() && count.is_none_or(|n| moved.iter().all(|(_, m)| *m == n))
+            }),
             Self::Tap { objects, tapped } => !objects.is_empty() && objects.iter().all(|o| game.obj(*o).tapped != *tapped),
             _ => true,
         }
@@ -180,6 +206,22 @@ pub(crate) fn run(game: &mut Game, action: Action) -> crate::Res<Result<Complete
             }
             if game.log.end() != first { game.finish_simultaneous(first, crate::layers::Working::before(Vec::new())); }
         },
+        // removed from the one, then put onto the other, as those events (122.5); what
+        // replaces putting counters applies to the second (614.1)
+        Action::MoveCounters { moving: Some(moving), kind, count } => {
+            let moved = moving.counters(game, &kind, count);
+            let first = game.log.end();
+            let mut batch = Vec::new();
+            for (kind, n) in moved {
+                let actual = game.remove_counters(moving.from, &kind, n);
+                if actual == 0 { continue; }
+                result.removed.push(crate::binding::Removal { from: Target::Object(moving.from), kind: kind.clone(), count: actual });
+                batch.push(Placement { on: Target::Object(moving.onto), kind, count: actual, by: moving.by });
+            }
+            if game.log.end() != first { game.finish_simultaneous(first, crate::layers::Working::before(Vec::new())); }
+            if !batch.is_empty() && let Err(decision) = game.put_counter_batch(batch, crate::operation::EventOrigin::Effect)? { return Ok(Err(decision)); }
+        }
+        Action::MoveCounters { moving: None, .. } => {}
         Action::Counter { objects, destination } => {
             use crate::program::action::CounterDestination;
             let countered: Vec<_> = objects.into_iter().filter(|o| game.countered(*o)).collect();

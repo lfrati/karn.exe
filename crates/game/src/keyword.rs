@@ -961,6 +961,20 @@ fn modular(item: &ir::token::KeywordInstance) -> Option<Vec<Ability>> {
     Some(abilities)
 }
 
+/// "Graft N" means "This permanent enters with N +1/+1 counters on it" and "Whenever another
+/// creature enters, if this permanent has a +1/+1 counter on it, you may move a +1/+1 counter
+/// from this permanent onto that creature." (702.58a); each instance works separately
+/// (702.58b).
+fn graft(item: &ir::token::KeywordInstance) -> Option<Vec<Ability>> {
+    let KeywordParam::Number(ir::Amount::Const(count)) = item.param else { return None };
+    static RULE: OnceLock<Vec<Ability>> = OnceLock::new();
+    let mut abilities = crate::token::init(&RULE, || CardDef::new("Graft rule", "", "Creature",
+        "This permanent enters with a +1/+1 counter on it.\nWhenever another creature enters, if this permanent has a +1/+1 counter on it, you may move a +1/+1 counter from this permanent onto that creature.", Some((0, 0)))
+        .expect("the grammar reads rule 702.58a").abilities).clone();
+    entry_counter_count(&mut abilities[0], count);
+    Some(abilities)
+}
+
 /// Fixed counter entry replacements share the same ordinary typed arrival.
 fn entry_counter_count(ability: &mut Ability, count: u32) {
     let Ability::Text(ir::Effect(sentences)) = ability else { unreachable!("entry rule is static") };

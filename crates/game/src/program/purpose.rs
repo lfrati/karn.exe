@@ -92,6 +92,7 @@ pub(super) fn done_by(instr: &Instr) -> Option<(Verb, Option<Placement>)> {
             A::Damage { .. } | A::DealDivided { .. } => (Verb::DealDamage, None),
             A::RemoveCounters { .. } => (Verb::RemoveCounters, None),
             A::PutCounters { .. } => (Verb::PutCounters, None),
+            A::MoveCounters { .. } => (Verb::MoveCounters, None),
             A::Distribute { .. } => (Verb::Distribute, None),
             A::Create { .. } => (Verb::Create, None),
             A::Regenerate { .. } => (Verb::Regenerate, None),
