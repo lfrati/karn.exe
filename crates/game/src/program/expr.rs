@@ -60,6 +60,8 @@ impl Reads {
     pub(crate) const TAP_STATE: Reads = Reads(2);
     /// What has happened: this turn's events, what entered this turn, how a spell was cast.
     pub(crate) const HISTORY: Reads = Reads(4);
+    /// The X announced as the spell or ability was put on the stack (107.3a).
+    pub(crate) const X: Reads = Reads(8);
     pub(crate) const ALL: Reads = Reads(u8::MAX);
 
     pub(crate) fn any(self, of: Reads) -> bool { self.0 & of.0 != 0 }
@@ -2173,7 +2175,8 @@ impl Number {
             Number::Product(a,b) | Number::Sum(a,b) | Number::Difference(a,b) => a.reads() | b.reads(),
             Number::Aggregate(_,_,among) | Number::Colors(among) | Number::CardTypes(among) | Number::Count(among) | Number::CountersAmong(among,_) => among.reads(),
             Number::CountZone(zone) => zone.cards.reads(),
-            Number::Const(_) | Number::X | Number::SpellX | Number::CastX | Number::EventAmount | Number::LifeLost(_) | Number::Damage { .. } | Number::ResultCount(_) | Number::RemovedCount { .. } | Number::Stat(_,_)
+            Number::X => Reads::X,
+            Number::Const(_) | Number::SpellX | Number::CastX | Number::EventAmount | Number::LifeLost(_) | Number::Damage { .. } | Number::ResultCount(_) | Number::RemovedCount { .. } | Number::Stat(_,_)
                 | Number::Counters(_,_) | Number::PlayerCounters(_,_) | Number::Life(_) | Number::Speed(_) | Number::Kicked(_) | Number::Replicated(_) => Reads::NONE,
         }
     }

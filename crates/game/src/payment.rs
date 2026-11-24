@@ -108,6 +108,8 @@ impl Payment {
         Self {audit:None,next_child:0,library_tops:None, permission: None, player, source: spell, ctx: Ctx::new(player, spell), finish: Finish::Spell, undo, triggers, cost, steps: steps.iter().cloned().collect(), paying: paying.to_vec(),
             with: with.cloned(), waiting: false, committing: None, interactive: false, reports: false }
     }
+    /// The X announced for the spell, which what its cost chooses among may read (107.3a).
+    pub(crate) fn with_x(mut self, x: Option<u32>) -> Self { self.ctx.x = x; self }
     /// This spell is cast while an effect is applied: the resolution below is told when it
     /// has been cast, or that the cast was abandoned.
     pub(crate) fn reporting(mut self) -> Self { self.reports = true; self }

@@ -62,6 +62,16 @@ impl Candidates {
         Self::compile(Verb::RemoveCounters, &selector, support)
     }
 
+    /// "Exile a blue card with mana value X from your hand": what it chooses among reads the
+    /// X its payer announces (107.3a).
+    fn reads_x(&self) -> bool {
+        match self {
+            Self::Hand(cards) => cards.reads().any(expr::Reads::X),
+            Self::Set(set) => set.reads().any(expr::Reads::X),
+            Self::Behold(cards, set) => (cards.reads() | set.reads()).any(expr::Reads::X),
+        }
+    }
+
     fn among(&self, game: &Game, ctx: &Ctx, verb: Verb, blight: u32) -> Vec<ObjId> {
         let objects: Vec<ObjId> = match self {
             Self::Hand(cards) => game.players[ctx.controller].hand.iter().copied().filter(|o| cards.contains(game, ctx, &NoLocals, *o)).collect(),
@@ -591,9 +601,16 @@ impl Plan {
         }
         Ok(())
     }
-    /// How many mana or life amounts announce X (107.3a).
+    /// How many mana or life amounts, or objects to choose, announce X (107.3a): "exile a blue
+    /// card with mana value X from your hand" is an alternative cost with an X in it.
     pub(crate) fn x(&self) -> usize {
-        self.parts.iter().map(|p| match p { Part::Mana(mana) => mana.0.iter().filter(|s| **s == X).count(), Part::Life(n) if n.is_x() => 1, _ => 0 }).sum()
+        self.parts.iter().map(|p| match p {
+            Part::Mana(mana) => mana.0.iter().filter(|s| **s == X).count(),
+            Part::Life(n) if n.is_x() => 1,
+            Part::Objects { groups, .. } => groups.iter().filter(|g| matches!(g, Objects::Choose { among, .. } if among.reads_x())).count(),
+            Part::RemoveCounters { from: Some(among), .. } => usize::from(among.reads_x()),
+            _ => 0,
+        }).sum()
     }
     /// The cost with the announced value in place of each {X}; it is locked in from then on
     /// (601.2b, 601.2f). A cost with {X} needs a value, and no other cost takes one.

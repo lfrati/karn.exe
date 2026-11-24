@@ -2287,7 +2287,8 @@ impl Game {
         if improvise > 0 && !proposed.has(spell, "Improvise") { return Err("that spell has no improvise (702.126)".into()); }
         if improvise > 0 && cost.has_zone_cost() { return Err(crate::Unsupported("improvise combined with a zone-changing object cost requires independent resource kinds".into()).into()); }
         let cost = cost.improvised(improvise)?;
-        let payment = crate::payment::Payment::spell(player, spell, cost, plan, paying, with, undo, triggers).permission(permission).library_tops(library_tops);
+        let payment = crate::payment::Payment::spell(player, spell, cost, plan, paying, with, undo, triggers).permission(permission).library_tops(library_tops)
+            .with_x(proposed.obj(spell).x);
         proposed.procedures.push(crate::procedure::Procedure::Payment(if reports { payment.reporting() } else { payment }));
         Ok(())
     }
