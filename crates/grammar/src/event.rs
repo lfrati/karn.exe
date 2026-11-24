@@ -1907,6 +1907,8 @@ pub fn span(turn: bool) -> P<(Step, StepOwner)> {
         lit("second main phase").to(Step::SecondMain),
         lit("postcombat main phase").to(Step::SecondMain).alias(),
         lit("combat").to(Step::Combat),
+        // the step by its name (511): "during the end of combat step"
+        lit("end of combat step").to(Step::EndOfCombat),
     ];
     if turn {
         nouns.push(lit("untap step").to(Step::Untap));
@@ -2051,10 +2053,16 @@ pub(crate) fn build(condition: &P<Condition>) -> Events {
             _ => None,
         },
     );
+    // "At the beginning of the end of combat step" is the point "At end of combat" names (511.2),
+    // which prints
+    let said_at_end_of_combat = |step: Step, whose: &StepOwner| {
+        step == Step::EndOfCombat
+            && (*whose == StepOwner::Each || *whose == StepOwner::Player { who: Box::new(Selector::you()), next: false })
+    };
     let at = lit("at the beginning of").then_keep(&step()).map(
         |(step, whose)| Some(Trigger::Step { step, whose }),
-        |t| match t {
-            Trigger::Step { step, whose } => Some((*step, whose.clone())),
+        move |t| match t {
+            Trigger::Step { step, whose } if !said_at_end_of_combat(*step, whose) => Some((*step, whose.clone())),
             _ => None,
         },
     );

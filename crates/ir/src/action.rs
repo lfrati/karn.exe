@@ -376,6 +376,10 @@ pub enum ValueKind {
     PlaneswalkerType,
     /// "a card name", "a nonland card name" (201.3): a name such cards have.
     CardName(ObjectSet),
+    /// "a color of a card in your graveyard", "a color of a permanent you control": one of
+    /// the colors an object of the set is (105.2), as the mana [`crate::mana::ManaTypes::ColorsAmong`]
+    /// is; colorless is no color (105.1), and an empty or colorless set leaves nothing to choose.
+    ColorAmong(ObjectSet),
 }
 
 /// A value a choice may not pick: "other than red", "other than creature or land", "other than

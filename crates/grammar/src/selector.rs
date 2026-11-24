@@ -2439,6 +2439,16 @@ fn zone_spec(prep: ZonePrep, player_sg: &P<Selector>) -> P<ZoneSpec> {
         ZonePrep::From => {
             v.push(shared("from the battlefield", Zone::Battlefield));
             v.push(shared("from the stack", Zone::Stack));
+            // "a spell from the top of your library": the one card on top of that library
+            // (401.1), where a cast or play permission finds it (601.3). A bare card there is
+            // the slice "the top card of your library"; `fold_posts` leaves it to that rule.
+            v.push(lit("from the top of").then_keep(&owner).skip(&lit("library")).map(
+                |o| Some(ZoneSpec { zones: ir::Coord::one(Zone::Library), owner: Some(Box::new(o)), slice: Some(Slice::Top(Amount::Const(1))) }),
+                |zs| match (zs.zone(), &zs.owner, &zs.slice) {
+                    (Some(Zone::Library), Some(o), Some(Slice::Top(Amount::Const(1)))) => Some((**o).clone()),
+                    _ => None,
+                },
+            ));
         }
         ZonePrep::OtherThan => {}
     }
@@ -3141,7 +3151,9 @@ fn fold_posts(set: &mut ObjectSet, posts: Vec<Post>) -> Option<(Option<Box<Selec
             Post::Controller(r) if set.controller.is_none() => set.controller = Some(r),
             Post::Owner(r) if set.owner.is_none() => set.owner = Some(r),
             Post::Caster(r) if set.caster.is_none() => set.caster = Some(r),
-            Post::Zone(z) if set.zone.is_none() => set.zone = Some(z),
+            // the top of a library holds a spell to cast or a land to play there; a card
+            // there is what the slice rule reads ("a card from the top of your library")
+            Post::Zone(z) if set.zone.is_none() && (z.slice.is_none() || cast_or_played(set)) => set.zone = Some(z),
             Post::OwnControl { who, owns, controls } if set.controller.is_none() && set.owner.is_none() => {
                 set.controller = Some(Relation { who: Box::new(who.clone()), negated: !controls, past: false });
                 set.owner = Some(Relation { who: Box::new(who), negated: !owns, past: false });
@@ -3192,6 +3204,13 @@ fn fold_posts(set: &mut ObjectSet, posts: Vec<Post>) -> Option<(Option<Box<Selec
         return None;
     }
     Some((chooser, random))
+}
+
+/// A spell, or a land as "play a land" names it: what a position in a zone, such as the top
+/// of a library, is said to hold when it is cast or played from there (601.3, 305.1).
+fn cast_or_played(set: &ObjectSet) -> bool {
+    let land = matches!(&set.filter, Filter::All(items) if items.contains(&Filter::Atom(Atom::Type(ir::CardType::Land))));
+    set.domain == Domain::Spell || (set.domain == Domain::Permanent && land)
 }
 
 /// Is this "with …" about what only a creature has: a keyword ability, power, toughness
@@ -4283,6 +4302,9 @@ fn build() -> Selectors {
     );
     let in_zone = definite.then(&zone_spec(ZonePrep::From, &player_sg_any)).map(
         |(r, z)| {
+            if z.slice.is_some() {
+                return None;
+            }
             let mut set = ObjectSet::of(Domain::Card);
             set.zone = Some(z);
             Some(Selector::new(Quant::Definite(r), set))

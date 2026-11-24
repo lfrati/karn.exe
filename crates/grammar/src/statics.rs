@@ -1835,10 +1835,24 @@ fn substitute(body: &P<Body>) -> P<Substitute> {
             },
         )
     };
+    // "you get that many plus one of each of those kinds of counters instead": counters on a
+    // player (122.1) are said with "get"; no one is named as placing them, as in the passive
+    let player = |s: &Selector| s.set.domain == ir::Domain::Player;
+    let recipient = alt("player getting counters", vec![
+        lit("you get").to(Selector::you()),
+        selectors().singular.skip(&lit("gets")).map(move |s| player(&s).then_some(s), move |s| (player(s) && *s != Selector::you()).then(|| s.clone())),
+    ]);
+    let gets = recipient.then(&count).skip(&lit("of each of those kinds of counters instead")).map(
+        move |(on, count)| player(&on).then_some(Substitute::CountersPut { count, kinds: CounterKinds::EachProposed, on, voice: CounterVoice::Passive }),
+        move |s| match s {
+            Substitute::CountersPut { count, kinds: CounterKinds::EachProposed, on, voice: CounterVoice::Passive } if player(on) => Some((on.clone(), count.clone())),
+            _ => None,
+        },
+    );
     let each_passive = inventory(empty(), "of each of those kinds of counters are put on", CounterVoice::Passive);
     let each_active = inventory(lit("put"), "of each of those kinds of counters on", CounterVoice::Imperative);
     let effect = inventory(lit("it puts"), "of those counters on", CounterVoice::Cause);
-    alt("substitute", vec![instructions, tokens, effect_tokens, plus, active_plus, counters, each_passive, each_active, effect])
+    alt("substitute", vec![instructions, tokens, effect_tokens, plus, active_plus, counters, gets, each_passive, each_active, effect])
 }
 
 /// "it produces {B} instead of any other type and amount", "it produces twice as much of that mana

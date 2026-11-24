@@ -969,3 +969,66 @@ fn r608_2c_passive_reveal_until() {
         "Target opponent reveals cards from the top of their library until an artifact card or X cards are revealed, whichever comes first.",
     ] { declines(text); }
 }
+
+/// CR 401.1 and 601.3: the top of a library is where a cast or play permission finds a spell or
+/// a land; a bare card there is the slice "the top card".
+#[test]
+fn r601_3_spell_from_the_top_of_a_library() {
+    for text in [
+        "Once each turn, you may cast a spell from the top of your library if it shares a card type with a card exiled with ~.",
+        "Once each turn, you may cast a creature spell with power 2 or less from the top of your library.",
+        "Once each turn, you may cast an instant or sorcery spell from the top of your library.",
+    ] {
+        let (value, printed) = read(text);
+        assert_eq!(printed, text);
+        let json = serde_json::to_string(&value).unwrap();
+        assert!(json.contains(r#""zones":{"items":["Library"]"#) && json.contains(r#""slice":{"Top":{"Const":1}}"#), "{json}");
+    }
+    let (card, _) = read("Exile a card from the top of your library.");
+    let (top, _) = read("Exile the top card of your library.");
+    assert_eq!(card, top);
+    for text in [
+        "Once each turn, you may cast a spell from the top of your graveyard.",
+        "Destroy a creature from the top of your library.",
+        "Exile ~ from the top of your library.",
+    ] { declines(text); }
+}
+
+/// CR 511.1: the end of combat step, named as a step.
+#[test]
+fn r511_1_end_of_combat_step() {
+    let (value, _) = read("{T}: ~ deals 1 damage to target attacking creature. Activate only during the end of combat step.");
+    assert!(serde_json::to_string(&value).unwrap().contains("EndOfCombat"));
+    for text in ["Activate only during the end of combat steps.", "Activate only during end of combat step."] { declines(text); }
+}
+
+/// CR 105.2: a color of an object of a set, as a choice of one value.
+#[test]
+fn r105_2_choose_a_color_of_an_object() {
+    for text in [
+        "{T}: Choose a color of a card in your graveyard. Add one mana of that color.",
+        "{T}: Choose a color of a permanent you control. Add one mana of that color.",
+    ] {
+        let (value, _) = read(text);
+        assert!(serde_json::to_string(&value).unwrap().contains("ColorAmong"));
+    }
+    for text in [
+        "{T}: Choose a color of target permanent. Add one mana of that color.",
+        "{T}: Choose a color of a player. Add one mana of that color.",
+        "{T}: Choose two colors of a card in your graveyard.",
+    ] { declines(text); }
+}
+
+/// CR 122.1 and 614.1a: a player gets counters; "that many plus one of each of those kinds" says
+/// the same replacement of a player as of a permanent.
+#[test]
+fn r122_1_player_gets_each_kind_of_counter() {
+    let (value, printed) = read("If you would get one or more counters, you get that many plus one of each of those kinds of counters instead.");
+    assert_eq!(printed, "If you would get one or more counters, you get that many plus one of each of those kinds of counters instead.");
+    let json = serde_json::to_string(&value).unwrap();
+    assert!(json.contains("GetsCounters") && json.contains("EachProposed"), "{json}");
+    for text in [
+        "If you would get one or more counters, you gets that many plus one of each of those kinds of counters instead.",
+        "If one or more counters would be put on a creature you control, it gets that many plus one of each of those kinds of counters instead.",
+    ] { declines(text); }
+}

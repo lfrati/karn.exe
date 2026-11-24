@@ -178,7 +178,19 @@ pub(crate) fn choice(objects: &P<Objects>, modes: &P<Modes>, set_sg: &P<ObjectSe
     let one_member = lit("one").not_before(&alt("modal continuation", vec![lit("—"), lit("instead")])).to(Choice::Objects(ir::Coord::one(ir::Selector::new(
         ir::Quant::Definite(ir::Ref::Anaphor(ir::Anaphor::One)), ir::ObjectSet::of(ir::Domain::Object),
     ))));
-    let single = alt("choice", vec![of_objects, one_member, one, any_name, several, number, words, among_colors, among_types, among_keywords, modal]);
+    // "a color of a card in your graveyard": one of the colors such an object is (105.2)
+    let a_one = |s: &ir::Selector| s.quant == ir::Quant::Indefinite(ir::Count::Exactly(Amount::Const(1))) && s.chooser.is_none() && s.random.is_none()
+        && s.set.domain != ir::Domain::Player;
+    let color_of = lit("a color of").then_keep(&crate::selector::selectors().selector).map(
+        move |s| a_one(&s).then(|| Choice::Value { kind: ValueKind::ColorAmong(s.set), count: Amount::Const(1), except: Vec::new(), random: false }),
+        |c| match c {
+            Choice::Value { kind: ValueKind::ColorAmong(set), count: Amount::Const(1), except, random: false } if except.is_empty() => {
+                Some(ir::Selector::new(ir::Quant::Indefinite(ir::Count::Exactly(Amount::Const(1))), set.clone()))
+            }
+            _ => None,
+        },
+    );
+    let single = alt("choice", vec![of_objects, one_member, one, any_name, several, number, words, among_colors, among_types, among_keywords, color_of, modal]);
     // "a color and an opponent": two kinds of thing; objects joined to objects are one object phrase
     let together = single.list("and").map(
         |v| (!v.iter().any(|c| matches!(c, Choice::All(_))) && !v.windows(2).any(|w| matches!(w, [Choice::Objects(_), Choice::Objects(_)])))
