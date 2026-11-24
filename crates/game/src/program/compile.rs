@@ -1141,6 +1141,19 @@ fn done_by_each_player(clause: &Clause) -> Option<&ObjectSet> {
         && matches!(clause.first.action, Action::Search { .. })).then_some(&s.set)
 }
 
+/// "Each player returns all creature cards from their graveyard to their hand": what every
+/// one of several players moves is all of something of their own, to where its owner's cards
+/// go. What each would choose ("a creature card from their graveyard") is not this.
+fn each_moves_all_their_own(players: &Selector, groups: &[(ir::action::Objects, Destination)]) -> bool {
+    let theirs = |s: &Selector| s.quant == Quant::All && s.set.domain == Domain::Card && s.chooser.is_none() && s.random.is_none()
+        && s.set.zone.as_ref().is_some_and(|zone| zone.zones.items.len() == 1 && zone.slice.is_none()
+            && zone.owner.as_deref().is_some_and(|o| o.quant == Quant::Definite(Ref::Anaphor(ir::Anaphor::They))));
+    matches!(players.quant, Quant::Each | Quant::All) && players.set.domain == Domain::Player
+        && players.chooser.is_none() && players.random.is_none()
+        && !groups.is_empty() && groups.iter().all(|(objects, to)| objects.items.iter().all(theirs)
+            && matches!(to, Destination::Hand(Whose::Their | Whose::Owner | Whose::Owners) | Destination::Graveyard(Whose::Their | Whose::Owner | Whose::Owners)))
+}
+
 /// Every act of the clause one its player does of their own library and what they find in
 /// it: searching "their library", putting what was found somewhere, revealing it, shuffling.
 fn searches_their_own(clause: &Clause) -> bool {
@@ -4854,6 +4867,19 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 moves = true;
                 if groups.len() > 1 && groups.iter().any(|(objects, _)| objects.items.iter().any(|s| matches!(s.quant, Quant::Indefinite(_)) && chosen_on_resolution(&s.set).is_some())) {
                     return unsupported("selected object: one description");
+                }
+                // "each player returns all creature cards from their graveyard to their hand":
+                // each returns all of their own, so all of theirs go together, each card to
+                // its owner's hand; "their" is each of them (608.2c, 400.3)
+                if let Some(Subject::Selector(players)) = clause.subject.as_ref()
+                    && binder.each.is_none() && binder.actor.is_none()
+                    && each_moves_all_their_own(players, groups)
+                {
+                    let operand = e.operand(players, support, &mut binder)?;
+                    let out = e.slot();
+                    e.instrs.push(Instr::Capture { operand, out });
+                    binder.name(out, players.set.clone(), (0, u32::MAX), false);
+                    binder.clause = Some(expr::Subject::Local(out));
                 }
                 let groups = groups.iter().map(|(objects, to)| {
                     let zone = match to {

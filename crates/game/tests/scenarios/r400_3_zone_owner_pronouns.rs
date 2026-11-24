@@ -50,11 +50,30 @@ fn r400_3_carrion_locust_takes_life_from_the_owner_of_the_exiled_card() {
 }
 
 #[test]
-fn r608_2c_underworld_cerberus_stays_refused_until_their_graveyard_is_each_players_own() {
-    // Uncited (admission): "each player returns all creature cards from their graveyard to their
-    // hand" is each one's own graveyard (608.2c); the engine read "their" as its controller's.
-    let refused = game::play::check(&oracle_read("Underworld Cerberus")).map_err(|e| e.0);
-    crate::support::refused(refused, "noun phrase: a zone owner's pronoun with no player named before it");
+fn r608_2c_underworld_cerberus_returns_each_players_creature_cards_to_their_owners_hand() {
+    // "When this creature dies, exile it and each player returns all creature cards from their
+    // graveyard to their hand": each player's own, to their own hand
+    let mut t = Board::new(2).battlefield(0, &["Underworld Cerberus"]).hand(0, &["Murder"])
+        .graveyard(0, &["Hill Giant", "Forest"]).graveyard(1, &["Grizzly Bears", "Lightning Bolt"]).build();
+    t.mana(0, "{1}{B}{B}");
+    cite!(["601.2"]; ok: t.cast(0, "Murder", vec!["Underworld Cerberus".into()], mana_pool("{1}{B}{B}")));
+    t.resolve();
+    t.expect().rules(["400.3", "608.2c", "603.10a"])
+        .zone_exact(0, Zone::Exile, &["Underworld Cerberus"])
+        .zone_exact(0, Zone::Hand, &["Hill Giant"]).zone_exact(1, Zone::Hand, &["Grizzly Bears"])
+        .zone_exact(0, Zone::Graveyard, &["Forest", "Murder"]).zone_exact(1, Zone::Graveyard, &["Lightning Bolt"]).check();
+}
+
+#[test]
+fn r608_2c_empty_the_catacombs_returns_each_players_creature_cards_to_their_owners_hand() {
+    let mut t = Board::new(3).hand(0, &["Empty the Catacombs"]).graveyard(0, &["Hill Giant"])
+        .graveyard(1, &["Grizzly Bears", "Forest"]).graveyard(2, &["Llanowar Elves"]).build();
+    t.mana(0, "{3}{B}");
+    cite!(["601.2"]; ok: t.cast(0, "Empty the Catacombs", vec![], mana_pool("{3}{B}")));
+    t.resolve();
+    t.expect().rules(["400.3", "608.2c"])
+        .zone_exact(0, Zone::Hand, &["Hill Giant"]).zone_exact(1, Zone::Hand, &["Grizzly Bears"]).zone_exact(2, Zone::Hand, &["Llanowar Elves"])
+        .zone_exact(0, Zone::Graveyard, &["Empty the Catacombs"]).zone_exact(1, Zone::Graveyard, &["Forest"]).check();
 }
 
 #[test]
