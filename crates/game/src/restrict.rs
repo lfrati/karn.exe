@@ -96,6 +96,8 @@ enum Happening {
     Countered,
     Exiled,
     Enters,
+    /// "can't be regenerated": its regeneration shields are not applied (701.19c).
+    Regenerated,
 }
 
 impl Happening {
@@ -108,6 +110,7 @@ impl Happening {
             Happening::Countered => (Verb::Counter, true),
             Happening::Exiled => (Verb::Exile, true),
             Happening::Enters => (Verb::Enter, true),
+            Happening::Regenerated => (Verb::Regenerate, true),
         };
         if would.verb() != verb {
             return None;
@@ -214,6 +217,7 @@ impl Cant {
             EventAction::Deed(d) if d.passive && d.args.is_empty() && d.verb == Verb::Destroy => Cant::Happen(Happening::Destroyed),
             EventAction::Deed(d) if d.passive && d.args.is_empty() && d.verb == Verb::Exile => Cant::Happen(Happening::Exiled),
             EventAction::Deed(d) if d.passive && d.args.is_empty() && d.verb == Verb::Counter => Cant::Happen(Happening::Countered),
+            EventAction::Deed(d) if d.passive && d.args.is_empty() && d.verb == Verb::Regenerate => Cant::Happen(Happening::Regenerated),
             other => {
                 return unsupported(match other.reading() {
                     Some((verb, _)) => format!("prohibition: {verb:?}"),

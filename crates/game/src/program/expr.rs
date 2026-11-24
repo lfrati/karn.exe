@@ -529,6 +529,10 @@ pub(crate) enum Atom {
     /// Membership in a particular instruction's completed move, before or after its zone change.
     Entered(super::Slot),
     InSubjects(super::Slot),
+    /// "dealt damage this way": a recipient of damage of this kind in a particular
+    /// instruction's completed damage (120.3, 608.2c), the object it was dealt to and not one
+    /// it became later (400.7).
+    DamagedThisWay { slot: super::Slot, kind: ir::event::DamageKind },
 }
 
 /// A description: what must be true of a thing for it to be one the text names.
@@ -566,7 +570,7 @@ impl Filter {
                 | Atom::Color(_) | Atom::Colorless | Atom::Multicolored | Atom::Monocolored
                 | Atom::Opponent | Atom::MostLife { .. } | Atom::Token | Atom::Commander | Atom::FaceDown | Atom::Combat(_) | Atom::Blocking(_) | Atom::Attached(_) | Atom::Ability { .. } | Atom::TargetCount(_)
                 | Atom::Chosen(_) | Atom::SameName(_) | Atom::SharesCreatureType(_) | Atom::SharesColor(_) | Atom::Named(_)
-                | Atom::Counters { .. } | Atom::Level { .. } | Atom::Entered(_) | Atom::InSubjects(_)) => Reads::NONE,
+                | Atom::Counters { .. } | Atom::Level { .. } | Atom::Entered(_) | Atom::InSubjects(_) | Atom::DamagedThisWay { .. }) => Reads::NONE,
         }
     }
 
@@ -694,6 +698,15 @@ impl Filter {
                 {
                     let entered = Filter::Atom(Atom::EnteredThisTurn);
                     return Ok(if *negated { Filter::Not(Box::new(entered)) } else { entered });
+                }
+                // "a creature dealt damage this way": of the one instruction this scope completed
+                // that dealt damage (608.2c)
+                ir::Atom::Did { action, when: ir::amount::When::ThisWay, negated }
+                    if matches!(&**action, ir::EventAction::IsDealtDamage { by, excess: false, .. } if by.is_empty()) =>
+                {
+                    let ir::EventAction::IsDealtDamage { kind, .. } = &**action else { unreachable!("matched") };
+                    let damaged = Filter::Atom(Atom::DamagedThisWay { slot: bind.damage()?, kind: *kind });
+                    return Ok(if *negated { Filter::Not(Box::new(damaged)) } else { damaged });
                 }
                 ir::Atom::Did { action, when: ir::amount::When::ThisTurn, negated }
                     if matches!(&**action, ir::EventAction::IsDealtDamage { by, excess: false, .. } if by.is_empty())
@@ -925,6 +938,7 @@ impl Filter {
             Filter::Atom(Atom::Chosen(scalar)) => out.push(scalar.clone()),
             Filter::Atom(Atom::InSubjects(slot)) => out.push(Scalar::Local { slot: *slot, kind: Kind::Subjects }),
             Filter::Atom(Atom::Entered(slot)) => out.push(Scalar::Local { slot: *slot, kind: Kind::Cards }),
+            Filter::Atom(Atom::DamagedThisWay { slot, .. }) => out.push(Scalar::Local { slot: *slot, kind: Kind::Damage }),
             Filter::Atom(Atom::SameName(subject) | Atom::SharesCreatureType(subject) | Atom::SharesColor(subject) | Atom::Blocking(subject) | Atom::DealtDamageBy(subject) | Atom::TappedFor { what: subject, .. } | Atom::Damage { to: Some(subject), .. }) => subject.scalars(out),
             Filter::Atom(Atom::Stat { value, .. }) => value.scalars(out),
             Filter::Atom(Atom::Most{among,..}) => among.collect(out),
@@ -979,6 +993,10 @@ impl Atom {
     fn matches(&self, game: &Game, ctx: &Ctx, locals: &dyn Locals, t: Target) -> bool {
         if let Atom::InSubjects(slot) = self {
             return matches!(locals.local(*slot), Some(Value::Subjects(subjects)) if subjects.contains(&t));
+        }
+        if let Atom::DamagedThisWay { slot, kind } = self {
+            return matches!(locals.local(*slot), Some(Value::Damage(results)) if results.iter().any(|r| r.recipient == t && r.amount > 0
+                && match kind { ir::event::DamageKind::Any => true, ir::event::DamageKind::Combat => r.combat, ir::event::DamageKind::Noncombat => !r.combat }));
         }
         if let Atom::DealtDamageBy(by) = self {
             return by.objects(game, ctx, locals).any(|source| game.dealt_damage_this_turn(source, t));
@@ -1093,7 +1111,7 @@ impl Atom {
             },
             Atom::Commander => game.is_commander(o.id),
             Atom::Suspended => game.suspended(o.id),
-            Atom::InSubjects(_) | Atom::DealtDamageBy(_) | Atom::TappedFor { .. } | Atom::HappenedTo(_) | Atom::Damage { .. } | Atom::FoughtThisTurn { .. } => unreachable!("tested before object lookup"),
+            Atom::InSubjects(_) | Atom::DamagedThisWay { .. } | Atom::DealtDamageBy(_) | Atom::TappedFor { .. } | Atom::HappenedTo(_) | Atom::Damage { .. } | Atom::FoughtThisTurn { .. } => unreachable!("tested before object lookup"),
             Atom::Entered(slot) => matches!(locals.local(*slot), Some(Value::Cards(cards)) if cards.contains(&o.id)),
             Atom::EnteredThisTurn => o.zone == Zone::Battlefield && o.entered != 0 && o.entered == game.turn,
             Atom::Counters { kind, min, max } => (u64::from(*min)..=u64::from(*max)).contains(&crate::select::counters_on(game, o.id, kind.as_ref())),
@@ -2149,7 +2167,7 @@ impl Number {
                     | Atom::Color(_) | Atom::Colorless | Atom::Multicolored | Atom::Monocolored
                     | Atom::Opponent | Atom::MostLife { .. } | Atom::Keyword(_) | Atom::Tapped(_) | Atom::Token | Atom::Saddled | Atom::Paired | Atom::Commander | Atom::Suspended | Atom::FaceDown
                     | Atom::Combat(_) | Atom::Blocking(_) | Atom::Attached(_) | Atom::Ability { .. } | Atom::Chosen(_) | Atom::SameName(_) | Atom::SharesCreatureType(_) | Atom::SharesColor(_)
-                    | Atom::TargetCount(_) | Atom::Named(_) | Atom::EnteredThisTurn | Atom::LostLifeThisTurn | Atom::DealtDamageBy(_) | Atom::TappedFor { .. } | Atom::Damage { .. } | Atom::FoughtThisTurn { .. } | Atom::Counters { .. } | Atom::Level { .. } | Atom::Entered(_) | Atom::InSubjects(_)) => false,
+                    | Atom::TargetCount(_) | Atom::Named(_) | Atom::EnteredThisTurn | Atom::LostLifeThisTurn | Atom::DealtDamageBy(_) | Atom::TappedFor { .. } | Atom::Damage { .. } | Atom::FoughtThisTurn { .. } | Atom::Counters { .. } | Atom::Level { .. } | Atom::Entered(_) | Atom::InSubjects(_) | Atom::DamagedThisWay { .. }) => false,
             }
         }
         fn set(s: &Set) -> bool {

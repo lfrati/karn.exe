@@ -1990,6 +1990,12 @@ impl Game {
         self.destroy_as(object, false)
     }
 
+    /// Does an effect say this permanent can't be regenerated? Then its regeneration shields
+    /// are not applied (701.19c), though they are still made.
+    pub(crate) fn regeneration_allowed(&self, object: ObjId) -> bool {
+        !self.forbidden(&Fact::new(Verb::Regenerate, None, vec![(Role::What, Target::Object(object))]))
+    }
+
     pub(crate) fn destruction_allowed(&self, object: ObjId) -> bool {
         let what = Target::Object(object);
         self.takes(Verb::Destroy, Role::What, what)
@@ -2008,7 +2014,7 @@ impl Game {
         // on it and its controller taps it. If it's an attacking or blocking creature, remove
         // it from combat." (701.19a): the destruction never happens (614.6), and the shield
         // has done what it does once
-        if let Some(shield) = self.shields.iter().position(|s| *s == object).filter(|_| regenerable) {
+        if let Some(shield) = self.shields.iter().position(|s| *s == object).filter(|_| regenerable && self.regeneration_allowed(object)) {
             self.shields.remove(shield);
             let o = self.obj_mut(object);
             o.damage = 0;

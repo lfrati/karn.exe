@@ -1365,6 +1365,17 @@ fn unpreventable_after(rule: &ir::statics::Static) -> Option<&ir::Body> {
     }
 }
 
+/// "If a creature dealt damage this way would die this turn", "A creature dealt damage this
+/// way can't block this turn": any of what an earlier instruction of this effect dealt damage
+/// to, so each of them, the instruction's result being fixed (608.2c).
+fn damaged_this_way(who: &Selector) -> Option<Selector> {
+    if !matches!(who.quant, Quant::Indefinite(Count::Exactly(Amount::Const(1)))) || who.chooser.is_some() || who.random.is_some() { return None; }
+    let damaged = |f: &ir::Filter| matches!(f, ir::Filter::Atom(Atom::Did { action, when: ir::amount::When::ThisWay, negated: false })
+        if matches!(&**action, ir::EventAction::IsDealtDamage { by, excess: false, .. } if by.is_empty()));
+    let names = match &who.set.filter { f if damaged(f) => true, ir::Filter::All(parts) => parts.iter().any(damaged), _ => false };
+    names.then(|| Selector { quant: Quant::All, ..who.clone() })
+}
+
 /// "If [condition], [one act] instead.": the condition of a sentence that replaces the one
 /// before it.
 fn instead(sentence: &Sentence) -> Option<&ir::Condition> {
@@ -1700,13 +1711,29 @@ pub(crate) fn scalar_choice(choice: &ir::action::Choice) -> Res<crate::binding::
     }
 }
 
-/// Is this "It can't be regenerated." / "They can't be regenerated."?
-fn bars_regeneration(clause: &Clause, act: &ir::effect::Act) -> bool {
-    let of_what_was_named = matches!(&clause.subject, Some(Subject::Selector(s)) if matches!(s.quant, Quant::Definite(Ref::Anaphor(_))));
+/// Is this "It can't be regenerated.", "They can't be regenerated." or "A creature destroyed
+/// this way can't be regenerated." of what `destroyed` names (701.19c)?
+fn bars_regeneration(clause: &Clause, act: &ir::effect::Act, destroyed: &ir::action::Coord<Selector>) -> bool {
+    let of_what_was_named = match &clause.subject {
+        Some(Subject::Selector(s)) => matches!(s.quant, Quant::Definite(Ref::Anaphor(_)))
+            || matches!(s.quant, Quant::Indefinite(Count::Exactly(Amount::Const(1)))) && s.chooser.is_none() && s.random.is_none() && destroyed_this_way(&s.set, destroyed),
+        Some(Subject::Set(set)) => destroyed_this_way(set, destroyed),
+        _ => false,
+    };
     let Action::Cant(items) = &act.action else { return false };
     let [item] = items.as_slice() else { return false };
     let regenerated = matches!(&item.event, ir::EventAction::Deed(d) if d.verb == Verb::Regenerate && d.passive && d.args.is_empty());
     of_what_was_named && regenerated && item.within.is_none() && act.mods.is_empty() && clause.rest.is_empty() && !clause.may
+}
+
+/// "a creature destroyed this way", "creatures destroyed this way", where what the destroy
+/// names is creatures alone: all it destroyed.
+fn destroyed_this_way(set: &ObjectSet, destroyed: &ir::action::Coord<Selector>) -> bool {
+    let creature = ir::Filter::Atom(Atom::Type(ir::CardType::Creature));
+    let result = ir::Filter::Atom(Atom::Reference(ir::reference::UnresolvedRef::action_result(Verb::Destroy)));
+    let creatures = |f: &ir::Filter| *f == creature || matches!(f, ir::Filter::All(parts) if parts.contains(&creature));
+    *set == ObjectSet { filter: ir::Filter::All(vec![creature.clone(), result]), ..ObjectSet::of(Domain::Permanent) }
+        && destroyed.items.iter().all(|d| d.set.domain == Domain::Permanent && creatures(&d.set.filter))
 }
 
 
@@ -3818,8 +3845,17 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 // "If a permanent dealt damage by ~ would die this turn": of whatever this
                 // spell dealt damage to, asked as each would die. Its "this turn" is the
                 // replacement's (614.1a).
-                if exiled == crate::restrict::Exiled::Dying && let Some(dealt) = dealt_damage_by_this(who, support) {
+                if exiled == crate::restrict::Exiled::Dying && let Some(dealt) = dealt_damage_by_this(who, support).or_else(|| damaged_this_way(who)) {
                     let subject = e.operand(&dealt, support, &mut binder)?;
+                    e.instrs.push(Instr::Register { subject, rule, lifetime, during: None });
+                    e.end_act(false, None);
+                    continue;
+                }
+                // "If a creature would die this turn, exile it instead.": of whatever creature
+                // would die this turn, one there now or not (611.2c), asked as it would die
+                if exiled == crate::restrict::Exiled::Dying && matches!(who.quant, Quant::Indefinite(Count::Exactly(Amount::Const(1))))
+                    && who.chooser.is_none() && who.random.is_none() && who.set.domain == Domain::Permanent {
+                    let subject = e.operand(&Selector { quant: Quant::All, ..who.clone() }, support, &mut binder)?;
                     e.instrs.push(Instr::Register { subject, rule, lifetime, during: None });
                     e.end_act(false, None);
                     continue;
@@ -4427,7 +4463,13 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             // "During target opponent's next turn, creatures that player controls attack Gideon
             // Jura if able.": the player is named before "that player" is said of
             let during = next_turns.last().map(|who| e.operand(who, support, &mut binder)).transpose()?;
-            let subject = e.clause_subject(clause, support, &mut binder)?;
+            // "A creature dealt damage this way can't block this turn": each of them, as
+            // "creatures dealt damage this way" says it
+            let damaged = match &clause.subject { Some(Subject::Selector(s)) => damaged_this_way(s), _ => None };
+            let subject = match damaged {
+                Some(all) => e.clause_subject(&Clause { subject: Some(Subject::Set(all.set)), ..clause.clone() }, support, &mut binder)?,
+                None => e.clause_subject(clause, support, &mut binder)?,
+            };
             let chosen = choose_protection_color(&mut e, &mut binder, &act.action);
             let rule = crate::restrict::Rule::compile(chosen.as_ref().unwrap_or(&act.action), support, &mut binder.scope(support))?;
             rule.validate_entry_subject(None)?;
@@ -5469,7 +5511,9 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             }
             Action::Destroy(objects) => {
                 moves = true;
-                let regenerable = !matches!(acts.get(index + 1), Some(TextStep::Act(c, a, _)) if bars_regeneration(c, a) && !a.may);
+                // "Destroy target creature if it's white. A creature destroyed this way can't be
+                // regenerated.": said of the destroy, done or not
+                let regenerable = !matches!(acts[index + 1..].iter().find(|step| !matches!(step, TextStep::EndIf)), Some(TextStep::Act(c, a, _)) if bars_regeneration(c, a, objects) && !a.may);
                 skip_rider = !regenerable;
                 Some(action::Action::Destroy { objects: e.chosen_objects(objects, clause, optional, Verb::Destroy, ir::Role::What, false, support, &mut binder)?, regenerable })
             }

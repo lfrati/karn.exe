@@ -249,6 +249,16 @@ remain refused. Continue until the user explicitly stops the builders.
   mana value, a description comparing or sharing with another object (Reinterpret, Baral and
   Kari Zev, Counterlash), another player's cast and a cast of one of several groups remain
   refused.
+- Damage and destruction this way: "a creature dealt damage this way" is a recipient of the
+  one instruction of the effect that dealt damage (608.2c), a player as well as an object.
+  "If a creature [dealt damage this way] would die this turn, exile it instead" is a
+  replacement of any creature it describes, asked as each would die (614.1a, 611.2c). "Can't
+  be regenerated [this turn]" leaves regeneration shields unapplied, though they are still
+  made (701.19c), and "a creature destroyed this way can't be regenerated" is said of a
+  destroy of creatures alone. Soul Rend (a delayed draw after a conditional destroy),
+  Essence Vortex ("unless"), damage of several instructions (Skeletonize, Reckless Blaze,
+  Ghired's Belligerence) and "can't be regenerated" with no duration (Whippoorwill) remain
+  refused.
 
 #### Quality (worktree `quality`)
 

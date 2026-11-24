@@ -66,7 +66,7 @@ impl Filter {
                 Atom::Damage { to, .. } => recipient(P::HISTORY) | I::at(D::Players, P::HISTORY) | to.as_ref().map_or(I::default(), Subject::inputs) | context(P::TURN),
                 Atom::Counters { .. } => recipient(P::COUNTERS),
                 Atom::Level { .. } => recipient(P::LEVEL),
-                Atom::Entered(_) | Atom::InSubjects(_) => context(P::BINDINGS),
+                Atom::Entered(_) | Atom::InSubjects(_) | Atom::DamagedThisWay { .. } => context(P::BINDINGS),
             },
         }
     }

@@ -198,7 +198,7 @@ impl Batch {
                 Kind::Sacrifice(player) => game.can(Verb::Sacrifice, player, Target::Object(object)),
             };
             if !allowed { return None; }
-            let regenerates = matches!(kind, Kind::Destroy { regenerable: true }) && game.shields.contains(&object);
+            let regenerates = matches!(kind, Kind::Destroy { regenerable: true }) && game.shields.contains(&object) && game.regeneration_allowed(object);
             let zone = kind.clone().zone();
             let chosen = selected.is_some();
             let destination = selected.unwrap_or_else(|| if regenerates { Destination::to(zone) } else {
