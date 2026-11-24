@@ -1054,3 +1054,14 @@ fn r725_1_the_monarch_names_a_player() {
     }
     for text in ["~ can't be blocked by creatures the monarchs control.", "Destroy target creature the monarch."] { declines(text); }
 }
+
+/// CR 701.38: what a vote gave the most votes, and how many votes an option got.
+#[test]
+fn r701_38_most_votes_and_the_number_of_votes() {
+    let (value, printed) = read("Starting with you, each player votes for a nonland permanent you don't control. Exile each permanent with the most votes or tied for most votes.");
+    assert!(printed.ends_with("Exile each permanent with the most votes or tied for most votes."), "{printed}");
+    assert!(serde_json::to_string(&value).unwrap().contains(r#"{"MostVotes":{"tied":true}}"#));
+    let (value, _) = read("You draw cards equal to the number of truth votes.");
+    assert!(serde_json::to_string(&value).unwrap().contains(r#"{"Votes":"truth"}"#));
+    for text in ["Exile each permanent with the most vote.", "You draw cards equal to the number of red votes."] { declines(text); }
+}

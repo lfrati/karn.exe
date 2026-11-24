@@ -438,6 +438,9 @@ pub enum Atom {
         among: Option<Box<ObjectSet>>,
         tied: bool,
     },
+    /// "with the most votes or tied for most votes": an object the vote this text held gave more
+    /// votes than any other (701.38); `tied`: one given as many as another such also counts.
+    MostVotes { tied: bool },
     /// "each opponent who does", "each player who doesn't", "each opponent who can't": how the
     /// player answered the instruction before, which offered or required something of each of
     /// them (as [`crate::Condition::Did`] asks of one player; CR 118.12a).

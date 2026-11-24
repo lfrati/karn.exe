@@ -1232,6 +1232,7 @@ fn post_filter(n: Number, sel: &P<Selector>) -> P<Filter> {
             combat(n, sel),
             targets(n, sel),
             most(),
+            most_votes(),
             compared(sel),
             // "each other creature you control that spell could target"
             alt("could target", vec![crate::kernel::empty(), lit("that").alias()]).then_keep(sel).skip(&lit("could target")).map(
@@ -1720,6 +1721,17 @@ fn most() -> P<Filter> {
             Filter::Atom(Atom::Most { stat, least, among, tied }) => {
                 Some((((*least, *stat), among.as_deref().cloned()), tied.then_some((*least, *stat))))
             }
+            _ => None,
+        },
+    )
+}
+
+/// "with the most votes or tied for most votes": what the vote gave the most votes (701.38).
+fn most_votes() -> P<Filter> {
+    lit("with the most votes").then_keep(&lit("or tied for most votes").opt()).map(
+        |tied| Some(Filter::Atom(Atom::MostVotes { tied: tied.is_some() })),
+        |f| match f {
+            Filter::Atom(Atom::MostVotes { tied }) => Some(tied.then_some(())),
             _ => None,
         },
     )
@@ -2278,6 +2290,7 @@ fn is_post_filter(f: &Filter) -> bool {
             | Atom::Targets { .. }
             | Atom::Did { .. }
             | Atom::Most { .. }
+            | Atom::MostVotes { .. }
             | Atom::Compared { .. }
             | Atom::TargetCount(_)
             | Atom::CouldTarget(_)

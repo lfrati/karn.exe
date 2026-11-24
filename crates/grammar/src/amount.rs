@@ -1048,8 +1048,17 @@ fn build() -> Amounts {
             _ => None,
         },
     );
+    // "the number of truth votes": the votes an option got, as "for each truth vote" (701.38a)
+    let votes = lit("the number of").then_keep(&crate::vote::option()).skip(&lit("votes")).map(
+        |o| Some(Amount::Votes(o)),
+        |a| match a {
+            Amount::Votes(o) => Some(o.clone()),
+            _ => None,
+        },
+    );
     let mut base = vec![
         lit("the total mana value of the permanents ~ targets").to(Amount::TargetedPermanentManaValue),
+        votes,
         literal,
         party,
         lit("the number of cards looked at while scrying this way").to(Amount::LookedAtScrying),
