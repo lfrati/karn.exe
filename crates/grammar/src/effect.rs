@@ -891,6 +891,28 @@ fn except_last(b: &Body) -> bool {
     acts.iter().rev().skip(1).all(|a| !has(a) && !villainous(a)) && acts.iter().all(|a| !villainous(a) || a.mods.is_empty())
 }
 
+/// A later clause without a subject is an instruction to the controller, and follows ", then"
+/// after one object's clause ("it deals damage equal to its power to its controller, then
+/// destroy that creature"). After a player's clause or a plural one, the same words are more
+/// of that clause's acts ("you gain 3 life, then draw a card").
+fn instructions_follow_an_object(b: &Body) -> bool {
+    let mut before = &b.first;
+    for (join, clause) in &b.rest {
+        // "there is an additional combat phase" has no subject, as nobody adds it (500.8)
+        if clause.subject.is_none() && !matches!(clause.first.action, ir::Action::AdditionalPhase { .. }) {
+            let one_object = match &before.subject {
+                Some(Subject::Selector(s)) => s.set.domain != ir::Domain::Player && !crate::selector::is_plural(s),
+                _ => false,
+            };
+            if *join != Join::CommaThen || !one_object {
+                return false;
+            }
+        }
+        before = clause;
+    }
+    true
+}
+
 fn build() -> Effects {
     let all = subjects();
     let it = Selector::new(
@@ -909,19 +931,23 @@ fn build() -> Effects {
     clauses.push(except_controller_turn_cost_clause());
     clauses.push(additional_phase_clause());
     let any_clause = alt("clause", clauses);
-    // a later clause names its subject (an instruction after an object's clause, "All creatures
-    // lose indestructible until end of turn, then destroy all creatures", is not read yet: its
-    // doer is the controller, not the clause's subject)
+    // a later clause names its subject, or is an instruction after ", then" that follows one
+    // object's clause ("~ gets +1/+0 until end of turn, then scry 1"): its doer is the
+    // controller, not that object
     let mut subjected: Vec<P<Clause>> = all.iter().skip(1).map(|(s, f)| clause(s, *f)).collect();
     subjected.push(life_total_clause());
     subjected.push(additional_phase_clause());
     let subjected = alt("clause with subject", subjected);
-    let body = any_clause.then(&join().then(&subjected).many()).map(
+    // only ", then" sets off an instruction as a clause of its own: after another join the
+    // words are more acts of the clause before, and each act boundary would be a reading
+    let instruction = lit(", then").to(Join::CommaThen).then(&clause(&all[0].0, all[0].1));
+    let later = alt("later clause", vec![join().then(&subjected), instruction]);
+    let body = any_clause.then(&later.many()).map(
         |(first, rest)| {
             let b = Body { first, rest };
-            except_last(&b).then_some(b)
+            (except_last(&b) && instructions_follow_an_object(&b)).then_some(b)
         },
-        |b: &Body| except_last(b).then(|| (b.first.clone(), b.rest.clone())),
+        |b: &Body| (except_last(b) && instructions_follow_an_object(b)).then(|| (b.first.clone(), b.rest.clone())),
     );
     let c = conditions();
     let plain = body.map(

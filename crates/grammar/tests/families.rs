@@ -1521,3 +1521,23 @@ fn r608_2d_choose_one_of_each_type() {
     let (one, _) = read("Choose a land.");
     assert_ne!(each, one);
 }
+
+/// CR 608.2c: the controller follows the instructions, so an instruction after ", then" that
+/// follows one object's clause is the controller's ("~ gets +1/+0 until end of turn, then scry
+/// 1", Burning Prophet), as "then you scry 1" says it. After a player's clause the same words
+/// are that player's acts.
+#[test]
+fn r608_2c_instruction_after_an_objects_clause() {
+    for text in [
+        "Whenever you cast a noncreature spell, ~ gets +1/+0 until end of turn, then scry 1.",
+        "When ~ enters, it deals damage equal to its power to its controller, then destroy that creature.",
+    ] {
+        let (_, printed) = read(text);
+        assert_eq!(printed, text);
+    }
+    let (then, _) = read("Whenever you cast a noncreature spell, ~ gets +1/+0 until end of turn, then scry 1.");
+    let (you, _) = read("Whenever you cast a noncreature spell, ~ gets +1/+0 until end of turn, then you scry 1.");
+    assert_ne!(then, you);
+    declines("Whenever you cast a noncreature spell, ~ gets +1/+0 until end of turn and scry 1.");
+    declines("Whenever you cast a noncreature spell, creatures you control get +1/+0 until end of turn, then scry 1.");
+}
