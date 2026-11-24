@@ -730,14 +730,22 @@ impl Binder {
         narrow(&mut candidates, &|n| !n.own);
         if !singular {
             // "untap target creature and each other creature that shares a color with it.
-            // Those creatures get +2/+0": what one act named together is not split in two
+            // Those creatures get +2/+0": what one act named together, the one with the
+            // several, is what the plural names, all of it
             let several = |slot: Slot| candidates.iter().any(|m| m.slot == slot && m.bounds.1 > 1);
-            if candidates.iter().any(|n| n.bounds.1 <= 1
-                && self.coordinated.iter().any(|group| group.contains(&n.slot) && group.iter().any(|s| several(*s))))
-            {
-                return unsupported("reference: a plural of one act's single and several objects");
+            let split = |group: &Vec<Slot>| group.iter().any(|s| several(*s))
+                && candidates.iter().any(|n| n.bounds.1 <= 1 && group.contains(&n.slot));
+            if let Some(group) = self.coordinated.iter().rev().find(|group| split(group)) {
+                if !group.iter().all(|s| candidates.iter().any(|n| n.slot == *s)) {
+                    return unsupported("reference: a plural of one act's single and several objects");
+                }
+                // no narrower noun splits it ("those creatures" is also what "target creature" said)
+                candidates.retain(|n| group.contains(&n.slot));
+                if candidates.iter().any(|n| n.at != candidates[0].at) { return unsupported("reference: a plural of one act's single and several objects"); }
+                return Ok((candidates.iter().map(|n| n.slot).collect(), Some(candidates[0].at)));
+            } else {
+                narrow(&mut candidates, &|n| n.bounds.1 > 1);
             }
-            narrow(&mut candidates, &|n| n.bounds.1 > 1);
         }
         // A definite qualified noun identifies a declared participant. By contrast,
         // "those/that creatures you don't control" may restrict an existing group

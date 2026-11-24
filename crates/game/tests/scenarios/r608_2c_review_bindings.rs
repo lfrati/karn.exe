@@ -50,8 +50,15 @@ fn r608_2c_increasing_confusion_stays_refused_until_that_many_reads_the_replaced
 }
 
 #[test]
-fn r608_2c_rally_the_righteous_stays_refused_until_those_creatures_include_its_target() {
-    // Uncited (admission): "untap target creature and each other creature that shares a color
-    // with it. Those creatures get +2/+0": those are both; the engine kept only the others.
-    refused(game::play::check(&oracle_read("Rally the Righteous")).map_err(|e| e.0), "reference: a plural of one act's single and several objects");
+fn r608_2c_rally_the_righteous_gives_its_target_and_each_creature_sharing_its_color_two_power() {
+    // "Untap target creature and each other creature that shares a color with it. Those
+    // creatures get +2/+0 until end of turn": those are the target and the others
+    let mut t = Board::new(2).hand(0, &["Rally the Righteous"]).tapped(0, &["Raging Goblin", "Goblin Piker"])
+        .tapped(1, &["Grizzly Bears"]).build();
+    let (raging, piker, bears) = (t.find_in(0, Zone::Battlefield, "Raging Goblin"), t.find_in(0, Zone::Battlefield, "Goblin Piker"), t.find_in(1, Zone::Battlefield, "Grizzly Bears"));
+    t.mana(0, "{1}{R}{W}");
+    cite!(["601.2"]; ok: t.cast(0, "Rally the Righteous", vec![Tgt::Object(raging)], mana_pool("{1}{R}{W}")));
+    t.resolve();
+    cite!(["608.2c", "105.4"]; assert!(!t.g.obj(raging).tapped && !t.g.obj(piker).tapped && t.g.obj(bears).tapped));
+    cite!(["608.2c", "613.4c"]; assert_eq!((t.g.power(raging), t.g.power(piker), t.g.power(bears)), (Some(3), Some(4), Some(2))));
 }
