@@ -1541,3 +1541,16 @@ fn r608_2c_instruction_after_an_objects_clause() {
     declines("Whenever you cast a noncreature spell, ~ gets +1/+0 until end of turn and scry 1.");
     declines("Whenever you cast a noncreature spell, creatures you control get +1/+0 until end of turn, then scry 1.");
 }
+
+/// CR 702.16a: a protection quality can be any characteristic value, so "colorless" is one
+/// (105.2c), and "protection from colorless or from the color of your choice" is a choice of
+/// one of those qualities, as "from artifacts or from the color of your choice" is (Giver of
+/// Runes, Angelic Intervention).
+#[test]
+fn r702_16a_protection_from_colorless() {
+    let text = "{T}: Another target creature you control gains protection from colorless or from the color of your choice until end of turn.";
+    let (colorless, printed) = read(text);
+    assert_eq!(printed, text);
+    let (artifacts, _) = read("{T}: Another target creature you control gains protection from artifacts or from the color of your choice until end of turn.");
+    assert_ne!(colorless, artifacts);
+}

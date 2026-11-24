@@ -222,6 +222,9 @@ fn quality() -> P<Quality> {
             color,
             lit("multicolored").to(Quality::Multicolored),
             lit("monocolored").to(Quality::Monocolored),
+            // "protection from colorless or from the color of your choice": from colorless
+            // sources, a characteristic as a color is (105.2c, 702.16a)
+            lit("colorless").to(Quality::Filter(Filter::Atom(Atom::Colorless))),
             lit("everything").to(Quality::Everything),
             lit("the chosen color").to(Quality::ChosenColor),
             lit("the chosen player").to(Quality::ChosenPlayer),
@@ -714,6 +717,7 @@ mod tests {
             "Hexproof from white",
             "Flying, hexproof from black and from blue",
             "{T}: Target creature gains protection from artifacts or from the color of your choice until end of turn.",
+            "{T}: Another target creature you control gains protection from colorless or from the color of your choice until end of turn.",
             "Enchanted creature has protection from the chosen color.",
             "You have protection from each of your opponents.",
             "Until your next turn, you gain protection from that player.",
