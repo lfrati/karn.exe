@@ -1437,6 +1437,19 @@ fn clause(e: &Events) -> P<Condition> {
             _ => None,
         },
     );
+    // "that creature's power is greater than ~'s": the other object's same characteristic,
+    // unsaid; the same comparison as "greater than ~'s power"
+    let than = alt("than", vec![lit("greater than").to(Cmp::Gt), lit("less than").to(Cmp::Lt)]);
+    let elided = amounts().amount.skip(&lit("is")).then(&than).then(&s.singular.skip(&clitic_s())).map(
+        |((left, cmp), of)| match &left {
+            Amount::Stat { stat, .. } => {
+                let right = Amount::Stat { of: Box::new(of), stat: *stat };
+                Some(Condition::Compare { left, cmp, right })
+            }
+            _ => None,
+        },
+        |_| None,
+    ).alias();
     let life_cmp = alt(
         "life",
         vec![
@@ -1659,6 +1672,7 @@ fn clause(e: &Events) -> P<Condition> {
             designation("you have an enduring story", "you don't have an enduring story", Designation::EnduringStory),
             monarch_other,
             total,
+            elided,
             full_party,
             compare_is(true, "is", false, false),
             compare_is(false, "is", false, false),

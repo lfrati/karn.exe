@@ -211,3 +211,65 @@ fn r208_1_meek_attack_puts_a_creature_card_whose_power_and_toughness_total_five_
     t.resolve();
     cite!(["608.2d"]; assert_eq!((t.g.players[0].hand.len(), t.g.battlefield.len()), (1, 1)));
 }
+
+/// Pelt Collector: "Whenever another creature you control enters or dies, if that creature's
+/// power is greater than this creature's, put a +1/+1 counter on this creature. As long as this
+/// creature has three or more +1/+1 counters on it, it has trample." "This creature's" is its
+/// power, said once.
+fn pelt_counters(t: &T) -> u32 { t.g.obj(t.find("Pelt Collector")).counters.get("+1/+1").copied().unwrap_or(0) }
+
+/// Ruling of 2018-10-05: a creature with power less than or equal to Pelt Collector's entering
+/// does not trigger it at all.
+#[test]
+fn r603_4_pelt_collector_grows_only_for_a_creature_of_greater_power() {
+    let mut t = Board::new(2).battlefield(0, &["Pelt Collector"]).hand(0, &["Llanowar Elves", "Grizzly Bears"]).build();
+    t.mana(0, "{G}");
+    t.cast(0, "Llanowar Elves", vec![], mana_pool("G")).unwrap();
+    t.pass_all();
+    cite!(["603.4"]; assert!(t.g.stack.is_empty(), "a 1/1 is not greater than a 1/1"));
+    t.mana(0, "{1}{G}");
+    t.cast(0, "Grizzly Bears", vec![], mana_pool("CG")).unwrap();
+    t.pass_all();
+    cite!(["603.4"]; assert_eq!(t.g.stack.len(), 1, "a 2/2 is"));
+    t.resolve();
+    cite!(["603.4", "122.1"]; assert_eq!((pelt_counters(&t), pt(&t, "Pelt Collector")), (1, (Some(2), Some(2)))));
+}
+
+/// Ruling of 2018-10-05: a creature that died is compared by its power as it last existed on the
+/// battlefield; an opponent's creature dying is not one "you control".
+#[test]
+fn r603_10a_pelt_collector_compares_a_creature_that_died_as_it_last_existed() {
+    let mut t = Board::new(2).battlefield(0, &["Pelt Collector", "Grizzly Bears"]).battlefield(1, &["Hill Giant"]).hand(0, &["Shock", "Lightning Bolt"]).build();
+    t.mana(0, "{R}");
+    t.cast(0, "Shock", vec![on(0, Zone::Battlefield, "Grizzly Bears")], mana_pool("R")).unwrap();
+    t.resolve();
+    cite!(["603.10a", "603.4", "122.1"]; assert_eq!(pelt_counters(&t), 1));
+    t.mana(0, "{R}");
+    t.cast(0, "Lightning Bolt", vec![on(1, Zone::Battlefield, "Hill Giant")], mana_pool("R")).unwrap();
+    t.pass_all();
+    cite!(["603.2"]; assert!(t.g.stack.is_empty() && t.g.players[1].graveyard.len() == 1, "the Giant was not the Collector's controller's"));
+    assert_eq!(pelt_counters(&t), 1);
+}
+
+/// Ruling of 2018-10-05: if Pelt Collector's power has been raised to the entering creature's or
+/// more as the ability resolves, it gets no counter.
+#[test]
+fn r603_4_pelt_collector_checks_again_as_the_ability_resolves() {
+    let mut t = Board::new(2).battlefield(0, &["Pelt Collector"]).hand(0, &["Grizzly Bears", "Giant Growth"]).build();
+    t.mana(0, "{1}{G}");
+    t.cast(0, "Grizzly Bears", vec![], mana_pool("CG")).unwrap();
+    t.pass_all();
+    assert_eq!(t.g.stack.len(), 1);
+    t.mana(0, "{G}");
+    t.cast(0, "Giant Growth", vec![on(0, Zone::Battlefield, "Pelt Collector")], mana_pool("G")).unwrap();
+    t.resolve();
+    cite!(["603.4"]; assert_eq!((pelt_counters(&t), pt(&t, "Pelt Collector")), (0, (Some(4), Some(4)))));
+}
+
+#[test]
+fn r611_3a_pelt_collector_has_trample_with_three_counters() {
+    let t = Board::new(2).battlefield(0, &["Pelt Collector"]).counters("Pelt Collector", "+1/+1", 3).build();
+    cite!(["611.3a", "702.19a"]; assert!(t.g.has(t.find("Pelt Collector"), "Trample")));
+    let t = Board::new(2).battlefield(0, &["Pelt Collector"]).counters("Pelt Collector", "+1/+1", 2).build();
+    cite!(["611.3a"]; assert!(!t.g.has(t.find("Pelt Collector"), "Trample")));
+}
