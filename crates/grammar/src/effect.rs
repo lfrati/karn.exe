@@ -385,6 +385,9 @@ fn build_modifiers() -> Modifiers {
             lit("as an Adventure").to(Modifier::AsAdventure),
             lit(", divided as you choose").to(Modifier::DividedAsYouChoose),
             lit("without paying their mana costs").to(Modifier::WithoutPayingManaCosts),
+            // "… without paying its mana cost and as though it had flash": only after a free cast;
+            // the plural is read with its free cast, below
+            lit("and as though it had flash").to(Modifier::AsThoughFlash),
             lit("using its").then_keep(&crate::selector::keyword_name()).skip(&lit("ability")).map(
                 |k| Some(Modifier::Using(k)),
                 |m| match m {
@@ -548,6 +551,11 @@ fn act(form: Form) -> P<Act> {
             && (by || unpaid || !play(false))
             && (!a.mods.contains(&Modifier::FaceDown) || exile)
             && (!a.mods.contains(&Modifier::AsAdventure) || matches!(a.action, ir::Action::Cast { play: false, .. }))
+            && (!a.mods.contains(&Modifier::AsThoughFlash) || match (&a.action, a.mods.as_slice()) {
+                (ir::Action::Cast { play: false, free: true, .. }, [Modifier::AsThoughFlash]) => true,
+                (ir::Action::Static(_), [Modifier::WithoutPayingManaCosts, Modifier::AsThoughFlash]) => true,
+                _ => false,
+            })
             && (!a.mods.iter().any(|m| matches!(m, Modifier::InPile(_))) || exile)
             && (!with_counters || (exile && !permanent))
             && !(exile && ends_in_counters && !permanent)
@@ -596,7 +604,17 @@ fn act(form: Form) -> P<Act> {
             _ => None,
         },
     );
-    alt("act", vec![counted, plain, freed])
+    // "Any player may cast creature spells … without paying their mana costs and as though they
+    // had flash": the free cast of a permission and its timing, in its number (Aluren)
+    let both = || vec![Modifier::WithoutPayingManaCosts, Modifier::AsThoughFlash];
+    let free_flash = action(form).skip(&lit("without paying their mana costs and as though they had flash")).map(
+        move |action| {
+            let a = Act { action, mods: both(), may: false };
+            fits(&a).then_some(a)
+        },
+        move |a: &Act| (a.mods == both() && fits(a) && !a.may).then(|| a.action.clone()),
+    );
+    alt("act", vec![counted, free_flash, plain, freed])
 }
 
 /// The acts of one subject in one verb form, with "may" or without.

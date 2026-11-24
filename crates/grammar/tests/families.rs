@@ -1177,3 +1177,14 @@ fn r715_3_cast_as_an_adventure() {
     assert_eq!(printed, "When ~ dies, you may cast it from your graveyard as an Adventure until the end of your next turn.");
     for text in ["When ~ dies, exile it as an Adventure.", "When ~ dies, return it to your hand as an Adventure."] { declines(text); }
 }
+
+/// CR 702.8a: "and as though it had flash" goes with a cast made without paying the mana cost
+/// (Aluren ruling of 2004-10-04: the cast is free and at instant speed together, or neither).
+#[test]
+fn r702_8a_a_free_cast_as_though_it_had_flash() {
+    let (_, printed) = read("Any player may cast creature spells with mana value 3 or less without paying their mana costs and as though they had flash.");
+    assert_eq!(printed, "Any player may cast creature spells with mana value 3 or less without paying their mana costs and as though they had flash.");
+    let (_, printed) = read("If a creature is attacking you and you control a Forest and a Plains, you may cast ~ without paying its mana cost and as though it had flash.");
+    assert!(printed.ends_with("you may cast ~ without paying its mana cost and as though it had flash."), "{printed}");
+    for text in ["You may cast ~ and as though it had flash.", "Draw a card and as though it had flash."] { declines(text); }
+}

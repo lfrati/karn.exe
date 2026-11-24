@@ -254,6 +254,10 @@ pub enum Modifier {
     /// "cast it from your graveyard as an Adventure": as the Adventure the card has, its
     /// alternative characteristics (715.3); never as the card itself.
     AsAdventure,
+    /// "without paying its mana cost and as though it had flash": the free cast may also be
+    /// made any time its caster could cast an instant (702.8a); only with that free cast (Aluren
+    /// ruling: casting it as though it had flash and paying the mana cost is not allowed).
+    AsThoughFlash,
     /// "in a face-down pile" ("exile them in a face-down pile", 700.3): the cards exiled are
     /// grouped into a pile.
     InPile(crate::procedure::PileKind),
