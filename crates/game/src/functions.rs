@@ -191,22 +191,29 @@ fn actions(effect: &Effect) -> Vec<&Action> {
 
 /// A positive condition that explicitly confines this source to exile (113.6b/k).
 /// Other subjects and disjunctions without that same constraint prove no source zone.
-fn requires_source_exiled(condition: &ir::Condition) -> bool {
+/// `it_is_this`: the condition is of an event whose only subject is this object, so "it" there
+/// is this object ("whenever a time counter is removed from this card while it's exiled").
+fn requires_source_exiled(condition: &ir::Condition, it_is_this: bool) -> bool {
     match condition {
-        ir::Condition::Is { what, pred, negated: false } if what.quant == Quant::Definite(Ref::This) => match pred {
+        ir::Condition::Is { what, pred, negated: false } if what.quant == Quant::Definite(Ref::This)
+            || it_is_this && what.quant == Quant::Definite(Ref::Anaphor(ir::Anaphor::It)) => match pred {
             ir::condition::Predicate::Designated(ir::condition::ObjectDesignation::Suspended) => true,
             ir::condition::Predicate::In(zone) => zone.zones.items == [ir::Zone::Exile] && zone.owner.is_none() && zone.slice.is_none(),
             _ => false,
         },
-        ir::Condition::And(conditions) => conditions.iter().any(requires_source_exiled),
-        ir::Condition::Or(conditions) => !conditions.is_empty() && conditions.iter().all(requires_source_exiled),
+        ir::Condition::And(conditions) => conditions.iter().any(|c| requires_source_exiled(c, it_is_this)),
+        ir::Condition::Or(conditions) => !conditions.is_empty() && conditions.iter().all(|c| requires_source_exiled(c, it_is_this)),
         _ => false,
     }
 }
 fn exile_only(ability: &Ability) -> bool {
+    // "it" in a trigger condition is the event's grammatical subject (as `input::find` binds it)
+    fn of_this(pattern: &ir::EventPattern) -> bool {
+        matches!(pattern.subjects.as_slice(), [subject] if subject.quant == Quant::Definite(Ref::This))
+    }
     fn event_condition(trigger: &ir::Trigger) -> bool {
         match trigger {
-            ir::Trigger::Event { pattern, .. } => pattern.condition.as_deref().is_some_and(requires_source_exiled),
+            ir::Trigger::Event { pattern, .. } => pattern.condition.as_deref().is_some_and(|c| requires_source_exiled(c, of_this(pattern))),
             ir::Trigger::Any(triggers) => !triggers.is_empty() && triggers.iter().all(event_condition),
             _ => false,
         }
@@ -214,9 +221,9 @@ fn exile_only(ability: &Ability) -> bool {
     match ability {
         Ability::Activated { effect, .. } => effect.0.iter().any(|sentence| matches!(sentence,
             Sentence::Restrictions(restrictions) if restrictions.iter().any(|restriction|
-                matches!(restriction, ir::Restriction::If(condition) if requires_source_exiled(condition))))),
+                matches!(restriction, ir::Restriction::If(condition) if requires_source_exiled(condition, false))))),
         Ability::Triggered { trigger, effect } => event_condition(trigger) || matches!(effect.0.first(),
-            Some(Sentence::Led { lead: ir::Lead::Modifier(ir::Modifier::If(condition)), .. }) if requires_source_exiled(condition)),
+            Some(Sentence::Led { lead: ir::Lead::Modifier(ir::Modifier::If(condition)), .. }) if requires_source_exiled(condition, false)),
         _ => false,
     }
 }
