@@ -82,3 +82,14 @@ fn r602_2a_paused_hand_activation_reveals_its_source_and_reversal_ends_the_revea
  assert_eq!(reversed.game().unwrap().obj(card).zone,Zone::Hand);assert!(reversed.game().unwrap().stack.is_empty());assert_eq!(reversed.game().unwrap().players[0].pool.total(),3);assert!(reversed.game().unwrap().obj(source).tapped);assert!(!reversed.snapshot(Some(1)).unwrap().objects.iter().any(|o|o.id==card));
  respond(&mut sim,Move::FinishPayment{plan:vec![],paying:vec![],with:Some(crate::support::mana_pool("G"))});assert_eq!(sim.game().unwrap().players[0].pool.total(),2);cite!(["602.2a"]; assert_eq!(sim.game().unwrap().players[0].graveyard.len(),1));assert_eq!(sim.game().unwrap().stack.len(),1);passes(&mut sim);assert!(matches!(sim.request().unwrap().unwrap().question,Asked::Search{..}));
 }
+
+/// Zenith Flare: "Zenith Flare deals X damage to any target and you gain X life, where X is the
+/// number of cards with a cycling ability in your graveyard." Typecycling abilities are cycling
+/// abilities (702.29f): the swampcycler counts, the Bears do not.
+#[test]
+fn r702_29f_zenith_flare_counts_typecycling_cards_as_cards_with_a_cycling_ability() {
+    use crate::support::{Board, mana_pool, player};
+    let mut t = Board::new(2).graveyard(0, &["Drifting Meadow", "Twisted Abomination", "Grizzly Bears"]).hand(0, &["Zenith Flare"]).build();
+    t.mana(0, "{2}{R}{W}").cast(0, "Zenith Flare", vec![player(1)], mana_pool("CCRW")).unwrap().resolve();
+    cite!(["702.29f", "107.3a"]; assert_eq!((t.g.players[1].life, t.g.players[0].life), (18, 22)));
+}

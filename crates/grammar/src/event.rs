@@ -1664,6 +1664,14 @@ pub fn would() -> P<EventPattern> {
     );
     // "if a nontoken creature would enter and it wasn't cast": a condition on the event
     let and_if = crate::kernel::lazy("condition", || crate::condition::conditions().condition.clone());
+    // "would be put into your graveyard from anywhere and it wasn't cycled": this zone change is
+    // not its discard to pay a cycling cost (702.29c, 702.29f; Abandoned Sarcophagus rulings).
+    // Said of the event, as "it wasn't cast" is of an entering: no window, which a condition
+    // alone would ask for ("if it was cycled this turn")
+    let it = Selector::new(Quant::Definite(Ref::Anaphor(Anaphor::It)), ObjectSet::of(Domain::Object));
+    let cycled = EventPattern::new(vec![it], vec![EventAction::Deed(Deed { verb: Verb::Cycle, passive: true, args: Vec::new() })]);
+    let not_cycled = lit("it wasn't cycled").to(Condition::Happened { pattern: cycled, window: None, times: None, tense: Tense::Past, negated: true });
+    let and_if = alt("event condition", vec![and_if, not_cycled]);
     let does = does.then(&lit("and").then_keep(&and_if).opt()).map(
         |(mut p, c)| {
             // "that player or that planeswalker's controller would gain life": two subjects, not

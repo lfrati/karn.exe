@@ -1103,3 +1103,22 @@ fn r701_38_most_votes_and_the_number_of_votes() {
     assert!(serde_json::to_string(&value).unwrap().contains(r#"{"Votes":"truth"}"#));
     for text in ["Exile each permanent with the most vote.", "You draw cards equal to the number of red votes."] { declines(text); }
 }
+
+/// CR 702.29a and 702.29f: "a cycling ability" is the keyword cycling (or a typecycling) said as
+/// an ability, the same with a plural noun ("spells that have a cycling ability"); "and it
+/// wasn't cycled" says the zone change is not its discard for a cycling cost (702.29c).
+#[test]
+fn r702_29_a_cycling_ability_and_a_card_not_cycled() {
+    let (said, printed) = read("You may cast spells that have a cycling ability from your graveyard.");
+    let (plain, _) = read("You may cast spells with cycling from your graveyard.");
+    assert_eq!((said, printed.as_str()), (plain, "You may cast spells with cycling from your graveyard."));
+    let text = "If a card that has a cycling ability would be put into your graveyard from anywhere and it wasn't cycled, exile it instead.";
+    let (value, printed) = read(text);
+    assert_eq!(printed, "If a card with cycling would be put into your graveyard from anywhere and it wasn't cycled, exile it instead.");
+    let json = serde_json::to_string(&value).unwrap();
+    assert!(json.contains(r#""verb":"Cycle","passive":true"#) && json.contains(r#""negated":true"#), "{json}");
+    for text in [
+        "When ~ dies, if it wasn't cycled, draw a card.",
+        "If a card would be put into your graveyard from anywhere and it wasn't cycle, exile it instead.",
+    ] { declines(text); }
+}

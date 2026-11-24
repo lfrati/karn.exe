@@ -1102,24 +1102,36 @@ fn post_filter(n: Number, sel: &P<Selector>) -> P<Filter> {
     // "with a cycling ability", "with landwalk abilities": the same as "with cycling" (a keyword
     // is the ability it names); "with a mana ability", "without mana abilities": an ability of
     // that kind (CR 113.3, 605.1)
-    let article = if n == Number::Sg { alt("a", vec![lit("a"), lit("an").alias()]) } else { crate::kernel::empty() };
-    let noun = lit(if n == Number::Sg { "ability" } else { "abilities" });
-    let kw_ability = has.then_keep(&article).then_keep(&keyword_name()).skip(&noun).map(
+    // The abilities are counted on their own: "spells that have a cycling ability", "a creature
+    // with landwalk abilities". Printed in the noun phrase's number.
+    let abilities = |what: P<ir::selector::AbilityKind>| {
+        let one = alt("a", vec![lit("a"), lit("an").alias()]).then_keep(&what).skip(&lit("ability"));
+        let some = what.skip(&lit("abilities"));
+        match n {
+            Number::Sg => alt("ability", vec![one, some.alias()]),
+            Number::Pl => alt("abilities", vec![some, one.alias()]),
+        }
+    };
+    let keyword_abilities = |what: P<Keyword>| {
+        let one = alt("a", vec![lit("a"), lit("an").alias()]).then_keep(&what).skip(&lit("ability"));
+        alt("ability", vec![one, what.skip(&lit("abilities"))])
+    };
+    let kw_ability = has.then_keep(&keyword_abilities(keyword_name())).map(
         move |k| Some(atom(Atom::Keyword(k))),
         |_| None,
     );
-    let no_kw_ability = lit("without").then_keep(&article).then_keep(&keyword_name()).skip(&noun).map(
+    let no_kw_ability = lit("without").then_keep(&keyword_abilities(keyword_name())).map(
         move |k| Some(Filter::Not(Box::new(atom(Atom::Keyword(k))))),
         |_| None,
     );
-    let has_ability = has.then_keep(&article).then_keep(&ability_kind()).skip(&noun).map(
+    let has_ability = has.then_keep(&abilities(ability_kind())).map(
         move |k| Some(atom(Atom::HasAbility(k))),
         |f| match f {
             Filter::Atom(Atom::HasAbility(k)) => Some(*k),
             _ => None,
         },
     );
-    let no_ability = lit("without").then_keep(&article).then_keep(&ability_kind()).skip(&noun).map(
+    let no_ability = lit("without").then_keep(&abilities(ability_kind())).map(
         move |k| Some(Filter::Not(Box::new(atom(Atom::HasAbility(k))))),
         |f| match f {
             Filter::Not(b) => match b.as_ref() {

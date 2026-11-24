@@ -5277,6 +5277,10 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                             object_actor: !recipient_players, to_players: recipient_players,
                         })?
                     };
+                    // "~ deals X damage to any target and you gain X life, where X is …": the X
+                    // read in the amounts' copy is read by this act, which is where X is first
+                    // used and so computed (107.3c; Zenith Flare)
+                    if amounts.x.as_ref().is_some_and(|read| read.get()) && let Some(read) = &binder.x { read.set(true); }
                     Ok((to, amount))
                 }).collect::<Res<_>>()?;
                 Some(action::Action::Damage { source, hits })
