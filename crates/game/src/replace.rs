@@ -657,12 +657,18 @@ fn counter_replacement(a: &Ability) -> Option<CounterReplacement<'_>> {
             (on.as_ref(), Some(by), false, kind.as_ref(), CounterVoice::Imperative),
         ([], [EventAction::PutsCounters { kind, one_or_more: true, on }], Some(EventCause::Effect)) =>
             (on.as_ref(), None, true, kind.as_ref(), CounterVoice::Cause),
+        // "If you would get one or more counters, you get that many plus one instead." (122.1)
+        ([on], [EventAction::GetsCounters { kind: None }], None) if on.set.domain == ir::Domain::Player =>
+            (on, None, false, None, CounterVoice::Passive),
         _ => return None,
     };
-    if !matches!(on.quant, Quant::Indefinite(_)) { return None; }
+    // the player the text is of: "you"
+    let you = |s: &Selector| s.quant == Quant::Definite(Ref::You) && s.set == ir::ObjectSet::of(ir::Domain::Player)
+        && s.chooser.is_none() && s.random.is_none();
+    if !matches!(on.quant, Quant::Indefinite(_)) && !you(on) { return None; }
     let Substitute::CountersPut { count, kinds, on: to, voice: with_voice } = &r.with else { return None };
     if *with_voice != voice { return None; }
-    let same = matches!(to.quant, Quant::Definite(Ref::Anaphor(Anaphor::It | Anaphor::That)))
+    let same = you(on) && you(to) || !you(on) && matches!(to.quant, Quant::Definite(Ref::Anaphor(Anaphor::It | Anaphor::That)))
         && to.set.controller.is_none() && to.set.owner.is_none() && to.set.caster.is_none()
         && to.set.zone.is_none() && !to.set.other && to.chooser.is_none() && to.random.is_none()
         && (to.set.filter == Filter::All(Vec::new()) || to.set.filter == on.set.filter);
