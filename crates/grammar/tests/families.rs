@@ -1340,3 +1340,15 @@ fn r303_4_attached_to_creatures_is_attached_to_a_creature() {
     let (your_one, _) = read("Auras attached to a permanent you control have umbra armor.");
     assert_eq!(yours, your_one);
 }
+
+/// CR 400.1 and 102.3: "all opponents' hands and graveyards" are your opponents' hands and
+/// graveyards, every one of them (Ashiok, Nightmare Weaver).
+#[test]
+fn r400_1_all_opponents_hands_and_graveyards() {
+    let (all, printed) = read("−10: Exile all cards from all opponents' hands and graveyards.");
+    let (yours, _) = read("−10: Exile all cards from your opponents' hands and graveyards.");
+    assert_eq!(all, yours);
+    assert_eq!(printed, "−10: Exile all cards from your opponents' hands and graveyards.");
+    let (graveyards, _) = read("−10: Exile all cards from your opponents' graveyards.");
+    assert_ne!(all, graveyards);
+}

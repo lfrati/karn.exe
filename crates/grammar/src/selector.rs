@@ -2427,9 +2427,11 @@ fn zone_spec(prep: ZonePrep, player_sg: &P<Selector>) -> P<ZoneSpec> {
         |zs| (zs.owner.as_deref() == Some(&that_zone()) && zs.slice.is_none()).then(|| zs.zone()).flatten(),
     );
     // "in your opponents' graveyards"
-    let theirs = lit(&format!("{p} your opponents'")).then_keep(&zone_noun(Number::Pl)).map(
-        |z| Some(ZoneSpec::of(z, Some(your_opponents()))),
-        |zs| if zs.owner.as_deref() == Some(&your_opponents()) && zs.slice.is_none() { zs.zone() } else { None },
+    // "from your opponents' hands and graveyards"; "all opponents'" says the same players
+    let opponents = alt("your opponents'", vec![lit(&format!("{p} your opponents'")), lit(&format!("{p} all opponents'")).alias()]);
+    let theirs = opponents.then_keep(&crate::action::coord(&zone_noun(Number::Pl))).map(
+        |zones| Some(ZoneSpec { zones, owner: Some(Box::new(your_opponents())), slice: None }),
+        |zs| if zs.owner.as_deref() == Some(&your_opponents()) && zs.slice.is_none() { Some(zs.zones.clone()) } else { None },
     );
     // "from graveyards" names the same cards as "from all graveyards"
     let all_word = alt("all", vec![lit(&format!("{p} all")), lit(p).alias()]);
