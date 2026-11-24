@@ -171,6 +171,10 @@ struct Binder {
     /// paragraphs followed as one text (608.2c).
     paragraphs: Vec<usize>,
     outcome: Option<(action::Operand, Slot, Slot, usize)>,
+    /// The outcome an "if you do" read last: "If you do, that player discards that card. If
+    /// you don't, …" asks the same question again, though the discard is a later outcome
+    /// (118.12, 608.2c).
+    asked: Option<(action::Operand, Slot, Slot, usize)>,
     player_outcomes: Vec<[Slot; 3]>,
     /// An instruction lowered before has players lose life: "the life lost this way".
     lost: Vec<Slot>,
@@ -3340,7 +3344,13 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 }
                 let condition = if let ir::Condition::Did { who, outcome } = c {
                     let actor = e.operand(who, support, &mut binder)?;
-                    let Some((producer, paid, possible, instruction)) = &binder.outcome else { return unsupported("outcome has no earlier payment producer"); };
+                    let Some(latest) = &binder.outcome else { return unsupported("outcome has no earlier payment producer"); };
+                    // of a different actor, the outcome the previous one asked about ("If
+                    // you do, that player discards that card. If you don't, …")
+                    let asked = binder.asked.as_ref().filter(|asked| latest.0 != actor && asked.0 == actor && asked.3 < latest.3);
+                    let read = asked.unwrap_or(latest).clone();
+                    binder.asked = Some(read.clone());
+                    let (producer, paid, possible, instruction) = &read;
                     if actor != *producer { return unsupported("outcome names a different actor than its payment"); }
                     if matches!(producer, action::Operand::All(_) | action::Operand::Union(_)) { return unsupported("several-player payment needs per-player outcome predicates"); }
                     if *outcome == ir::condition::Outcome::Couldnt && matches!(e.instrs[*instruction], Instr::Pay { .. }) {
@@ -4041,8 +4051,14 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
         if causative_loss && !controller_only(clause.subject.as_ref()) { return unsupported("causative life loss: one controller chooses"); }
         let ordinary_attempt = causative_loss || (optional && matches!(act.action, Action::Destroy(_))) || matches!(&act.action, Action::RemoveCounters { .. } | Action::PayEnergy(_) | Action::Draw(_) | Action::DrawAdditional(_) | Action::DrawUpTo(_) | Action::Mill(_) | Action::GainLife(_) | Action::LoseLife(_) | Action::Tap(_) | Action::Untap(_) | Action::PutCounters(_) | Action::GetCounters { .. } | Action::Create(_) | Action::GetEmblem(_) | Action::Move { .. } | Action::Exile(_)) && !result_move;
         let optional_top = optional && matches!(&act.action, Action::Reveal(o) if o.items.iter().all(|s| top_of_library(s).is_some()));
+        // "You may choose a nonland card from it": whether and which are one choice, of the
+        // cards that fit (608.2d); "if you do" asks whether one was chosen (118.12)
+        let optional_choice = optional && alone && act.mods.is_empty() && !act.may && draw_bound.is_none()
+            && controller_only(clause.subject.as_ref()) && binder.actor.is_none() && binder.each.is_none()
+            && matches!(&act.action, Action::Choose(ir::action::Choice::Objects(objects)) if matches!(objects.items.as_slice(),
+                [s] if s.chooser.is_none() && s.random.is_none() && mention(s).is_some_and(|m| matches!(m.taking, Taking::Exactly(_)))));
         let flash_permission = matches!(&act.action, Action::Static(s) if matches!(**s, ir::statics::StaticAct::CastAsThoughFlash { .. }));
-        let optional_branch = if optional && !flash_permission && !optional_top && !matches!(act.action, Action::Scry(_) | Action::Surveil(_)) && !ordinary_attempt && !result_move && !named_exile && !matches!(act.action, Action::Discard(_) | Action::Sacrifice(_) | Action::PayMana(_) | Action::PayLife(_) | Action::Numbered(ir::NumberedAction::CollectEvidence, _) | Action::OnObjects(ir::action::ObjectAction::Behold, _)) {
+        let optional_branch = if optional && !flash_permission && !optional_top && !optional_choice && !matches!(act.action, Action::Scry(_) | Action::Surveil(_)) && !ordinary_attempt && !result_move && !named_exile && !matches!(act.action, Action::Discard(_) | Action::Sacrifice(_) | Action::PayMana(_) | Action::PayLife(_) | Action::Numbered(ir::NumberedAction::CollectEvidence, _) | Action::OnObjects(ir::action::ObjectAction::Behold, _)) {
             if !alone || !controller_only(clause.subject.as_ref()) {
                 return unsupported("program: optional compound clause or other chooser not lowered");
             }
@@ -5783,6 +5799,14 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                     Taking::All => (Pick::All, u32::MAX),
                     Taking::AnyNumber => (Pick::AnyNumber, u32::MAX),
                     Taking::Remainder => return unsupported("choice: a remainder is not a selection"),
+                };
+                let pick = match pick {
+                    Pick::Exactly(count) if optional_choice => {
+                        let (paid, possible) = (e.slot(), e.slot());
+                        binder.outcome = Some((action::Operand::Controller, paid, possible, e.instrs.len()));
+                        Pick::Optional { count, paid, possible }
+                    }
+                    pick => pick,
                 };
                 let out = e.slot();
                 e.instrs.push(Instr::Select { from, set: set.into(), pick, chooser: doer, gate: None, still_in: zone, out });
