@@ -185,9 +185,16 @@ fn predicate(n: Number) -> P<Predicate> {
             ),
         ],
     );
+    // "is face down", "it's face down": after a verb Oracle writes the status unhyphenated
+    // (708.2, 110.5); before a noun it's "face-down"
+    let face = alt("face down", vec![
+        lit("face down").to(Predicate::Adjective(Filter::Atom(Atom::Status(ir::selector::Status::FaceDown)))),
+        lit("face up").to(Predicate::Adjective(Filter::Atom(Atom::Status(ir::selector::Status::FaceUp)))),
+    ]);
     alt(
         "predicate",
         vec![
+            face,
             adjective_group().map(
                 |f| Some(Predicate::Adjective(f)),
                 |p| match p {

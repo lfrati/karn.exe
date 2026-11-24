@@ -1388,3 +1388,15 @@ fn r605_1a_cost_more_unless_mana_abilities() {
     let (all, _) = read("Activated abilities of sources with the chosen name cost {2} more to activate.");
     assert_ne!(unless, all);
 }
+
+/// CR 708.2 and 110.5: after a verb the face-down status is written "face down" (Unable to
+/// Scream: "As long as enchanted creature is face down, it can't be turned face up.").
+#[test]
+fn r708_2_is_face_down() {
+    let text = "As long as enchanted creature is face down, it can't be turned face up.";
+    let (down, printed) = read(text);
+    assert_eq!(printed, text);
+    let (up, _) = read("As long as enchanted creature is face up, it can't be turned face up.");
+    assert_ne!(down, up);
+    assert!(serde_json::to_string(&down).unwrap().contains("FaceDown"));
+}
