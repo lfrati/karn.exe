@@ -1156,3 +1156,13 @@ fn r119_3_gained_and_lost_life_this_turn() {
     assert!(printed.contains("if you gained life this turn and you lost life this turn"), "{printed}");
     declines("At the beginning of your end step, if you gained and lost life, create a 1/1 black Bat creature token with flying.");
 }
+
+/// CR 603.7b: "When you cast your next instant or sorcery spell this turn" is the delayed trigger
+/// "when you next cast an instant or sorcery spell this turn" says.
+#[test]
+fn r603_7b_your_next_spell_is_the_next_one_you_cast() {
+    let (said, printed) = read("When you cast your next instant or sorcery spell this turn, copy that spell.");
+    let (other, _) = read("When you next cast an instant or sorcery spell this turn, copy that spell.");
+    assert_eq!(said, other);
+    assert_eq!(printed, "When you next cast an instant or sorcery spell this turn, copy that spell.");
+}

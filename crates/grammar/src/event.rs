@@ -1487,6 +1487,15 @@ fn clause(tense: Tense, negated: bool, next: bool) -> P<EventPattern> {
     };
     let with = |subjects: P<Vec<Selector>>, aux: &str| subjects.skip(&lit(aux));
     if next {
+        // "When you cast your next instant or sorcery spell this turn,": the trigger "when you
+        // next cast an instant or sorcery spell" says (Twinferno)
+        let your_next = lit("you cast your next").then_keep(&s.set_sg).map(
+            |set| {
+                let one = Selector::new(Quant::Indefinite(Count::Exactly(Amount::Const(1))), set);
+                Some(doing(vec![Selector::you()], vec![EventAction::does(Verb::Cast, one)]))
+            },
+            |_| None,
+        );
         // "next" stands after the subject of a verb; the clauses with no subject before their
         // verb have no place for it
         return alt(
@@ -1496,6 +1505,7 @@ fn clause(tense: Tense, negated: bool, next: bool) -> P<EventPattern> {
                 mk(plural(), Form::Base, true),
                 mk(you(), Form::Base, true),
                 mk(mixed(), Form::Third, false),
+                your_next.alias(),
             ],
         );
     }
