@@ -1366,3 +1366,14 @@ fn r404_1_bottom_card_of_a_graveyard() {
     let (library, _) = read("{T}: Exile the bottom card of target player's library.");
     assert_ne!(bottom, library);
 }
+
+/// CR 102.3: "that player's opponents" are the opponents of the player the text named, not of
+/// the ability's controller (Standstill).
+#[test]
+fn r102_3_that_players_opponents() {
+    let text = "When a player casts a spell, sacrifice ~. If you do, each of that player's opponents draws three cards.";
+    let (theirs, printed) = read(text);
+    let (yours, _) = read("When a player casts a spell, sacrifice ~. If you do, each of your opponents draws three cards.");
+    assert_ne!(theirs, yours);
+    assert!(serde_json::to_string(&theirs).unwrap().contains("OpponentOf"), "{printed}");
+}

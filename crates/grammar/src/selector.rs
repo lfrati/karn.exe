@@ -4398,7 +4398,22 @@ fn build() -> Selectors {
     let sg = alt("selector", vec![branch(Number::Sg, ZonePrep::In), target_union(&set_sg), slices.clone(), part_sg.clone()]);
     // "your opponents" is how Oracle says all opponents; listed first so it prints that way
     let your_opponents = lit("your opponents").to(your_opponents());
-    let pl = alt("plural selector", vec![your_opponents.clone(), branch(Number::Pl, ZonePrep::In), part_pl.clone()]);
+    // "each of that player's opponents draws three cards": the opponents of a player the text
+    // named (102.3); "your opponents" is said above
+    let opponents_of = crate::kernel::lazy("possessive", || selectors().possessive.clone()).skip(&lit("opponents")).map(
+        |p| (p != Selector::you()).then(|| {
+            let set = ObjectSet { filter: Filter::All(vec![Filter::Atom(Atom::OpponentOf(Box::new(p)))]), ..ObjectSet::of(Domain::Player) };
+            Selector::new(Quant::All, set)
+        }),
+        |s: &Selector| match (&s.quant, s.chooser.is_none() && s.random.is_none(), &s.set.filter) {
+            (Quant::All, true, Filter::All(v)) if s.set == ObjectSet { filter: s.set.filter.clone(), ..ObjectSet::of(Domain::Player) } => match v.as_slice() {
+                [Filter::Atom(Atom::OpponentOf(p))] if **p != Selector::you() => Some((**p).clone()),
+                _ => None,
+            },
+            _ => None,
+        },
+    );
+    let pl = alt("plural selector", vec![your_opponents.clone(), opponents_of, branch(Number::Pl, ZonePrep::In), part_pl.clone()]);
     sg_in.define(sg.clone());
     pl_in.define(pl.clone());
     let selector = alt("selector", vec![sg.clone(), pl.clone(), special.clone(), zones.clone(), either.clone()]);
