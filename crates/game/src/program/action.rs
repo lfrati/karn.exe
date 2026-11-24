@@ -366,6 +366,25 @@ impl Operand {
 }
 
 /// What an operand is, now. Nothing is named twice.
+/// "Defending player" (508.5): the player the attacking creature the ability refers to is
+/// attacking, or was before it was removed from combat. That creature is the one the trigger
+/// is of when it is an attacking creature ("Whenever enchanted creature attacks", "Whenever a
+/// creature you control becomes blocked"), and otherwise the ability's source.
+fn defending_player(game: &Game, f: &Frame) -> Option<PlayerId> {
+    let mut of_subject: Vec<PlayerId> = Vec::new();
+    for subject in f.inputs.iter().filter(|(input, _)| *input == super::input::Input::Subject).flat_map(|(_, subjects)| subjects) {
+        if let Target::Object(o) = subject && let Some(player) = game.defending_player_of(*o) && !of_subject.contains(&player) {
+            of_subject.push(player);
+        }
+    }
+    match of_subject.as_slice() {
+        [player] => Some(*player),
+        // creatures attacking different players: the controller would choose one (508.5a),
+        // which is not asked
+        _ => f.ctx.source.and_then(|source| game.defending_player_of(source)),
+    }
+}
+
 pub(super) fn named(game: &Game, f: &Frame, operand: &Operand) -> Vec<Target> {
     match operand {
         Operand::Player(player) => vec![Target::Player(*player)],
@@ -411,7 +430,7 @@ pub(super) fn named(game: &Game, f: &Frame, operand: &Operand) -> Vec<Target> {
         },
         Operand::Controller => vec![Target::Player(f.ctx.controller)],
         Operand::Source => f.ctx.source.into_iter().map(Target::Object).collect(),
-        Operand::DefendingPlayer => f.ctx.source.and_then(|source| game.defending_player_of(source)).map(Target::Player).into_iter().collect(),
+        Operand::DefendingPlayer => defending_player(game, f).map(Target::Player).into_iter().collect(),
         Operand::Targets(group) => {
             let spec = f.program.targets.get(*group).expect("a compiled action names a target group of its program");
             let said = f.targets.get(*group).expect("a frame runs with every target group of its program announced");
