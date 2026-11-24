@@ -154,3 +154,39 @@ fn r508_1d_alluring_siren_makes_a_creature_attack_you_this_turn() {
     cite!(["508.1d"]; refused("Grizzly Bears attacks what an effect says it attacks if able (508.1d)"): t.g.act(1, Move::Attack(vec![(bears, Target::Player(2))])));
     cite!(["508.1d"]; ok: t.g.act(1, Move::Attack(vec![(bears, Target::Player(0))])));
 }
+
+// Rules: 508.1d, 604.1
+// Given: three players; player 0 controls Galactus, Devourer of Worlds ("Galactus attacks an
+// opponent with the most life among your opponents each combat if able unless you control a
+// creature named Silver Surfer, Galactus's Herald."); players 0 and 1 have 20 life, player 2
+// has 15 or 20.
+// When: player 0 declares attackers, without or with a creature named Silver Surfer, Galactus's
+// Herald.
+// Expect: without it, Galactus must attack player 1, the opponent with the most life (player 0's
+// own life is not among their opponents'), or either of players 1 and 2 when they are tied;
+// with it, no requirement applies.
+#[test]
+fn r508_1d_galactus_attacks_an_opponent_with_the_most_life() {
+    for (surfer, life, expected) in [
+        (false, 15, (vec![Target::Player(1)], true)),
+        (false, 20, (vec![Target::Player(1), Target::Player(2)], true)),
+        (true, 15, (vec![Target::Player(1), Target::Player(2)], false)),
+    ] {
+        let herald = game::CardDef::new("Silver Surfer, Galactus's Herald", "{0}", "Legendary Creature — Alien", "", Some((1, 1))).unwrap();
+        let defs = vec![oracle("Galactus, Devourer of Worlds"), herald, oracle("Wastes")];
+        let mut g = game::Game::new(defs, 3, 20);
+        for p in 0..3 { for _ in 0..10 { g.put(p, 2, Zone::Library); } }
+        let mut t = T::new(g);
+        t.to_no_combat(1, Part::PrecombatMain);
+        let galactus = t.g.put(0, 0, Zone::Battlefield);
+        if surfer { t.g.put(0, 1, Zone::Battlefield); }
+        t.g.players[2].life = life;
+        t.to_no_combat(0, Part::PrecombatMain);
+        to_attackers(&mut t);
+        cite!(["508.1d", "604.1"]; case: format!("surfer {surfer}, player 2 at {life}"); assert_eq!(may_attack(&mut t, galactus), expected));
+        if (surfer, life) == (false, 15) {
+            cite!(["508.1d"]; refused("Galactus, Devourer of Worlds attacks what an effect says it attacks if able (508.1d)"): t.g.act(0, Move::Attack(vec![(galactus, Target::Player(2))])));
+            cite!(["508.1d"]; ok: t.g.act(0, Move::Attack(vec![(galactus, Target::Player(1))])));
+        }
+    }
+}

@@ -305,7 +305,7 @@ fn life_extrema_include_explicit_ties_and_exclude_departed_players_without_clamp
         let mut game = Game::new(Vec::<CardDef>::new(), 3, 20);
         for (p, life) in life.into_iter().enumerate() { game.players[p].life = life; }
         if let Some(p) = departed { game.players[p].lost = true; }
-        let predicate = Atom::MostLife { least, tied };
+        let predicate = Atom::MostLife { least, tied, opponents: false };
         let winners: Vec<_> = (0..3).filter(|p| predicate.matches(&game, &Ctx::rule(0, AbilityKey::printed(0)), &NoLocals, Target::Player(*p))).collect();
         assert_eq!(winners, expected, "life={life:?}, departed={departed:?}, least={least}, tied={tied}");
     }

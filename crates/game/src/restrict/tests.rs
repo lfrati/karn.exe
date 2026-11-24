@@ -167,8 +167,13 @@ fn what_the_engine_does_not_hold_in_force_is_refused_as_the_text_is_lowered() {
     assert_eq!(refused(windowed), "prohibition: a window of its own");
     let must = |what| Action::Static(Box::new(StaticAct::IfAble { what, when: None }));
     assert_eq!(refused(must(vec![EventAction::Blocks { blocked: None }])), "requirement: to block");
-    let alone = EventAction::Attacks { alone: false, defender: vec![a(ObjectSet::of(Domain::Player))], with: None };
-    assert_eq!(refused(must(vec![alone])), "requirement: to attack something in particular");
+    // "attacks a player if able" names what it attacks (508.1d); "attacks target opponent if
+    // able" names a target the rule doesn't read
+    let a_player = EventAction::Attacks { alone: false, defender: vec![a(ObjectSet::of(Domain::Player))], with: None };
+    assert!(compile(&game, &ctx, &must(vec![a_player])).is_ok());
+    let target = Selector::new(Quant::Target(Count::Exactly(Amount::Const(1))), ObjectSet::of(Domain::Player));
+    let targeted = EventAction::Attacks { alone: false, defender: vec![target], with: None };
+    assert_eq!(refused(must(vec![targeted])), "requirement: to attack something in particular");
     assert_eq!(refused(Action::DoesntUntap { whose: UntapWhose::ThatPlayer, next: false }), "doesn't untap during the untap step of ThatPlayer");
     let abilities = cant(EventAction::BecomesTarget { of: Some(Box::new(Selector::new(Quant::All, ObjectSet::of(Domain::Ability)))) });
     assert_eq!(refused(abilities), "target prohibition: qualities of abilities or their sources");

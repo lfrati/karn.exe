@@ -460,8 +460,18 @@ impl Rule {
                         return unsupported("requirement: of nothing");
                     };
                     // "attacks Gideon Jura if able", "attack you if able": what it attacks to
-                    // obey it (508.1d)
-                    Says::MustAttack(defender.iter().map(|d| Noun::compile(d, support, &mut *bind)).collect::<Res<_>>()
+                    // obey it (508.1d). "An opponent with the most life" is any one no other
+                    // opponent has more life than: of those tied for it, whichever it attacks.
+                    let any_of_the_most = |d: &Selector| {
+                        let mut d = d.clone();
+                        if let (Quant::Indefinite(_), ir::Filter::All(parts)) = (&d.quant, &mut d.set.filter) {
+                            for part in parts {
+                                if let ir::Filter::Atom(ir::Atom::MostOf { tied, .. }) = part { *tied = true; }
+                            }
+                        }
+                        d
+                    };
+                    Says::MustAttack(defender.iter().map(|d| Noun::compile(&any_of_the_most(d), support, &mut *bind)).collect::<Res<_>>()
                         .map_err(|_| crate::Unsupported("requirement: to attack something in particular".into()))?)
                 }
                 StaticAct::SaddlesAndCrews(by) => Says::CrewPower { by: match by {

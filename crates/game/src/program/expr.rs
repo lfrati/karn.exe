@@ -471,8 +471,9 @@ pub(crate) enum Atom {
     Multicolored,
     Monocolored,
     Opponent,
-    /// All live players participate, including ties only when the text says so.
-    MostLife { least: bool, tied: bool },
+    /// All live players participate, including ties only when the text says so; of an
+    /// opponent ("an opponent with the most life"), the opponents of the one it is said for.
+    MostLife { least: bool, tied: bool, opponents: bool },
     Keyword(ir::Keyword),
     Tapped(bool),
     Token,
@@ -571,6 +572,13 @@ impl Filter {
 
     pub(crate) fn compile(f: &ir::Filter, support: &Support<'_>, bind: Bind<'_>) -> Res<Filter> {
         Ok(match f {
+            // "an opponent with the most life [among your opponents]": the most among them
+            // (Roiling Horror, ruling 2007-02-01: it "looks at the life totals of all opponents")
+            ir::Filter::All(v) if v.contains(&ir::Filter::Atom(ir::Atom::Opponent)) => Filter::All(v.iter().map(|x| match x {
+                ir::Filter::Atom(ir::Atom::MostOf { measure, least, tied }) if matches!(measure.as_ref(), ir::condition::Measure::Life) =>
+                    Ok(Filter::Atom(Atom::MostLife { least: *least, tied: *tied, opponents: true })),
+                x => Filter::compile(x, support, bind),
+            }).collect::<Res<_>>()?),
             ir::Filter::All(v) => Filter::All(v.iter().map(|x| Filter::compile(x, support, bind)).collect::<Res<_>>()?),
             ir::Filter::Any(v) => Filter::Any(v.iter().map(|x| Filter::compile(x, support, bind)).collect::<Res<_>>()?),
             ir::Filter::Not(x) => Filter::Not(Box::new(Filter::compile(x, support, bind)?)),
@@ -648,7 +656,7 @@ impl Filter {
                     Atom::Targets(what.items.iter().map(|s| Set::compile(&s.set, support, bind)).collect::<Res<_>>()?)
                 }
                 ir::Atom::MostOf { measure, least, tied } if matches!(measure.as_ref(), ir::condition::Measure::Life) =>
-                    Atom::MostLife { least: *least, tied: *tied },
+                    Atom::MostLife { least: *least, tied: *tied, opponents: false },
                 ir::Atom::AbilityKind(ir::selector::AbilityKind::Activated) => Atom::Ability { triggered: false },
                 ir::Atom::AbilityKind(ir::selector::AbilityKind::Triggered) => Atom::Ability { triggered: true },
                 ir::Atom::Reference(r) if r.form == RefForm::Choice && r.qualifiers.is_empty() => {
@@ -1005,8 +1013,8 @@ impl Atom {
             // what describes objects is false of a player
             Target::Player(p) => return match self {
                 Atom::Opponent => p != ctx.controller,
-                Atom::MostLife { least, tied } => !game.players[p].lost && game.players.iter().enumerate()
-                    .filter(|(other, player)| *other != p && !player.lost)
+                Atom::MostLife { least, tied, opponents } => !game.players[p].lost && game.players.iter().enumerate()
+                    .filter(|(other, player)| *other != p && !player.lost && !(*opponents && *other == ctx.controller))
                     .all(|(_, other)| {
                         let order = game.players[p].life.cmp(&other.life);
                         order == if *least { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater }
