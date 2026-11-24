@@ -1395,6 +1395,7 @@ impl Game {
         // Automatic turn/cleanup changes are semantic boundaries too; a query must not
         // manufacture their acquired-link lifetime transitions.
         self.reconcile_linked_acquisitions();
+        self.reconcile_pairs();
         #[cfg(feature = "profile")]
         let _profile = crate::profile::span(crate::profile::Scope::Triggers);
         let membership_changed = self.membership_changed();

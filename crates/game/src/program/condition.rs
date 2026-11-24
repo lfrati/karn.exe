@@ -641,6 +641,10 @@ impl Asks {
                     }
                     Predicate::A(set) => Is::A(expr::Set::compile(set, support, bind)?),
                     Predicate::In(zone) if zone.zones.items.len() == 1 && matches!(zone.zones.items[0], ir::Zone::Battlefield | ir::Zone::Exile) && zone.owner.is_none() && zone.slice.is_none() => Is::Zone(match zone.zones.items[0] { ir::Zone::Exile => crate::Zone::Exile, _ => crate::Zone::Battlefield }),
+                    // "~ is paired with another creature": a creature is paired only with
+                    // another creature (702.95b), so this is being paired
+                    Predicate::PairedWith(other) if another_creature(other) =>
+                        Is::Adjective(expr::Filter::compile(&ir::Filter::Atom(ir::Atom::Status(ir::selector::Status::Paired)), support, bind)?),
                     Predicate::Designated(d @ (ir::condition::ObjectDesignation::Solved | ir::condition::ObjectDesignation::Monstrous | ir::condition::ObjectDesignation::Renowned | ir::condition::ObjectDesignation::Prepared | ir::condition::ObjectDesignation::Suspended)) => Is::Designated(*d),
                     other => return unsupported(format!("condition: is {}", name(other))),
                 };
@@ -1140,4 +1144,18 @@ pub(crate) fn optional_paid(fact: &ir::condition::CastFact, kind: crate::keyword
             if objects.items.len() == 1 && objects.items[0].set == *set),
         _ => false,
     }
+}
+
+/// "another creature", and no more said of it.
+fn another_creature(s: &ir::Selector) -> bool {
+    fn creature(f: &ir::Filter) -> bool {
+        match f {
+            ir::Filter::Atom(ir::Atom::Type(ir::CardType::Creature)) => true,
+            ir::Filter::All(parts) => matches!(parts.as_slice(), [one] if creature(one)),
+            _ => false,
+        }
+    }
+    s.quant == Quant::Indefinite(Count::Exactly(ir::Amount::Const(1))) && s.chooser.is_none() && s.random.is_none()
+        && s.set.other && s.set.domain == ir::Domain::Permanent && s.set.zone.is_none() && s.set.controller.is_none()
+        && s.set.owner.is_none() && s.set.caster.is_none() && creature(&s.set.filter)
 }

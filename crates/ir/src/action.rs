@@ -69,6 +69,9 @@ pub enum Action {
     OnObjects(ObjectAction, Objects),
     /// "attach it to target creature you control" (701.3).
     Attach { what: Objects, to: Box<Selector> },
+    /// "pair this creature with another unpaired creature you control": soulbond's pairing
+    /// (702.95a-b).
+    Pair { what: Objects, with: Box<Selector> },
     /// "fights target creature you don't control" (701.14).
     Fight(Objects),
     /// "those creatures fight each other" (701.14).

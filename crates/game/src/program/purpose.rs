@@ -94,6 +94,7 @@ pub(super) fn done_by(instr: &Instr) -> Option<(Verb, Option<Placement>)> {
             A::Create { .. } => (Verb::Create, None),
             A::Regenerate { .. } => (Verb::Regenerate, None),
             A::Attach { .. } => (Verb::Attach, None),
+            A::Pair { .. } => (Verb::Pair, None),
             A::IncreaseSpeed { .. } | A::GetEmblem { .. } | A::Level { .. } | A::Unprepare { .. } | A::Designate { .. } | A::Prevent { .. } => return None,
         },
         Instr::Choice { action, .. } => (action.verb().said(), action.verb().to()),

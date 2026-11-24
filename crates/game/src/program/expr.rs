@@ -458,6 +458,8 @@ pub(crate) enum Atom {
     Token,
     /// Saddled (702.171b).
     Saddled,
+    /// Paired with another creature by soulbond (702.95b).
+    Paired,
     Commander,
     /// A face-down permanent (708.2), or what was one as it last existed.
     FaceDown,
@@ -531,6 +533,8 @@ impl Filter {
             Filter::Atom(Atom::Tapped(_)) => Reads::TAP_STATE,
             // set by a saddle ability's resolving, as an event of the turn (702.171a)
             Filter::Atom(Atom::Saddled) => Reads::HISTORY,
+            // a pair is a relation between identities, as an attachment is
+            Filter::Atom(Atom::Paired) => Reads::NONE,
             Filter::Atom(Atom::EnteredThisTurn | Atom::LostLifeThisTurn | Atom::DealtDamageBy(_) | Atom::TappedFor { .. } | Atom::Damage { .. } | Atom::FoughtThisTurn { .. }) => Reads::HISTORY,
             // an event pattern describes its objects as they were: it may read anything
             Filter::Atom(Atom::HappenedTo(_)) => Reads::ALL,
@@ -599,6 +603,7 @@ impl Filter {
                 ir::Atom::Status(Status::Untapped) => Atom::Tapped(false),
                 ir::Atom::Status(Status::Token) => Atom::Token,
                 ir::Atom::Status(Status::Saddled) => Atom::Saddled,
+                ir::Atom::Status(Status::Paired) => Atom::Paired,
                 ir::Atom::Status(Status::Suspended) => Atom::Suspended,
                 ir::Atom::Status(Status::Commander) => Atom::Commander,
                 ir::Atom::Status(Status::FaceDown) => Atom::FaceDown,
@@ -927,6 +932,7 @@ impl Atom {
             Atom::Tapped(false) => "untapped".into(),
             Atom::Token => "a token".into(),
             Atom::Saddled => "saddled".into(),
+            Atom::Paired => "paired".into(),
             Atom::PreparedSpell => "a prepare spell".into(),
             Atom::Commander => "a commander".into(),
             Atom::Suspended => "suspended".into(),
@@ -1045,6 +1051,8 @@ impl Atom {
             Atom::Token => o.token(),
             // only a permanent is saddled (702.171b); one that left was, as it last existed
             Atom::Saddled => o.saddled && (o.zone == Zone::Battlefield || (o.zone == Zone::Gone && o.left == Some(Zone::Battlefield))),
+            // only a creature on the battlefield is paired (702.95b, e)
+            Atom::Paired => game.partner(o.id).is_some(),
             // a face-down spell or permanent, or one as it last existed there (708.2); what an
             // event turned face up or one that entered this turn, as the event happened (708.8,
             // 608.2i)
@@ -2101,7 +2109,7 @@ impl Number {
                 Filter::Atom(Atom::HappenedTo(_)) => true,
                 Filter::Atom(Atom::Type(_) | Atom::PermanentType | Atom::HasAdventure | Atom::PreparedSpell | Atom::BasicLandType | Atom::ManaCost(_) | Atom::Subtype(_) | Atom::Supertype(_)
                     | Atom::Color(_) | Atom::Colorless | Atom::Multicolored | Atom::Monocolored
-                    | Atom::Opponent | Atom::MostLife { .. } | Atom::Keyword(_) | Atom::Tapped(_) | Atom::Token | Atom::Saddled | Atom::Commander | Atom::Suspended | Atom::FaceDown
+                    | Atom::Opponent | Atom::MostLife { .. } | Atom::Keyword(_) | Atom::Tapped(_) | Atom::Token | Atom::Saddled | Atom::Paired | Atom::Commander | Atom::Suspended | Atom::FaceDown
                     | Atom::Combat(_) | Atom::Blocking(_) | Atom::Attached(_) | Atom::Ability { .. } | Atom::Chosen(_) | Atom::SameName(_) | Atom::SharesCreatureType(_) | Atom::SharesColor(_)
                     | Atom::TargetCount(_) | Atom::Named(_) | Atom::EnteredThisTurn | Atom::LostLifeThisTurn | Atom::DealtDamageBy(_) | Atom::TappedFor { .. } | Atom::Damage { .. } | Atom::FoughtThisTurn { .. } | Atom::Counters { .. } | Atom::Level { .. } | Atom::Entered(_) | Atom::InSubjects(_)) => false,
             }

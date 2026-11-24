@@ -68,6 +68,7 @@ mod suspend;
 mod miracle;
 pub mod foretell;
 mod saga;
+mod soulbond;
 mod history;
 mod retention;
 mod linked_lifetime;

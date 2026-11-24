@@ -61,6 +61,8 @@ pub(crate) enum Action {
     Regenerate(Vec<ObjId>),
     /// Each attachment, and what it is attached to (701.3a).
     Attach(Vec<(ObjId, Target)>),
+    /// Two creatures to pair, by the player who controls the soulbond ability (702.95a).
+    Pair(Option<(ObjId, ObjId, PlayerId)>),
 }
 
 impl Action {
@@ -257,6 +259,7 @@ pub(crate) fn run(game: &mut Game, action: Action) -> crate::Res<Result<Complete
             for (object, to) in attachments { game.attach(object, to); }
             game.stamped_at_once(first);
         },
+        Action::Pair(pair) => if let Some((one, other, controller)) = pair { game.pair(one, other, controller); },
     }
     Ok(Ok(result))
 }

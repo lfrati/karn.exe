@@ -409,6 +409,7 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
             true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
         "Modular" => generated_many(modular(item).ok_or_else(|| crate::Unsupported("keyword: Modular".into()))?,
             true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
+        "Soulbond" if plain => generated_many(crate::keyword::soulbond().to_vec(), true, vec![Context::PermanentsOnly]),
         "Hideaway" => {
             let Some(ability) = hideaway(item) else { return refused(item) };
             generated(ability, true, vec![Context::PrintedOnly, Context::PermanentsOnly])

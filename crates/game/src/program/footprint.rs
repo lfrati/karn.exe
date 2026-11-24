@@ -29,6 +29,8 @@ impl Properties {
     pub(crate) const LEVEL: Self = Self(1 << 27);
     /// A permanent's monstrous, renowned and saddled designations (701.37b, 702.112b, 702.171b).
     pub(crate) const DESIGNATIONS: Self = Self(1 << 28);
+    /// Which creatures soulbond paired (702.95b).
+    pub(crate) const PAIRING: Self = Self(1 << 29);
     pub(crate) const ATTACHMENT: Self = Self(1 << 12);
     pub(crate) const COMBAT: Self = Self(1 << 13);
     pub(crate) const TIMESTAMP: Self = Self(1 << 23);

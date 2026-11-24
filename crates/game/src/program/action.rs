@@ -155,6 +155,8 @@ pub enum Action {
     /// Each Aura or Equipment named is attached to the one object or player `to` names
     /// (701.3a).
     Attach { objects: Vec<Operand>, to: Operand },
+    /// The two creatures a soulbond ability pairs (702.95a), as it resolves.
+    Pair { one: Operand, other: Operand },
 }
 
 /// The result an ordinary operation exposes to subsequent instructions (608.2h).
@@ -232,7 +234,7 @@ impl Action {
             | Self::ExileUntil { .. } | Self::Draw { .. } | Self::GainLife { .. }
             | Self::Tap { .. } | Self::Transform { .. } | Self::Level { .. } | Self::Unprepare { .. } | Self::Designate { .. } | Self::TurnFace { .. }
             | Self::Prevent { .. } | Self::PutCounters { .. } | Self::Regenerate { .. }
-            | Self::Attach { .. } | Self::Distribute { .. } => None,
+            | Self::Attach { .. } | Self::Pair { .. } | Self::Distribute { .. } => None,
         }
     }
     /// "For each" contributes to one action's quantity (608.2f), not repeated individual
@@ -259,6 +261,7 @@ impl Action {
             Action::Move { groups, .. } => groups.iter().flat_map(|(objects, _)| objects).collect(),
             Action::Tap { objects, .. } | Action::Transform { objects } | Action::Level { objects, .. } | Action::Unprepare { objects } | Action::Designate { objects, .. } | Action::TurnFace { objects, .. } | Action::Destroy { objects, .. } | Action::Counter { objects, .. } | Action::ExileUntil { objects } | Action::Regenerate { objects } => objects.iter().collect(),
             Action::Attach { objects, to } => objects.iter().chain(std::iter::once(to)).collect(),
+            Action::Pair { one, other } => vec![one, other],
             Action::Damage { source, hits } => std::iter::once(source).chain(hits.iter().flat_map(|(to, _)| to)).collect(),
             Action::Prevent { to, by, .. } => to.iter().chain(by).collect(),
             Action::Fight { one, other } => std::iter::once(one).chain(other).collect(),
@@ -275,7 +278,7 @@ impl Action {
             Action::Draw { amount, .. } | Action::Mill { amount, .. } | Action::GainLife { amount, .. }
             | Action::LoseLife { amount, .. } => vec![amount],
             Action::Tap { .. } | Action::Fight { .. } | Action::Transform { .. } | Action::Level { .. } | Action::Unprepare { .. } | Action::Designate { .. } | Action::TurnFace { .. } | Action::Destroy { .. } | Action::Counter { .. } | Action::ExileUntil { .. }
-            | Action::Prevent { .. } | Action::RemoveCounters { .. } | Action::BecomeMonarch { .. } | Action::IncreaseSpeed { .. } | Action::Regenerate { .. } | Action::Attach { .. } | Action::GetEmblem { .. }
+            | Action::Prevent { .. } | Action::RemoveCounters { .. } | Action::BecomeMonarch { .. } | Action::IncreaseSpeed { .. } | Action::Regenerate { .. } | Action::Attach { .. } | Action::Pair { .. } | Action::GetEmblem { .. }
             | Action::DealDivided { .. } | Action::Distribute { .. } => Vec::new(),
             Action::Damage { hits, .. } => hits.iter().map(|(_, n)| n).collect(),
             Action::PutCounters { placements, .. } => placements.iter().flat_map(|(_, counters)| counters.iter().map(|(_, n)| n)).collect(),
@@ -317,6 +320,7 @@ impl Action {
             Action::Tap { tapped, .. } => no(Operand::Controller, if *tapped { "tap a player" } else { "untap a player" }),
             Action::Destroy { .. } | Action::Counter { .. } | Action::ExileUntil { .. } | Action::Move { .. } | Action::Transform { .. } | Action::Level { .. } | Action::Unprepare { .. } | Action::Designate { .. } | Action::TurnFace { .. } => no(Operand::Controller, "an object action on a player"),
             Action::Regenerate { .. } => no(Operand::Controller, "regenerate a player"),
+            Action::Pair { .. } => no(Operand::Controller, "pair a player"),
             Action::Attach { objects, to } => {
                 // what is attached is an object; what it is attached to may be a player (303.4)
                 if objects.contains(&Operand::Controller) {
@@ -708,6 +712,15 @@ pub(super) fn evaluate(game: &Game, f: &Frame, action: &Action) -> crate::Res<pe
             // say, as it is done (701.3b).
             let to = found(game, f, to).into_iter().next();
             perform::Action::Attach(to.into_iter().flat_map(|to| objects(game, f, what).into_iter().map(move |o| (o, to))).collect())
+        }
+        // each is the identity the text names, where it still is (400.7); whether the two can
+        // be paired is the pairing's to say (702.95c)
+        Action::Pair { one, other } => {
+            let (one, other) = (objects(game, f, std::slice::from_ref(one)), objects(game, f, std::slice::from_ref(other)));
+            perform::Action::Pair(match (one.as_slice(), other.as_slice()) {
+                ([one], [other]) => Some((*one, *other, f.ctx.controller)),
+                _ => None,
+            })
         }
         })
 }

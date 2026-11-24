@@ -116,6 +116,8 @@ pub fn adjective() -> P<Filter> {
     }
     e.push(("nontoken".into(), not(Atom::Status(Status::Token))));
     e.push(("nonattacking".into(), not(Atom::Status(Status::Attacking))));
+    // "an unpaired creature": one not paired by soulbond (702.95b)
+    e.push(("unpaired".into(), not(Atom::Status(Status::Paired))));
     e.push(("non-outlaw".into(), not(Atom::Status(Status::Outlaw))));
     // "commander creatures you own" (before a type; "a commander" alone is the head noun)
     e.push(("commander".into(), atom(Atom::Status(Status::Commander))));

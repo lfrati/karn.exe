@@ -5012,6 +5012,21 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                     Some(action::Action::Attach { objects, to: e.operand(to, support, &mut binder)? })
                 } else { return unsupported("attach: choosing between multiple destinations"); }
             }
+            // "pair this creature with another unpaired creature you control" (702.95a): two
+            // creatures named, or one named and one the controller chooses as it resolves
+            Action::Pair { what, with } => {
+                let [one] = what.items.as_slice() else { return unsupported("pair: one creature with one other") };
+                let definite = |s: &Selector| matches!(s.quant, Quant::Definite(Ref::This | Ref::Anaphor(ir::Anaphor::It | ir::Anaphor::That)));
+                if !definite(one) { return unsupported("pair: the creature paired is one the text names"); }
+                let one = e.object(one, support, &mut binder)?;
+                let other = if definite(with) { e.object(with, support, &mut binder)? }
+                    else if matches!(with.quant, Quant::Indefinite(Count::Exactly(Amount::Const(1)))) && with.set.domain == Domain::Permanent
+                        && binder.each.is_none() && binder.actor.is_none() && controller_only(clause.subject.as_ref()) {
+                        // "you may" is asked before the choice (608.2d)
+                        e.select_chosen(with, Who::Controller, Verb::Pair, ir::Role::With, false, support, &mut binder)?
+                    } else { return unsupported("pair: a creature chosen other than by the controller, one of one description") };
+                Some(action::Action::Pair { one, other })
+            }
             // (of a group the text took, "exile the rest": below, as chosen cards)
             Action::Exile(objects) if !objects.items.iter().any(|s| mention(s).is_some()) && objects.items.iter().all(|s| s.quant != Quant::The
                 || (s.set.domain == Domain::Card && s.set.zone.as_ref().is_some_and(|zone| zone.slice.is_none()))) => {

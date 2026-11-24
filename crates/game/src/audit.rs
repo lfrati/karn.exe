@@ -596,7 +596,7 @@ impl Game {
             || !self.triggered.is_empty() || !self.delayed.is_empty() || !self.procedures.is_empty()
             || self.decision.is_some() || !self.stack.is_empty()
             || self.audit_retained_objects().any(|object|object.monstrous || object.renowned || object.solved)
-            || !self.permissions.is_empty() || !self.linked_acquisitions.is_empty()
+            || !self.permissions.is_empty() || !self.linked_acquisitions.is_empty() || !self.pairs.is_empty()
             || !self.commanders.is_empty() || self.companions.iter().any(Option::is_some)
             || self.exiled_with.iter().any(|(source,key,exiled,generation)|
                 self.obj(*exiled).zone==crate::Zone::Exile && (!self.battlefield.contains(source)

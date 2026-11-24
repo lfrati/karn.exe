@@ -35,6 +35,9 @@ pub(crate) enum Subject {
     Source,
     /// Whatever this Aura or Equipment is attached to, now (303.4m, 301.5f).
     Attached,
+    /// This permanent and the creature it is paired with, while it is paired (702.95b):
+    /// "both creatures".
+    Paired,
     /// Whatever fits the description at any moment ("Creatures you control …").
     Described(expr::Set),
     /// Any source object, including a card whose ability functions off the battlefield.
@@ -48,6 +51,7 @@ impl Subject {
             ir::Subject::Selector(s) if *s == ir::Selector::you() => Ok(Subject::Controller),
             ir::Subject::Selector(s) if s.quant == Quant::Definite(Ref::This) => Ok(Subject::Source),
             ir::Subject::Selector(s) if matches!(s.quant, Quant::Definite(Ref::AttachedTo(Attachment::Enchanted | Attachment::Equipped))) => Ok(Subject::Attached),
+            ir::Subject::Selector(s) if s.quant == Quant::Definite(Ref::Anaphor(ir::Anaphor::BothPaired)) => Ok(Subject::Paired),
             ir::Subject::Selector(s) if matches!(s.quant, Quant::Each | Quant::All) && s.chooser.is_none() && s.random.is_none() => {
                 expr::Set::compile(&s.set, support, bind).map(Subject::Described)
             }
@@ -60,7 +64,7 @@ impl Subject {
     /// controller and what it is attached to are identities, in no bit of it.
     pub(crate) fn reads(&self) -> expr::Reads {
         match self {
-            Subject::Controller | Subject::Source | Subject::Attached => expr::Reads::NONE,
+            Subject::Controller | Subject::Source | Subject::Attached | Subject::Paired => expr::Reads::NONE,
             Subject::Described(set) => set.reads(),
             Subject::SourceFilter(filter) => filter.reads(),
         }
@@ -72,6 +76,8 @@ impl Subject {
             Subject::Controller => t == Target::Player(ctx.controller),
             Subject::Source => Some(t) == ctx.source.map(Target::Object),
             Subject::Attached => ctx.source.and_then(|s| game.attached_to(s)) == Some(t),
+            Subject::Paired => ctx.source.and_then(|s| Some((s, game.partner(s)?)))
+                .is_some_and(|(s, partner)| t == Target::Object(s) || t == Target::Object(partner)),
             Subject::Described(set) => set.contains(game, ctx, &NoLocals, t),
             Subject::SourceFilter(filter) => matches!(t, Target::Object(_)) && filter.matches(game, ctx, &NoLocals, t),
         }
@@ -333,6 +339,20 @@ pub(crate) struct Characteristic {
     footprints: Vec<(usize, Layer, super::footprint::EffectFootprint)>,
 }
 
+/// "As long as ~ is paired with another creature, each of those creatures gets +1/+1": the
+/// creatures are the two the condition names, this one and the one it is paired with
+/// (702.95b), as "both creatures" says.
+fn those_paired(statement: &crate::statement::Statement<'_>) -> bool {
+    let ir::Subject::Selector(s) = &statement.subject else { return false };
+    let ir::Filter::All(parts) = &s.set.filter else { return false };
+    let [ir::Filter::Atom(ir::Atom::Among(those))] = parts.as_slice() else { return false };
+    let paired = |when: &crate::statement::When<'_>| matches!(when, crate::statement::When::AsLongAs(ir::Condition::Is {
+        what, pred: ir::Predicate::PairedWith(_), negated: false }) if what.quant == Quant::Definite(Ref::This));
+    s.quant == Quant::Each && s.set.domain == ir::Domain::Object && !s.set.other && s.chooser.is_none() && s.random.is_none()
+        && those.quant == Quant::Definite(Ref::Anaphor(ir::Anaphor::Those))
+        && !statement.acts.is_empty() && statement.acts.iter().all(|(_, when, _)| paired(when))
+}
+
 /// The unconditional printed definition of this object's own P/T (604.3a). A conditional
 /// or an effect setting another object's stats is not a characteristic-defining ability.
 pub(crate) fn defining_pt(a: &Ability) -> Option<(&Option<ir::Amount>, &Option<ir::Amount>)> {
@@ -352,6 +372,7 @@ impl Characteristic {
             Subject::Source => I::at(D::Source,P::IDENTITY),
             Subject::Controller => I::at(D::Context,P::CONTROL),
             Subject::Attached => I::at(D::Source,P::ATTACHMENT),
+            Subject::Paired => I::at(D::Source,P::IDENTITY | P::PAIRING) | I::at(D::Objects,P::IDENTITY | P::ZONE | P::PAIRING),
             Subject::SourceFilter(f) => f.inputs().on_source(),
             Subject::Described(s) => s.inputs(),
         };
@@ -404,7 +425,9 @@ impl Characteristic {
         }
         let statement = crate::layers::statement(a)?;
         Some((|| {
-            let subject = Subject::compile(&statement.subject, support, &mut linked(support))?;
+            let subject = if those_paired(&statement) { Subject::Paired } else {
+                Subject::compile(&statement.subject, support, &mut linked(support))?
+            };
             let mut acts = Vec::new();
             for (action, when, scale) in &statement.acts {
                 crate::layers::removal_scope(action, &statement.subject)?;

@@ -242,6 +242,8 @@ lexicon! {
     RemoveFromCombat: "remove _ from combat", "506.4", Player, [What => PERMANENT];
     Attach: "attach", "701.3", Player, [What => PERMANENT, To => ATTACHED_TO];
     Unattach: "unattach", "701.3", Player, [What => PERMANENT, From => PERMANENT];
+    /// Soulbond's pairing of two creatures (702.95a).
+    Pair: "pair", "702.95a", Player, [What => CREATURE, With => CREATURE];
     GainControl: "gain control of", "613.1, 723", Player, [What => CONTROL_TARGETS];
     ExchangeControl: "exchange control of", "701.12", Player, [What => CONTROLLED];
     Transform: "transform", "701.27", Player, [What => PERMANENT];
@@ -587,6 +589,7 @@ impl Action {
             Action::RemoveFromCombat(_) => Verb::RemoveFromCombat,
             Action::Attach { .. } => Verb::Attach,
             Action::Unattach { .. } => Verb::Unattach,
+            Action::Pair { .. } => Verb::Pair,
             Action::GainControl(_) => Verb::GainControl,
             Action::ExchangeControl(_) => Verb::ExchangeControl,
             Action::OnObjects(k, _) => match k {

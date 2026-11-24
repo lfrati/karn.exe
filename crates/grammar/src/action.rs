@@ -1867,6 +1867,14 @@ fn keyword_actions(form: Form, object: &P<Objects>, from: &P<Objects>, n: &P<Amo
             _ => None,
         },
     );
+    // "pair this creature with another unpaired creature you control" (702.95a)
+    let pair_with = v("pairs", "pair").then_keep(&slot(object, Verb::Pair, Role::What)).skip(&lit("with")).then(&slot_one(&s.selector, Verb::Pair, Role::With)).map(
+        |(what, with)| Some(Action::Pair { what, with: Box::new(with) }),
+        |a| match a {
+            Action::Pair { what, with } => Some((what.clone(), (**with).clone())),
+            _ => None,
+        },
+    );
     let fight = v("fights", "fight").then_keep(&slot(object, Verb::Fight, Role::What)).map(
         |o| Some(Action::Fight(o)),
         |a| match a {
@@ -1987,7 +1995,7 @@ fn keyword_actions(form: Form, object: &P<Objects>, from: &P<Objects>, n: &P<Amo
                 _ => None,
             },
         );
-    let mut all = vec![bare, numbered, on_objects, attach, fight, amass, clash, roll];
+    let mut all = vec![bare, numbered, on_objects, attach, pair_with, fight, amass, clash, roll];
     if form == Form::Base {
         all.push(fight_each_other);
     }

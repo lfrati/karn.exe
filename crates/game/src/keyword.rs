@@ -553,6 +553,17 @@ fn triggered(item: &ir::token::KeywordInstance) -> Option<&'static Ability> {
     }
 }
 
+/// 702.95a: soulbond's two triggered abilities. Each pairs only creatures that are both
+/// unpaired, under the control of its controller, as it triggers and as it resolves (603.4,
+/// 702.95c); the pair lasts as long as 702.95e says ([`crate::soulbond`]), so "for as long
+/// as both remain creatures on the battlefield under your control" is not said again here.
+pub(crate) fn soulbond() -> &'static Vec<Ability> {
+    static RULE: OnceLock<Vec<Ability>> = OnceLock::new();
+    crate::token::init(&RULE, || CardDef::new("Soulbond rule", "", "Creature",
+        "When this creature enters, if this creature is unpaired and you control another unpaired creature, you may pair this creature with another unpaired creature you control.\nWhenever another creature you control enters, if this creature is unpaired and that creature is unpaired, you may pair that creature with this creature.", None)
+        .expect("the grammar reads rule 702.95a").abilities)
+}
+
 /// 702.115a: the damaged player exiles one library card, regardless of damage amount.
 fn ingest() -> &'static Ability {
     static RULE: OnceLock<Ability> = OnceLock::new();

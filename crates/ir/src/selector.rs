@@ -557,6 +557,8 @@ pub enum Status {
     /// "a kicked spell": its controller declared the intention to pay a kicker cost (CR
     /// 702.33d).
     Kicked,
+    /// Paired with another creature by soulbond (702.95b); "unpaired" is not being so.
+    Paired,
 }
 
 /// Whether a number is even or odd, or which of the two an earlier "choose odd or even" chose.

@@ -80,6 +80,8 @@ impl Game {
             shields: _, prevention, continuous, clock: _, simultaneous: _, activated: _, activation_started: _, active_mana_abilities: _, procedures: _, priority: _,
             // Replay outcomes retain physical CardIds, never incarnation handles.
             passes: _, observations: _, seen: _, ordered: _, together: _, random: _, captured_random: _, replay_random: _, opening: _,
+            // a soulbond pair names battlefield identities and is over as either leaves (702.95e)
+            pairs: _,
             prospective: _, linked_acquisitions: _, exiled_with: _, madness_found: _, permissions: _, cast_permission_uses: _, ability_uses: _, companions: _, commanders: _, next_card: _, last_sba: _ } = self.state_view();
         // Zone membership is authoritative, including fixture objects not in a zone list.
         for object in objects.iter().filter(|o| o.zone != Zone::Gone) { visit(object.id); }

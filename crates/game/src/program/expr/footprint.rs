@@ -41,6 +41,7 @@ impl Filter {
                 Atom::Tapped(_) => recipient(P::TAPPED),
                 Atom::Token => recipient(P::IDENTITY | P::CATALOG),
                 Atom::Saddled => recipient(P::DESIGNATIONS | P::ZONE),
+                Atom::Paired => recipient(P::PAIRING | P::IDENTITY | P::ZONE) | I::at(D::Objects, P::PAIRING | P::IDENTITY | P::ZONE),
                 Atom::Commander => recipient(P::COMMANDER),
                 // the face selects the definition (708.2a); only a spell or permanent, or one as it last was there
                 Atom::FaceDown => recipient(P::IDENTITY | P::CATALOG | P::ZONE),

@@ -941,6 +941,8 @@ pub struct GameState {
     pub(crate) prospective: Option<(ObjId, Option<ObjId>)>,
     /// Acquired linked relationship lifetimes, independent of activation-use keys.
     pub(crate) linked_acquisitions: Vec<crate::linked_lifetime::Acquisition>,
+    /// The creatures soulbond paired (702.95), see [`crate::soulbond`].
+    pub(crate) pairs: Vec<crate::soulbond::Pair>,
     /// The cards an instruction of an object's ability exiled: that object, and the card as it
     /// is in exile. What another ability of the object calls "the exiled cards" (607.2a).
     pub(crate) exiled_with: Vec<(ObjId, Option<crate::binding::AbilityKey>, ObjId, Option<usize>)>,
@@ -1194,6 +1196,7 @@ impl Game {
                 opening: None,
                 prospective: None,
                 linked_acquisitions: Vec::new(),
+                pairs: Vec::new(),
                 exiled_with: Vec::new(),
                 madness_found: Vec::new(),
                 permissions: Vec::new(),

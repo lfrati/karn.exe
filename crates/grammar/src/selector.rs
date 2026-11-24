@@ -2904,7 +2904,7 @@ fn is_adjective(f: &Filter) -> bool {
         ) || matches!(a, Atom::Status(s) if matches!(s, Status::Commander | Status::Kicked | Status::Suspended) || crate::words::STATUS_WORDS.iter().any(|(_, x)| x == s)),
         Filter::Not(b) => matches!(
             b.as_ref(),
-            Filter::Atom(Atom::Color(_) | Atom::Supertype(_) | Atom::Type(_) | Atom::Subtype(_) | Atom::Status(Status::Token | Status::Attacking | Status::Outlaw))
+            Filter::Atom(Atom::Color(_) | Atom::Supertype(_) | Atom::Type(_) | Atom::Subtype(_) | Atom::Status(Status::Token | Status::Attacking | Status::Outlaw | Status::Paired))
         ),
         Filter::All(_) if pt_pair(f, Stat::Power, Stat::Toughness).is_some() => true,
         Filter::Any(v) | Filter::All(v) => v.len() >= 2 && v.iter().all(|x| matches!(x, Filter::Atom(_) | Filter::Not(_)) && is_adjective(x)),

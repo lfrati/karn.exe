@@ -501,6 +501,7 @@ impl Effect<'_> {
                         Subject::Controller => Some(Vec::new()),
                         Subject::Attached => Some(self.by.and_then(|by| game.attached_to(by))
                             .and_then(|target| match target { Target::Object(on) => Some(on), _ => None }).into_iter().collect()),
+                        Subject::Paired => Some(self.by.and_then(|by| Some([by, game.partner(by)?])).into_iter().flatten().collect()),
                         Subject::Described(ref set) => {
                             if game.prospective.is_none() && let (Some(mask), Some(zones)) = (set.layer_zones(), &world.zones) {
                                 if mask == 0 { return Vec::new().into(); }
