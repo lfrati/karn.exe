@@ -3867,6 +3867,7 @@ fn slice(player_sg: &P<Selector>) -> P<Selector> {
                 return None;
             }
             let z = s.set.zone.as_ref()?;
+            if z.zones != ir::Coord::one(Zone::Library) { return None; }
             let (top, n) = match z.slice.as_ref()? {
                 Slice::Top(n) => (true, n.clone()),
                 Slice::Bottom(n) => (false, n.clone()),
@@ -3875,7 +3876,33 @@ fn slice(player_sg: &P<Selector>) -> P<Selector> {
             Some(((top, n), (**z.owner.as_ref()?).clone()))
         },
     );
-    alt("slice", vec![by_count, measured, top_of_kind])
+    // "the bottom card of target player's graveyard", "the top two cards of your graveyard": a
+    // graveyard keeps its order (404.1), so its top and bottom are cards of it as a library's are
+    let of_graveyard = lit("the").then_keep(&end).then(&how_many).skip(&lit("of")).then(&zone_said(player_sg)).skip(&lit("graveyard")).map(
+        |((top, n), owner)| {
+            let mut set = ObjectSet::of(Domain::Card);
+            set.zone = Some(ZoneSpec {
+                zones: ir::Coord::one(Zone::Graveyard),
+                owner: Some(Box::new(owner)),
+                slice: Some(if top { Slice::Top(n) } else { Slice::Bottom(n) }),
+            });
+            Some(Selector::new(Quant::The, set))
+        },
+        |s: &Selector| {
+            if s.quant != Quant::The || s.set != slice_set(&s.set) {
+                return None;
+            }
+            let z = s.set.zone.as_ref()?;
+            if z.zones != ir::Coord::one(Zone::Graveyard) { return None; }
+            let (top, n) = match z.slice.as_ref()? {
+                Slice::Top(n) => (true, n.clone()),
+                Slice::Bottom(n) => (false, n.clone()),
+                Slice::TopOfKind => return None,
+            };
+            Some(((top, n), (**z.owner.as_ref()?).clone()))
+        },
+    );
+    alt("slice", vec![by_count, measured, top_of_kind, of_graveyard])
 }
 
 /// The set a slice selector has: cards in a library slice and nothing else.

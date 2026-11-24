@@ -1352,3 +1352,17 @@ fn r400_1_all_opponents_hands_and_graveyards() {
     let (graveyards, _) = read("−10: Exile all cards from your opponents' graveyards.");
     assert_ne!(all, graveyards);
 }
+
+/// CR 404.1 and 401.1: a graveyard keeps its order, so it has a top and a bottom card as a
+/// library has (Phyrexian Furnace: "Exile the bottom card of target player's graveyard.").
+#[test]
+fn r404_1_bottom_card_of_a_graveyard() {
+    let text = "{T}: Exile the bottom card of target player's graveyard.";
+    let (bottom, printed) = read(text);
+    assert_eq!(printed, text);
+    let (top, printed) = read("{T}: Exile the top card of target player's graveyard.");
+    assert_eq!(printed, "{T}: Exile the top card of target player's graveyard.");
+    assert_ne!(bottom, top);
+    let (library, _) = read("{T}: Exile the bottom card of target player's library.");
+    assert_ne!(bottom, library);
+}
