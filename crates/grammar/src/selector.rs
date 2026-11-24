@@ -4244,10 +4244,13 @@ fn split_noun_phrases(s: &Selector) -> Option<Vec<Selector>> {
     (join_noun_phrases(values.clone()).as_ref() == Some(s)).then_some(values)
 }
 
-/// One shared target over complete, differently typed alternatives. A retained
-/// postmodifier or an untyped head marks the boundary; shared type/head unions stay in core.
-/// Controllers, owners, zones and predicates remain local to their arms.
-fn target_union(set: &P<ObjectSet>) -> P<Selector> {
+/// One determiner over complete, differently typed alternatives: one shared target, "target
+/// creature you control or creature card in your graveyard" (115.1), or a counted plural, "one
+/// or more creatures you control and/or creature cards in your graveyard", its union spelled
+/// "and/or" as [`Union::of`] spells it. A retained postmodifier or an untyped head marks the
+/// boundary; shared type/head unions stay in core. Controllers, owners, zones and predicates
+/// remain local to their arms.
+fn arm_union(num: Number, set: &P<ObjectSet>) -> P<Selector> {
     fn arm_ok(set: &ObjectSet) -> bool { !matches!(set.domain, Domain::Union(_)) && !set.other }
     fn qualified(set: &ObjectSet) -> bool {
         unfold_posts(set, &None, None).is_some_and(|(_, posts)| !posts.is_empty() && !posts.iter().any(ends_nested))
@@ -4274,10 +4277,18 @@ fn target_union(set: &P<ObjectSet>) -> P<Selector> {
             || (bare_permanent(first) && untyped_head(second))
             || (untyped_head(first) && bare_permanent(second)))
     }
-    fn target(det: &Det) -> bool { matches!(det.0, Quant::Target(_)) }
+    // a target of either arm; a counted plural of them
+    let fits = move |det: &Det| match num {
+        Number::Sg => matches!(det.0, Quant::Target(_)),
+        Number::Pl => matches!(det.0, Quant::Indefinite(_)),
+    };
+    let word = match num {
+        Number::Sg => "or",
+        Number::Pl => "and/or",
+    };
     let arm = set.map(|s| arm_ok(&s).then_some(s), |s| arm_ok(s).then(|| s.clone()));
-    determiner(Number::Sg).map(|d| target(&d).then_some(d), |d| target(d).then(|| d.clone()))
-        .then(&arm.skip(&lit("or")).then(&arm)).map(
+    determiner(num).map(move |d| fits(&d).then_some(d), move |d| fits(d).then(|| d.clone()))
+        .then(&arm.skip(&lit(word)).then(&arm)).map(
             |((quant, other), (first, second))| alternatives(&first, &second).then(||
                 Selector::new(quant, ObjectSet { other, ..ObjectSet::of(Domain::Union(vec![first, second])) })),
             |s: &Selector| {
@@ -4440,7 +4451,7 @@ fn build() -> Selectors {
         |set| Some(Selector::new(Quant::All, set)),
         |s: &Selector| (s.quant == Quant::All && s.chooser.is_none() && s.random.is_none() && matches!(s.set.domain, Domain::Union(_))).then(|| s.set.clone()),
     );
-    let sg = alt("selector", vec![branch(Number::Sg, ZonePrep::In), target_union(&set_sg), slices.clone(), part_sg.clone()]);
+    let sg = alt("selector", vec![branch(Number::Sg, ZonePrep::In), arm_union(Number::Sg, &set_sg), slices.clone(), part_sg.clone()]);
     // "your opponents" is how Oracle says all opponents; listed first so it prints that way
     let your_opponents = lit("your opponents").to(your_opponents());
     // "each of that player's opponents draws three cards": the opponents of a player the text
@@ -4458,7 +4469,7 @@ fn build() -> Selectors {
             _ => None,
         },
     );
-    let pl = alt("plural selector", vec![your_opponents.clone(), opponents_of, branch(Number::Pl, ZonePrep::In), all_arms, part_pl.clone()]);
+    let pl = alt("plural selector", vec![your_opponents.clone(), opponents_of, branch(Number::Pl, ZonePrep::In), all_arms, arm_union(Number::Pl, &set_pl), part_pl.clone()]);
     sg_in.define(sg.clone());
     pl_in.define(pl.clone());
     let selector = alt("selector", vec![sg.clone(), pl.clone(), special.clone(), zones.clone(), either.clone()]);
@@ -4500,7 +4511,7 @@ fn build() -> Selectors {
         vec![
             battlefield_and_graveyards(),
             branch(Number::Sg, ZonePrep::From),
-            target_union(&set_sg_from),
+            arm_union(Number::Sg, &set_sg_from),
             slices,
             part_sg,
             part_pl,

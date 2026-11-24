@@ -1611,3 +1611,25 @@ fn r608_2d_from_among_said_of_each() {
     let (each, _) = read("Choose a creature card from among them and a land card from among them.");
     assert_eq!(list, each);
 }
+
+/// CR 603.2c: an ability that triggers on "one or more" of something triggers once for each
+/// event, however many it was of. "~ and/or one or more other Vampires you control enter" has
+/// ~ and the counted others as its subjects (Anje, Maid of Dishonor; Satoru, the Infiltrator),
+/// not "~ or another Vampire", which triggers for each. "one or more creatures you control
+/// and/or creature cards in your graveyard" is one counted noun phrase of two complete arms of
+/// different kinds (Kaya, Spirits' Justice), as "target creature you control or creature card
+/// in your graveyard" is after "target".
+#[test]
+fn r603_2c_and_or_trigger_subjects() {
+    let text = "Whenever ~ and/or one or more other Vampires you control enter, create a Blood token.";
+    let (both, printed) = read(text);
+    assert_eq!(printed, text);
+    let (each, _) = read("Whenever ~ or another Vampire you control enters, create a Blood token.");
+    assert_ne!(both, each);
+    let text = "Whenever one or more creatures you control and/or creature cards in your graveyard are put into exile, draw a card.";
+    let (_, printed) = read(text);
+    assert_eq!(printed, text);
+    let (_, printed) = read("Exile two creatures you control and/or creature cards in your graveyard.");
+    assert_eq!(printed, "Exile two creatures you control and/or creature cards in your graveyard.");
+    declines("Whenever ~ and/or another Vampire you control enter, create a Blood token.");
+}

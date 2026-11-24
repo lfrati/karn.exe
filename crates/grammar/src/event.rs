@@ -1158,6 +1158,25 @@ fn self_ref() -> P<Vec<Selector>> {
     )
 }
 
+/// "~ and/or one or more other Vampires you control enter": one event of ~, of the others or
+/// of both, triggering once however many of them it was of (603.2c); its subjects ~ and the
+/// counted others.
+fn this_and_or_others() -> P<Vec<Selector>> {
+    let others = |x: &Selector| {
+        x.quant == Quant::Indefinite(Count::AtLeast(Amount::Const(1))) && x.set.other && x.chooser.is_none() && x.random.is_none()
+    };
+    self_ref().skip(&lit("and/or")).then(&selectors().plural).map(
+        move |(mut v, o)| others(&o).then(|| {
+            v.push(o);
+            v
+        }),
+        move |v: &Vec<Selector>| match v.as_slice() {
+            [this, o] if this.quant == Quant::Definite(Ref::This) && others(o) => Some((vec![this.clone()], o.clone())),
+            _ => None,
+        },
+    )
+}
+
 /// "a spell or ability an opponent controls causes you to discard ~".
 pub(crate) fn caused() -> P<EventPattern> {
     let s = selectors();
@@ -1608,6 +1627,7 @@ fn clause(tense: Tense, negated: bool, next: bool) -> P<EventPattern> {
                 // a card naming a pair ("Don & Raph") takes the plural verb
                 mk(self_ref(), Form::Base, true).alias(),
                 counters_put("is put on", "are put on"),
+                mk(this_and_or_others(), Form::Base, true),
                 mk(singular(), Form::Third, false),
                 mk(plural(), Form::Base, true),
                 mk(you(), Form::Base, true),
