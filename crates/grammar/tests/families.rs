@@ -1662,3 +1662,21 @@ fn r615_12_combat_damage_cant_be_prevented() {
     assert_ne!(combat, all);
     read("Noncombat damage can't be prevented this turn.");
 }
+
+/// CR 614.1: a replacement effect watches for an event that would happen; "during your turn",
+/// "during your draw step" after the event is part of what it watches for, as after a trigger's
+/// event (Bloodletter of Aclazotz, Island Sanctuary).
+#[test]
+fn r614_1_would_happen_during_a_window() {
+    let text = "If an opponent would lose life during your turn, they lose twice that much life instead.";
+    let (during, printed) = read(text);
+    assert_eq!(printed, text);
+    let (always, _) = read("If an opponent would lose life, they lose twice that much life instead.");
+    assert_ne!(during, always);
+    let text = "If you would draw a card during your draw step, instead you may skip that draw.";
+    let (_, printed) = read(text);
+    assert_eq!(printed, text);
+    // the first such event of each of your turns keeps its scope
+    let (_, printed) = read("The first time you would create one or more tokens during each of your turns, you may instead choose a creature other than ~ and create that many tokens that are copies of that creature.");
+    assert_eq!(printed, "The first time you would create one or more tokens during your turn, instead you may choose a creature other than ~ and create that many tokens that are copies of that creature.");
+}

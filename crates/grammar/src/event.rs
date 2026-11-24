@@ -1702,28 +1702,32 @@ pub fn would() -> P<EventPattern> {
     let plural = s.plural.map(|x| Some(vec![x]), |v: &Vec<Selector>| (v.len() == 1).then(|| v[0].clone()));
     let subjects = alt("subjects", vec![you, one_or_list(&s.singular), plural]);
     let actions = alt("actions", vec![shared_object(Form::Infinitive), one_or_list(&action(Form::Infinitive, false))]);
-    // "if you would draw a card except the first one you draw in each of your draw steps"
-    let does = subjects.skip(&lit("would")).then(&actions).then(&draw_exception()).map(
-        |((subjects, actions), except)| {
+    // "if you would draw a card except the first one you draw in each of your draw steps"; "if
+    // an opponent would lose life during your turn", "if you would draw a card during your draw
+    // step": only events that happen in that window (614.1a)
+    let does = subjects.skip(&lit("would")).then(&actions).then(&draw_exception()).then(&during_phrase().opt()).map(
+        |(((subjects, actions), except), during)| {
             let mut p = doing(subjects, actions);
             if let Some((nth, you)) = except {
                 let draws = matches!(p.actions.as_slice(), [EventAction::Deed(d)] if d.verb == Verb::Draw && !d.passive);
                 let said_of_you = matches!(p.subjects.as_slice(), [s] if s.quant == ir::Quant::Definite(ir::Ref::You));
-                if !draws || said_of_you != you || p.subjects.len() != 1 { return None; }
+                if !draws || said_of_you != you || p.subjects.len() != 1 || during.is_some() { return None; }
                 p.except_nth_in_step = Some((nth, Step::Draw));
             }
+            p.during = during;
             Some(p)
         },
         move |p| {
-            if !unmodified(p) { return None; }
+            if p.nth_each_turn.is_some() || p.condition.is_some() { return None; }
             let except = match p.except_nth_in_step {
                 None => None,
-                Some((nth, Step::Draw)) => Some((nth, matches!(p.subjects.as_slice(), [s] if s.quant == ir::Quant::Definite(ir::Ref::You)))),
+                Some((nth, Step::Draw)) if p.during.is_none() => Some((nth, matches!(p.subjects.as_slice(), [s] if s.quant == ir::Quant::Definite(ir::Ref::You)))),
                 Some(_) => return None,
             };
             let mut base = p.clone();
             base.except_nth_in_step = None;
-            said_doing(&base).map(|said| (said, except))
+            base.during = None;
+            said_doing(&base).map(|said| ((said, except), p.during.clone()))
         },
     );
     // "if a nontoken creature would enter and it wasn't cast": a condition on the event
