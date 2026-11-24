@@ -908,6 +908,9 @@ fn check_cost(def: &CardDef, r: &mut Refusals) -> Res<()> {
     if crate::keyword::contributions(def).filter(|(_, g)| matches!(g, crate::keyword::Gives::Route { route: CastRoute::Harmonize { .. }, .. })).count() > 1 {
         r.say("harmonize: choosing among multiple harmonize costs")?;
     }
+    if crate::keyword::of_items(def).filter(|item| item.keyword.name() == "Blitz").count() > 1 {
+        r.say("blitz: several instances, each of only its own payment (702.152b)")?;
+    }
     if crate::keyword::of_items(def).filter_map(crate::foretell::cost).count() > 1 {
         r.say("foretell: choosing among multiple foretell costs")?;
     }

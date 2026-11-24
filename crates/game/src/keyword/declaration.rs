@@ -210,6 +210,17 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
             Ok(Declared::new(vec![(stack, Gives::Alternative { cost, from: None, when: None }),
                 (bf, Gives::Ability(dash_haste()))], vec![Context::PermanentsOnly, Context::PrintedOnly]))
         }
+        // "You may cast this card by paying [cost] rather than its mana cost," "If this
+        // spell's blitz cost was paid, sacrifice the permanent this spell becomes at the
+        // beginning of the next end step," and "As long as this permanent's blitz cost was
+        // paid, it has haste and 'When this permanent is put into a graveyard from the
+        // battlefield, draw a card'" (702.152a): the sacrifice is made as the spell resolves
+        // ([`crate::Game::alternative_resolved`])
+        "Blitz" => {
+            let Some(cost) = route_cost(item) else { return refused(item) };
+            Ok(Declared::new(vec![(stack, Gives::Alternative { cost, from: None, when: None }),
+                (bf, Gives::Ability(blitz_haste()))], vec![Context::PermanentsOnly, Context::PrintedOnly]))
+        }
         // "As you cast this spell, you may choose to cast it bestowed. If you do, you pay
         // [cost] rather than its mana cost" (702.103a); what it is then is
         // [`crate::Game::bestowed`]'s (702.103b–f)
@@ -554,6 +565,13 @@ fn dash_haste() -> Ability {
     crate::token::init(&HASTE, || CardDef::new("Dash rule", "", "Creature",
         "If this creature's dash cost was paid, this creature has haste.", None)
         .expect("the grammar reads rule 702.109a's conditional haste").abilities[0].clone()).clone()
+}
+/// 702.152a's "it has haste and …", with "it" said as the permanent it stands for.
+fn blitz_haste() -> Ability {
+    static HASTE: std::sync::OnceLock<Ability> = std::sync::OnceLock::new();
+    crate::token::init(&HASTE, || CardDef::new("Blitz rule", "", "Creature",
+        "As long as this permanent's blitz cost was paid, this permanent has haste and \"When this permanent is put into a graveyard from the battlefield, draw a card.\"", None)
+        .expect("the grammar reads rule 702.152a's static ability").abilities[0].clone()).clone()
 }
 fn evoke_trigger() -> Ability {
     static EVOKE: std::sync::OnceLock<Ability> = std::sync::OnceLock::new();

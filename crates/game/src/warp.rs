@@ -1,5 +1,6 @@
 //! Alternative-cost spells create delayed consequences as they resolve: Warp exiles its
-//! permanent (702.185a), while Dash returns it to its owner's hand (702.109a).
+//! permanent (702.185a), Dash returns it to its owner's hand (702.109a), and Blitz has it
+//! sacrificed (702.152a).
 use crate::{Game,ObjId};
 use crate::select::{Ctx,Support};
 impl Game {
@@ -50,10 +51,10 @@ impl Game {
         out
     }
     /// The resolving spell creates the delayed consequence of its paid alternative cost;
-    /// it is independent of enters triggers and later ability loss (702.109a, 702.185a).
+    /// it is independent of enters triggers and later ability loss (702.109a, 702.152a, 702.185a).
     pub(crate) fn alternative_resolved(&mut self,spell:ObjId,permanent:ObjId) {
         let carried = crate::keyword::carried();
-        let Some(keyword) = [carried.warp, carried.dash].into_iter().find(|keyword| self.paid_for(spell, *keyword)) else { return };
+        let Some(keyword) = [carried.warp, carried.dash, carried.blitz].into_iter().find(|keyword| self.paid_for(spell, *keyword)) else { return };
         let controller=self.obj(spell).controller;
         let mut ctx=Ctx::for_spell(controller,spell);
         // The paid alternative is the declaring keyword row, not a guessed ability
@@ -67,6 +68,7 @@ impl Game {
         let pattern=crate::trigger::DelayedPattern::step(ir::Step::End,&ir::StepOwner::The{next:true},&Support::runtime(self,&ctx))
             .expect("alternative casting costs watch the next end step");
         let captured=if keyword == carried.warp { crate::program::warp_exile(self,ctx,permanent) }
+            else if keyword == carried.blitz { crate::program::blitz_sacrifice(self,ctx,permanent) }
             else { crate::program::dash_return(self,ctx,permanent) };
         self.delayed.push(crate::state::Delayed{source:spell,controller,pattern,subjects:Vec::new(),
             captured,bound:Default::default(),lasts:crate::state::Lasts::Indefinite,once:true});

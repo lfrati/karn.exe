@@ -21,14 +21,14 @@ pub(crate) use declaration::*;
 /// The keywords whose rules the engine carries out beyond the text it reads for them, each
 /// found once in the 702 table and then compared as itself, not by its name: the ceiling of
 /// Cascade's cast (702.85a), the hand Miracle's cast is from (702.94a), the haste of Suspend's
-/// (702.62a), Warp's exile and Dash's return (702.185a, 702.109a), Sneak's attacking entry
-/// (702.190b).
-pub(crate) struct Carried { pub cascade: Keyword, pub miracle: Keyword, pub suspend: Keyword, pub warp: Keyword, pub dash: Keyword, pub sneak: Keyword }
+/// (702.62a), Warp's exile, Dash's return and Blitz's sacrifice (702.185a, 702.109a,
+/// 702.152a), Sneak's attacking entry (702.190b).
+pub(crate) struct Carried { pub cascade: Keyword, pub miracle: Keyword, pub suspend: Keyword, pub warp: Keyword, pub dash: Keyword, pub blitz: Keyword, pub sneak: Keyword }
 pub(crate) fn carried() -> &'static Carried {
     static CARRIED: OnceLock<Carried> = OnceLock::new();
     CARRIED.get_or_init(|| {
         let k = |name| Keyword::from_name(name).expect("a keyword of 702");
-        Carried { cascade: k("Cascade"), miracle: k("Miracle"), suspend: k("Suspend"), warp: k("Warp"), dash: k("Dash"), sneak: k("Sneak") }
+        Carried { cascade: k("Cascade"), miracle: k("Miracle"), suspend: k("Suspend"), warp: k("Warp"), dash: k("Dash"), blitz: k("Blitz"), sneak: k("Sneak") }
     })
 }
 

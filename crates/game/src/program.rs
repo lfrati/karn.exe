@@ -1700,6 +1700,8 @@ pub(crate) fn keyword_delayed_identity(program: &Arc<Program>) -> Option<(&'stat
         Some(("Warp", "702.185a", "At the beginning of the next end step, exile the permanent this spell becomes. Its owner may cast this card after the current turn has ended for as long as it remains exiled."))
     } else if same_instance(program, dash_program()) {
         Some(("Dash", "702.109a", "At the beginning of the next end step, return the permanent this spell becomes to its owner's hand."))
+    } else if same_instance(program, blitz_program()) {
+        Some(("Blitz", "702.152a", "At the beginning of the next end step, sacrifice the permanent this spell becomes."))
     } else { None }
 }
 
@@ -1713,6 +1715,11 @@ pub(crate) fn warp_exile(game: &Game, ctx: Ctx<'static>, permanent: ObjId) -> Ca
 /// 702.109a: retain the resulting permanent, not a later incarnation of its card.
 pub(crate) fn dash_return(game: &Game, ctx: Ctx<'static>, permanent: ObjId) -> Captured {
     alternative_delayed(game, ctx, permanent, dash_program())
+}
+/// 702.152a: the resulting permanent, sacrificed by the ability's controller only while it
+/// controls it (701.21a); not a later incarnation of its card (400.7).
+pub(crate) fn blitz_sacrifice(game: &Game, ctx: Ctx<'static>, permanent: ObjId) -> Captured {
+    alternative_delayed(game, ctx, permanent, blitz_program())
 }
 fn alternative_delayed(game: &Game, ctx: Ctx<'static>, permanent: ObjId, program: &Arc<Program>) -> Captured {
     let keyword_producer=ctx.source.zip(ctx.ability.as_ref()).and_then(|(source,key)|
@@ -1729,6 +1736,14 @@ fn dash_program() -> &'static Arc<Program> {
         Instr::Action { action: action::Action::Move { groups: vec![(vec![action::Operand::Reference(0)], action::Destination::Zone(Zone::Hand))], said: ir::action::MoveVerb::Return }, created: None, attempt: None },
     ], vec![ActSpan { end:1, moves:true, keeps_x:false }], Vec::new(), vec![Some(Kind::Subjects)])
         .expect("dash returns with the ordinary move instruction")))
+}
+fn blitz_program() -> &'static Arc<Program> {
+    static PROGRAM: std::sync::OnceLock<Arc<Program>> = std::sync::OnceLock::new();
+    PROGRAM.get_or_init(|| Arc::new(Program::with_initial(vec![
+        Instr::Choice { action: choice::Action::sacrifice_named(action::Operand::Controller, vec![action::Operand::Reference(0)]),
+            optional: false, payment: false, paid: 1, possible: 2, chosen: None, outcomes: None, actual: None, discarded_before: None },
+    ], vec![ActSpan { end:1, moves:true, keeps_x:false }], Vec::new(), vec![Some(Kind::Subjects)])
+        .expect("blitz sacrifices with the ordinary named sacrifice")))
 }
 fn warp_program() -> &'static Arc<Program> {
     static PROGRAM: std::sync::OnceLock<Arc<Program>> = std::sync::OnceLock::new();
