@@ -2526,20 +2526,7 @@ impl Game {
         let from = self.log.end();
         let mut any = !batch.to_command.is_empty();
         self.last_sba = batch.checked_through;
-        self.monarch_leaving(&batch.losses);
-        let ended = !batch.losses.is_empty();
-        for player in &batch.losses {
-            self.players[*player].lost = true;
-            self.event_log_mut().push(Event::Lost { player: *player });
-            any = true;
-        }
-        // A loser leaves a game that goes on (800.4a); a loss that ends the game ends it with
-        // everything where it is (104.2a, 104.3a), as in every two-player game.
-        if !self.finished() {
-            for player in batch.losses { self.leave_game(player); }
-        }
-        // At the end of the game, all face-down permanents and spells are revealed (708.9).
-        if ended && self.finished() { self.reveal_face_down_of(None); }
+        if !batch.losses.is_empty() { self.commit_losses(&batch.losses); any = true; }
         for player in &mut self.players { player.drew_from_empty = false; }
         let before = crate::layers::Working::before(batch.permanents.iter().map(|(id, last, _, _)| (*id, last.clone())).collect())
             .freeze_attachments(batch.attachments);
@@ -2605,11 +2592,53 @@ impl Game {
             return Err(crate::Unsupported("a concession before the first turn is not supported in a game that goes on".into()).into());
         }
         self.event_log_mut().push(Event::Conceded { player });
-        self.monarch_leaving(&[player]);
-        self.players[player].lost = true;
-        self.event_log_mut().push(Event::Lost { player });
-        if !self.finished() { self.leave_game(player); }
+        self.commit_losses(&[player]);
+        Ok(())
+    }
+
+    /// These players lose the game, at once (104.3). A loser leaves a game that goes on
+    /// (800.4a); a loss that ends the game ends it with everything where it is (104.2a,
+    /// 104.3a), as in every two-player game, and all face-down permanents and spells are then
+    /// revealed (708.9).
+    fn commit_losses(&mut self, losers: &[PlayerId]) {
+        self.monarch_leaving(losers);
+        for player in losers {
+            self.players[*player].lost = true;
+            self.event_log_mut().push(Event::Lost { player: *player });
+        }
+        if !self.finished() {
+            for player in losers { self.leave_game(*player); }
+        }
         if self.finished() { self.reveal_face_down_of(None); }
+    }
+
+    /// "Target player loses the game." (104.3e): those of them still in the game lose it at
+    /// once ([`Self::commit_losses`]). The controller of the spell or ability that says so
+    /// leaving a game that goes on (800.4a) is not supported: what would become of the rest
+    /// of its resolution.
+    pub(crate) fn lose_by_effect(&mut self, players: &[PlayerId], controller: PlayerId) -> crate::Res<()> {
+        let mut losers: Vec<PlayerId> = players.iter().copied().filter(|p| !self.players[*p].lost).collect();
+        losers.sort_unstable();
+        losers.dedup();
+        if losers.is_empty() || self.finished() { return Ok(()); }
+        let goes_on = self.players.iter().enumerate().filter(|(p, state)| !state.lost && !losers.contains(p)).take(2).count() == 2;
+        if goes_on && losers.contains(&controller) {
+            return Err(crate::Unsupported("a player leaving a game that goes on while what they control resolves is not supported".into()));
+        }
+        self.commit_losses(&losers);
+        Ok(())
+    }
+
+    /// "You win the game." (104.2b): the game ends (104.1) with that player its winner, each
+    /// other player still in it losing, as when a player's opponents have all left it
+    /// (104.2a). Several players winning at once is not supported.
+    pub(crate) fn win_by_effect(&mut self, players: &[PlayerId]) -> crate::Res<()> {
+        let mut winners: Vec<PlayerId> = players.iter().copied().filter(|p| !self.players[*p].lost).collect();
+        winners.dedup();
+        if winners.is_empty() || self.finished() { return Ok(()); }
+        let [winner] = winners[..] else { return Err(crate::Unsupported("several players winning the game at once is not supported".into())) };
+        let losers: Vec<PlayerId> = (0..self.players.len()).filter(|p| *p != winner && !self.players[*p].lost).collect();
+        self.commit_losses(&losers);
         Ok(())
     }
 

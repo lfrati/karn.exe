@@ -27,6 +27,11 @@ pub(crate) enum Movement {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Action {
     BecomeMonarch { players: Vec<PlayerId> },
+    /// Those still in the game among them win it (104.2b), and every other player loses.
+    WinGame { players: Vec<PlayerId> },
+    /// Those still in the game among them lose it, at once (104.3e); `controller` controls
+    /// the spell or ability that says so.
+    LoseGame { players: Vec<PlayerId>, controller: PlayerId },
     IncreaseSpeed { players: Vec<PlayerId> },
     GetEmblem { players: Vec<PlayerId>, definition: crate::ability::Template },
     Destroy { objects: Vec<ObjId>, regenerable: bool },
@@ -69,7 +74,7 @@ impl Action {
     /// Collect all optional player decisions before committing their shared action (608.2e).
     pub(crate) fn retain_players(&mut self, accepted: &[PlayerId]) {
         match self {
-            Self::BecomeMonarch { players } | Self::IncreaseSpeed { players } | Self::GetEmblem { players, .. } => players.retain(|p| accepted.contains(p)),
+            Self::BecomeMonarch { players } | Self::WinGame { players } | Self::LoseGame { players, .. } | Self::IncreaseSpeed { players } | Self::GetEmblem { players, .. } => players.retain(|p| accepted.contains(p)),
             Self::Players { players, .. } => players.retain(|(p, _)| accepted.contains(p)),
             Self::PutCounters(batch) => batch.retain(|placement| match placement.on {
                 Target::Player(p) => accepted.contains(&p), Target::Object(_) => true,
@@ -115,6 +120,8 @@ pub(crate) fn run(game: &mut Game, action: Action) -> crate::Res<Result<Complete
     let mut result = Completed::default();
     match action {
         Action::BecomeMonarch { players } => { for player in players { game.become_monarch(player); } },
+        Action::WinGame { players } => game.win_by_effect(&players)?,
+        Action::LoseGame { players, controller } => game.lose_by_effect(&players, controller)?,
         Action::IncreaseSpeed { players } => { for player in players { game.increase_speed(player); } },
         Action::GetEmblem { players, definition } => {
             let first = game.clock + 1;

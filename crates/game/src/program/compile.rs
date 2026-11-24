@@ -5352,6 +5352,8 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 Some(action::Action::Counter { objects, destination })
             }
             Action::Keyword(ir::action::KeywordAction::BecomeMonarch) => Some(action::Action::BecomeMonarch { players: e.clause_subject(clause, support, &mut binder)? }),
+            Action::Keyword(ir::action::KeywordAction::WinGame) => Some(action::Action::WinGame { players: e.clause_subject(clause, support, &mut binder)? }),
+            Action::Keyword(ir::action::KeywordAction::LoseGame) => Some(action::Action::LoseGame { players: e.clause_subject(clause, support, &mut binder)? }),
             // said of no subject: the speed of the player whose ability it is (702.179d)
             Action::Keyword(ir::action::KeywordAction::IncreaseSpeed) if clause.subject.is_none() => Some(action::Action::IncreaseSpeed { players: action::Operand::Controller }),
             Action::Draw(n) | Action::DrawAdditional(n) | Action::DrawUpTo(n) => Some(action::Action::Draw { players: e.clause_subject(clause, support, &mut binder)?, amount: player_quantity(n, support, &binder)? }),

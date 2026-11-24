@@ -111,6 +111,10 @@ pub enum CounterDestination { Graveyard, Exile, Hand, Library(ir::action::Librar
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
     BecomeMonarch { players: Operand },
+    /// "You win the game." (104.2b)
+    WinGame { players: Operand },
+    /// "Target player loses the game." (104.3e)
+    LoseGame { players: Operand },
     /// "Your speed increases by 1" (702.179d).
     IncreaseSpeed { players: Operand },
     GetEmblem { players: Operand, definition: crate::ability::Template },
@@ -241,7 +245,7 @@ impl Action {
                     .filter(|first| groups.iter().all(|(_, to)| zone(to) == *first));
                 Some(Output::Moved { destination })
             }
-            Self::BecomeMonarch { .. } | Self::IncreaseSpeed { .. } | Self::GetEmblem { .. }
+            Self::BecomeMonarch { .. } | Self::WinGame { .. } | Self::LoseGame { .. } | Self::IncreaseSpeed { .. } | Self::GetEmblem { .. }
             | Self::ExileUntil { .. } | Self::Draw { .. } | Self::GainLife { .. }
             | Self::Tap { .. } | Self::Transform { .. } | Self::Level { .. } | Self::Unprepare { .. } | Self::Designate { .. } | Self::TurnFace { .. }
             | Self::Prevent { .. } | Self::PutCounters { .. } | Self::Regenerate { .. }
@@ -266,7 +270,8 @@ impl Action {
     pub(super) fn operands(&self) -> Vec<&Operand> {
         match self {
             Action::Draw { players, .. } | Action::Mill { players, .. } | Action::GainLife { players, .. }
-            | Action::LoseLife { players, .. } | Action::BecomeMonarch { players } | Action::IncreaseSpeed { players } | Action::GetEmblem { players, .. } => vec![players],
+            | Action::LoseLife { players, .. } | Action::BecomeMonarch { players } | Action::WinGame { players } | Action::LoseGame { players }
+            | Action::IncreaseSpeed { players } | Action::GetEmblem { players, .. } => vec![players],
             Action::Create { players, tokens, attached, defenders, .. } => std::iter::once(players).chain(tokens.iter().filter_map(|(token,_,_)|
                 if let Token::Copy { of, .. } = token { Some(of.as_ref()) } else { None })).chain(attached.as_ref())
                 .chain(defenders.as_ref().map(|d| &d.players)).collect(),
@@ -290,7 +295,7 @@ impl Action {
             Action::Draw { amount, .. } | Action::Mill { amount, .. } | Action::GainLife { amount, .. }
             | Action::LoseLife { amount, .. } => vec![amount],
             Action::Tap { .. } | Action::Fight { .. } | Action::Transform { .. } | Action::Level { .. } | Action::Unprepare { .. } | Action::Designate { .. } | Action::TurnFace { .. } | Action::Destroy { .. } | Action::Counter { .. } | Action::ExileUntil { .. }
-            | Action::Prevent { .. } | Action::RemoveCounters { .. } | Action::BecomeMonarch { .. } | Action::IncreaseSpeed { .. } | Action::Regenerate { .. } | Action::Attach { .. } | Action::Pair { .. } | Action::GetEmblem { .. }
+            | Action::Prevent { .. } | Action::RemoveCounters { .. } | Action::BecomeMonarch { .. } | Action::WinGame { .. } | Action::LoseGame { .. } | Action::IncreaseSpeed { .. } | Action::Regenerate { .. } | Action::Attach { .. } | Action::Pair { .. } | Action::GetEmblem { .. }
             | Action::DealDivided { .. } | Action::Distribute { .. } => Vec::new(),
             Action::Damage { hits, .. } => hits.iter().map(|(_, n)| n).collect(),
             Action::PutCounters { placements, .. } => placements.iter().flat_map(|(_, counters)| counters.iter().map(|(_, n)| n)).collect(),
@@ -326,7 +331,8 @@ impl Action {
         };
         match self {
             Action::Draw { players, .. } | Action::Mill { players, .. } | Action::GainLife { players, .. }
-            | Action::LoseLife { players, .. } | Action::Create { players, .. } | Action::BecomeMonarch { players } | Action::IncreaseSpeed { players } | Action::GetEmblem { players, .. } => {
+            | Action::LoseLife { players, .. } | Action::Create { players, .. } | Action::BecomeMonarch { players } | Action::WinGame { players } | Action::LoseGame { players }
+            | Action::IncreaseSpeed { players } | Action::GetEmblem { players, .. } => {
                 if *players == Operand::Source { unsupported("an object where the action is a player's") } else { Ok(()) }
             }
             Action::Tap { tapped, .. } => no(Operand::Controller, if *tapped { "tap a player" } else { "untap a player" }),
@@ -551,6 +557,8 @@ pub(super) fn moved(game: &Game, f: &Frame, operands: &[Operand]) -> Vec<ObjId> 
 pub(super) fn evaluate(game: &Game, f: &Frame, action: &Action) -> crate::Res<perform::Action> {
     Ok(match action {
         Action::BecomeMonarch { players: who } => perform::Action::BecomeMonarch { players: players(game,f,who) },
+        Action::WinGame { players: who } => perform::Action::WinGame { players: players(game,f,who) },
+        Action::LoseGame { players: who } => perform::Action::LoseGame { players: players(game,f,who), controller: f.ctx.controller },
         Action::IncreaseSpeed { players: who } => perform::Action::IncreaseSpeed { players: players(game,f,who) },
         Action::GetEmblem { players: who, definition } => perform::Action::GetEmblem { players: players(game, f, who), definition: *definition },
         Action::Destroy { objects: on, regenerable } => perform::Action::Destroy { objects: objects(game, f, on), regenerable: *regenerable },

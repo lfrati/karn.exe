@@ -1488,6 +1488,8 @@ pub(crate) fn advance(game: &mut Game, f: &mut Frame) -> Res<Option<Paused>> {
             Err(Halt::Child) => return Ok(Some(Paused::Child)),
             Err(Halt::Unsupported(u)) => return Err(u),
         }
+        // a game ends immediately when a player wins (104.1): nothing more of it is done
+        if game.finished() { return Ok(None); }
         let ended = f.pc + 1;
         // a repeat goes back to the start of its process once the act it ends is done, so
         // what that act did is settled (and triggers noted) each time through

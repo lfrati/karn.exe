@@ -69,6 +69,8 @@ pub(super) fn done_by(instr: &Instr) -> Option<(Verb, Option<Placement>)> {
     Some(match instr {
         Instr::Action { action, .. } => match action {
             A::BecomeMonarch { .. } => (Verb::BecomeMonarch, None),
+            A::WinGame { .. } => (Verb::WinGame, None),
+            A::LoseGame { .. } => (Verb::LoseGame, None),
             A::Destroy { .. } => (Verb::Destroy, None),
             A::Counter { .. } => (Verb::Counter, None),
             // to exile is to move to exile (701.13a), as a targeted exile is said
