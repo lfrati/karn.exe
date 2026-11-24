@@ -662,7 +662,10 @@ pub struct Lasting {
 /// unless defending player controls an Island"). Read as a definition is loaded, where it is
 /// lowered ([`registration::restrictions`]); nothing in force is asked through it.
 pub fn statement(a: &Ability) -> Option<Statement<'_>> {
-    crate::statement::read(a).filter(|s| s.acts.iter().all(|(action, _, scale)| rule(action) && *scale == Scale::Once))
+    let statement = crate::statement::read(a)?;
+    if statement.acts.iter().all(|(action, _, scale)| rule(action) && *scale == Scale::Once) { return Some(statement); }
+    // its rules, beside what it says its subject is
+    statement.mixed().then(|| statement.only(|action, scale| rule(action) && *scale == Scale::Once))
 }
 
 /// "Spells with the chosen name can't be cast.": that players can't cast such spells
@@ -679,7 +682,7 @@ pub(crate) fn spells_cant_be_cast(statement: &Statement<'_>) -> Option<(ir::Subj
 
 /// Is this act a restriction or a requirement? "Doesn't untap during its controller's untap
 /// step" is one: an effect that keeps a permanent from untapping (502.3).
-fn rule(a: &Action) -> bool {
+pub(crate) fn rule(a: &Action) -> bool {
     matches!(a, Action::Cant(_) | Action::DoesntUntap { .. } | Action::KeepMana { mana: ir::mana::Pooled::Unspent(Some(_)), phases: true }) || matches!(a, Action::Static(s) if matches!(**s, StaticAct::CastOnly { .. } | StaticAct::CastAsThoughFlash { .. } | StaticAct::NoMaximumHandSize | StaticAct::IfAble { .. } | StaticAct::CanBlockAdditional { .. } | StaticAct::CanBlockOnly(_) | StaticAct::SaddlesAndCrews(_) | StaticAct::CrewsAsThoughGreater(_)))
 }
 

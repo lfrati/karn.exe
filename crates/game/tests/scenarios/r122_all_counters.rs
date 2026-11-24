@@ -51,10 +51,9 @@ fn r122_1_standard_consumers_compile_removal_and_keep_distinct_static_refusals()
     // Counter removal no longer blocks this card, but its separate name-changing layer
     // remains unsupported; all four consumer names are not an admission claim.
     assert_eq!(game::play::check(&real("Honest Work")).unwrap_err().0, "becomes: supertypes or a name");
-    assert_eq!(
-        game::play::check(&real("Enchanted River's Grasp")).unwrap_err().0,
-        "ability on a permanent: static: Loses"
-    );
+    // its static ability says both what the creature is and a rule for it, and both run
+    // (604.1): see r604_1_a_statement_and_its_rules
+    cite!(["122.1"]; case: "Enchanted River's Grasp"; assert!(game::play::check(&real("Enchanted River's Grasp")).is_ok()));
 }
 
 // Removing the +1/+1 counters makes the marked damage lethal, but every other kind

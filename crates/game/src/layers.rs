@@ -1009,7 +1009,10 @@ pub(crate) fn still(changes: Vec<Change>) -> Vec<Change> {
 /// as a definition is loaded, where it is lowered
 /// ([`crate::program::registration::characteristics`]); no effect is asked through it.
 pub fn statement(a: &Ability) -> Option<Statement<'_>> {
-    crate::statement::read(a).filter(|s| s.acts.iter().all(|(action, _, _)| changes(action)))
+    let statement = crate::statement::read(a)?;
+    if statement.acts.iter().all(|(action, _, _)| changes(action)) { return Some(statement); }
+    // what it says its subject is, beside the rules it says
+    statement.mixed().then(|| statement.only(|action, _| changes(action)))
 }
 
 /// CR 122.1b fixes this vocabulary; other counter names grant no keyword.

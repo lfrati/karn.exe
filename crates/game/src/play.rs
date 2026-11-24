@@ -813,6 +813,8 @@ fn check_face_as(def: &CardDef, alternative: bool, r: &mut Refusals) -> Res<()> 
             _ if def.cost_change_ok(i).is_some() => { r.several(def.cost_change_ok(i).expect("a cost modifier"), stated(def, i), "instructions")?; },
             _ if def.characteristic_ok(i).is_some() => {
                 r.several(def.characteristic_ok(i).expect("a statement"), stated(def, i), "instructions")?;
+                // one that also says a rule for its subject (604.1)
+                if let Some(rule) = def.restriction_ok(i) { r.several(rule, stated(def, i), "instructions")?; }
             }
             // a static ability that is a restriction or a requirement (604.1)
             _ if def.restriction_ok(i).is_some() => {

@@ -97,6 +97,25 @@ pub fn read(a: &Ability) -> Option<Statement<'_>> {
     Some(Statement { subject, acts })
 }
 
+impl<'a> Statement<'a> {
+    /// "As long as …, this creature gets +2/+2, has flying, and attacks each combat if able":
+    /// it says both what its subject is ([`crate::layers`]) and a rule for it
+    /// ([`crate::restrict`]), each act one or the other. Each of the two owners reads its own
+    /// acts, with the subject and the conditions they share (604.1).
+    pub(crate) fn mixed(&self) -> bool {
+        let changes = |a: &Action| crate::layers::changes(a);
+        let rule = |a: &Action, scale: &Scale<'_>| crate::restrict::rule(a) && *scale == Scale::Once;
+        self.acts.iter().all(|(a, _, scale)| changes(a) || rule(a, scale))
+            && self.acts.iter().any(|(a, _, _)| changes(a))
+            && self.acts.iter().any(|(a, _, scale)| rule(a, scale))
+    }
+
+    /// The statement of only the acts `keep` holds of.
+    pub(crate) fn only(self, keep: impl Fn(&Action, &Scale<'_>) -> bool) -> Statement<'a> {
+        Statement { subject: self.subject, acts: self.acts.into_iter().filter(|(a, _, scale)| keep(a, scale)).collect() }
+    }
+}
+
 /// What a statement, or a rule a resolved spell put in force, is said of.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Affected {
