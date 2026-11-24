@@ -445,9 +445,7 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if let Some(ability) = echo(item) { return Some(ability); }
     if let Some(ability) = bloodthirst(item) { return Some(ability); }
     if let Some(ability) = fabricate(item) { return Some(ability); }
-    if let Some(ability) = bushido(item) { return Some(ability); }
-    if let Some(ability) = afflict(item) { return Some(ability); }
-    if let Some(ability) = rampage(item) { return Some(ability); }
+    if let Some(ability) = blocked_trigger(item) { return Some(ability); }
     if let Some(ability) = soulshift(item) { return Some(ability); }
     if let Some(ability) = renown(item) { return Some(ability); }
     if let Some(ability) = annihilator(item) { return Some(ability); }
@@ -877,30 +875,19 @@ fn entry_counter_count(ability: &mut Ability, count: u32) {
     on.counters.count = ir::Amount::Const(count);
 }
 
-/// 702.23a/b: count current blockers on resolution and freeze the resulting bonus.
-fn rampage(item: &ir::token::KeywordInstance) -> Option<Ability> {
-    if item.keyword.name() != "Rampage" { return None; }
+/// A combat trigger of a fixed N, read from its rule with N written in. 702.23a/b: Rampage
+/// counts current blockers on resolution and freezes the resulting bonus. 702.130a: Afflict's
+/// blocked occurrence retains its own defending player. 702.45a: Bushido's becoming blocked is
+/// one event regardless of the number of blockers.
+fn blocked_trigger(item: &ir::token::KeywordInstance) -> Option<Ability> {
     let KeywordParam::Number(ir::Amount::Const(n)) = item.param else { return None };
-    let text = format!("Whenever this creature becomes blocked, it gets +{n}/+{n} until end of turn for each creature blocking it beyond the first.");
-    CardDef::new("Rampage rule", "", "Creature", &text, None).ok()?.abilities.into_iter().next()
-}
-
-/// 702.130a: the blocked occurrence retains its own defending player.
-fn afflict(item: &ir::token::KeywordInstance) -> Option<Ability> {
-    if item.keyword.name() != "Afflict" { return None; }
-    let KeywordParam::Number(ir::Amount::Const(n)) = item.param else { return None };
-    let text = format!("Whenever this creature becomes blocked, defending player loses {n} life.");
-    CardDef::new("Afflict rule", "", "Creature", &text, None).ok()?.abilities.into_iter().next()
-}
-
-/// 702.45a: becoming blocked is one event regardless of the number of blockers.
-fn bushido(item: &ir::token::KeywordInstance) -> Option<Ability> {
-    if item.keyword.name() != "Bushido" { return None; }
-    let KeywordParam::Number(ir::Amount::Const(n)) = item.param else { return None; };
-    if n > i32::MAX as u32 { return None; }
-    let text = format!("Whenever this creature blocks or becomes blocked, it gets +{n}/+{n} until end of turn.");
-    Some(CardDef::new("Bushido rule", "", "Creature", &text, None)
-        .expect("the grammar reads rule 702.45a").abilities[0].clone())
+    let (rule, text) = match item.keyword.name() {
+        "Rampage" => ("Rampage rule", format!("Whenever this creature becomes blocked, it gets +{n}/+{n} until end of turn for each creature blocking it beyond the first.")),
+        "Afflict" => ("Afflict rule", format!("Whenever this creature becomes blocked, defending player loses {n} life.")),
+        "Bushido" if n <= i32::MAX as u32 => ("Bushido rule", format!("Whenever this creature blocks or becomes blocked, it gets +{n}/+{n} until end of turn.")),
+        _ => return None,
+    };
+    CardDef::new(rule, "", "Creature", &text, None).ok()?.abilities.into_iter().next()
 }
 
 /// "Renown N" means "When this creature deals combat damage to a player, if it isn't renowned,
