@@ -2125,7 +2125,16 @@ pub fn counters_body(n: Number) -> P<Filter> {
             _ => None,
         },
     );
-    alt("counters", vec![one, or_more, or_fewer, exactly]).skip(&on).map(
+    // "fewer than three +1/+1 counters on it": counts are whole numbers (107.1), so "two or
+    // fewer"
+    let below = lit("fewer than").then_keep(&count_amount()).then(&kind).skip(&lit("counters")).map(
+        |(a, k)| match a {
+            Amount::Const(n) if n >= 1 => Some((k, Count::UpTo(Amount::Const(n - 1)))),
+            _ => None,
+        },
+        |_: &(Option<CounterKind>, Count)| None,
+    ).alias();
+    alt("counters", vec![one, or_more, or_fewer, exactly, below]).skip(&on).map(
         |(kind, count)| Some(Filter::Atom(Atom::Counters { kind, count })),
         |f| match f {
             Filter::Atom(Atom::Counters { kind, count }) => Some((kind.clone(), count.clone())),

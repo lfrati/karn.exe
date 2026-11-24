@@ -1466,3 +1466,13 @@ fn r614_1a_that_many_counters_minus_one() {
     let (plus, _) = read("If one or more -1/-1 counters would be put on a creature you control, that many plus one -1/-1 counters are put on it instead.");
     assert_ne!(minus, plus);
 }
+
+/// CR 107.1 and 122.1: "fewer than three +1/+1 counters on it" is "two or fewer" (Runaway
+/// Steam-Kin).
+#[test]
+fn r122_1_fewer_than_three_counters_on_it() {
+    let (fewer, printed) = read("Whenever you cast a red spell, if ~ has fewer than three +1/+1 counters on it, put a +1/+1 counter on ~.");
+    assert_eq!(printed, "Whenever you cast a red spell, if ~ has two or fewer +1/+1 counters on it, put a +1/+1 counter on ~.");
+    let (two, _) = read("Whenever you cast a red spell, if ~ has two or fewer +1/+1 counters on it, put a +1/+1 counter on ~.");
+    assert_eq!(fewer, two);
+}
