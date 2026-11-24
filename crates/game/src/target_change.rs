@@ -15,8 +15,8 @@ impl Game {
                 contexts.extend(std::iter::repeat_n(invocation.ctx.clone(), invocation.program.targets.len()));
                 crate::announcement::append_targets(&mut specs, invocation.program.targets.clone());
             }
-        } else if let Some(Ok(Some(spec))) = self.def(object).map(|d| d.enchant.clone()) {
-            specs.push(spec);
+        } else if let Some(spec) = self.enchant_spec(object) {
+            specs.push(spec.clone());
             contexts.push(Ctx { x: self.obj(object).x, ..Ctx::for_spell(self.obj(object).controller, object) });
         }
         (specs, contexts)

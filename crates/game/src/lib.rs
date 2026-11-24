@@ -28,6 +28,7 @@ pub mod audit;
 pub mod ability;
 pub mod activate;
 pub mod attach;
+mod bestow;
 pub mod card;
 pub mod binding;
 pub mod combat;

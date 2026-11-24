@@ -373,6 +373,9 @@ enum Body<'a> {
     Static { statement: &'a crate::program::registration::Characteristic, act: usize, key: AbilityKey, only: Option<ObjId> },
     Resolved(&'a Continuous),
     Counter { on: ObjId, keyword: Keyword },
+    /// What a bestowed Aura spell or Aura is by its bestow ability: an Aura enchantment, with
+    /// the object's timestamp (702.103b, 613.7a).
+    Bestowed { on: ObjId },
 }
 /// Potential instances indexed by layer, independent of current applicability. In
 /// particular a grant whose producing instance is absent still has an indexed reader.
@@ -393,6 +396,7 @@ impl Effect<'_> {
             Body::Static { statement, act, .. } => statement.part_in(*act, layer),
             Body::Resolved(c) => c.change.layer() == layer,
             Body::Counter { .. } => layer == Layer::Abilities,
+            Body::Bestowed { .. } => layer == Layer::Types,
         }
     }
     fn footprint(&self, layer: Layer) -> crate::program::footprint::EffectFootprint {
@@ -403,6 +407,8 @@ impl Effect<'_> {
                 writes: Inputs::at(Domain::Recipient, c.change.writes()) },
             Body::Counter { .. } => EffectFootprint { reads: Inputs::NONE,
                 writes: Inputs::at(Domain::Recipient, Properties::KEYWORDS) },
+            Body::Bestowed { .. } => EffectFootprint { reads: Inputs::NONE,
+                writes: Inputs::at(Domain::Recipient, Properties::TYPES) },
         }
     }
     fn evaluate(&self, game: &Game, world: &Working, layer: Layer) -> Evaluated {
@@ -438,6 +444,10 @@ impl Effect<'_> {
                 Body::Counter { on, keyword } => {
                     if on != id { return None; }
                     vec![Change::Gains(vec![Held::plain(*keyword)])]
+                }
+                Body::Bestowed { on } => {
+                    if on != id { return None; }
+                    vec![Change::Types(crate::bestow::types().clone())]
                 }
                 Body::Resolved(c) => {
                     let prior_spell = game.prospective.filter(|(on, _)| on == id).and_then(|(_, was)| was)
@@ -504,7 +514,7 @@ impl Effect<'_> {
                         Subject::SourceFilter(_) => None,
                     }
                 },
-                Body::Counter { on, .. } => Some(vec![*on]),
+                Body::Counter { on, .. } | Body::Bestowed { on } => Some(vec![*on]),
                 Body::Resolved(c) => {
                     let mut ids = c.affected.clone();
                     if let Some((entrant, Some(was))) = game.prospective {
@@ -541,7 +551,7 @@ impl Effect<'_> {
             let seen = &mut world.objects[at].1;
             let mut grant_index = match &self.body {
                 Body::Static { statement, act, .. } => statement.grant_offset(*act),
-                Body::Resolved(_) | Body::Counter { .. } => 0,
+                Body::Resolved(_) | Body::Counter { .. } | Body::Bestowed { .. } => 0,
             };
             for change in changes {
                 match change {
@@ -742,7 +752,7 @@ fn independent_abilities(effects: &[Effect], remaining: &[usize], entering: bool
         // what affects a spell affects the permanent it is about to become, under another
         // identity: that is not looked into
         Body::Resolved(c) => c.change != Change::LosesAll || (!entering && !c.affected.iter().any(|o| asked.contains(o))),
-        Body::Counter { .. } => true,
+        Body::Counter { .. } | Body::Bestowed { .. } => true,
     });
     #[cfg(test)]
     if proven { PROVEN.with(|n| n.set(n.get() + 1)); }
@@ -1412,6 +1422,16 @@ impl Game {
         for c in &self.continuous {
             effects.push(Effect { stamp: c.stamp, also: Vec::new(), by: None, part: c.part, body: Body::Resolved(c), started: None });
         }
+        // A bestowed Aura spell or Aura is one by an effect of its own bestow ability, which
+        // has the object's timestamp (702.103b, 613.7a); so is a card asked about as it is
+        // cast bestowed (702.103d).
+        let mut bestowed: Vec<ObjId> = self.battlefield.iter().chain(&self.stack).copied().chain(own).chain([o])
+            .filter(|id| self.obj(*id).bestowed).collect();
+        bestowed.sort_unstable();
+        bestowed.dedup();
+        for on in bestowed {
+            effects.push(Effect { stamp: self.obj(on).stamp, also: Vec::new(), by: None, part: 0, started: None, body: Body::Bestowed { on } });
+        }
         // An effect none of whose parts is of a layer this view applies is never evaluated
         // below. It is left out before deciding whether a world is needed. One with a part
         // in an applied layer stays whole, its later parts simply not reached (613.6).
@@ -1432,7 +1452,7 @@ impl Game {
             Body::Static { .. } => true,
             Body::Resolved(Continuous { change: Change::Gives(templates), .. }) =>
                 templates.iter().any(|what| !what.def().characteristics.is_empty()),
-            Body::Resolved(_) | Body::Counter { .. } => false,
+            Body::Resolved(_) | Body::Counter { .. } | Body::Bestowed { .. } => false,
         });
         #[cfg(feature = "profile")]
         let building = crate::profile::span(crate::profile::Scope::World);
@@ -1448,7 +1468,7 @@ impl Game {
             Body::Static { statement, .. } => !matches!(statement.subject, Subject::Source | Subject::Controller)
                 && LAYERS.iter().any(|layer| reaches_every_zone(*layer) && statement.changes_in(*layer)
                     && (*layer != Layer::Abilities || matches!(&statement.subject, Subject::Described(set) if set.off_battlefield_cards()))),
-            Body::Resolved(_) | Body::Counter { .. } => false,
+            Body::Resolved(_) | Body::Counter { .. } | Body::Bestowed { .. } => false,
         }));
         let mut ids: Vec<_> = if everywhere {
             self.battlefield.iter().chain(&self.stack).chain(&self.exile).chain(&self.command).copied()
@@ -1468,7 +1488,7 @@ impl Game {
                         }
                     },
                     Body::Resolved(c) => c.affected.iter().copied().for_each(&mut add),
-                    Body::Counter { .. } => {}
+                    Body::Counter { .. } | Body::Bestowed { .. } => {}
                 }
             }
             if let Some((entrant, was)) = self.prospective { [Some(entrant), was].into_iter().flatten().for_each(&mut add); }
@@ -1512,7 +1532,7 @@ impl Game {
                         Body::Static { statement, act, .. } => statement.potential_grants(*act),
                         Body::Resolved(Continuous { change: Change::Gives(templates), .. }) =>
                             templates.iter().enumerate().map(|(i, what)| (i as u32, *what)).collect(),
-                        Body::Resolved(_) | Body::Counter { .. } => Vec::new(),
+                        Body::Resolved(_) | Body::Counter { .. } | Body::Bestowed { .. } => Vec::new(),
                     };
                     for (index, what) in grants {
                         let grant = Grant { by: parent.by, stamp: parent.stamp, part: parent.part << 16 | index };
@@ -1645,7 +1665,7 @@ impl Game {
         // Earlier layers still determine those inputs and source membership normally.
         let fixed = !trials_only() && remaining.iter().all(|i| match &effects[*i].body {
             Body::Static { statement, act, .. } => layer == Layer::DefinePt && statement.independent_pt_definition(*act),
-            Body::Resolved(_) | Body::Counter { .. } => true,
+            Body::Resolved(_) | Body::Counter { .. } | Body::Bestowed { .. } => true,
         });
         if fixed || (layer == Layer::Abilities && independent_abilities(effects, &remaining, self.prospective.is_some())) {
             for i in remaining.drain(..) {
@@ -1721,6 +1741,7 @@ impl Game {
         let mut seen = self.base_seen(o);
         for layer in LAYERS.into_iter().take_while(|l| before.is_none_or(|b| *l < b)) {
             if layer == Layer::DefinePt { seen.no_value_pt(); }
+            if layer == Layer::Types && self.obj(o).bestowed { crate::bestow::types().apply(&mut seen); }
             self.layer_counters(o, &mut seen, layer);
         }
         self.finish_seen(o, &mut seen);

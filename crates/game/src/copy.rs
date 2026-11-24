@@ -361,7 +361,9 @@ impl Game {
         }
         made.stack_copy_of = Some(original);
         made.ability = old.ability; made.delayed = old.delayed;
-        made.targets = old.targets; made.modes = old.modes; made.x = old.x; made.kicked = old.kicked; made.optional_paid = old.optional_paid; made.alternative = old.alternative; made.buyback_paid = old.buyback_paid; made.entwined = old.entwined;
+        made.targets = old.targets; made.modes = old.modes; made.x = old.x; made.kicked = old.kicked; made.optional_paid = old.optional_paid; made.alternative = old.alternative;
+        // a copy of a bestowed Aura spell is a bestowed Aura spell (702.103c)
+        made.bestowed = old.bestowed; made.buyback_paid = old.buyback_paid; made.entwined = old.entwined;
         made.cast_exiled = old.cast_exiled;
         made.cast_announcement = old.cast_announcement.map(|mut announcement| {
             // Alternative casting choices copy; this copy was never cast or paid (707.10).

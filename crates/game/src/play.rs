@@ -1762,6 +1762,19 @@ impl Game {
             view.refresh_face(card);
             return view.castable(player, card, cast_as, route, chosen, modes, x, kicks, buyback, optional, entwine, replicate, gift);
         }
+        // Cast bestowed, it is an Aura spell as it is announced: only what the bestow
+        // ability makes of it is asked whether it can be cast (702.103b, 702.103d).
+        if let crate::announcement::CastCost::Alternative(row) = chosen && !self.obj(card).bestowed
+            && self.def(card).and_then(|whole| whole.spell(cast_as).ok()).is_some_and(|def| Self::bestow_row(def, row))
+        {
+            let mut view = self.clone();
+            view.obj_mut(card).bestowed = true;
+            return view.castable(player, card, cast_as, route, chosen, modes, x, kicks, buyback, optional, entwine, replicate, gift);
+        }
+        if self.obj(card).bestowed && !matches!(chosen, crate::announcement::CastCost::Alternative(row)
+            if self.def(card).and_then(|whole| whole.spell(cast_as).ok()).is_some_and(|def| Self::bestow_row(def, row))) {
+            return Err("a spell is cast bestowed only for its bestow cost (702.103a)".into());
+        }
         // A selected half's own hard zone restriction also overrides external permissions
         // (101.2, 601.3); face-down characteristics have already been applied above.
         if let Some(zone) = self.def(card).and_then(|whole| whole.spell(cast_as).ok()).and_then(|def|
@@ -1968,7 +1981,9 @@ impl Game {
             None => cost,
         };
         let mut slots = Vec::new();
-        if let Some(spec) = def.enchant.clone()? { slots.push(spec); }
+        // an Aura spell's target, of a bestowed one what enchant creature describes (702.103b)
+        if self.obj(card).bestowed { slots.extend(self.enchant_spec(card).cloned()); }
+        else if let Some(spec) = def.enchant.clone()? { slots.push(spec); }
         if def.is(CardType::Instant) || def.is(CardType::Sorcery) {
             for (_, programs) in crate::program::spell_programs(def, modes, crate::program::ModeCount { entwined: entwine, kicked: kicks > 0, optional })? {
                 for program in programs {
@@ -2102,7 +2117,10 @@ impl Game {
         chars.mana_value = def.spell_mana_value(x);
         // cast under an effect's offer: what that offer says of the spell cast this way
         let rider = if route == CastRoute::Normal { self.offered_rider(player, card) } else { None };
+        // a spell cast bestowed is a bestowed Aura spell as it is put onto the stack (702.103b)
+        let bestowed = self.obj(card).bestowed;
         let spell = self.move_to(card, Zone::Stack, player).ok_or("the card did not reach the stack")?;
+        self.obj_mut(spell).bestowed = bestowed;
         self.obj_mut(spell).cast_rider = rider;
         self.obj_mut(spell).cast_as = cast_as;
         self.obj_mut(spell).chars = chars;
@@ -2172,6 +2190,11 @@ impl Game {
         // face down, as does a reversed cast through `original`
         let turned = route == CastRoute::Foretell && original.hidden.is_some();
         if turned { proposed.turn_foretold_face_up(card); }
+        // cast bestowed, it is a bestowed Aura spell for every check of the proposal (702.103b,
+        // 702.103d); a refused proposal leaves it as it was, as does a reversed cast
+        let bestowed = matches!(chosen, crate::announcement::CastCost::Alternative(row)
+            if proposed.def(card).and_then(|whole| whole.spell(cast_as).ok()).is_some_and(|def| Self::bestow_row(def, row)));
+        if bestowed { proposed.obj_mut(card).bestowed = true; }
         let checked = (|| -> ActionResult<_> {
             let (slots, cost) = proposed.castable(player, card, cast_as, route, chosen, modes, x, kicks, buyback, optional, entwine, replicate, gift)?;
             // which alternative of each choice its cost has is paid, and how each Phyrexian
@@ -2193,7 +2216,7 @@ impl Game {
         let (cost, x, division, announced) = match checked {
             Ok(checked) => checked,
             Err(e) => {
-                if turned { *proposed.obj_mut(card) = original; }
+                if turned || bestowed { *proposed.obj_mut(card) = original; }
                 return Err(e);
             }
         };
@@ -2294,10 +2317,16 @@ impl Game {
             let mut chosen = Choices::default();
             // a face-down spell enters as the face-down permanent it was (702.37c, 708.4)
             if let crate::face::Face::Down(down) = self.obj(top).face { chosen.face_down = Some(down.by); }
-            if self.def(top).is_some_and(crate::attach::aura) {
+            if self.enters_attached(top) {
                 chosen.attached_to = self.obj(top).targets.first().and_then(|t| t.first()).copied();
-                if !chosen.attached_to.is_some_and(|t| self.can_enchant(top, controller, t)
-                    && self.can_target(&Ctx::for_spell(controller, top), t)) {
+                let legal = chosen.attached_to.is_some_and(|t| self.can_enchant(top, controller, t)
+                    && self.can_target(&Ctx::for_spell(controller, top), t));
+                if !legal && self.obj(top).bestowed {
+                    // a bestowed Aura spell whose target is illegal ceases to be bestowed and
+                    // goes on resolving as a creature spell (702.103e, 608.3b)
+                    self.cease_bestowed(top);
+                    chosen.attached_to = None;
+                } else if !legal {
                     self.log.push(Event::Fizzled { spell: top });
                     self.leave_stack(top);
                     return Ok(());

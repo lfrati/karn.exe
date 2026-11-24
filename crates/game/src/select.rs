@@ -82,6 +82,8 @@ impl<'a> Ctx<'a> {
                     for statement in d.characteristics.iter().filter_map(|r| r.result.as_ref().ok()) {
                         for types in statement.defined_types() { types.apply(&mut seen); }
                     }
+                    // cast bestowed, it is an Aura spell (702.103b, 702.103d)
+                    if game.obj(o).bestowed { crate::bestow::types().apply(&mut seen); }
                 }
                 // Color definitions work in every zone too (604.3, 702.114a): a devoid card
                 // being cast is a colorless spell for what its mana may be spent on (106.6).

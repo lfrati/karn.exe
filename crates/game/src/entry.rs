@@ -191,11 +191,11 @@ impl Game {
     }
     pub(crate) fn entry_attachment_choices(&mut self, card: ObjId, controller: PlayerId, chosen: &Choices) -> Option<Vec<Target>> {
         let view = self.entry_view(card, controller, chosen);
-        view.game.def(card).is_some_and(crate::attach::aura).then(|| view.game.enchant_choices(card, controller))
+        view.game.enters_attached(card).then(|| view.game.enchant_choices(card, controller))
     }
     fn entry_attachment_legal(&mut self, card: ObjId, controller: PlayerId, chosen: &Choices) -> bool {
         let view = self.entry_view(card, controller, chosen);
-        !view.game.def(card).is_some_and(crate::attach::aura)
+        !view.game.enters_attached(card)
             || chosen.attached_to.is_some_and(|t| view.game.can_enchant(card, controller, t))
     }
     /// Defenders are chosen using the entrant's completed prospective values (508.4).
@@ -260,6 +260,8 @@ impl EntryEvent {
         if let EntryRequest::Card { card, .. } = &request && game.obj(*card).zone == Zone::Stack {
             game.obj_mut(on).kicked = game.obj(*card).kicked;
             game.obj_mut(on).alternative = game.obj(*card).alternative;
+            // a bestowed Aura spell becomes a bestowed Aura (702.103b)
+            game.obj_mut(on).bestowed = game.obj(*card).bestowed;
             game.obj_mut(on).spell_x = game.obj(*card).x;
             game.obj_mut(on).cast_by = game.obj(*card).cast_by;
             game.obj_mut(on).mana_paid = game.obj(*card).mana_paid;

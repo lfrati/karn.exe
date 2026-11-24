@@ -223,6 +223,10 @@ pub struct Object {
     /// Of a spell, and of the permanent it becomes: the row of the alternative cost it was
     /// cast for, if any (118.9, 601.2b): "if its evoke cost was paid" (702.74a).
     pub(crate) alternative: Option<usize>,
+    /// Of a spell cast bestowed, and of the permanent it becomes: it is a bestowed Aura
+    /// spell or bestowed Aura (702.103b), until it ceases to be one (702.103e–f). Copied
+    /// with a spell (702.103c); not a copiable value, and a new object is not bestowed.
+    pub(crate) bestowed: bool,
     /// Buyback cost was announced and paid for this retained spell (702.27a).
     pub buyback_paid: bool,
     /// All modes were chosen with the optional entwine cost (702.42).
@@ -1333,6 +1337,7 @@ impl Game {
             kicked: 0,
             optional_paid: false,
             alternative: None,
+            bestowed: false,
             buyback_paid: false,
             entwined: false,
             replicated: 0,
@@ -1619,7 +1624,7 @@ impl Game {
             && self.obj(id).card.is_some_and(|i|self.defs[i].modal && !self.defs[i].types.iter().any(|t|t.permanent())) {
             return None;
         }
-        if to == Zone::Battlefield && self.def(id).is_some_and(crate::attach::aura)
+        if to == Zone::Battlefield && self.enters_attached(id)
             && !chosen.attached_to.is_some_and(|t| self.can_enchant(id, controller, t))
         {
             // An Aura with nothing legal to enchant stays where it was (303.4g, i).
@@ -1770,6 +1775,7 @@ impl Game {
             self.obj_mut(permanent).kicked = old.kicked;
             self.obj_mut(permanent).optional_paid = old.optional_paid;
             self.obj_mut(permanent).alternative = old.alternative;
+            self.obj_mut(permanent).bestowed = old.bestowed;
             self.obj_mut(permanent).cast_announcement = old.cast_announcement.clone();
             self.obj_mut(permanent).spell_x = old.x;
             for effect in &mut self.continuous {
@@ -2427,6 +2433,10 @@ impl Game {
             let detach = o.attached_to.is_some_and(|to| !self.can_attach(id, to));
             let illegal_aura = self.aura(id)
                 && !self.attached_to(id).is_some_and(|t| self.can_enchant(id, self.controller(id), t));
+            // a bestowed Aura unattached or attached illegally becomes unattached and ceases to
+            // be bestowed rather than going to the graveyard (702.103f, an exception to 704.5m)
+            let unbestowed = o.bestowed && (illegal_aura || detach);
+            let (detach, illegal_aura) = (detach || unbestowed, illegal_aura && !unbestowed);
             let zero_toughness = seen.is(CardType::Creature) && toughness.is_some_and(|t| t <= 0);
             let zero_loyalty = seen.is(CardType::Planeswalker) && o.counters.get("loyalty").copied().unwrap_or(0) == 0;
             let lethal = seen.is(CardType::Creature)
@@ -2547,7 +2557,7 @@ impl Game {
                 any = true;
             }
             if detach && self.obj(id).zone == Zone::Battlefield {
-                self.obj_mut(id).attached_to = None;
+                if self.obj(id).bestowed { self.cease_bestowed(id); } else { self.obj_mut(id).attached_to = None; }
                 any = true;
             }
         }

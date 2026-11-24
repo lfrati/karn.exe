@@ -62,7 +62,7 @@ pub(crate) fn compile(def: &CardDef) -> Res<Option<TargetSpec>> {
 }
 
 /// The lowered enchant description of an Aura; None for anything else, or for one refused.
-fn enchants(def: &CardDef) -> Option<&TargetSpec> {
+pub(crate) fn enchants(def: &CardDef) -> Option<&TargetSpec> {
     def.enchant.as_ref().ok()?.as_ref()
 }
 
@@ -121,14 +121,12 @@ impl Game {
             || self.protected_from(to, &Ctx::new(controller, aura)) {
             return false;
         }
-        self.def(aura)
-            .and_then(enchants)
+        self.enchant_spec(aura)
             .is_some_and(|s| s.set.contains(self, &Ctx::new(controller, aura), &NoLocals, to))
     }
 
     pub(crate) fn enchant_choices(&self, aura: ObjId, controller: PlayerId) -> Vec<Target> {
-        self.def(aura)
-            .and_then(enchants)
+        self.enchant_spec(aura)
             .map(|s| {
                 s.set.members(self, &Ctx::new(controller, aura), &NoLocals)
                     .into_iter()

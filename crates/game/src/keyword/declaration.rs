@@ -15,6 +15,9 @@ pub(crate) struct Declared {
 pub(crate) enum Context {
     SpellsOnly,
     PermanentsOnly,
+    /// Of a creature card only: bestow (702.103a), whose card is a creature when it is not
+    /// cast bestowed.
+    CreaturesOnly,
     Aura,
     GiftOnSpell,
     PrintedOnly,
@@ -109,6 +112,7 @@ impl Declared {
                 Context::GiftOnSpell if !spell => return unsupported("gift on a permanent: its enters trigger (702.174b)"),
                 Context::SpellsOnly if !spell => return refused(item),
                 Context::PermanentsOnly if spell => return refused(item),
+                Context::CreaturesOnly if !def.is(ir::CardType::Creature) => return refused(item),
                 Context::Aura if !crate::attach::aura(def) => return refused(item),
                 Context::Unavailable => return refused(item),
                 _ => {},
@@ -204,6 +208,13 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
             let Some(cost) = route_cost(item) else { return refused(item) };
             Ok(Declared::new(vec![(stack, Gives::Alternative { cost, from: None }),
                 (bf, Gives::Ability(dash_haste()))], vec![Context::PermanentsOnly, Context::PrintedOnly]))
+        }
+        // "As you cast this spell, you may choose to cast it bestowed. If you do, you pay
+        // [cost] rather than its mana cost" (702.103a); what it is then is
+        // [`crate::Game::bestowed`]'s (702.103b–f)
+        "Bestow" => {
+            let Some(cost) = route_cost(item) else { return refused(item) };
+            one(stack, Gives::Alternative { cost, from: None }, vec![Context::CreaturesOnly, Context::PrintedOnly])
         }
         "Warp" => {
             let Some(cost) = route_cost(item) else { return refused(item) };
