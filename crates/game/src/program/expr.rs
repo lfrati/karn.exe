@@ -1062,8 +1062,7 @@ impl Atom {
             Atom::Level { min, max } => (*min..=*max).contains(&o.level.unwrap_or(1)),
             Atom::Attached(_) => unreachable!("tested before object lookup"),
             Atom::Combat(s) => crate::combat::status(game, o.id, *s).unwrap_or(false),
-            Atom::Blocking(attacker) => attacker.objects(game, ctx, locals)
-                .any(|attacker| game.combat.blockers.iter().any(|(blocker, blocked)| *blocker == o.id && *blocked == attacker)),
+            Atom::Blocking(attacker) => attacker.objects(game, ctx, locals).any(|attacker| game.combat.blocks(o.id, attacker)),
             Atom::Stat { stat, cmp, value } => {
                 let want = value.evaluate(game, ctx, locals);
                 stat.of(game, ctx, o.id).is_some_and(|have| match cmp {

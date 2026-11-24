@@ -43,6 +43,9 @@ pub struct Combat {
     pub(crate) declared_attackers: Vec<ObjId>,
     /// The attacking creatures removed from combat, and what each was attacking then (508.5).
     pub(crate) removed: Vec<(ObjId, Target)>,
+    /// The blocks (blocker, attacker) a creature was in as it left the battlefield: what an
+    /// effect reads of it as it last existed, "each creature blocking it" (608.2h).
+    pub(crate) departed_blocks: Vec<(ObjId, ObjId)>,
 }
 
 /// Declaration is a retained rules action, not priority or a stack object (508.1f–m).
@@ -81,6 +84,20 @@ impl Combat {
     /// The creatures blocking an attacking creature.
     pub fn blockers_of(&self, attacker: ObjId) -> Vec<ObjId> {
         self.blockers.iter().filter(|(_, a)| *a == attacker).map(|(b, _)| *b).collect()
+    }
+
+    /// A permanent leaves the battlefield: it is removed from combat (506.4), and the blocks it
+    /// was in are kept as it last existed (608.2h).
+    pub(crate) fn depart(&mut self, o: ObjId) {
+        self.departed_blocks.extend(self.blockers.iter().filter(|(b, a)| *b == o || *a == o).copied());
+        self.remove(o);
+    }
+
+    /// Is this creature blocking that one, or was it as one of them last existed on the
+    /// battlefield (608.2h)? One removed from combat that is still on the battlefield blocks
+    /// nothing (506.4).
+    pub(crate) fn blocks(&self, blocker: ObjId, attacker: ObjId) -> bool {
+        self.blockers.contains(&(blocker, attacker)) || self.departed_blocks.contains(&(blocker, attacker))
     }
 
     /// A permanent is removed from combat (506.4): it stops being an attacking or blocking
@@ -711,9 +728,9 @@ pub fn status(game: &Game, o: ObjId, status: ir::Status) -> Option<bool> {
 impl crate::retention::Trace for Combat {
     fn trace(&self, visit: &mut dyn FnMut(ObjId)) {
         let Self { attackers, blockers, blocking, blocked, assigned, to_divide, assigning,
-            declared: _, blockers_declared: _, to_block: _, damage_steps: _, first_strikers: _, declared_attackers, removed } = self;
+            declared: _, blockers_declared: _, to_block: _, damage_steps: _, first_strikers: _, declared_attackers, removed, departed_blocks } = self;
         for (attacker, target) in attackers.iter().chain(removed) { attacker.trace(visit); target.trace(visit); }
-        for (blocker, attacker) in blockers { blocker.trace(visit); attacker.trace(visit); }
+        for (blocker, attacker) in blockers.iter().chain(departed_blocks) { blocker.trace(visit); attacker.trace(visit); }
         blocking.trace(visit);
         blocked.trace(visit);
         for (source, target, _) in assigned { source.trace(visit); target.trace(visit); }

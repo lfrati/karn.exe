@@ -1731,7 +1731,7 @@ impl Game {
         self.obj_mut(id).left = Some(old.zone);
         // a permanent that leaves the battlefield is removed from combat (506.4)
         if old.zone == Zone::Battlefield {
-            self.combat.remove(id);
+            self.combat.depart(id);
         }
         let now = {
             let controller = if matches!(to, Zone::Battlefield | Zone::Stack) { controller } else { old.owner };
