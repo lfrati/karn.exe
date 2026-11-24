@@ -165,6 +165,9 @@ pub trait Binding {
     /// "Exile all attacking creatures target player controls. That player may search their
     /// library for that many …".
     fn latest_group(&mut self) -> Res<(super::Slot, Shape)> { unsupported("that many: no preceding group of objects") }
+    /// Inside an "instead" that has made no group yet, the amount of the act it is done
+    /// instead of: what its "that many" is.
+    fn replaced_amount(&mut self) -> Option<ir::Amount> { None }
 
     /// Actual exile results for an explicit "other cards exiled with" reader.
     fn exiled(&mut self) -> Res<super::Slot> { unsupported("other linked cards: no preceding exile result") }
@@ -2210,6 +2213,9 @@ impl Number {
                     amount.0
                 } else if matches!(support.ability(), Some(ir::Ability::Triggered { trigger, .. }) if crate::trigger::bound_shape(trigger).event_amount.is_some()) {
                     Number::EventAmount
+                } else if *many && let Some(replaced) = bind.replaced_amount() {
+                    // as many as the act it is done instead of says (608.2c)
+                    Self::compile(&replaced, support, bind)?
                 } else if *many {
                     // as many as the objects the instruction before it acted on (608.2c)
                     let (slot, shape) = bind.latest_group()?;
@@ -2498,6 +2504,7 @@ impl Amount {
             fn life_lost(&mut self) -> Res<super::Slot> { self.parent.life_lost() }
             fn this_way(&mut self, verb: Option<ir::Verb>, into: Option<Zone>) -> Res<Vec<(super::Slot, Shape, bool)>> { self.parent.this_way(verb, into) }
             fn latest_group(&mut self) -> Res<(super::Slot, Shape)> { self.parent.latest_group() }
+            fn replaced_amount(&mut self) -> Option<ir::Amount> { self.parent.replaced_amount() }
         }
         Self::compile(amount, support, &mut Recall { previous, parent: bind })
     }

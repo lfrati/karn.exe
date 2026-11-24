@@ -1,6 +1,6 @@
 //! What a reference names when an earlier sentence made something, or an earlier branch was not
 //! taken (608.2c): the text's own nouns, as the instruction is followed.
-use crate::support::{Board, Tgt, cite, mana_pool, oracle_read, refused};
+use crate::support::{Board, Boundary, Tgt, cite, mana_pool};
 use game::announcement::CastRoute;
 use game::state::{Answer, Choice, Decision};
 use game::{Move, Zone};
@@ -42,11 +42,26 @@ fn r111_3_the_final_days_from_a_graveyard_creates_those_tokens_tapped() {
 }
 
 #[test]
-fn r608_2c_increasing_confusion_stays_refused_until_that_many_reads_the_replaced_amount() {
-    // Uncited (admission): "mills X cards. If cast from a graveyard, that player mills twice that
-    // many cards instead": that many is X, the amount of the act it replaces; the act's own
-    // result is never made on this path, so it is refused rather than milling none.
-    refused(game::play::check(&oracle_read("Increasing Confusion")).map_err(|e| e.0), "that many: no preceding group of objects");
+fn r608_2c_increasing_confusion_mills_twice_x_cast_from_a_graveyard() {
+    // "Target player mills X cards. If this spell was cast from a graveyard, that player mills
+    // twice that many cards instead": that many is X, what the act it replaces says
+    for (flashback, milled) in [(false, 2), (true, 4)] {
+        let board = Board::new(2).fill(6);
+        let mut t = if flashback { board.graveyard(0, &["Increasing Confusion"]) } else { board.hand(0, &["Increasing Confusion"]) }.build();
+        let zone = if flashback { Zone::Graveyard } else { Zone::Hand };
+        let card = t.find_in(0, zone, "Increasing Confusion");
+        t.mana(0, "{2}{U}");
+        let cast = Move::WithX(2, Box::new(Move::Cast { card, targets: vec![vec![game::Target::Player(1)]] }));
+        let cast = if flashback { Move::CastVia(CastRoute::Flashback, Box::new(cast)) } else { cast };
+        cite!(["601.2", "702.34a"]; case: flashback; ok: t.g.act(0, Move::Paying(mana_pool("{2}{U}"), Box::new(cast))));
+        // the milled cards go to the graveyard in the order their owner chooses
+        while let Boundary::Question(p, _) = t.settle() {
+            let Some(Decision::Choose { choice: Choice::OrderCards { cards, .. }, .. }) = t.g.decision.clone() else { panic!("{:?}", t.g.decision) };
+            t.answer(p, Answer::Objects(cards)).unwrap();
+        }
+        cite!(["701.17a", "608.2c"]; case: flashback; assert_eq!(t.g.players[1].graveyard.len(), milled));
+        cite!(["701.17a"]; case: flashback; assert_eq!(t.g.players[1].library.len(), 6 - milled));
+    }
 }
 
 #[test]

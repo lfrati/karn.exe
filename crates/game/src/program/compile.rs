@@ -21,6 +21,17 @@ fn alternative_path(binder: &mut Binder, (produced, damage): (usize, usize)) {
     binder.damage.truncate(damage);
 }
 
+/// The number the one act of a sentence says: "mills X cards", "draws two cards".
+fn replaced_amount(sentence: &Sentence) -> Option<&Amount> {
+    let Sentence::Do(body) = sentence else { return None };
+    if !body.rest.is_empty() || !body.first.rest.is_empty() { return None; }
+    match &body.first.first.action {
+        Action::Mill(amount) | Action::Draw(amount) | Action::GainLife(amount) | Action::LoseLife(amount)
+            | Action::Scry(amount) | Action::Surveil(amount) => Some(amount),
+        _ => None,
+    }
+}
+
 fn close_branch(instrs: &mut [Instr], at: usize, inner: &Binder, outer: &mut Binder) {
     // A conditional body is not proof of one immediately preceding movement.
     outer.past_inputs.clear();
@@ -142,6 +153,9 @@ struct RecipientContext {
 /// Resolves references to producers by lexical scope.
 #[derive(Default, Clone)]
 struct Binder {
+    /// Inside an "instead", the amount of the one act it is done instead of, and how many
+    /// groups had been made as it began: what its "that many" is until it makes one.
+    replaced: Option<(ir::Amount, usize)>,
     /// What one act named together as its objects ("untap target creature and each other
     /// creature that shares a color with it"), each list of their slots.
     coordinated: Vec<Vec<Slot>>,
@@ -379,6 +393,9 @@ impl expr::Binding for Scoped<'_, '_> {
             .map(|p| (p.slot, p.shape, p.yours)).collect();
         if groups.is_empty() { return unsupported(format!("result group: no earlier instruction did what \"{verb:?} this way\" names")); }
         Ok(groups)
+    }
+    fn replaced_amount(&mut self) -> Option<ir::Amount> {
+        self.binder.replaced.as_ref().filter(|(_, produced)| self.binder.produced.len() == *produced).map(|(amount, _)| amount.clone())
     }
     fn latest_group(&mut self) -> Res<(Slot, expr::Shape)> {
         if self.binder.unrepresented_movement {
@@ -1061,7 +1078,7 @@ enum TextStep<'a> { Reflexive(&'a Sentence, &'a [Sentence], Option<&'a ir::Event
     ManaSpent(&'a ir::mana::SpendOn, &'a Sentence, &'a Sentence), Alternative(&'a Clause), May(&'a Clause), EndMay, Delayed(&'a ir::EventPattern, Option<ir::DelayLimit>, bool, &'a Sentence, &'a Sentence),
     /// "At the beginning of your first upkeep, look at …. … .": what follows the lead and the
     /// sentences after it, all done then (only what an opening-hand action has done, 103.6)
-    Later(ir::event::Step, &'a ir::event::StepOwner, &'a Sentence, &'a [Sentence], &'a Sentence), Act(&'a Clause, &'a ir::effect::Act, bool), If(&'a ir::Condition, bool), EndIf, Otherwise, Instead(bool), Duration(&'a ir::effect::Duration), EndDuration, Rule(&'a ir::statics::Static), Each(&'a ObjectSet, bool), EndEach, AfterTurn(ir::effect::TurnRef), EndAfterTurn, DuringCreatedTurn, EndDuringCreatedTurn,
+    Later(ir::event::Step, &'a ir::event::StepOwner, &'a Sentence, &'a [Sentence], &'a Sentence), Act(&'a Clause, &'a ir::effect::Act, bool), If(&'a ir::Condition, bool), EndIf, Otherwise, Instead(bool, &'a Sentence), Duration(&'a ir::effect::Duration), EndDuration, Rule(&'a ir::statics::Static), Each(&'a ObjectSet, bool), EndEach, AfterTurn(ir::effect::TurnRef), EndAfterTurn, DuringCreatedTurn, EndDuringCreatedTurn,
     /// "If an instant or sorcery spell cast this way would be put into your graveyard, exile it
     /// instead": what the cast offered just before carries.
     CastRider(&'a ir::statics::Static),
@@ -1460,7 +1477,7 @@ fn text_steps<'a>(effect: &'a Effect, support: &Support<'_>) -> Res<Vec<TextStep
             let alternative = alternative_targets(&effect.0[i + 1]);
             out.extend([TextStep::If(condition, alternative), TextStep::EndIf, TextStep::Otherwise]);
             walk(sentence, &mut out)?;
-            out.extend([TextStep::EndIf, TextStep::Instead(alternative)]);
+            out.extend([TextStep::EndIf, TextStep::Instead(alternative, sentence)]);
             walk(done_instead(&effect.0[i + 1]), &mut out)?;
             out.push(TextStep::EndIf);
             continue;
@@ -3289,7 +3306,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                     && let Ok(expr::Subject::Local(source))=expr::Subject::compile(what,&mut binder.scope(support))
                     && binder.created_groups.contains(&source)
                     && let Some([TextStep::Act(clause,act,true),TextStep::EndIf])=acts.get(index+1..index+3)
-                    && !matches!(acts.get(index+3),Some(TextStep::Otherwise | TextStep::Instead(_)))
+                    && !matches!(acts.get(index+3),Some(TextStep::Otherwise | TextStep::Instead(..)))
                     && matches!(&act.action,Action::Becomes(ir::action::Becoming::Is(_)))
                     && !clause.may && !act.may && clause.rest.is_empty()
                     && let Some(Subject::Selector(subject))=&clause.subject
@@ -3413,7 +3430,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 alternative_path(&mut binder, untaken);
                 continue;
             }
-            TextStep::Instead(alternative) => {
+            TextStep::Instead(alternative, instead_of) => {
                 let (outer, outcomes) = previous_target_if.expect("a preceding target scope");
                 target_branches.push((outer, outcomes));
                 e.announced_mask = outer & outcomes.0;
@@ -3438,6 +3455,10 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 e.instrs.push(Instr::Branch { condition: condition::Condition::stored(remember, true), end: 0, remember: None, skipped_values: Vec::new() });
                 e.end_act(false, None);
                 alternative_path(&mut binder, untaken);
+                // "that many" here, before this path makes a group, is as many as the act it is
+                // done instead of says: "mills X cards. If …, that player mills twice that many
+                // cards instead" (608.2c)
+                binder.replaced = replaced_amount(instead_of).map(|amount| (amount.clone(), binder.produced.len()));
                 replacing = true;
                 continue;
             }
@@ -5145,7 +5166,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 // do not move to the graveyard and then try to find the spell again.
                 let mut destination=action::CounterDestination::Graveyard;
                 if let Some([TextStep::If(condition, true),TextStep::Act(clause,rider,true),TextStep::EndIf])=acts.get(index+1..index+4)
-                    && !matches!(acts.get(index+4), Some(TextStep::Otherwise | TextStep::Instead(_)))
+                    && !matches!(acts.get(index+4), Some(TextStep::Otherwise | TextStep::Instead(..)))
                     && let Some((named, to)) = counter_destination_rider(condition,clause,rider)
                 {
                     let subject=e.operand(countered_subject(condition).expect("rider proved"),support,&mut binder)?;
