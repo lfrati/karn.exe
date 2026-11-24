@@ -208,3 +208,27 @@ fn r608_2c_overload_destroys_by_mana_value_and_more_when_kicked() {
             assert_eq!(t.g.battlefield.contains(&target), !destroyed));
     }
 }
+
+// Rules: 608.2h, 701.22a
+// Given: Hellish Sideswipe aimed at Grizzly Bears, its caster sacrificing a Mind Stone or a
+// Hill Giant (neither a Vehicle) or a Smuggler's Copter (a Vehicle).
+// When: it resolves.
+// Expect: the Bears is destroyed; its caster draws a card only if the sacrificed permanent was a
+// Vehicle.
+#[test]
+fn r608_2h_hellish_sideswipe_draws_only_for_a_sacrificed_vehicle() {
+    for (fodder, draws) in [("Mind Stone", false), ("Hill Giant", false), ("Smuggler's Copter", true)] {
+        let mut t = Board::new(2).hand(0, &["Hellish Sideswipe"]).battlefield(0, &[fodder]).battlefield(1, &["Grizzly Bears"])
+            .library(0, &["Forest", "Forest"]).build();
+        let bears = t.find_in_battlefield("Grizzly Bears");
+        let sacrificed = t.find_in_battlefield(fodder);
+        let card = t.find_in(0, Zone::Hand, "Hellish Sideswipe");
+        let hand = t.g.players[0].hand.len();
+        t.mana(0, "{B}");
+        t.g.act(0, Move::Paying(mana_pool("B"), Box::new(Move::WithCosts(vec![vec![sacrificed]],
+            Box::new(Move::Cast { card, targets: vec![vec![Target::Object(bears)]] }))))).unwrap();
+        settle(&mut t);
+        cite!(["701.22a"]; case: fodder; assert!(!t.g.battlefield.contains(&bears)));
+        cite!(["608.2h"]; case: fodder; assert_eq!(t.g.players[0].hand.len(), hand - 1 + usize::from(draws)));
+    }
+}
