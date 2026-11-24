@@ -303,21 +303,23 @@ pub(crate) fn landwalk_ok(filter: &ir::Filter) -> crate::Res<()> {
     }
 }
 
-/// The passive keyword abilities a definition prints, lowered once as it is loaded. One the
-/// engine does not give its meaning is left out: its card is refused ([`passive_ok`]).
+/// The keyword abilities a definition prints, lowered once as it is loaded: what its object
+/// has, and is asked to have, in every zone ("a spell with cascade", "a card with a kicker
+/// ability", "a creature with flying"; 702). That is every keyword it prints, whether the
+/// keyword is passive or only the activated, triggered or spell ability its row also is
+/// ("equip {3}"); which an effect can give is [`passive_ok`]'s question. One the engine does
+/// not declare is left out: its card is refused.
 pub(crate) fn held(def: &CardDef) -> Vec<Held> {
     let support = Support::definition(def, None);
     def.keyword_declarations.iter().filter_map(|instance| {
         let declared = instance.declared.as_ref().ok()?;
-        declared.held().then(|| Held::from_declared(&instance.item, declared.clone(), &support, &mut linked(&support)).ok()).flatten()
+        Held::from_declared(&instance.item, declared.clone(), &support, &mut linked(&support)).ok()
     }).collect()
 }
 
-/// Is this keyword one an object is asked to have ([`Held`]), rather than only the
-/// activated, triggered or spell ability its row is ("equip {3}")?
-/// The same question [`held`] asks of a definition's keywords.
+/// Is this printed keyword one its object holds ([`held`])?
 pub(crate) fn is_held(item: &ir::KeywordInstance) -> bool {
-    declare(item).is_ok_and(|declared| declared.held())
+    declare(item).is_ok()
 }
 
 /// The keyword abilities a card has, as it is printed.

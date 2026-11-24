@@ -83,16 +83,17 @@ pub(crate) struct Instance {
 }
 impl Declared {
     fn new(gives: Vec<(Scope, Gives)>, needs: Vec<Context>) -> Self { Self { gives, needs } }
-    /// Is it an ability its permanent is asked to have: "a creature with flying", "target
-    /// creature with a morph ability"?
-    pub(super) fn held(&self) -> bool {
+    /// Does it mean something on whatever has it, apart from the row printing it: a rule held
+    /// in force, or a quality a rule or an effect asks of its object ("a creature with flying",
+    /// "target creature with a morph ability")? Only such a keyword can be given (613.1f).
+    fn passive(&self) -> bool {
         self.gives.iter().any(|(_, gives)| matches!(gives, Gives::Rule(_) | Gives::Asked | Gives::Characteristic | Gives::FaceDown { .. }
             | Gives::Route { route: crate::announcement::CastRoute::Flashback, .. }))
     }
     pub(super) fn grantable(&self) -> bool {
         // Literal granted flashback costs can refer to the granting ability's choices.
         // Only the paired recipient-mana-cost definition is lowered for now.
-        self.held() && !self.needs.contains(&Context::PrintedOnly)
+        self.passive() && !self.needs.contains(&Context::PrintedOnly)
             && !self.gives.iter().any(|(_, gives)| matches!(gives, Gives::Route { route: crate::announcement::CastRoute::Flashback, .. }))
     }
     fn context_ok(&self, def: &CardDef, item: &KeywordInstance) -> Res<()> {

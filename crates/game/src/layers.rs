@@ -782,10 +782,11 @@ impl Seen {
         }
     }
 
-    /// Megamorph is a variant of the morph ability (702.37b): what has it has a morph ability.
+    /// Megamorph is a variant of the morph ability (702.37b), and multikicker of kicker
+    /// (702.33c): what has the variant has the ability.
     pub fn has(&self, keyword: Keyword) -> bool {
-        let megamorph = keyword.name() == "Morph";
-        self.keywords.iter().any(|i| i.keyword == keyword || megamorph && i.keyword.name() == "Megamorph")
+        let variant = match keyword.name() { "Morph" => Some("Megamorph"), "Kicker" => Some("Multikicker"), _ => None };
+        self.keywords.iter().any(|i| i.keyword == keyword || variant == Some(i.keyword.name()))
     }
 
     /// Sum all functioning toxic instances, including equal printed and granted values.
