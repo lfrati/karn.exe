@@ -1327,3 +1327,16 @@ fn r702_33d_kicked_twice() {
     assert_ne!(twice, once);
     assert!(serde_json::to_string(&twice).unwrap().contains("Kicked"));
 }
+
+/// CR 301.5 and 303.4: "permanents attached to creatures" are those attached to any creature,
+/// as "attached to a creature" says (End Hostilities, Auras attached to permanents you control).
+#[test]
+fn r303_4_attached_to_creatures_is_attached_to_a_creature() {
+    let (plural, printed) = read("Destroy all creatures and all permanents attached to creatures.");
+    let (one, _) = read("Destroy all creatures and all permanents attached to a creature.");
+    assert_eq!(plural, one);
+    assert_eq!(printed, "Destroy all creatures and all permanents attached to a creature.");
+    let (yours, _) = read("Auras attached to permanents you control have umbra armor.");
+    let (your_one, _) = read("Auras attached to a permanent you control have umbra armor.");
+    assert_eq!(yours, your_one);
+}

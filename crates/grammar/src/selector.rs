@@ -2042,13 +2042,21 @@ fn attached_to(sel: &P<Selector>) -> P<Filter> {
         "attached to",
         vec![lit("attached to"), lit("that's attached to").alias(), lit("that are attached to").alias()],
     );
-    intro.then_keep(sel).map(
+    let one = intro.then_keep(sel).map(
         |s| Some(Filter::Atom(Atom::AttachedTo(Box::new(s)))),
         |f| match f {
             Filter::Atom(Atom::AttachedTo(s)) => Some((**s).clone()),
             _ => None,
         },
-    )
+    );
+    // "Destroy all creatures and all permanents attached to creatures", "Auras attached to
+    // permanents you control": attached to any one of them, as "attached to a creature" says
+    let set_pl = crate::kernel::lazy("plural set", || selectors().set_pl.clone());
+    let any_of = intro.then_keep(&set_pl).map(
+        |set| Some(Filter::Atom(Atom::AttachedTo(Box::new(Selector::new(Quant::Indefinite(Count::Exactly(Amount::Const(1))), set))))),
+        |_: &Filter| None,
+    ).alias();
+    alt("attached to", vec![one, any_of])
 }
 
 /// "with a +1/+1 counter on it", "with a counter on it", "with three or more time counters on
