@@ -1426,3 +1426,17 @@ fn r109_1_cards_not_on_the_battlefield_spells_and_permanents() {
     assert_ne!(and, two);
     read("All cards that aren't on the battlefield, spells, and permanents are the chosen color in addition to their other colors.");
 }
+
+/// CR 508.1c: "No more than one creature can attack ~ each combat" limits the attackers of that
+/// planeswalker as "… can attack you each combat" does a player's (The Eternal Wanderer,
+/// Crawlspace).
+#[test]
+fn r508_1c_no_more_than_one_creature_can_attack_it() {
+    for text in ["No more than one creature can attack ~ each combat.", "No more than two creatures can attack you each combat."] {
+        let (_, printed) = read(text);
+        assert_eq!(printed, text);
+    }
+    let (it, _) = read("No more than one creature can attack ~ each combat.");
+    let (any, _) = read("No more than one creature can attack each combat.");
+    assert_ne!(it, any);
+}

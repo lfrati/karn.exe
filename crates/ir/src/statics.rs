@@ -168,8 +168,9 @@ pub enum Static {
     /// "If ~ is in a graveyard, effects from spells named Muscle Burst count it as a card named
     /// Muscle Burst." (201.2)
     CountsAsNamedInGraveyard(crate::selector::Name),
-    /// "No more than two creatures can attack you each combat." (508.1c)
-    NoMoreThanAttackYou(Amount),
+    /// "No more than two creatures can attack you each combat", "No more than one creature can
+    /// attack ~ each combat" (508.1c): at most `count` creatures attack `defender`.
+    NoMoreThanAttack { count: Amount, defender: Selector },
     /// "~ can be attached only to a creature with toughness 4 or greater." (301.5, 303.4)
     AttachOnlyTo(Selector),
     /// "You may activate abilities of creatures you control as though those creatures had

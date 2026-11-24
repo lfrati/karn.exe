@@ -1106,9 +1106,9 @@ pub fn sentence(body: &P<Body>) -> P<Static> {
                         ),
                     ],
                 ))
-                .skip(&lit("can attack you each combat"))
-                .map(|n| Some(Static::NoMoreThanAttackYou(n)), |s| match s {
-                    Static::NoMoreThanAttackYou(n) => Some(n.clone()),
+                .skip(&lit("can attack")).then(&selectors().selector).skip(&lit("each combat"))
+                .map(|(count, defender)| Some(Static::NoMoreThanAttack { count, defender }), |s| match s {
+                    Static::NoMoreThanAttack { count, defender } => Some((count.clone(), defender.clone())),
                     _ => None,
                 }),
             lit("~ can be attached only to").then_keep(&selectors().selector).map(
