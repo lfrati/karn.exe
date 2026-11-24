@@ -38,6 +38,7 @@ fn close_branch(instrs: &mut [Instr], at: usize, inner: &Binder, outer: &mut Bin
     outer.completed_subject = outer.completed_subject.joined(inner.completed_subject);
     outer.alternative_result |= inner.alternative_result;
     outer.unrepresented_movement |= inner.unrepresented_movement;
+    outer.unrecorded_graveyard |= inner.unrecorded_graveyard;
     let end = instrs.len();
     let produced: Vec<_> = instrs[at + 1..end].iter().flat_map(Instr::skipped_result).collect();
     let Instr::Branch { end: target, skipped_values, .. } = &mut instrs[at] else { unreachable!("a block begins with its branch") };
@@ -216,6 +217,11 @@ struct Binder {
     /// A movement whose complete two-destination result is not represented here.
     /// Generic tallies must not fall back to an older or partial producer (608.2c).
     unrepresented_movement: bool,
+    /// An instruction that puts cards into a graveyard and keeps no result group: a sacrifice,
+    /// a surveil, a counter. "Put into a graveyard this way" would miss what it put there.
+    unrecorded_graveyard: bool,
+    /// Of a delayed body: what it reads of this resolution's result groups, it reads later.
+    later: bool,
     /// What earlier instructions of this text put into exile, as it is there: what "the
     /// exiled cards" names before any card exiled by another ability (608.2c, 400.7).
     exiled_now: Vec<Slot>,
@@ -408,6 +414,14 @@ impl expr::Binding for Scoped<'_, '_> {
             let groups: Vec<_> = self.binder.created_groups.iter().map(|slot| (*slot, expr::Shape::Created, true)).collect();
             if groups.is_empty() { return unsupported("result group: no earlier instruction created tokens"); }
             return Ok(groups);
+        }
+        if verb.is_none() && into == Some(Zone::Graveyard) && self.binder.unrecorded_graveyard {
+            return unsupported("result group: an instruction put cards into a graveyard and kept no result");
+        }
+        // the cards put there are those it put there, wherever they are later; the description
+        // reads only those still there, as one instruction of the effect follows another
+        if verb.is_none() && into == Some(Zone::Graveyard) && self.binder.later {
+            return unsupported("result group: cards put into a graveyard this way, read by a delayed body");
         }
         // what destroyed puts each where it went; every other instruction one zone (400.7)
         let groups: Vec<_> = self.binder.produced.iter()
@@ -3558,6 +3572,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 captured_scope.created_turn = None; // future-turn anchors cannot escape into a later resolution
                 captured_scope.searched = None;
                 captured_scope.found_waiting = false;
+                captured_scope.later = true;
                 // The following optional new-target sentence modifies the delayed copy,
                 // not the registration's already-resolving ability (707.10c).
                 let mut body = vec![rest.clone()];
@@ -4395,6 +4410,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
         let mut after_turn = after_turns.last().copied();
         let mut turn_count = None;
         let mut face_down = false;
+        binder.unrecorded_graveyard |= matches!(act.action, Action::Sacrifice(_) | Action::Surveil(_) | Action::Counter(_));
         for modifier in &act.mods {
             match modifier {
                 ir::effect::Modifier::FaceDown if matches!(act.action, Action::Exile(_)) && !face_down => face_down = true,
@@ -6402,8 +6418,11 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                             Taking::Quantity(_) => return unsupported("optional variable result movement not lowered"),
                             _ => None,
                         };
-                        let out = e.slot();
-                        e.instrs.push(Instr::Gate { who: doer, probe, out, possible: None });
+                        // "If you don't" after it asks whether it was done, not whether what
+                        // came before it was (608.2c)
+                        let (out, possible) = (e.slot(), e.slot());
+                        binder.outcome = (doer == Who::Controller).then(|| (action::Operand::Controller, out, possible, e.instrs.len()));
+                        e.instrs.push(Instr::Gate { who: doer, probe, out, possible: Some(possible) });
                         gate = Some(out);
                     }
                     let out = e.slot();

@@ -533,6 +533,9 @@ pub(crate) enum Atom {
     /// instruction's completed damage (120.3, 608.2c), the object it was dealt to and not one
     /// it became later (400.7).
     DamagedThisWay { slot: super::Slot, kind: ir::event::DamageKind },
+    /// "put into a graveyard this way": a member of these completed result groups where it
+    /// was put, or the object it became there, while it is still that object (400.7, 608.2c).
+    PutThere { groups: Vec<(super::Slot, Shape)>, zone: Zone },
 }
 
 /// A description: what must be true of a thing for it to be one the text names.
@@ -570,7 +573,7 @@ impl Filter {
                 | Atom::Color(_) | Atom::Colorless | Atom::Multicolored | Atom::Monocolored
                 | Atom::Opponent | Atom::MostLife { .. } | Atom::Token | Atom::Commander | Atom::FaceDown | Atom::Combat(_) | Atom::Blocking(_) | Atom::Attached(_) | Atom::Ability { .. } | Atom::TargetCount(_)
                 | Atom::Chosen(_) | Atom::SameName(_) | Atom::SharesCreatureType(_) | Atom::SharesColor(_) | Atom::Named(_)
-                | Atom::Counters { .. } | Atom::Level { .. } | Atom::Entered(_) | Atom::InSubjects(_) | Atom::DamagedThisWay { .. }) => Reads::NONE,
+                | Atom::Counters { .. } | Atom::Level { .. } | Atom::Entered(_) | Atom::InSubjects(_) | Atom::DamagedThisWay { .. } | Atom::PutThere { .. }) => Reads::NONE,
         }
     }
 
@@ -939,6 +942,7 @@ impl Filter {
             Filter::Atom(Atom::InSubjects(slot)) => out.push(Scalar::Local { slot: *slot, kind: Kind::Subjects }),
             Filter::Atom(Atom::Entered(slot)) => out.push(Scalar::Local { slot: *slot, kind: Kind::Cards }),
             Filter::Atom(Atom::DamagedThisWay { slot, .. }) => out.push(Scalar::Local { slot: *slot, kind: Kind::Damage }),
+            Filter::Atom(Atom::PutThere { groups, .. }) => out.extend(groups.iter().map(|(slot, shape)| Scalar::Local { slot: *slot, kind: shape.kind() })),
             Filter::Atom(Atom::SameName(subject) | Atom::SharesCreatureType(subject) | Atom::SharesColor(subject) | Atom::Blocking(subject) | Atom::DealtDamageBy(subject) | Atom::TappedFor { what: subject, .. } | Atom::Damage { to: Some(subject), .. }) => subject.scalars(out),
             Filter::Atom(Atom::Stat { value, .. }) => value.scalars(out),
             Filter::Atom(Atom::Most{among,..}) => among.collect(out),
@@ -993,6 +997,11 @@ impl Atom {
     fn matches(&self, game: &Game, ctx: &Ctx, locals: &dyn Locals, t: Target) -> bool {
         if let Atom::InSubjects(slot) = self {
             return matches!(locals.local(*slot), Some(Value::Subjects(subjects)) if subjects.contains(&t));
+        }
+        if let Atom::PutThere { groups, zone } = self {
+            // a group kept as it was chosen to be moved has the card it became there
+            return matches!(t, Target::Object(o) if members(locals, groups, false).into_iter()
+                .any(|(member, put)| (member == o || game.became(member) == Some(o)) && put.is_none_or(|put| put == *zone)));
         }
         if let Atom::DamagedThisWay { slot, kind } = self {
             return matches!(locals.local(*slot), Some(Value::Damage(results)) if results.iter().any(|r| r.recipient == t && r.amount > 0
@@ -1111,7 +1120,7 @@ impl Atom {
             },
             Atom::Commander => game.is_commander(o.id),
             Atom::Suspended => game.suspended(o.id),
-            Atom::InSubjects(_) | Atom::DamagedThisWay { .. } | Atom::DealtDamageBy(_) | Atom::TappedFor { .. } | Atom::HappenedTo(_) | Atom::Damage { .. } | Atom::FoughtThisTurn { .. } => unreachable!("tested before object lookup"),
+            Atom::InSubjects(_) | Atom::DamagedThisWay { .. } | Atom::PutThere { .. } | Atom::DealtDamageBy(_) | Atom::TappedFor { .. } | Atom::HappenedTo(_) | Atom::Damage { .. } | Atom::FoughtThisTurn { .. } => unreachable!("tested before object lookup"),
             Atom::Entered(slot) => matches!(locals.local(*slot), Some(Value::Cards(cards)) if cards.contains(&o.id)),
             Atom::EnteredThisTurn => o.zone == Zone::Battlefield && o.entered != 0 && o.entered == game.turn,
             Atom::Counters { kind, min, max } => (u64::from(*min)..=u64::from(*max)).contains(&crate::select::counters_on(game, o.id, kind.as_ref())),
@@ -1446,6 +1455,13 @@ impl Set {
             return Ok(Set { domain, other: set.other,
                 other_than: if set.other { Some(Subject::Local(bind.exiled()?)) } else { None },
                 controller: None, owner, filter: Filter::compile(&filter, support, bind)? });
+        }
+        if let Some((whose, rest)) = put_there_this_way(set) {
+            let groups = bind.this_way(None, Some(Zone::Graveyard))?.into_iter().map(|(slot, shape, _)| (slot, shape)).collect();
+            let there = ir::ObjectSet { zone: Some(ir::ZoneSpec::of(ir::Zone::Graveyard, Some(whose))), filter: rest, ..set.clone() };
+            let mut compiled = Self::compile(&there, support, bind)?;
+            compiled.filter = Filter::All(vec![compiled.filter, Filter::Atom(Atom::PutThere { groups, zone: Zone::Graveyard })]);
+            return Ok(compiled);
         }
         if let Some((zones, yours, also_permanents)) = card_zones(set)? {
             let mut owner = owner;
@@ -2058,6 +2074,23 @@ fn history_count(set: &ir::ObjectSet) -> Option<ir::EventPattern> {
     Some(ir::EventPattern::new(vec![ir::Selector::new(ir::Quant::Indefinite(ir::Count::Exactly(ir::Amount::Const(1))), subject)], vec![history_action(action)]))
 }
 
+/// "a creature card put into a graveyard this way", "each land card put into their graveyard
+/// this way": a card in that graveyard that an instruction of this effect put there (608.2c),
+/// as the card it is there. Whose graveyard it names, and the rest of the description.
+pub(crate) fn put_there_this_way(set: &ir::ObjectSet) -> Option<(ir::Selector, ir::Filter)> {
+    if set.domain != ir::Domain::Card || set.zone.is_some() { return None; }
+    let ir::Filter::All(parts) = &set.filter else { return None };
+    let into = |p: &ir::Filter| match p {
+        ir::Filter::Atom(ir::Atom::Did { action, when: ir::amount::When::ThisWay, negated: false }) => match &**action {
+            ir::EventAction::PutIntoGraveyard { into, from: None } if into.set.domain == ir::Domain::Player && into.chooser.is_none() && into.random.is_none() => Some((**into).clone()),
+            _ => None,
+        },
+        _ => None,
+    };
+    let [whose] = &parts.iter().filter_map(into).collect::<Vec<_>>()[..] else { return None };
+    Some((whose.clone(), ir::Filter::All(parts.iter().filter(|p| into(p).is_none()).cloned().collect())))
+}
+
 /// Identify the positive operation-local dying predicate, preserving all other filters.
 fn death_filter(filter: &ir::Filter) -> Option<ir::Filter> {
     match filter {
@@ -2167,7 +2200,7 @@ impl Number {
                     | Atom::Color(_) | Atom::Colorless | Atom::Multicolored | Atom::Monocolored
                     | Atom::Opponent | Atom::MostLife { .. } | Atom::Keyword(_) | Atom::Tapped(_) | Atom::Token | Atom::Saddled | Atom::Paired | Atom::Commander | Atom::Suspended | Atom::FaceDown
                     | Atom::Combat(_) | Atom::Blocking(_) | Atom::Attached(_) | Atom::Ability { .. } | Atom::Chosen(_) | Atom::SameName(_) | Atom::SharesCreatureType(_) | Atom::SharesColor(_)
-                    | Atom::TargetCount(_) | Atom::Named(_) | Atom::EnteredThisTurn | Atom::LostLifeThisTurn | Atom::DealtDamageBy(_) | Atom::TappedFor { .. } | Atom::Damage { .. } | Atom::FoughtThisTurn { .. } | Atom::Counters { .. } | Atom::Level { .. } | Atom::Entered(_) | Atom::InSubjects(_) | Atom::DamagedThisWay { .. }) => false,
+                    | Atom::TargetCount(_) | Atom::Named(_) | Atom::EnteredThisTurn | Atom::LostLifeThisTurn | Atom::DealtDamageBy(_) | Atom::TappedFor { .. } | Atom::Damage { .. } | Atom::FoughtThisTurn { .. } | Atom::Counters { .. } | Atom::Level { .. } | Atom::Entered(_) | Atom::InSubjects(_) | Atom::DamagedThisWay { .. } | Atom::PutThere { .. }) => false,
             }
         }
         fn set(s: &Set) -> bool {
@@ -2331,7 +2364,7 @@ impl Number {
                 let (verb, from, rest) = moved_from_this_way(&set.filter).expect("matched");
                 Self::members_from(&ir::ObjectSet { filter: rest, ..(**set).clone() }, verb, from, support, bind)?
             }
-            ir::Amount::Count(set) if death_filter(&set.filter).is_some() => {
+            ir::Amount::Count(set) if death_filter(&set.filter).is_some() && put_there_this_way(set).is_none() => {
                 let mut original = (**set).clone();
                 original.filter = death_filter(&set.filter).unwrap();
                 Self::death_count(&original, support, bind)?

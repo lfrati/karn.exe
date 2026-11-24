@@ -269,6 +269,14 @@ remain refused. Continue until the user explicitly stops the builders.
   number (Oblivion Sower, Specter of Mortality), and one made by another player or by each
   player (Carrion Rats) remain refused, as do a card from a hand and a graveyard together
   (Swift Warkite, Dakkon, Kastral, Dread Tiller).
+- "A creature card put into a graveyard this way", "for each land card put into their
+  graveyard this way": a card in that graveyard that an instruction of the effect put there,
+  as the card it is there (608.2c, 400.7), chosen or counted; "from among the cards milled
+  this way" names the mill's group. "If you don't" after "you may put a card from among
+  them" asks whether that was done (it read the mill's outcome: Ainok Wayfarer and
+  Ostrich-Horse never got their counter). Refused: beside a sacrifice, surveil or counter,
+  which keep no result group, and read later by a delayed body (Song of Blood), which would
+  count only the cards still there.
 
 #### Quality (worktree `quality`)
 

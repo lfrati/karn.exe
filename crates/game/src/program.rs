@@ -1067,8 +1067,18 @@ fn chosen_on_resolution(set: &ObjectSet) -> Option<Zone> {
         // with this artifact" is one of exile too (607.2a)
         (Domain::Card, Some(zone)) if zone.zones.items == [ir::Zone::Exile] && zone.slice.is_none() && zone.owner.is_none() => Some(Zone::Exile),
         (Domain::Card, None) if expr::linked_exile_filter(&set.filter).is_some() => Some(Zone::Exile),
+        // "a creature card put into a graveyard this way" is one there (608.2c)
+        (Domain::Card, None) if expr::put_there_this_way(set).is_some() => Some(Zone::Graveyard),
         _ => None,
     }
+}
+
+/// "the cards milled this way": nothing but the result of an instruction of this effect.
+fn result_reference(set: &ObjectSet) -> Option<&UnresolvedRef> {
+    let ir::Filter::All(parts) = &set.filter else { return None };
+    let [ir::Filter::Atom(Atom::Reference(r))] = parts.as_slice() else { return None };
+    (r.expected == Kind::Cards && r.form == RefForm::ActionResult && matches!(r.qualifiers.as_slice(), [Qualifier::ThisWay(_)])
+        && *set == ObjectSet { filter: set.filter.clone(), ..ObjectSet::of(Domain::Card) }).then_some(r)
 }
 
 pub fn mention(s: &Selector) -> Option<Mention> {
@@ -1105,6 +1115,12 @@ pub fn mention(s: &Selector) -> Option<Mention> {
                 && of.set.domain == Domain::Card && of.set.filter == ir::Filter::All(Vec::new()) && of.chooser.is_none() && of.random.is_none() => {
                 if reference.is_some() { return None; }
                 reference = Some(UnresolvedRef::cards(RefForm::Anaphor));
+            }
+            // "from among the cards milled this way": the group that instruction produced
+            ir::Filter::Atom(Atom::Among(of)) if matches!(of.quant, Quant::Definite(Ref::Anaphor(ir::Anaphor::The { plural: true })))
+                && of.chooser.is_none() && of.random.is_none() && result_reference(&of.set).is_some() => {
+                if reference.is_some() { return None; }
+                reference = result_reference(&of.set).cloned();
             }
             // "from among the milled cards": the group that instruction produced, as "the
             // cards milled this way" names it (608.2c)
