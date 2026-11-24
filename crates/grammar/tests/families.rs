@@ -1146,3 +1146,13 @@ fn r401_1_the_top_cards_of_the_library_said_before() {
     assert_eq!(unsaid, said);
     assert!(printed.ends_with("exile the top three cards of that library instead."), "{printed}");
 }
+
+/// CR 119.3: "you gained and lost life this turn" is both events, in the same turn.
+#[test]
+fn r119_3_gained_and_lost_life_this_turn() {
+    let (both, printed) = read("At the beginning of your end step, if you gained and lost life this turn, create a 1/1 black Bat creature token with flying.");
+    let (each, _) = read("At the beginning of your end step, if you gained life this turn and you lost life this turn, create a 1/1 black Bat creature token with flying.");
+    assert_eq!(both, each);
+    assert!(printed.contains("if you gained life this turn and you lost life this turn"), "{printed}");
+    declines("At the beginning of your end step, if you gained and lost life, create a 1/1 black Bat creature token with flying.");
+}

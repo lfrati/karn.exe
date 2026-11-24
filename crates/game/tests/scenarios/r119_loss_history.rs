@@ -120,3 +120,27 @@ fn r603_3b_delney_doubled_yshtola_and_bloodchief_follow_the_offered_choice_indic
         cite!(["608.1"]; assert!(g.stack.is_empty()));
     }
 }
+
+/// Lunar Convocation: "At the beginning of your end step, if you gained life this turn, each
+/// opponent loses 1 life. At the beginning of your end step, if you gained and lost life this
+/// turn, create a 1/1 black Bat creature token with flying. {1}{B}, Pay 2 life: Draw a card."
+/// Rulings of 2024-07-26: the second asks for both, whatever the life total did; paying life is
+/// losing it (119.4). The token is named "Bat Token" (111.4).
+#[test]
+fn r119_3_lunar_convocation_makes_a_bat_only_after_life_was_both_gained_and_lost() {
+    use crate::support::{Board, Decision, mana_pool};
+    for (gain, lose) in [(true, false), (true, true), (false, true), (false, false)] {
+        let mut t = Board::new(2).fill(3).battlefield(0, &["Lunar Convocation"]).hand(0, &["Chaplain's Blessing"]).build();
+        if gain { t.mana(0, "{W}").cast(0, "Chaplain's Blessing", vec![], mana_pool("W")).unwrap().resolve(); }
+        if lose { t.mana(0, "{1}{B}").activate(0, "Lunar Convocation", 2, vec![], mana_pool("CB")).unwrap().resolve(); }
+        let life = t.g.players[0].life;
+        cite!(["119.4"]; case: format!("{gain},{lose}"); assert_eq!(life, 20 + if gain { 5 } else { 0 } - if lose { 2 } else { 0 }));
+        end(&mut t.g);
+        if let Some(Decision::Order { player, abilities }) = t.g.decision.clone() { t.g.act(player, Move::Order((0..abilities.len()).collect())).unwrap(); }
+        cite!(["603.4"]; case: format!("{gain},{lose}"); assert_eq!(t.g.stack.len(), usize::from(gain) + usize::from(gain && lose)));
+        t.resolve();
+        let bats: Vec<_> = t.g.battlefield.iter().copied().filter(|o| t.g.controller(*o) == 0 && t.g.obj(*o).chars.name == "Bat Token").collect();
+        cite!(["119.3", "603.4"]; case: format!("{gain},{lose}"); assert_eq!((t.g.players[1].life, bats.len()), (20 - i32::from(gain), usize::from(gain && lose))));
+        for bat in bats { assert!(t.g.has(bat, "Flying") && t.g.power(bat) == Some(1)); }
+    }
+}

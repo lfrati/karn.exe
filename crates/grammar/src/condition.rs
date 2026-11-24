@@ -1791,11 +1791,31 @@ fn build(e: &Events) -> Conditions {
             }, |_| None,
         ).alias()
     }).collect());
+    // "if you gained and lost life this turn": both happened, to the same player in the same
+    // window (Lunar Convocation); "you gained life this turn and you lost life this turn"
+    let who = alt("player", vec![lit("you").to(Selector::you()), selectors().singular.clone()]);
+    let gained_and_lost = who.skip(&lit("gained and lost life")).then(&history_window()).map(
+        |(who, window)| {
+            let happened = |action| Condition::Happened {
+                pattern: EventPattern::new(vec![who.clone()], vec![action]),
+                window: Some(window.clone()),
+                times: None,
+                tense: Tense::Past,
+                negated: false,
+            };
+            (who.set.domain == Domain::Player).then(|| Condition::And(vec![
+                happened(EventAction::GainsLife { amount: None }),
+                happened(EventAction::LosesLife { amount: None }),
+            ]))
+        },
+        |_| None,
+    );
     let condition = alt(
         "conditions",
         vec![
             c.clone(),
             inherited,
+            gained_and_lost.alias(),
             c.list("and").map(
                 |v| Some(Condition::And(v)),
                 |c| match c {
