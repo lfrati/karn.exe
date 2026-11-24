@@ -386,6 +386,8 @@ pub(crate) enum Noun {
     /// An event names a card independently of its current zone (108.2).
     Card(expr::Cards),
     Activation(crate::activate::ActivationFilter),
+    /// "the chosen player": the player chosen as the permanent entered (607.2d).
+    Chosen(expr::Subject),
 }
 
 impl Noun {
@@ -411,6 +413,8 @@ impl Noun {
             Quant::Definite(Ref::This) => Ok(Noun::This),
             Quant::Definite(Ref::You) => Ok(Noun::You),
             Quant::Definite(Ref::AttachedTo(Attachment::Enchanted | Attachment::Equipped)) => Ok(Noun::Attached),
+            Quant::Definite(Ref::Anaphor(ir::Anaphor::TheParticiple { what: Verb::Choose, plural: false })) if s.set == ir::ObjectSet::of(ir::Domain::Player) =>
+                { use expr::Binding; linked(support).scalar(&ir::reference::UnresolvedRef::choice(ir::reference::Kind::Player)).map(|chosen| Noun::Chosen(expr::Subject::Chosen(chosen))) }
             Quant::Indefinite(Count::Exactly(Amount::Const(1))) | Quant::Each | Quant::All => {
                 if s.set.domain == ir::Domain::Card && s.set.zone.is_none() {
                     return expr::Cards::compile(&s.set, support, &mut linked(support)).map(Noun::Card);
@@ -434,6 +438,7 @@ impl Noun {
             }
             Noun::Described(set) => set.contains(game, ctx, &NoLocals, t),
             Noun::Card(cards) => matches!(t, Target::Object(o) if cards.contains(game, ctx, &NoLocals, o)),
+            Noun::Chosen(player) => player.evaluate(game, ctx, &NoLocals).contains(&t),
         }
     }
 }

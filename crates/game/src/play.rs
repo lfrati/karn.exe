@@ -1256,7 +1256,7 @@ impl Game {
                     crate::binding::Kind::CardName => Game::name_refusal(value_name(&answer), false).into(),
                     kind => format!("choose a legal {kind:?} value (608.2d)").into(),
                 }),
-                (Choice::Name(names), Answer::Value(value)) if crate::binding::accepts(crate::binding::Domain { kind: crate::binding::Kind::CardName, names: *names }, value) => {}
+                (Choice::Name(names), Answer::Value(value)) if crate::binding::accepts(crate::binding::Domain { kind: crate::binding::Kind::CardName, names: *names, opponent: false }, value) => {}
                 (Choice::Name(_), _) => return Err(Game::name_refusal(value_name(&answer), true).into()),
                 (Choice::Arrange { cards, .. }, Answer::Arrange { top, away }) if Game::arrangement(cards, top, away) => {}
                 (Choice::Arrange { verb, .. }, _) => {

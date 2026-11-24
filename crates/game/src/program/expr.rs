@@ -246,6 +246,9 @@ pub enum Subject {
     OwnerOf(Box<Subject>),
     Attached,
     LinkedExile(crate::binding::AbilityKey),
+    /// The player a choice retained: "the chosen player" of "as this enters, choose a
+    /// player" (607.2d). Nothing once that player has left the game (800.4a).
+    Chosen(Scalar),
 }
 
 impl Subject {
@@ -278,6 +281,13 @@ impl Subject {
             Quant::Definite(Ref::AttachedTo(_)) => Ok(Subject::Attached),
             Quant::Definite(Ref::ControllerOf(of)) => Ok(Subject::ControllerOf(Box::new(Self::compile_read(of, bind, amount)?))),
             Quant::Definite(Ref::OwnerOf(of)) => Ok(Subject::OwnerOf(Box::new(Self::compile_read(of, bind, amount)?))),
+            // "the chosen player": what this text chose, else the player chosen as the
+            // permanent entered (607.2d)
+            Quant::Definite(Ref::Anaphor(ir::Anaphor::TheParticiple { what: ir::Verb::Choose, plural: false }))
+                if s.set == ir::ObjectSet::of(ir::Domain::Player) && s.chooser.is_none() && s.random.is_none() => {
+                let local = if amount { bind.amount_subject(s) } else { bind.subject(s) };
+                local.or_else(|refused| bind.scalar(&UnresolvedRef::choice(Kind::Player)).map(Subject::Chosen).map_err(|_| refused))
+            }
             _ => if amount { bind.amount_subject(s) } else { bind.subject(s) },
         }
     }
@@ -335,6 +345,10 @@ impl Subject {
             }).collect(),
             Subject::ControllerOf(of) => players(of, &|game, o| ctx.controlled_by(game, o)),
             Subject::OwnerOf(of) => players(of, &|game, o| game.obj(o).owner),
+            Subject::Chosen(scalar) => match chosen(game, ctx, locals, scalar.clone()) {
+                Some(Value::Player(p)) if !game.players[*p].lost => vec![Target::Player(*p)],
+                _ => Vec::new(),
+            },
         }
     }
 
@@ -354,6 +368,7 @@ impl Subject {
             Subject::Targets(_) => {},
             Subject::Local(slot) => out.push(Scalar::Local { slot: *slot, kind: Kind::Subjects }),
             Subject::ControllerOf(of) | Subject::OwnerOf(of) | Subject::Commanders(of) => of.scalars(out),
+            Subject::Chosen(scalar) => out.push(scalar.clone()),
             Subject::Source | Subject::Controller | Subject::Actor | Subject::ObjectActor | Subject::Input(_) | Subject::MovedInput(_) | Subject::Attached | Subject::LinkedExile(_) => {}
         }
     }

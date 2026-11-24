@@ -423,7 +423,7 @@ impl Game {
             Some(Decision::Choose { player, choice: Choice::CoinCall }) => (player, Asked::CoinCall),
             Some(Decision::Choose { player, choice: Choice::Value(kind) }) => (player, Asked::Value { kind, options: crate::binding::options(kind) }),
             Some(Decision::Choose { player, choice: Choice::Name(names) }) => (player, Asked::Value { kind: crate::binding::Kind::CardName,
-                options: crate::binding::options(crate::binding::Domain { kind: crate::binding::Kind::CardName, names }) }),
+                options: crate::binding::options(crate::binding::Domain { kind: crate::binding::Kind::CardName, names, opponent: false }) }),
             Some(Decision::Choose { player, choice: Choice::Arrange { verb, cards } }) => (player, Asked::Arrange { verb, cards }),
             Some(Decision::Choose { player, choice: Choice::Player { among } }) => (player, Asked::Player { among }),
             Some(Decision::Choose { player, choice: Choice::Pile { piles } }) => (player, Asked::Pile { piles }),

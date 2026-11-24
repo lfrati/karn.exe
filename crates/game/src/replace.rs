@@ -817,6 +817,7 @@ impl Asks {
             Asks::Life { life, .. } => payments.can_reserve(game, player, *life).then_some(Choice::May { possible: true }),
             Asks::Reveal { among, private, .. } | Asks::Behold { among, private, .. } =>
                 (*private || !among.is_empty()).then(|| Choice::Select { among: among.clone(), min: 0, max: 1 }),
+            Asks::Value { kind, .. } if kind.kind == Kind::Player => Some(Choice::Player { among: players(game, player, *kind) }),
             Asks::Value { kind, .. } => Some(kind.choice()),
         }
     }
@@ -860,10 +861,21 @@ impl Asks {
                 chosen.values.push(Record { link: link.clone(), chooser: player, value });
                 chosen.then = then.as_deref().cloned();
             }
+            (Asks::Value { kind, link, then }, Some(Answer::Player(chosen_player)))
+                if kind.kind == Kind::Player && players(game, player, *kind).contains(&chosen_player) => {
+                chosen.values.push(Record { link: link.clone(), chooser: player, value: crate::binding::Value::Player(chosen_player) });
+                chosen.then = then.as_deref().cloned();
+            }
             _ => return unsupported("a legal answer to the entry choice is required (614.12a-b)"),
         }
         Ok(())
     }
+}
+
+/// The players a choice of a player as a permanent enters may pick: those still in the game
+/// (800.4a), of "an opponent" the chooser's opponents alone.
+fn players(game: &Game, chooser: PlayerId, domain: crate::binding::Domain) -> Vec<PlayerId> {
+    (0..game.players.len()).filter(|p| !game.players[*p].lost && !(domain.opponent && *p == chooser)).collect()
 }
 
 /// Costs committed while collecting simultaneous entry choices (614.12b). Commitments
@@ -986,9 +998,19 @@ pub fn as_enters(a: &Ability) -> Option<AsEnters<'_>> {
 /// choose, when that is all it says.
 fn value_choice(rest: &Sentence) -> Option<crate::binding::Domain> {
     let Sentence::Do(body) = rest else { return None };
-    let Clause { subject: None, may: false, also: false, first: Act { action: Action::Choose(choice @ ir::action::Choice::Value { kind, count: Amount::Const(1), random: false, .. }), mods, may: false }, rest } = &body.first
+    let Clause { subject: None, may: false, also: false, first: Act { action: Action::Choose(choice), mods, may: false }, rest } = &body.first
     else { return None };
     if !mods.is_empty() || !rest.is_empty() || !body.rest.is_empty() { return None; }
+    // "choose a player", "choose an opponent": one player, kept with the permanent (607.2d)
+    if let ir::action::Choice::Objects(objects) = choice {
+        let [one] = objects.items.as_slice() else { return None };
+        if one.quant != Quant::Indefinite(ir::Count::Exactly(Amount::Const(1))) || one.chooser.is_some() || one.random.is_some() { return None; }
+        let player = ir::ObjectSet::of(ir::Domain::Player);
+        let opponent = ir::ObjectSet { filter: ir::Filter::All(vec![ir::Filter::Atom(ir::Atom::Opponent)]), ..player.clone() };
+        return (one.set == player || one.set == opponent)
+            .then(|| crate::binding::Domain { kind: Kind::Player, names: crate::binding::Names::ANY, opponent: one.set == opponent });
+    }
+    let ir::action::Choice::Value { kind, count: Amount::Const(1), random: false, .. } = choice else { return None };
     match kind {
         // a basic land type is chosen only as a permanent enters
         ir::action::ValueKind::BasicLandType => matches!(choice, ir::action::Choice::Value { except, .. } if except.is_empty()).then(|| Kind::BasicLandType.into()),

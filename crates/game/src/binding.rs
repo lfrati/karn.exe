@@ -34,6 +34,8 @@ pub enum Value {
     Color(Color),
     /// One of the five basic land types (305.6).
     BasicLandType(Subtype),
+    /// A player chosen as a permanent entered (Black Vise, True-Name Nemesis).
+    Player(PlayerId),
 }
 
 /// A completed destruction's original/LKI object and actual resulting incarnation (400.7).
@@ -46,9 +48,10 @@ pub struct Destruction { pub before: ObjId, pub after: ObjId, pub from: crate::s
 pub struct Removal { pub from: crate::Target, pub kind: String, pub count: u32 }
 
 /// What a single value choice may pick: a kind of value and, of a card name, the
-/// characteristics the card it names must have (201.4a): "choose a nonland card name".
+/// characteristics the card it names must have (201.4a): "choose a nonland card name"; of a
+/// player, whether it is one of the chooser's opponents ("choose an opponent").
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Domain { pub kind: Kind, pub names: Names }
+pub struct Domain { pub kind: Kind, pub names: Names, pub opponent: bool }
 
 impl Domain {
     /// The decision that asks for a value of this domain.
@@ -58,7 +61,7 @@ impl Domain {
 }
 
 impl From<Kind> for Domain {
-    fn from(kind: Kind) -> Self { Domain { kind, names: Names::ANY } }
+    fn from(kind: Kind) -> Self { Domain { kind, names: Names::ANY, opponent: false } }
 }
 
 /// Which card names a choice of one may pick, by the card types and supertypes of the face
@@ -126,7 +129,7 @@ impl Names {
 /// Legal answers to a single value choice (105.1, 205.3m). Frame-only kinds have
 /// no finite choice domain and must not be used to ask this decision.
 pub fn options(domain: impl Into<Domain>) -> Vec<Value> {
-    let Domain { kind, names: within } = domain.into();
+    let Domain { kind, names: within, .. } = domain.into();
     match kind {
         Kind::CardName => {
             let mut names: Vec<_> = oracle::names::all().iter().filter(|n| within.admits(n)).cloned().collect();
@@ -142,7 +145,7 @@ pub fn options(domain: impl Into<Domain>) -> Vec<Value> {
     }
 }
 pub fn accepts(domain: impl Into<Domain>, value: &Value) -> bool {
-    let Domain { kind, names } = domain.into();
+    let Domain { kind, names, .. } = domain.into();
     match (kind, value) {
         (Kind::CardType, Value::CardType(t)) => ir::vocab::list("card types").contains(t),
         (Kind::CreatureType, Value::CreatureType(t)) => t.kind() == ir::vocab::SubtypeKind::Creature,
@@ -235,7 +238,7 @@ impl Links {
     pub fn group(group: Origin, abilities: usize, producers: &[(usize, Kind)]) -> Self {
         let mut result = Self { group: group.clone(), abilities, producers: producers.to_vec(), reads: Vec::new() };
         for index in 0..abilities {
-            for expected in [Kind::Type, Kind::CardType, Kind::CreatureType, Kind::Color, Kind::CardName, Kind::BasicLandType] {
+            for expected in [Kind::Type, Kind::CardType, Kind::CreatureType, Kind::Color, Kind::CardName, Kind::BasicLandType, Kind::Player] {
                 let reader = AbilityKey { origin: group.clone(), index };
                 let bound = match result.candidates(reader.clone(), expected).expect("known ability").as_slice() {
                     [one] => Ok(one.clone()),
@@ -337,7 +340,7 @@ impl crate::retention::Trace for Value {
             Value::Destructions(results) => for result in results { visit(result.before); visit(result.after); },
             Value::Cards(cards) => cards.trace(visit),
             Value::Subjects(subjects) => subjects.trace(visit),
-            Value::Coin(_) | Value::Turn(_) | Value::CreatedTurns(_) | Value::Consent(_) | Value::Number(_) | Value::CardType(_) | Value::CreatureType(_) | Value::Color(_) | Value::CardName(_) | Value::BasicLandType(_) => {},
+            Value::Coin(_) | Value::Turn(_) | Value::CreatedTurns(_) | Value::Consent(_) | Value::Number(_) | Value::CardType(_) | Value::CreatureType(_) | Value::Color(_) | Value::CardName(_) | Value::BasicLandType(_) | Value::Player(_) => {},
         }
     }
 }
@@ -348,6 +351,7 @@ impl crate::retention::Players for Value {
             Value::Damage(results) => for result in results { result.recipient.players(visit); },
             Value::Removals(results) => for result in results { result.from.players(visit); },
             Value::Subjects(subjects) => subjects.players(visit),
+            Value::Player(player) => visit(*player),
             Value::Destructions(_) | Value::Cards(_) | Value::Turn(_) | Value::CreatedTurns(_) | Value::Consent(_) | Value::Number(_)
             | Value::CardType(_) | Value::CreatureType(_) | Value::Color(_) | Value::CardName(_) | Value::BasicLandType(_) => {},
         }

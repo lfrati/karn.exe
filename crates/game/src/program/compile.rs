@@ -130,6 +130,9 @@ enum Referent {
     Local(Vec<Slot>),
     Input(input::Input),
     Source,
+    /// "The chosen player" of "as this enters, choose a player": what the permanent keeps
+    /// (607.2d).
+    Chosen(Scalar),
 }
 
 /// Only the last completed clause can establish the new source-relative proof.
@@ -308,6 +311,7 @@ impl expr::Binding for Scoped<'_, '_> {
             },
             Referent::Input(input) => Ok(expr::Subject::Input(input)),
             Referent::Source => Ok(expr::Subject::Source),
+            Referent::Chosen(scalar) => Ok(expr::Subject::Chosen(scalar)),
         }
     }
     fn amount_subject(&mut self, s: &Selector) -> Res<expr::Subject> {
@@ -340,6 +344,7 @@ impl expr::Binding for Scoped<'_, '_> {
             },
             Referent::Input(input) => Ok(expr::Subject::Input(input)),
             Referent::Source => Ok(expr::Subject::Source),
+            Referent::Chosen(scalar) => Ok(expr::Subject::Chosen(scalar)),
         }
     }
     fn past_subject(&mut self, s: &Selector) -> Res<expr::Subject> {
@@ -617,6 +622,12 @@ impl Binder {
             // several compatible declarations or a payment/event participant.
             match candidates.as_slice() {
                 [one] => return Ok(Referent::Local(vec![one.slot])),
+                // none here: the player chosen as the permanent entered (607.2d)
+                [] if !plural && selector.set == ObjectSet::of(Domain::Player) && selector.chooser.is_none() && selector.random.is_none()
+                    && !support.choice_candidates(Kind::Player)?.is_empty() => {
+                    if input::find(support, selector)?.is_some() { return unsupported("chosen reference: ambiguous input and linked choices"); }
+                    return Ok(Referent::Chosen(self.scalar(&UnresolvedRef::choice(Kind::Player), support)?));
+                }
                 [] => {},
                 _ => return unsupported("chosen reference: ambiguous explicit choices"),
             }
@@ -1530,7 +1541,7 @@ pub(crate) fn scalar_choice(choice: &ir::action::Choice) -> Res<crate::binding::
         return unsupported("choice: unsupported cardinality, randomness or value domain");
     };
     if let ir::action::ValueKind::CardName(set) = kind {
-        return Ok(crate::binding::Domain { kind: Kind::CardName, names: crate::binding::Names::compile(set, except)? });
+        return Ok(crate::binding::Domain { kind: Kind::CardName, names: crate::binding::Names::compile(set, except)?, opponent: false });
     }
     if !except.is_empty() { return unsupported("choice: restricted value domain"); }
     match kind {
@@ -2256,6 +2267,7 @@ impl Emit {
             },
             // an object pronoun for the source this effect moved: what it became (400.7j)
             Referent::Source => Ok(binder.source_entered.map_or(Operand::Source, Operand::Reference)),
+            Referent::Chosen(scalar) => Ok(self.keep(Operand::Subject(expr::Subject::Chosen(scalar)), ObjectSet::of(Domain::Player), 1, binder)),
             Referent::Input(input) => {
                 let out = self.slot();
                 self.instrs.push(Instr::Input { input, out });
@@ -2319,6 +2331,7 @@ impl Emit {
                             || binder.result.as_ref().is_some_and(|(out, set, _)| out == slot && kinds(set).0)
                     }),
                     Referent::Source => false,
+                    Referent::Chosen(_) => true,
                     Referent::Input(input) => input::signature(support, *input)?.0,
                 };
                 operands.push(self.reference_operand(s, referent, support, binder)?);

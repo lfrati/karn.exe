@@ -15,6 +15,7 @@ impl Subject {
             Self::ControllerOf(of) => of.inputs() | I::at(D::Objects, P::CONTROL),
             Self::OwnerOf(of) => of.inputs() | I::at(D::Objects, P::OWNER),
             Self::LinkedExile(_) => I::at(D::Objects, P::ZONE | P::COLLECTIONS) | context(P::BINDINGS),
+            Self::Chosen(_) => context(P::BINDINGS) | I::at(D::Players, P::PLAYER_STATUS),
             Self::Actor | Self::ObjectActor | Self::Local(_) | Self::Input(_) | Self::MovedInput(_) | Self::Targets(_) => context(P::BINDINGS),
         }
     }

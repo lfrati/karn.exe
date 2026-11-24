@@ -43,10 +43,10 @@ pub(crate) fn known(item: &KeywordInstance) -> bool {
             && qualities.conj == ir::Conj::And
             && qualities.items.iter().all(|q| match q {
                 Quality::Color(_) | Quality::EachColor | Quality::Multicolored | Quality::Monocolored
-                    | Quality::Everything | Quality::ChosenColor | Quality::Set(_) | Quality::Player(_) => true,
+                    | Quality::Everything | Quality::ChosenColor | Quality::ChosenPlayer | Quality::Set(_) | Quality::Player(_) => true,
                 Quality::Filter(f) => characteristic(f),
                 // chosen as the effect that grants it resolves: see [`choice_of_color`]
-                Quality::ColorOfChoice | Quality::ChosenPlayer => false,
+                Quality::ColorOfChoice => false,
                 // not run yet
                 Quality::ColorOfControllersChoice | Quality::EachOfItsColors | Quality::EachColorAmong(_) => false,
             }))
@@ -125,6 +125,9 @@ impl Protection {
                     Protects::Set(set)
                 }
                 Quality::Player(who) => Protects::Players(Players::compile(who, support, &mut *bind)?),
+                // "protection from the chosen player" (702.16k): the player chosen as it entered
+                Quality::ChosenPlayer => Protects::Players(Players::Said(expr::Subject::Chosen(
+                    bind.scalar(&ir::reference::UnresolvedRef::choice(ir::reference::Kind::Player))?))),
                 other => return unsupported(format!("protection: from {}", crate::select::name(other).to_lowercase())),
             });
         }

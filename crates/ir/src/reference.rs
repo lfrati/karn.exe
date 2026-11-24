@@ -34,6 +34,8 @@ pub enum Kind {
     CardName,
     /// "a basic land type" (305.6): Plains, Island, Swamp, Mountain or Forest.
     BasicLandType,
+    /// A player chosen as a permanent enters: "choose a player", "choose an opponent".
+    Player,
 }
 
 /// How the text identifies an earlier value, independently of its eventual producer ID.
