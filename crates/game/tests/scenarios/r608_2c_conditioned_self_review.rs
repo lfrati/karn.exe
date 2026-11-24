@@ -148,11 +148,30 @@ fn lurking_jackals_is_admitted_and_watches_an_opponent_s_life() {
 }
 
 #[test]
-fn it_after_another_named_object_or_in_a_later_sentence_is_not_this() {
-    for text in ["If target creature is tapped, it gets +2/+2 until end of turn.", "Draw a card. If this creature is tapped, it gets +1/+1 until end of turn."] {
-        let def = CardDef::new("X", "{0}", "Creature — Bear", &format!("{{1}}: {text}"), Some((1, 1))).unwrap();
-        let reason = if text.starts_with("If target") { "condition: is, of \"Target\"" }
-            else { "input reference: nothing before it supplies the required participant/cardinality" };
-        crate::support::refused(game::play::check(&def).map_err(|e|e.0), reason);
+fn it_after_another_named_object_is_not_this() {
+    // Uncited (admission): "it" is the target creature the condition names, which a condition
+    // does not introduce yet.
+    let def = CardDef::new("X", "{0}", "Creature — Bear", "{1}: If target creature is tapped, it gets +2/+2 until end of turn.", Some((1, 1))).unwrap();
+    crate::support::refused(game::play::check(&def).map_err(|e|e.0), "condition: is, of \"Target\"");
+}
+
+#[test]
+fn r608_2c_it_after_a_condition_naming_this_creature_in_a_later_sentence_is_this() {
+    // "Draw a card. If this creature is tapped, it gets +1/+1": the condition names this
+    // creature, so "it" is this creature, not the card drawn before
+    for tapped in [true, false] {
+        let def = CardDef::new("X", "{0}", "Creature — Bear", "{1}: Draw a card. If this creature is tapped, it gets +1/+1 until end of turn.", Some((1, 1))).unwrap();
+        let land = CardDef::new("Land", "", "Basic Land — Forest", "", None).unwrap();
+        let mut g = Game::new(vec![def, land], 2, 20);
+        for p in 0..2 { for _ in 0..8 { g.put(p, 1, Zone::Library); } }
+        while g.part != Part::PrecombatMain { g.act(g.priority, Move::Pass).unwrap(); }
+        let x = g.put(0, 0, Zone::Battlefield);
+        g.set_tapped(x, tapped);
+        let hand = g.players[0].hand.len();
+        g.players[0].pool.colorless += 1;
+        g.act(0, paid("C", Move::Activate { source: x, ability: 0, targets: vec![], paying: vec![] })).unwrap();
+        settle(&mut g, 1);
+        cite!(["608.2c"]; case: tapped; assert_eq!(g.power(x), Some(if tapped { 2 } else { 1 })));
+        cite!(["121.1"]; case: tapped; assert_eq!(g.players[0].hand.len(), hand + 1));
     }
 }

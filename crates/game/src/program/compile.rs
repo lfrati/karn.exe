@@ -3258,8 +3258,11 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 // An explicit attached-object noun in a condition introduces its subject
                 // on both paths: "If equipped creature is a Vampire, put two on it instead".
                 // Capture before branching so a skipped action cannot erase the antecedent.
+                // The ability's own object named there is the antecedent of a later "it" as
+                // an explicit mention in the body is ("Whenever an opponent casts a spell, if
+                // this card is suspended, remove a time counter from it": from this card).
                 if let ir::Condition::Is { what, .. } = c
-                    && matches!(what.quant, Quant::Definite(Ref::AttachedTo(_))) {
+                    && matches!(what.quant, Quant::Definite(Ref::AttachedTo(_) | Ref::This)) {
                     e.operand(what, support, &mut binder)?;
                 }
                 let condition = if let ir::Condition::Did { who, outcome } = c {

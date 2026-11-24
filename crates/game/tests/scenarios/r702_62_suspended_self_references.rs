@@ -1,5 +1,6 @@
 //! A suspended card's own abilities that speak of it while it is exiled: "it" in "while it's
-//! exiled" is the card the event happens to (113.6b, 702.62a).
+//! exiled" is the card the event happens to, and a condition naming this card makes it the
+//! "it" its effect acts on (113.6b, 702.62a, 608.2c).
 use crate::support::*;
 use game::legal::Asked;
 use game::state::{Answer, Decision};
@@ -30,6 +31,19 @@ fn suspended(t: &mut T, name: &str, time: u32) -> game::ObjId {
     t.g.put_counters(card, "time", time);
     assert!(t.g.suspended(card));
     card
+}
+
+#[test]
+fn r608_2c_deep_sea_kraken_removes_a_time_counter_from_itself_when_an_opponent_casts_a_spell() {
+    let mut t = Board::new(2).active(1).exile(0, &["Deep-Sea Kraken"]).hand(1, &["Grizzly Bears"]).build();
+    let kraken = suspended(&mut t, "Deep-Sea Kraken", 9);
+    t.mana(1, "{1}{G}").cast(1, "Grizzly Bears", vec![], mana_pool("CG")).unwrap();
+    cite!(["603.4", "702.62a"]; assert_eq!(t.g.stack.len(), 2));
+    t.resolve();
+    // "it" is this card the condition names, not the spell the opponent cast
+    cite!(["608.2c", "122.1"]; assert_eq!(t.g.counters(kraken).get("time"), Some(&8)));
+    let bears = t.find_in(1, Zone::Battlefield, "Grizzly Bears");
+    cite!(["608.2c"]; assert!(t.g.counters(bears).is_empty()));
 }
 
 #[test]
