@@ -1197,3 +1197,14 @@ fn r608_2c_a_comma_before_or_between_instructions() {
     assert_eq!(comma, bare);
     assert!(printed.contains(" or untap all tapped permanents"), "{printed}");
 }
+
+/// CR 614.1a: "instead create one of each" of the kinds of token the event names is that many of
+/// each (Academy Manufactor rulings of 2021-06-18).
+#[test]
+fn r614_1a_one_of_each_kind_of_token_instead() {
+    let (each, printed) = read("If you would create a Clue, Food, or Treasure token, instead create one of each.");
+    let (said, _) = read("If you would create one or more Clue, Food, or Treasure tokens, instead create that many Clue tokens, that many Food tokens, and that many Treasure tokens.");
+    assert_eq!(each, said);
+    assert_eq!(printed, "If you would create one or more Clue, Food, and/or Treasure tokens, instead create that many Clue tokens, that many Food tokens, and that many Treasure tokens.");
+    for text in ["If you would create a Clue token, instead create one of each.", "If you would draw a card, instead create one of each."] { declines(text); }
+}

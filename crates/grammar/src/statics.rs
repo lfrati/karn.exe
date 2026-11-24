@@ -2111,7 +2111,32 @@ fn replacement_of(event: &P<EventPattern>, with: &P<Substitute>, bare: bool) -> 
                 _ => None,
             },
         );
-    alt("replacement", vec![said_if, first_time])
+    // "If you would create a Clue, Food, or Treasure token, instead create one of each.": what
+    // the Academy Manufactor rulings of 2021-06-18 say it does, "if you would create one or more
+    // Clue, Food, or Treasure tokens, instead create that many Clue tokens, that many Food
+    // tokens, and that many Treasure tokens"; printed as that
+    let one_of_each = lit("if").then_keep(event).skip(&lit(", instead create one of each")).map(
+        move |mut event| {
+            if bare { return None; }
+            let [EventAction::Deed(ir::Deed { verb: Verb::Create, passive: false, args })] = event.actions.as_mut_slice() else { return None };
+            let [(ir::Role::What, ir::Arg::Noun(made))] = args.as_mut_slice() else { return None };
+            let ir::Filter::All(parts) = &made.set.filter else { return None };
+            let [ir::Filter::Any(kinds), ir::Filter::Atom(ir::Atom::Status(ir::Status::Token))] = parts.as_slice() else { return None };
+            let specs = kinds.iter().map(|kind| match kind {
+                ir::Filter::Atom(ir::Atom::Subtype(t)) => ir::token::Predefined::ALL.iter().find(|p| p.name() == t.name()).map(|p| ir::token::TokenSpec {
+                    count: Amount::That { many: true }, tapped: false, kind: ir::token::TokenKind::Predefined(*p), combat: None, attached_to: None,
+                }),
+                _ => None,
+            }).collect::<Option<Vec<_>>>()?;
+            if specs.len() < 2 || made.quant != Quant::Indefinite(ir::Count::Exactly(Amount::Const(1))) { return None; }
+            made.quant = Quant::Indefinite(ir::Count::AtLeast(Amount::Const(1)));
+            let create = ir::effect::Act { action: ir::Action::Create(ir::Coord { items: specs, conj: ir::Conj::And }), mods: Vec::new(), may: false };
+            let body = ir::effect::Body { first: ir::effect::Clause { subject: None, may: false, also: false, first: create, rest: Vec::new() }, rest: Vec::new() };
+            Some(Static::Replacement(Box::new(Replacement { next_time: false, event: ir::Coord::one(event), while_: None, this_turn: false, with: Substitute::Body(Box::new(body)), instead_first: true })))
+        },
+        |_| None,
+    ).alias();
+    alt("replacement", vec![said_if, first_time, one_of_each])
 }
 
 /// "If a triggered ability of an Ally you control triggers, that ability triggers an additional
