@@ -1,8 +1,31 @@
 //! What a reference names when an earlier sentence made something, or an earlier branch was not
 //! taken (608.2c): the text's own nouns, as the instruction is followed.
-use crate::support::{Board, cite, mana_pool, oracle_read, refused};
+use crate::support::{Board, Tgt, cite, mana_pool, oracle_read, refused};
 use game::announcement::CastRoute;
+use game::state::{Answer, Choice, Decision};
 use game::{Move, Zone};
+
+#[test]
+fn r608_2c_protect_the_negotiators_asks_the_target_spells_controller_to_pay() {
+    // "If this spell was kicked, create a 1/1 white Soldier creature token. Counter target spell
+    // unless its controller pays {1} for each creature you control." Unkicked, no token: "its
+    // controller" is the target spell's, who may pay {1} for the one creature.
+    let mut t = Board::new(2).active(1).battlefield(0, &["Grizzly Bears"]).hand(0, &["Protect the Negotiators"])
+        .hand(1, &["Hill Giant"]).build();
+    t.mana(1, "{3}{R}");
+    cite!(["601.2"]; ok: t.cast(1, "Hill Giant", vec![], mana_pool("{3}{R}")));
+    t.g.act(1, Move::Pass).unwrap();
+    t.mana(0, "{1}{U}");
+    cite!(["601.2"]; ok: t.cast(0, "Protect the Negotiators", vec![Tgt::In(1, Zone::Stack, "Hill Giant")], mana_pool("{1}{U}")));
+    t.mana(1, "{1}");
+    while !matches!(t.g.decision, Some(Decision::Choose { .. })) && !t.g.stack.is_empty() { t.g.act(t.g.priority, Move::Pass).unwrap(); }
+    cite!(["608.2c", "118.12"]; assert!(matches!(&t.g.decision, Some(Decision::Choose { player: 1, choice: Choice::Pay { .. } })),
+        "the Giant's controller is asked to pay: {:?}", t.g.decision));
+    cite!(["118.12"]; ok: t.g.act(1, Move::Choose(Answer::Pay { plan: vec![], with: Some(mana_pool("C")), tapped: vec![] })));
+    t.resolve();
+    t.expect().rules(["118.12", "608.2c"]).zone_exact(1, Zone::Battlefield, &["Hill Giant"])
+        .zone_exact(0, Zone::Graveyard, &["Protect the Negotiators"]).check();
+}
 
 #[test]
 fn r111_3_the_final_days_from_a_graveyard_creates_those_tokens_tapped() {

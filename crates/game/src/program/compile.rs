@@ -32,7 +32,10 @@ fn close_branch(instrs: &mut [Instr], at: usize, inner: &Binder, outer: &mut Bin
     let Instr::Branch { end: target, skipped_values, .. } = &mut instrs[at] else { unreachable!("a block begins with its branch") };
     *target = end;
     let produced_here = |slot| produced.iter().any(|(out, _)| *out == slot);
-    if inner.result.as_ref().is_some_and(|(slot, ..)| produced_here(*slot)) { outer.result = inner.result.clone(); }
+    if inner.result.as_ref().is_some_and(|(slot, ..)| produced_here(*slot)) {
+        outer.result = inner.result.clone();
+        outer.branch_result = inner.result.as_ref().map(|(slot, ..)| *slot);
+    }
     outer.created_groups.extend(inner.created_groups.iter().filter(|slot| produced_here(**slot)).copied());
     if inner.created_single.is_some_and(produced_here) { outer.created_single = inner.created_single; }
     // A selection from an existing group remains excluded from "the rest" after
@@ -142,6 +145,8 @@ struct Binder {
     /// What one act named together as its objects ("untap target creature and each other
     /// creature that shares a color with it"), each list of their slots.
     coordinated: Vec<Vec<Slot>>,
+    /// The result an act inside a conditional branch made, carried out of it when it closed.
+    branch_result: Option<Slot>,
     /// The exact preceding local flip; unrelated numbers and actions do not replace it.
     coin: Option<Slot>,
     turn: Option<Slot>,
@@ -683,18 +688,28 @@ impl Binder {
         // Exclude it before sentence/noun narrowing, independently of amount possessors.
         let dealer = if recipient { self.clause.as_ref() } else { None };
         let excluded = |slot| matches!(dealer, Some(expr::Subject::Local(s)) if *s == slot);
-        if let Some((slot, set, max)) = &self.result
-            && !excluded(*slot)
-        {
-            let (p, o) = kinds(set);
-            if (!singular || *max <= 1 || self.created_single == Some(*slot)) && (!p || player) && (!o || object) { return Ok((vec![*slot], None)); }
-        }
         let fits = |n: &Named| {
             let (p, o) = kinds(&n.set);
             // A mixed target can denote an object despite its player alternative.
             // Player-only producers are not bare Object-pronoun antecedents.
             !excluded(n.slot) && ((!p || player) && (!o || object) || recipient && n.target && o)
         };
+        // What an earlier sentence or a closed conditional branch made is not what this
+        // sentence names first: "If this spell was kicked, create a Soldier token. Counter
+        // target spell unless its controller pays …": its controller is the spell's. (An act
+        // of a conditional sentence has no sentence of its own here, so nothing displaces.)
+        let made_elsewhere = |slot: Slot| match self.subjects.iter().find(|n| n.slot == slot) {
+            Some(made) => made.at.0 != self.at.0,
+            None => self.branch_result == Some(slot),
+        };
+        let displaced = |slot: Slot| self.at.0 != usize::MAX && made_elsewhere(slot)
+            && self.subjects.iter().any(|n| n.slot != slot && n.at.0 == self.at.0 && !n.own && fits(n) && (!singular || n.bounds.1 <= 1));
+        if let Some((slot, set, max)) = &self.result
+            && !excluded(*slot) && !displaced(*slot)
+        {
+            let (p, o) = kinds(set);
+            if (!singular || *max <= 1 || self.created_single == Some(*slot)) && (!p || player) && (!o || object) { return Ok((vec![*slot], None)); }
+        }
         let mut candidates: Vec<&Named> = self.subjects.iter().filter(|n| {
             fits(n) && (!singular || n.bounds.1 <= 1)
         }).collect();
