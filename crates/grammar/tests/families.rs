@@ -1290,3 +1290,16 @@ fn r102_1_except_during_its_controllers_turn() {
     let (all, _) = read("Each spell costs {3} more to cast.");
     assert_ne!(grid, all);
 }
+
+/// CR 500.7 and 101.2: "during your first, second, or third turns of the game" is while it's
+/// one of those turns of yours (Serra Avenger, Jace Reawakened, Spider-Man 2099; extra turns
+/// count, rulings of 2012-07-01).
+#[test]
+fn r500_7_during_your_first_second_or_third_turns() {
+    let (during, printed) = read("You can't cast ~ during your first, second, or third turns of the game.");
+    assert_eq!(printed, "You can't cast ~ as long as it's your first, second, or third turn of the game.");
+    let (as_long_as, _) = read("You can't cast ~ as long as it's your first, second, or third turn of the game.");
+    assert_eq!(during, as_long_as);
+    let (your_turn, _) = read("You can't cast ~ during your turn.");
+    assert_ne!(during, your_turn);
+}

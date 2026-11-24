@@ -336,6 +336,13 @@ fn build_modifiers() -> Modifiers {
             _ => None,
         },
     );
+    // "during your first, second, or third turns of the game": while it's one of those turns
+    // of that player's (500.7: extra turns count), the condition read as "as long as"
+    let during_nth = lit("during").then_keep(&selectors().possessive)
+        .then(&crate::event::ordinal().list("or"))
+        .skip(&alt("turns of the game", vec![lit("turns of the game"), lit("turn of the game")]))
+        .map(|(p, turns)| Some(Modifier::AsLongAs(ir::Condition::NthTurn { whose: Box::new(p), turns })), |_: &Modifier| None)
+        .alias();
     // "at this turn's next end of combat" is the same point
     let at_end_of_combat =
         alt("at end of combat", vec![lit("at end of combat"), lit("at this turn's next end of combat").alias()]).to(Modifier::AtEndOfCombat);
@@ -431,6 +438,7 @@ fn build_modifiers() -> Modifiers {
             if_,
             as_long_as,
             during_turn,
+            during_nth,
             after_turn,
             as_enters,
         ],
