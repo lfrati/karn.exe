@@ -140,6 +140,13 @@ pub fn known(k: Keyword) -> bool {
     passive(&ir::token::KeywordInstance { keyword: k, param: KeywordParam::None })
 }
 
+/// Does this keyword's meaning include an ability of its own, a trigger such as exalted's or
+/// training's (702.83a, 702.149a)? Holding the keyword alone does not give that ability: what
+/// gives the keyword has to give its ability too.
+pub(crate) fn gives_ability(item: &ir::token::KeywordInstance) -> bool {
+    declare(item).is_ok_and(|d| d.gives.iter().any(|(_, gives)| matches!(gives, Gives::Ability(_))))
+}
+
 /// A supported passive keyword instance, preserving its parameter (702).
 /// 702.114a: a color characteristic definition, functioning in every zone.
 pub(crate) fn devoid(item: &ir::token::KeywordInstance) -> bool {

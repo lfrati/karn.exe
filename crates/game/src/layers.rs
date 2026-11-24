@@ -1023,6 +1023,10 @@ pub fn counter_ok(kind: &str) -> Res<()> {
         // the grammar reads the two-word keyword counters (first strike, double strike) since the
         // noun phrases name them; their effect on combat is not tested here yet, so they are refused
         (kind, Some(k)) if kind.contains(' ') => unsupported(format!("keyword counter: {}", k.name())),
+        // a counter gives the keyword alone, not the trigger a triggered keyword is (exalted,
+        // 702.83a): each counter would need its own instance of the ability
+        (_, Some(k)) if crate::keyword::gives_ability(&ir::token::KeywordInstance { keyword: k, param: ir::token::KeywordParam::None }) =>
+            unsupported(format!("keyword counter: {} gives a triggered ability", k.name())),
         (_, Some(k)) if crate::keyword::known(k) => Ok(()),
         (_, Some(k)) => unsupported(format!("keyword counter: {}", k.name())),
         ("shield" | "hone", None) => unsupported(format!("counter: {kind} (122.1)")),

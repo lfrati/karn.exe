@@ -193,7 +193,9 @@ pub(crate) fn empower_jace() -> Res<crate::copy::Token> {
 }
 
 /// A keyword the token's characteristics hold as a flag, with nothing more to say.
-fn flag(k: &ir::token::KeywordInstance) -> bool { k.param == ir::token::KeywordParam::None && crate::keyword::known(k.keyword) }
+fn flag(k: &ir::token::KeywordInstance) -> bool {
+    k.param == ir::token::KeywordParam::None && crate::keyword::known(k.keyword) && !crate::keyword::gives_ability(k)
+}
 
 pub(crate) fn token_chars(kind: &TokenKind) -> crate::Res<Chars> {
     use crate::unsupported;
