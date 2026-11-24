@@ -169,3 +169,24 @@ fn r400_7_counter_source_projection_does_not_follow_a_departed_permanent() {
     cite!(["400.7", "113.7a"]; assert_eq!(g.abilities(returned).len(), 1));
     cite!(["701.6a"]; assert_eq!(g.players[0].life, 20));
 }
+
+#[test]
+fn r110_1_a_countered_ability_of_a_card_in_a_graveyard_takes_no_abilities_from_it() {
+    // "If an ability of an artifact, creature, or planeswalker is countered this way, that
+    // permanent loses all abilities": a creature card in a graveyard is no permanent (110.1).
+    let mut g = Game::new(vec![oracle("Tishana's Tidebinder"), oracle("Reassembling Skeleton"), oracle("Forest")], 2, 20);
+    for p in 0..2 { for _ in 0..8 { g.put(p, 2, Zone::Library); } }
+    g.active = 1; g.priority = 1; g.part = ir::Part::PrecombatMain;
+    let skeleton = g.put(1, 1, Zone::Graveyard);
+    g.players[1].pool = mana_pool("CB");
+    g.act(1, paid("CB", Move::Activate { source: skeleton, ability: 0, targets: vec![], paying: vec![] })).unwrap();
+    let ability = *g.stack.last().unwrap();
+    cast(&mut g, 0, 0, vec![], "CCU");
+    pass(&mut g);
+    cite!(["603.3d"]; assert!(matches!(g.decision, Some(Decision::Targets { player: 0, groups: 1, .. }))));
+    g.act(0, Move::ChooseTargets(vec![vec![Target::Object(ability)]])).unwrap();
+    pass(&mut g);
+    cite!(["701.6a"]; assert!(g.stack.is_empty(), "the ability is countered"));
+    cite!(["701.6a"]; assert!(g.players[1].graveyard.contains(&skeleton), "and does nothing"));
+    cite!(["110.1", "611.2b"]; assert_eq!(g.abilities(skeleton).len(), 1, "the card keeps its ability"));
+}

@@ -38,7 +38,9 @@ pub enum Operand {
     /// Matching members of a retained group, queried as the action runs. A
     /// separate Capture freezes a condition's subset before its body.
     Matching(Matching),
-    /// Sources of retained stack abilities, preserving their exact incarnations (113.7a).
+    /// The sources of retained stack abilities that are permanents, preserving their exact
+    /// incarnations (113.7a): "that permanent" is not the card the source became in another
+    /// zone, nor a card whose ability triggered from a graveyard or a hand (110.1).
     AbilitySources(Box<Operand>),
     ControllerOf(Box<Operand>),
     /// Distinct former controllers of qualified completed destruction records.
@@ -384,7 +386,7 @@ pub(super) fn named(game: &Game, f: &Frame, operand: &Operand) -> Vec<Target> {
             let mut sources = Vec::new();
             for ability in named(game, f, of) {
                 let Target::Object(ability) = ability else { continue };
-                if let Some((Some(source), _)) = game.obj(ability).ability {
+                if let Some((Some(source), _)) = game.obj(ability).ability && game.obj(source).zone == Zone::Battlefield {
                     let source = Target::Object(source);
                     if !sources.contains(&source) { sources.push(source); }
                 }
