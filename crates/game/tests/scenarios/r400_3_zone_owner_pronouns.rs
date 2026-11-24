@@ -1,7 +1,7 @@
 //! "Their graveyard", "that player": a zone's owner named by a pronoun is the player the text
 //! named (a target, the player each iteration is of, the owner of the graveyard a target was in),
 //! never the controller of the ability that the text leaves unsaid (400.3, 608.2c).
-use crate::support::{Board, cite, mana_pool, oracle_read};
+use crate::support::{Board, cite, mana_pool};
 use game::legal::Asked;
 use game::{Move, Target, Zone};
 
@@ -77,11 +77,48 @@ fn r608_2c_empty_the_catacombs_returns_each_players_creature_cards_to_their_owne
 }
 
 #[test]
-fn r601_2c_loaming_shaman_stays_refused_until_a_target_can_depend_on_the_target_player() {
-    // Uncited (admission): "target cards from their graveyard" is in the graveyard of the target
-    // player announced before them (601.2c); the engine has no target relation to an earlier
-    // target player yet, so it would offer the cards of its controller's graveyard.
-    crate::support::refused(game::play::check(&oracle_read("Loaming Shaman")).map_err(|e| e.0), "noun phrase: a zone owner's pronoun with no player named before it");
+fn r601_2c_loaming_shaman_targets_cards_from_the_target_players_graveyard() {
+    // "target player shuffles any number of target cards from their graveyard into their
+    // library": the cards are in the graveyard of the player targeted before them
+    let board = || Board::new(2).hand(0, &["Loaming Shaman"]).graveyard(0, &["Hill Giant"]).graveyard(1, &["Grizzly Bears", "Forest"]);
+    let mut t = board().build();
+    let (giant, bears) = (t.find_in(0, Zone::Graveyard, "Hill Giant"), t.find_in(1, Zone::Graveyard, "Grizzly Bears"));
+    t.mana(0, "{2}{G}");
+    cite!(["601.2"]; ok: t.cast(0, "Loaming Shaman", vec![], mana_pool("{2}{G}")));
+    t.pass_all();
+    let Some((0, Asked::Targets { .. })) = t.asked() else { panic!("no targets asked: {:?}", t.asked()) };
+    cite!(["601.2c", "115.1"]; refused("an illegal target, Hill Giant"): t.g.act(0, Move::ChooseTargets(vec![vec![Target::Player(1)], vec![Target::Object(giant)]])));
+    cite!(["601.2c"]; ok: t.g.act(0, Move::ChooseTargets(vec![vec![Target::Player(1)], vec![Target::Object(bears)]])));
+    t.resolve();
+    t.expect().rules(["601.2c", "701.24a"])
+        .zone_exact(1, Zone::Graveyard, &["Forest"]).zone_exact(1, Zone::Library, &["Grizzly Bears"])
+        .zone_exact(0, Zone::Graveyard, &["Hill Giant"]).check();
+    // its controller may be the player: then their own graveyard's
+    let mut t = board().build();
+    let giant = t.find_in(0, Zone::Graveyard, "Hill Giant");
+    enters_with(&mut t, "Loaming Shaman", "{2}{G}", vec![vec![Target::Player(0)], vec![Target::Object(giant)]]);
+    t.expect().rules(["601.2c"]).zone_exact(0, Zone::Library, &["Hill Giant"]).zone_exact(1, Zone::Graveyard, &["Grizzly Bears", "Forest"]).check();
+}
+
+#[test]
+fn r601_2c_rite_of_renewal_shuffles_cards_from_the_target_players_graveyard() {
+    // "Return up to two target permanent cards from your graveyard to your hand. Target player
+    // shuffles up to four target cards from their graveyard into their library. Exile Rite of
+    // Renewal.": their graveyard is the target player's, not the one the first targets are in
+    let mut t = Board::new(2).hand(0, &["Rite of Renewal"]).graveyard(0, &["Hill Giant", "Forest"])
+        .graveyard(1, &["Grizzly Bears", "Lightning Bolt"]).build();
+    let rite = t.find_in(0, Zone::Hand, "Rite of Renewal");
+    let (giant, forest) = (t.find_in(0, Zone::Graveyard, "Hill Giant"), t.find_in(0, Zone::Graveyard, "Forest"));
+    let (bears, bolt) = (t.find_in(1, Zone::Graveyard, "Grizzly Bears"), t.find_in(1, Zone::Graveyard, "Lightning Bolt"));
+    let cast = |targets: Vec<Vec<Target>>| Move::Paying(mana_pool("{3}{G}"), Box::new(Move::Cast { card: rite, targets }));
+    t.mana(0, "{3}{G}");
+    cite!(["601.2c", "115.1"]; refused("an illegal target, Forest"):
+        t.g.act(0, cast(vec![vec![Target::Object(giant)], vec![Target::Player(1)], vec![Target::Object(forest)]])));
+    cite!(["601.2c"]; ok: t.g.act(0, cast(vec![vec![Target::Object(giant)], vec![Target::Player(1)], vec![Target::Object(bears), Target::Object(bolt)]])));
+    t.resolve();
+    t.expect().rules(["601.2c", "701.24a"])
+        .zone_exact(0, Zone::Hand, &["Hill Giant"]).zone_exact(0, Zone::Graveyard, &["Forest"]).zone_exact(0, Zone::Exile, &["Rite of Renewal"])
+        .zone_exact(1, Zone::Graveyard, &[]).zone_exact(1, Zone::Library, &["Grizzly Bears", "Lightning Bolt"]).check();
 }
 
 #[test]

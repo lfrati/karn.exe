@@ -365,6 +365,20 @@ impl crate::program::expr::Binding for TargetBinding<'_,'_> {
                 _=>return crate::unsupported("target relation: ambiguous earlier targets"),
             }
         }
+        // "target player shuffles any number of target cards from their graveyard": "their" is
+        // the player that target names, chosen before these (601.2c)
+        if s.quant==Quant::Definite(Ref::Anaphor(Anaphor::They)) && s.set.domain==ir::Domain::Player {
+            let candidates:Vec<_>=self.earlier.iter().enumerate().filter(|(_,p)|p.selector.set.domain==ir::Domain::Player && named(&s.set,&p.selector.set)).map(|(i,_)|i).collect();
+            match candidates.as_slice() {
+                [one]=>{
+                    if self.earlier[*one].bounds!=(1,1) || self.earlier[*one].dependency.is_some(){return crate::unsupported("target relation: needs one independent earlier target");}
+                    if !self.reads.contains(one){self.reads.push(*one);}
+                    return Ok(crate::program::expr::Subject::Targets(*one));
+                },
+                []=>{},
+                _=>return crate::unsupported("target relation: ambiguous earlier targets"),
+            }
+        }
         crate::program::input::Binding(self.support).subject(s)
     }
 }
