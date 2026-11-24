@@ -361,12 +361,16 @@ impl Game {
                 let defending = self.attack_recipients();
                 let able = self.battlefield.clone().into_iter().filter(|o| self.able_to_attack(*o));
                 let attackers = able
-                    .map(|creature| Attacker {
-                        creature,
-                        attacks: defending.iter().copied().filter(|t| !self.cant_attack(creature, *t)).collect(),
-                        costs: defending.iter().copied().filter(|t| !self.cant_attack(creature, *t))
-                            .map(|t| (t, self.attack_cost(&[(creature, t)]))).collect(),
-                        must: self.required_to_attack(creature),
+                    .map(|creature| {
+                        // what it may attack: what obeys the most requirements it can (508.1d)
+                        let most = self.attack_requirements(creature);
+                        let may = |t: &Target| !self.cant_attack(creature, *t) && (most == 0 || self.requirements_obeyed(creature, *t) >= most);
+                        Attacker {
+                            creature,
+                            attacks: defending.iter().copied().filter(may).collect(),
+                            costs: defending.iter().copied().filter(may).map(|t| (t, self.attack_cost(&[(creature, t)]))).collect(),
+                            must: most > 0,
+                        }
                     })
                     .collect();
                 (player, Asked::Attackers(attackers))

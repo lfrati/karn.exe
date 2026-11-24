@@ -258,8 +258,9 @@ enum Says {
     /// "doesn't untap during its controller's untap step" (502.3): an effect that keeps a
     /// permanent from untapping. `yours`: "during your untap step"; `next`: the next one.
     DoesntUntap { yours: bool, next: bool },
-    /// "attacks each combat if able" (508.1d).
-    MustAttack,
+    /// "attacks each combat if able" (508.1d), and "attacks Gideon Jura if able": a requirement
+    /// obeyed by attacking any of these, or anything when there are none.
+    MustAttack(Vec<Noun>),
     /// Additional attacking creatures one creature may block (509.1a); None is unlimited.
     ExtraBlocks(Option<u32>),
     /// "saddles Mounts and crews Vehicles as though its power were N greater" (Some(N)),
@@ -450,15 +451,18 @@ impl Rule {
                 StaticAct::IfAble { what, .. } => {
                     for e in what {
                         match e {
-                            EventAction::Attacks { alone: false, defender, with: None } if defender.is_empty() => {}
+                            EventAction::Attacks { alone: false, defender, with: None } if defender.is_empty() || what.len() == 1 => {}
                             EventAction::Attacks { .. } => return unsupported("requirement: to attack something in particular"),
                             _ => return unsupported("requirement: to block"),
                         }
                     }
-                    if what.is_empty() {
+                    let [EventAction::Attacks { defender, .. }, ..] = what.as_slice() else {
                         return unsupported("requirement: of nothing");
-                    }
-                    Says::MustAttack
+                    };
+                    // "attacks Gideon Jura if able", "attack you if able": what it attacks to
+                    // obey it (508.1d)
+                    Says::MustAttack(defender.iter().map(|d| Noun::compile(d, support, &mut *bind)).collect::<Res<_>>()
+                        .map_err(|_| crate::Unsupported("requirement: to attack something in particular".into()))?)
                 }
                 StaticAct::SaddlesAndCrews(by) => Says::CrewPower { by: match by {
                     None => None,
@@ -572,6 +576,7 @@ impl Rule {
             Says::CantCauseSacrifice { what, .. } => what.scalars(&mut out),
             Says::Protected(p) => out.extend(p.scalars()),
             Says::Prevent { to, by, .. } => to.iter().chain(by).for_each(|n| n.scalars(&mut out)),
+            Says::MustAttack(defenders) => defenders.iter().for_each(|n| n.scalars(&mut out)),
             _ => {}
         }
         out
@@ -602,6 +607,10 @@ pub enum Lifetime {
     ThisCombat(Option<crate::turn::PhaseId>),
     /// No duration stated: until the game ends (611.2a).
     Game,
+    /// "During target opponent's next turn": in force through the next turn that player
+    /// begins after it was put in force, and over once that turn ends. `player` is who that
+    /// is, named as it is put in force; `began`, once that turn has begun.
+    NextTurnOf { player: Option<crate::PlayerId>, began: bool },
 }
 
 /// Which departure of the objects it is said of a resolved "exile it instead" replaces.
@@ -629,6 +638,15 @@ impl Lifetime {
         } else {
             unsupported("a rule that lasts other than this turn")
         }
+    }
+
+    /// "During target opponent's next turn, creatures that player controls attack Gideon Jura
+    /// if able.": a rule that says no window of its own, kept through that player's next turn.
+    pub(crate) fn during_next_turn(modifiers: &[Modifier], action: &Action) -> Res<Lifetime> {
+        if !modifiers.is_empty() || Lifetime::compile(&[], action).is_ok() {
+            return unsupported("during a player's next turn: a rule with a window of its own");
+        }
+        Ok(Lifetime::NextTurnOf { player: None, began: false })
     }
 }
 
@@ -831,7 +849,7 @@ impl Game {
     /// The turn ends: the rules that last until the cleanup step are over (514.2), and none
     /// said of one of its combat phases outlives it.
     pub(crate) fn end_turn_rules(&mut self) {
-        self.lasting.retain(|l| !matches!(l.lifetime, Lifetime::ThisTurn | Lifetime::ThisCombat(_)));
+        self.lasting.retain(|l| !matches!(l.lifetime, Lifetime::ThisTurn | Lifetime::ThisCombat(_) | Lifetime::NextTurnOf { began: true, .. }));
         // what is said only of permanents that have left the battlefield since no longer
         // applies to anything (400.7)
         let mut lasting = std::mem::take(&mut self.lasting);
@@ -849,6 +867,10 @@ impl Game {
     pub(crate) fn begin_turn_rules(&mut self) {
         let active = self.active;
         self.lasting.retain(|l| l.lifetime != Lifetime::UntilYourNextTurn || l.ctx.controller != active);
+        // "during that player's next turn": this one, when it is theirs
+        for l in &mut self.lasting {
+            if let Lifetime::NextTurnOf { player: Some(player), began } = &mut l.lifetime && *player == active { *began = true; }
+        }
     }
 
     /// Does an effect keep this permanent from untapping as its controller's untap step has
@@ -932,7 +954,9 @@ impl Game {
         let combat = if self.lasting.iter().any(|l| matches!(l.lifetime, Lifetime::ThisCombat(_))) {
             self.turn_plan().phase().filter(|run| run.phase == ir::turn::Phase::Combat).map(|run| run.id)
         } else { None };
-        out.extend(self.lasting.iter().filter(|l| !matches!(l.lifetime, Lifetime::ThisCombat(id) if id.is_none() || id != combat)).map(|l| InForce {
+        // what lasts during a player's next turn applies in that turn only
+        out.extend(self.lasting.iter().filter(|l| !matches!(l.lifetime, Lifetime::ThisCombat(id) if id.is_none() || id != combat)
+            && !matches!(l.lifetime, Lifetime::NextTurnOf { began: false, .. })).map(|l| InForce {
             ctx: l.ctx.clone(),
             of: Of::Kept(&l.affected),
             rule: &l.rule,
@@ -1085,9 +1109,18 @@ impl Game {
         ir::ManaCost(total)
     }
 
-    /// Does an effect say this creature attacks if able (508.1d)?
+    /// Does an effect say this creature attacks if able, or attacks something in particular if
+    /// able (508.1d)?
     pub fn must_attack(&self, creature: ObjId) -> bool {
-        self.in_force().iter().any(|r| r.rule.0 == Says::MustAttack && self.affects(r, creature))
+        self.in_force().iter().any(|r| matches!(r.rule.0, Says::MustAttack(_)) && self.affects(r, creature))
+    }
+
+    /// How many of the requirements said of this creature it obeys by attacking this player,
+    /// planeswalker or battle (508.1d): "attacks each combat if able" by attacking anything,
+    /// "attacks Gideon Jura if able" by attacking him.
+    pub fn requirements_obeyed(&self, creature: ObjId, attacked: Target) -> usize {
+        self.in_force().iter().filter(|r| matches!(&r.rule.0, Says::MustAttack(defenders)
+            if defenders.is_empty() || defenders.iter().any(|d| d.is(self, &r.ctx, &r.locals, attacked))) && self.affects(r, creature)).count()
     }
 
     /// Does an effect say damage can't be prevented (615.12)? Asked wherever damage would

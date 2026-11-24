@@ -253,10 +253,14 @@ impl Game {
                 .filter(|t| self.can_be_attacked(*t).is_ok())).collect()
     }
 
-    pub(crate) fn required_to_attack(&self, creature: ObjId) -> bool {
-        self.must_attack(creature) && self.can_attack(creature).is_ok()
-            && self.attack_recipients().into_iter().any(|t| !self.cant_attack(creature, t)
-                && self.attack_cost(&[(creature, t)]).0.is_empty())
+    /// The most requirements this creature can obey by attacking what it may without paying a
+    /// cost (508.1d): those it obeys must be no fewer. A player isn't made to pay a cost to obey
+    /// one, but may.
+    pub(crate) fn attack_requirements(&self, creature: ObjId) -> usize {
+        if !self.must_attack(creature) || self.can_attack(creature).is_err() { return 0; }
+        self.attack_recipients().into_iter()
+            .filter(|t| !self.cant_attack(creature, *t) && self.attack_cost(&[(creature, *t)]).0.is_empty())
+            .map(|t| self.requirements_obeyed(creature, t)).max().unwrap_or(0)
     }
 
     /// Could this creature be declared as an attacker: it can attack (508.1a), and no effect
@@ -292,12 +296,18 @@ impl Game {
         if let Some((creature, _)) = attacks.iter().find(|(c, t)| self.cant_attack(*c, *t)) {
             return Err(format!("{} can't attack that (508.1c)", self.obj(*creature).chars.name));
         }
-        // requirements: a creature that attacks if able, and is able, attacks (508.1d)
-        let stays = self.battlefield.iter().find(|o| {
-            self.required_to_attack(**o) && !attacks.iter().any(|(c, _)| c == *o)
-        });
-        if let Some(creature) = stays {
-            return Err(format!("{} attacks if able (508.1d)", self.obj(*creature).chars.name));
+        // requirements: a creature that attacks if able, and is able, attacks; one that attacks
+        // Gideon Jura if able attacks him, if it can: the most requirements that can be obeyed
+        // are (508.1d)
+        for creature in &self.battlefield {
+            let most = self.attack_requirements(*creature);
+            if most == 0 { continue; }
+            match attacks.iter().find(|(c, _)| c == creature) {
+                None => return Err(format!("{} attacks if able (508.1d)", self.obj(*creature).chars.name)),
+                Some((_, attacked)) if self.requirements_obeyed(*creature, *attacked) < most =>
+                    return Err(format!("{} attacks what an effect says it attacks if able (508.1d)", self.obj(*creature).chars.name)),
+                Some(_) => {}
+            }
         }
         self.decision = None;
         let mut tapped = Vec::new();

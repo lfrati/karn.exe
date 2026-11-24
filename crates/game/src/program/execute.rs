@@ -311,7 +311,7 @@ pub(super) fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt
             });
             game.begin_effect_from(changes, affected, duration.evaluate(&f.ctx), producer);
         }
-        Instr::Register { subject, rule, lifetime } => {
+        Instr::Register { subject, rule, lifetime, during } => {
             fn affected(game: &Game, f: &Frame, subject: &action::Operand) -> crate::statement::Affected {
                 use crate::statement::Affected;
                 match subject {
@@ -320,7 +320,15 @@ pub(super) fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt
                     other => Affected::Things(action::found(game, f, other)),
                 }
             }
-            game.keep(f.ctx.clone(), affected(game, f, subject), rule.clone(), *lifetime, f.slots.clone());
+            // "during that player's next turn": the player, as it is put in force
+            let lifetime = match (lifetime, during) {
+                (crate::restrict::Lifetime::NextTurnOf { began, .. }, Some(player)) => {
+                    let Some(player) = action::players(game, f, player).first().copied() else { return Ok(()) };
+                    crate::restrict::Lifetime::NextTurnOf { player: Some(player), began: *began }
+                }
+                (lifetime, _) => *lifetime,
+            };
+            game.keep(f.ctx.clone(), affected(game, f, subject), rule.clone(), lifetime, f.slots.clone());
         }
         Instr::Mana { players, production } => {
             let players = if f.pending.is_none() { action::players(game, f, players) } else { Vec::new() };

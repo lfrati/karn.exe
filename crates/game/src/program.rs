@@ -307,7 +307,9 @@ pub enum Instr {
     /// 701.44: the permanents explore, one at a time.
     Explore { objects: action::Operand },
     Arrange { players: action::Operand, verb: Verb, amount: expr::Amount, optional: bool },
-    Register { subject: action::Operand, rule: crate::restrict::Rule, lifetime: crate::restrict::Lifetime },
+    /// Keep a rule said of the subject for as long as it lasts (611.2a). `during`: the player
+    /// whose next turn it lasts through ("During target opponent's next turn, …").
+    Register { subject: action::Operand, rule: crate::restrict::Rule, lifetime: crate::restrict::Lifetime, during: Option<action::Operand> },
     ControlTurn { player: action::Operand, out: Slot },
     ExtraTurns { players: action::Operand, count: expr::Amount, after: Option<Slot>, out: Slot },
     RuleDuringCreatedTurns { turns: Slot, rule: crate::restrict::Rule },
@@ -652,8 +654,8 @@ impl Program {
                         if let Scalar::Local { slot, kind } = scalar { need(&kinds, slot, kind)?; }
                     }
                 }
-                Instr::Register { subject, rule, .. } => {
-                    for scalar in subject.scalars().into_iter().chain(rule.scalars()) {
+                Instr::Register { subject, rule, during, .. } => {
+                    for scalar in subject.scalars().into_iter().chain(rule.scalars()).chain(during.iter().flat_map(action::Operand::scalars)) {
                         if let Scalar::Local { slot, kind } = scalar { need(&kinds, slot, kind)?; }
                     }
                 }
@@ -943,7 +945,8 @@ impl fmt::Display for Instr {
             Instr::Action { action, created, .. } => write!(f, "{action:?} -> {created:?}"),
             Instr::Input { input, out } => write!(f, "s{out} = input {input:?}"),
             Instr::Capture { operand, out } => write!(f, "s{out} = capture {operand:?}"),
-            Instr::Register { subject, rule, lifetime } => write!(f, "keep {subject:?}: {rule:?}; {lifetime:?}"),
+            Instr::Register { subject, rule, lifetime, during: None } => write!(f, "keep {subject:?}: {rule:?}; {lifetime:?}"),
+            Instr::Register { subject, rule, lifetime, during: Some(player) } => write!(f, "keep {subject:?}: {rule:?}; {lifetime:?} of {player:?}"),
             Instr::Proliferate { by } => write!(f, "{by:?} proliferate"),
             Instr::ChooseSome { among, by, verb, out } => write!(f, "s{out} = {by:?} chooses some of s{among} to {verb:?} for"),
             Instr::Connive { objects } => write!(f,"{objects:?} connive"),

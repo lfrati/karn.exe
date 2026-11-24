@@ -1186,6 +1186,9 @@ enum TextStep<'a> { Reflexive(&'a Sentence, &'a [Sentence], Option<&'a ir::Event
     /// "… and the damage can't be prevented", "The damage can't be prevented." (615.12): said
     /// of the damage the act just before deals.
     DamageUnpreventable,
+    /// "During target opponent's next turn, …": the rules the sentence says last through that
+    /// player's next turn.
+    DuringNextTurn(&'a Selector), EndDuringNextTurn,
     /// "… return it to the battlefield … at the beginning of your next upkeep. It gains
     /// haste.": the sentences the delayed instruction just after this does too, after it
     /// ([`changes_what_returns_later`]).
@@ -1499,6 +1502,9 @@ fn text_steps<'a>(effect: &'a Effect, support: &Support<'_>) -> Res<Vec<TextStep
             }
             Sentence::Led { lead: Lead::Modifier(ir::effect::Modifier::AfterTurn(turn)), rest } => {
                 out.push(TextStep::AfterTurn(*turn));walk(rest,out)?;out.push(TextStep::EndAfterTurn);
+            }
+            Sentence::Led { lead: Lead::Modifier(ir::effect::Modifier::During(ir::event::During::Step(ir::event::Step::Turn, ir::event::StepOwner::Player { who, next: true }))), rest } => {
+                out.push(TextStep::DuringNextTurn(who)); walk(rest, out)?; out.push(TextStep::EndDuringNextTurn);
             }
             Sentence::Led { lead: Lead::Then, rest } => walk(rest, out)?,
             Sentence::Led { lead: Lead::WhenYouDo, .. } => return unsupported("reflexive: nested scope not lowered"),
@@ -3204,6 +3210,8 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
     let mut durations = Vec::new();
     let mut after_turns = Vec::new();
     let mut created_turn_scopes = Vec::new();
+    // "During target opponent's next turn": whose next turn the rules within last through
+    let mut next_turns: Vec<&Selector> = Vec::new();
     let mut optional_groups = 0;
     let mut each_completed = None;
     // A trailing "where X is …" defines its coordinated instruction body (107.3c).
@@ -3220,6 +3228,9 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
     for (index, part) in acts.iter().copied().chain(std::iter::once(TextStep::EndDuration)).enumerate() {
         if !created_turn_scopes.is_empty() && !matches!(part,TextStep::Rule(_)|TextStep::EndDuringCreatedTurn) {
             return unsupported("during a created turn: only a retained activation-family rule is implemented");
+        }
+        if !next_turns.is_empty() && !matches!(part, TextStep::Act(..) | TextStep::EndDuringNextTurn) {
+            return unsupported("during a player's next turn: only a rule said of a subject");
         }
         // an act said "unless" whose path did not end it does not follow the payment
         if e.unless_open.is_some() || e.unless_said.is_some() {
@@ -3753,6 +3764,8 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 created_turn_scopes.push(turn);continue;
             }
             TextStep::EndDuringCreatedTurn => { created_turn_scopes.pop();continue; }
+            TextStep::DuringNextTurn(who) => { next_turns.push(who); continue; }
+            TextStep::EndDuringNextTurn => { next_turns.pop(); continue; }
             TextStep::AfterTurn(turn) => { after_turns.push(turn);continue; }
             TextStep::EndAfterTurn => { after_turns.pop().expect("temporal scope");continue; }
             TextStep::Duration(duration) => { durations.push(duration); continue; }
@@ -3807,14 +3820,14 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 // replacement's (614.1a).
                 if exiled == crate::restrict::Exiled::Dying && let Some(dealt) = dealt_damage_by_this(who, support) {
                     let subject = e.operand(&dealt, support, &mut binder)?;
-                    e.instrs.push(Instr::Register { subject, rule, lifetime });
+                    e.instrs.push(Instr::Register { subject, rule, lifetime, during: None });
                     e.end_act(false, None);
                     continue;
                 }
                 // what it names as it is put in force, and nothing that is that later (614.1a)
                 let subject = e.operand(who, support, &mut binder)?;
                 if matches!(subject, action::Operand::All(_)) { return unsupported("exile replacement: of whatever would depart, not of objects named"); }
-                e.instrs.push(Instr::Register { subject, rule, lifetime });
+                e.instrs.push(Instr::Register { subject, rule, lifetime, during: None });
                 e.end_act(false, None);
                 continue;
             }
@@ -3828,7 +3841,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 }
                 // said of the game, not of a subject: its controller is who put it in force
                 let (rule, lifetime) = crate::restrict::Rule::sentence(stated)?;
-                e.instrs.push(Instr::Register { subject: action::Operand::Controller, rule, lifetime });
+                e.instrs.push(Instr::Register { subject: action::Operand::Controller, rule, lifetime, during: None });
                 e.end_act(false, None);
                 continue;
             }
@@ -4407,14 +4420,21 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 binder.clause = Some(expr::Subject::Actor);
             }
         }
+        if !next_turns.is_empty() && (!registration || next_turns.len() > 1 || !durations.is_empty() || optional_branch.is_some()) {
+            return unsupported("during a player's next turn: only a rule said of a subject");
+        }
         if registration {
+            // "During target opponent's next turn, creatures that player controls attack Gideon
+            // Jura if able.": the player is named before "that player" is said of
+            let during = next_turns.last().map(|who| e.operand(who, support, &mut binder)).transpose()?;
             let subject = e.clause_subject(clause, support, &mut binder)?;
             let chosen = choose_protection_color(&mut e, &mut binder, &act.action);
             let rule = crate::restrict::Rule::compile(chosen.as_ref().unwrap_or(&act.action), support, &mut binder.scope(support))?;
             rule.validate_entry_subject(None)?;
             let mods = duration_mods(clause, act, &durations);
-            let lifetime = crate::restrict::Lifetime::compile(&mods, &act.action)?;
-            e.instrs.push(Instr::Register { subject, rule, lifetime });
+            let lifetime = if during.is_some() { crate::restrict::Lifetime::during_next_turn(&mods, &act.action)? }
+                else { crate::restrict::Lifetime::compile(&mods, &act.action)? };
+            e.instrs.push(Instr::Register { subject, rule, lifetime, during });
             e.end_act(false, optional_branch);
             continue;
         }
