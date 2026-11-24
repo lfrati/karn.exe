@@ -68,7 +68,7 @@ impl Game {
         let original = proposed.obj(card).clone();
         let position = proposed.players[player].hand.iter().position(|o| *o == card).expect("foretell checked the hand");
         let triggers = proposed.triggered.len();
-        let exiled = proposed.exile_hidden(card, &[player], None).ok_or("the foretold card could not be exiled")?;
+        let exiled = proposed.exile_hidden(card, &[player], None, None).ok_or("the foretold card could not be exiled")?;
         if proposed.obj(exiled).zone != Zone::Exile { return Err("the foretold card could not be exiled".into()); }
         proposed.check_triggers();
         let triggers = triggers..proposed.triggered.len();

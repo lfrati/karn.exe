@@ -81,6 +81,9 @@ pub struct Hidden {
     /// The permanent whose controllers gain permission to look (702.75a). Grants are
     /// retained in `lookers` for this exile incarnation (406.3).
     pub watcher: Option<ObjId>,
+    /// The pile it is kept in, of the cards exiled face down how and when it was (406.4):
+    /// named by the first of them. Public.
+    pub pile: Option<ObjId>,
 }
 
 /// The special action that turns a face-down permanent face up, by the rule that permits it.
@@ -160,7 +163,7 @@ impl Game {
     /// allowed to look at it. The card it becomes in exile has no
     /// characteristics (406.3a). A replacement that puts it anywhere else leaves it face up
     /// there. Nothing else is changed: it is exiled as any card is ([`Game::exile_result`]).
-    pub(crate) fn exile_hidden(&mut self, object: ObjId, lookers: &[PlayerId], watcher: Option<ObjId>) -> Option<ObjId> {
+    pub(crate) fn exile_hidden(&mut self, object: ObjId, lookers: &[PlayerId], watcher: Option<ObjId>, pile: Option<ObjId>) -> Option<ObjId> {
         let now = self.exile_result(object)?;
         if self.obj(now).zone == Zone::Exile {
             let mut lookers = lookers.to_vec();
@@ -170,10 +173,39 @@ impl Game {
             lookers.sort_unstable();
             lookers.dedup();
             let o = self.obj_mut(now);
-            o.hidden = Some(Hidden { lookers, watcher });
+            o.hidden = Some(Hidden { lookers, watcher, pile: Some(pile.unwrap_or(now)) });
             o.chars = hidden_definition().chars();
         }
         Some(now)
+    }
+
+    /// Of these cards a player is to choose among, the cards exiled face down they may not
+    /// look at, by the piles they are kept in (406.4): each pile stays among them as no more
+    /// of its cards than may be chosen, and [`Game::from_piles`] makes each chosen one a card
+    /// of its pile picked at random. The others are left as they are.
+    pub(crate) fn unseen_piles(&self, player: PlayerId, among: &mut Vec<ObjId>, most: usize) -> Vec<Vec<ObjId>> {
+        let mut piles: Vec<(ObjId, Vec<ObjId>)> = Vec::new();
+        among.retain(|card| {
+            let o = self.obj(*card);
+            let Some(hidden) = o.hidden.as_ref().filter(|_| o.zone == Zone::Exile && !self.sees(player, *card)) else { return true };
+            let key = hidden.pile.unwrap_or(*card);
+            let at = piles.iter().position(|(k, _)| *k == key).unwrap_or_else(|| { piles.push((key, Vec::new())); piles.len() - 1 });
+            piles[at].1.push(*card);
+            piles[at].1.len() <= most
+        });
+        piles.into_iter().map(|(_, cards)| cards).collect()
+    }
+
+    /// What a choice among [`Game::unseen_piles`] stand-ins chose: for each pile, as many of
+    /// its cards as were chosen of it, picked at random (406.4).
+    pub(crate) fn from_piles(&mut self, player: PlayerId, chosen: Vec<ObjId>, piles: &[Vec<ObjId>]) -> Vec<ObjId> {
+        if piles.is_empty() { return chosen; }
+        let mut cards: Vec<ObjId> = chosen.iter().copied().filter(|c| !piles.iter().any(|pile| pile.contains(c))).collect();
+        for pile in piles {
+            let count = chosen.iter().filter(|c| pile.contains(c)).count();
+            if count > 0 { cards.extend(self.random_pick(player, pile, count)); }
+        }
+        cards
     }
 
     /// Control changing grants permission immediately, independently of observation.
@@ -459,5 +491,54 @@ impl Game {
             }
         }
         for (owner, objects) in by_owner { self.show_face_down(owner, &objects, true); }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{CardDef, Game, ObjId, Zone};
+
+    /// Three cards of player 1's hand exiled face down by one instruction, and one by another,
+    /// only player 1 allowed to look at them.
+    fn piles() -> (Game, Vec<ObjId>, ObjId) {
+        let defs = vec![CardDef::new("Bear", "{1}{G}", "Creature — Bear", "", Some((2, 2))).unwrap()];
+        let mut g = Game::new(defs, 2, 20);
+        let mut first = None;
+        let mut pile = Vec::new();
+        for _ in 0..3 {
+            let card = g.put(1, 0, Zone::Hand);
+            let now = g.exile_hidden(card, &[1], None, first).unwrap();
+            first.get_or_insert(now);
+            pile.push(now);
+        }
+        let card = g.put(1, 0, Zone::Hand);
+        let alone = g.exile_hidden(card, &[1], None, None).unwrap();
+        (g, pile, alone)
+    }
+
+    #[test]
+    fn r406_4_a_pile_of_cards_exiled_face_down_is_chosen_as_a_pile_and_a_card_of_it_at_random() {
+        let (mut g, pile, alone) = piles();
+        let mut among: Vec<ObjId> = pile.iter().copied().chain([alone]).collect();
+        // of each pile, no more cards than may be chosen stand for it
+        let piles = g.unseen_piles(0, &mut among, 1);
+        assert_eq!(among, vec![pile[0], alone]);
+        assert_eq!(piles, vec![pile.clone(), vec![alone]]);
+        let chosen = g.from_piles(0, vec![pile[0]], &piles);
+        assert!(chosen.len() == 1 && pile.contains(&chosen[0]));
+        let chosen = g.from_piles(0, vec![alone], &piles);
+        assert_eq!(chosen, vec![alone]);
+        // two of a pile chosen are two of its cards
+        let mut among: Vec<ObjId> = pile.clone();
+        let piles = g.unseen_piles(0, &mut among, 2);
+        assert_eq!(among, pile[..2].to_vec());
+        let mut chosen = g.from_piles(0, among, &piles);
+        chosen.sort();
+        chosen.dedup();
+        assert!(chosen.len() == 2 && chosen.iter().all(|c| pile.contains(c)));
+        // a player who may look at them chooses the cards themselves
+        let mut among = pile.clone();
+        assert!(g.unseen_piles(1, &mut among, 1).is_empty());
+        assert_eq!(among, pile);
     }
 }

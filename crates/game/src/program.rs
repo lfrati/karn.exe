@@ -875,7 +875,7 @@ impl Program {
                     }
                     make(&mut kinds, *out, Kind::Cards)?;
                     if let Pick::Optional { count, paid, possible } = pick {
-                        if *count != 1 || gate.is_some() { return unsupported("optional object selection: one ungated object"); }
+                        if *count == 0 || gate.is_some() { return unsupported("optional object selection: ungated objects"); }
                         make(&mut kinds, *paid, Kind::Consent)?;
                         make(&mut kinds, *possible, Kind::Consent)?;
                     }
@@ -1063,6 +1063,10 @@ fn chosen_on_resolution(set: &ObjectSet) -> Option<Zone> {
     match (&set.domain, &set.zone) {
         (Domain::Permanent, None) => Some(Zone::Battlefield),
         (Domain::Card, Some(zone)) if zone.zones.items == [ir::Zone::Graveyard] && zone.slice.is_none() => Some(Zone::Graveyard),
+        // of exile, a card exiled face down among them as its pile (406.4); "a card exiled
+        // with this artifact" is one of exile too (607.2a)
+        (Domain::Card, Some(zone)) if zone.zones.items == [ir::Zone::Exile] && zone.slice.is_none() && zone.owner.is_none() => Some(Zone::Exile),
+        (Domain::Card, None) if expr::linked_exile_filter(&set.filter).is_some() => Some(Zone::Exile),
         _ => None,
     }
 }

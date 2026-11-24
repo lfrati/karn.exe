@@ -771,12 +771,18 @@ impl Binder {
         // "It" as recipient does not name the dealer (which would require "itself").
         // Exclude it before sentence/noun narrowing, independently of amount possessors.
         let dealer = if recipient { self.clause.as_ref() } else { None };
+        // "That creature" is a permanent: not a card named in another zone that has not
+        // entered the battlefield since ("You may exile a card from your graveyard. If you
+        // do, … that creature's controller" is the target's)
+        let elsewhere = |slot: Slot, set: &ObjectSet| selector.set.domain == Domain::Permanent && set.domain == Domain::Card
+            && set.zone.as_ref().is_some_and(|z| !z.zones.items.contains(&ir::Zone::Battlefield))
+            && !self.subjects.iter().any(|n| n.slot == slot && n.object.is_some());
         let excluded = |slot| matches!(dealer, Some(expr::Subject::Local(s)) if *s == slot);
         let fits = |n: &Named| {
             let (p, o) = kinds(&n.set);
             // A mixed target can denote an object despite its player alternative.
             // Player-only producers are not bare Object-pronoun antecedents.
-            !excluded(n.slot) && ((!p || player) && (!o || object) || recipient && n.target && o)
+            !excluded(n.slot) && !elsewhere(n.slot, &n.set) && ((!p || player) && (!o || object) || recipient && n.target && o)
         };
         // What an earlier sentence or a closed conditional branch made is not what this
         // sentence names first: "If this spell was kicked, create a Soldier token. Counter
@@ -789,7 +795,7 @@ impl Binder {
         let displaced = |slot: Slot| self.at.0 != usize::MAX && made_elsewhere(slot)
             && self.subjects.iter().any(|n| n.slot != slot && n.at.0 == self.at.0 && !n.own && fits(n) && (!singular || n.bounds.1 <= 1));
         if let Some((slot, set, max)) = &self.result
-            && !excluded(*slot) && !displaced(*slot)
+            && !excluded(*slot) && !displaced(*slot) && !elsewhere(*slot, set)
         {
             let (p, o) = kinds(set);
             if (!singular || *max <= 1 || self.created_single == Some(*slot)) && (!p || player) && (!o || object) { return Ok((vec![*slot], None)); }
@@ -1823,6 +1829,9 @@ struct Emit {
     unless_open: Option<usize>,
     /// The payment of the act being lowered, until its path offers it.
     unless_said: Option<(Selector, Unless)>,
+    /// "You may exile a creature card from your graveyard": the act's object is chosen with
+    /// the consent, one choice ([`Pick::Optional`]), and the act itself asks nothing.
+    consented: bool,
 }
 
 impl Emit {
@@ -2613,6 +2622,14 @@ impl Emit {
     /// (608.2d). A permanent, or a card in a graveyard, still there when it is chosen.
     fn select_chosen(&mut self, selector: &Selector, chooser: Who, verb: Verb, role: ir::Role, enters: bool,
         support: &Support<'_>, binder: &mut Binder) -> Res<action::Operand> {
+        self.select_consented(selector, chooser, verb, role, enters, false, support, binder)
+    }
+    /// [`Emit::select_chosen`], and with `consent` "you may" asked with the choice: whether
+    /// and which are one choice of the objects that fit (608.2d), and "if you do" asks
+    /// whether one was chosen.
+    #[allow(clippy::too_many_arguments)]
+    fn select_consented(&mut self, selector: &Selector, chooser: Who, verb: Verb, role: ir::Role, enters: bool, consent: bool,
+        support: &Support<'_>, binder: &mut Binder) -> Res<action::Operand> {
         let permanent = selector.set.domain == Domain::Permanent && selector.set.zone.is_none();
         let Some(still_in) = (if permanent { Some(Zone::Battlefield) } else { chosen_on_resolution(&selector.set) }) else {
             return unsupported("selected object: a permanent or a card in a graveyard");
@@ -2626,6 +2643,16 @@ impl Emit {
             Quant::Indefinite(Count::UpTo(Amount::Const(n))) => (Pick::UpTo(n as usize), n),
             Quant::Indefinite(Count::AnyNumber) => (Pick::AnyNumber, u32::MAX),
             _ => return unsupported("selected permanent action: fixed bounded count required"),
+        };
+        let pick = match pick {
+            Pick::Exactly(count) if consent => {
+                let (paid, possible) = (self.slot(), self.slot());
+                binder.outcome = Some((action::Operand::Controller, paid, possible, self.instrs.len() + 1));
+                self.consented = true;
+                Pick::Optional { count, paid, possible }
+            }
+            _ if consent => return unsupported("selected object: \"you may\" with a choice of other than a fixed number"),
+            pick => pick,
         };
         let set = expr::Set::compile(&selector.set, support, &mut binder.scope(support))?;
         let (from, selected, subjects) = (self.slot(), self.slot(), self.slot());
@@ -2694,7 +2721,13 @@ impl Emit {
         if objects.items.iter().filter(|s| chosen(s)).count() > 1 || objects.conj != ir::Conj::And && objects.items.len() > 1 {
             return unsupported("selected object: one description");
         }
-        if optional || binder.each.is_some() {
+        // "You may exile a creature card from your graveyard": the controller's one choice of
+        // whether and which, of a public zone, for a move that asks nothing more. (A destroy
+        // chosen may still not be done, and "if you do" asks whether it was.)
+        let consent = optional && objects.items.len() == 1 && !from_their_hand(&objects.items[0])
+            && binder.actor.is_none() && controller_only(clause.subject.as_ref())
+            && matches!(verb, Verb::Move | Verb::Exile);
+        if optional && !consent || binder.each.is_some() {
             return unsupported("selected object: one mandatory choice by the controller");
         }
         let chooser = if binder.actor.is_none() && controller_only(clause.subject.as_ref()) { Who::Controller } else {
@@ -2702,7 +2735,7 @@ impl Emit {
             self.actor(clause, support, binder)?
         };
         let operands: Vec<action::Operand> = objects.items.iter().map(|s| if from_their_hand(s) { self.chosen_from_hand(s, chooser, support, binder) }
-            else if chosen(s) { self.select_chosen(s, chooser, verb, role, enters, support, binder) } else { self.object(s, support, binder) }).collect::<Res<_>>()?;
+            else if chosen(s) { self.select_consented(s, chooser, verb, role, enters, consent, support, binder) } else { self.object(s, support, binder) }).collect::<Res<_>>()?;
         if objects.items.len() == 1 { return Ok(operands); }
         // "exile it and up to one creature …, then return those cards": what is said of them
         // after is said of every group together, not of the one chosen alone
@@ -3189,7 +3222,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
     }
     let heads: Vec<&Clause> = effect.0.iter().filter_map(head).collect();
     let base = binder.sentences;
-    let mut e = Emit { instrs: Vec::new(), acts: Vec::new(), next: initial.len(), targets: Vec::new(), relative_targets: None, sentence_targets: 0, target_relations: Vec::new(), announced_mask: crate::announcement::ANY, alternative_kicker_targets: false, target_x: None, clause_subject: None, contrast: None, captured_source: None, unless_open: None, unless_said: None };
+    let mut e = Emit { instrs: Vec::new(), acts: Vec::new(), next: initial.len(), targets: Vec::new(), relative_targets: None, sentence_targets: 0, target_relations: Vec::new(), announced_mask: crate::announcement::ANY, alternative_kicker_targets: false, target_x: None, clause_subject: None, contrast: None, captured_source: None, unless_open: None, unless_said: None, consented: false };
     fn group_subject(clause: &Clause) -> Option<&ObjectSet> {
         match clause.subject.as_ref()? {
             Subject::Set(set) if set.domain == Domain::Permanent => Some(set),
@@ -5990,7 +6023,8 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 }
                 _ => None,
             };
-            let attempt = if ordinary_attempt && !optional_selection {
+            let consented = std::mem::take(&mut e.consented);
+            let attempt = if ordinary_attempt && !optional_selection && !consented {
                 if optional && !controller_only(clause.subject.as_ref()) && !matches!(act.action, Action::GetCounters { .. }) && !matches!(&instruction, action::Action::Draw {..} | action::Action::Mill {..} | action::Action::GainLife {..} | action::Action::LoseLife {..} | action::Action::Create {..} | action::Action::GetEmblem {..}) {
                     return unsupported("optional object action by several actors not lowered");
                 }

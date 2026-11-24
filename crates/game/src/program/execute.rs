@@ -723,6 +723,12 @@ pub(super) fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt
                     evaluated = Pick::Exactly(n.checked(game, &f.ctx, f)? as usize);
                     &evaluated
                 } else { pick };
+                let most = match pick {
+                    Pick::Optional { count, .. } => *count,
+                    Pick::Exactly(n) | Pick::Whole(n) | Pick::UpTo(n) => *n,
+                    _ => usize::MAX,
+                };
+                let piles = game.unseen_piles(player, &mut fitting, most);
                 chosen = match pick {
                     Pick::Optional { count, paid, possible } => {
                         let feasible = fitting.len() >= *count;
@@ -755,6 +761,7 @@ pub(super) fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt
                     },
                     _ => fitting,
                 };
+                chosen = game.from_piles(player, chosen, &piles);
             }
             f.slots[*out] = Some(Value::Cards(chosen));
         }
@@ -797,11 +804,14 @@ pub(super) fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt
             // the permanent whose controller may look at it (702.75a)
             let watcher = hidden.as_ref().filter(|h| h.watched).and_then(|_| f.ctx.source);
             let mut arrived = Vec::new();
+            // the cards it exiles face down are one pile (406.4)
+            let mut pile = None;
             for card in f.cards(*from) {
                 let now = match &lookers {
-                    Some(lookers) => game.exile_hidden(card, lookers, watcher),
+                    Some(lookers) => game.exile_hidden(card, lookers, watcher, pile),
                     None => game.exile_result(card),
                 };
+                if lookers.is_some() && let Some(now) = now && game.obj(now).hidden.is_some() { pile.get_or_insert(now); }
                 // exiled with this object, as by its ability (607.2a)
                 if let (Some(now), Some(source)) = (now, f.ctx.source) && game.obj(now).zone == Zone::Exile {
                     game.exiled_with.push((source, f.ctx.ability.clone(), now, f.ctx.link_generation));

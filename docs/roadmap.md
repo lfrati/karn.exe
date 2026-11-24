@@ -259,6 +259,16 @@ remain refused. Continue until the user explicitly stops the builders.
   Essence Vortex ("unless"), damage of several instructions (Skeletonize, Reckless Blaze,
   Ghired's Belligerence) and "can't be regenerated" with no duration (Whippoorwill) remain
   refused.
+- "You may [exile, return, put] a card from a graveyard or from exile": whether and which
+  are one choice of the controller (608.2d), and "if you do" asks whether they were chosen.
+  A card exiled face down that player may not look at is chosen as its pile, the card one
+  of that pile at random (406.4); a pile is the cards one instruction exiled face down. "A
+  creature card exiled with this creature" is chosen the same way, of the cards its linked
+  ability exiled (607.2a). A
+  destroy (which may not be done once chosen), counters, a choice of other than a fixed
+  number (Oblivion Sower, Specter of Mortality), and one made by another player or by each
+  player (Carrion Rats) remain refused, as do a card from a hand and a graveyard together
+  (Swift Warkite, Dakkon, Kastral, Dread Tiller).
 
 #### Quality (worktree `quality`)
 
