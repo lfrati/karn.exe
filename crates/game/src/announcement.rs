@@ -289,13 +289,19 @@ pub(crate) struct Facts {
 impl Facts {
     pub(crate) fn compile(effect: &ir::Effect, support: &crate::select::Support<'_>) -> Res<Self> {
         use ir::{Action, Sentence, Destination};
+        // "at the beginning of the next turn's upkeep", "at end of combat": a delayed
+        // triggered ability does it (603.7), not this one
+        fn later(m: &ir::effect::Modifier) -> bool { matches!(m, ir::effect::Modifier::At { .. } | ir::effect::Modifier::AtEndOfCombat) }
         fn acts<'a>(sentence: &'a Sentence, out: &mut Vec<&'a ir::effect::Act>) {
             match sentence {
                 Sentence::Do(b) => for clause in std::iter::once(&b.first).chain(b.rest.iter().map(|(_, c)| c)) {
-                    out.extend(std::iter::once(&clause.first).chain(clause.rest.iter().map(|(_, a)| a)));
+                    out.extend(std::iter::once(&clause.first).chain(clause.rest.iter().map(|(_, a)| a)).filter(|a| !a.mods.iter().any(later)));
                 },
-                // Registering a delayed ability does not perform that child's instructions now.
+                // Registering a delayed ability does not perform that child's instructions now:
+                // Barbed Sextant's "Draw a card at the beginning of the next turn's upkeep"
+                // moves no card of a library as its mana ability resolves (605.1a, 603.7a).
                 Sentence::Led { lead: ir::Lead::When { .. }, .. } => {},
+                Sentence::Led { lead: ir::Lead::Modifier(m), .. } if later(m) => {},
                 Sentence::Led { rest, .. } => acts(rest, out), _ => {},
             }
         }
