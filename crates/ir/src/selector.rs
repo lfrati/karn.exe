@@ -614,6 +614,11 @@ pub enum Ref {
     /// "the monarch": the player who has that designation (725.1, 725.3), if any; a static
     /// effect about the monarch does nothing while there is none (725.5).
     Monarch,
+    /// "that library", "that graveyard": the owner of the zone of that kind the text last spoke
+    /// of, as the owner of a zone ("the top two cards of that library", "from that graveyard").
+    /// Not "that player's": the zone said before may be another player's ("If an opponent would
+    /// search a library, that player searches the top four cards of that library instead").
+    ThatZone,
     /// "the amassed Army": the Army the amass before put counters on (701.47).
     AmassedArmy,
     /// "all revealed cards not cast this way": every card the effect revealed, the one it

@@ -1950,6 +1950,33 @@ fn redirect_to() -> P<Substitute> {
     )
 }
 
+/// "that player searches the top four cards of that library instead" (701.23): the one who would
+/// search searches part of the library they would search. "That library" is the library
+/// searched, whoever owns it.
+fn searches_part() -> P<Substitute> {
+    let part = |s: &Selector| {
+        let zone = s.set.zone.as_ref()?;
+        let that = Selector::new(Quant::Definite(Ref::ThatZone), ObjectSet::of(Domain::Player));
+        let plain = ObjectSet { zone: Some(zone.clone()), ..ObjectSet::of(Domain::Card) };
+        (s.quant == Quant::The && s.set == plain && zone.zones == ir::Coord::one(Zone::Library)
+            && zone.owner.as_deref() == Some(&that) && matches!(zone.slice, Some(Slice::Top(_))))
+            .then(|| zone.clone())
+    };
+    lit("that player searches").then_keep(&selectors().selector).skip(&lit("instead")).map(
+        move |s| part(&s).map(Substitute::Searches),
+        |w| match w {
+            Substitute::Searches(zone) => Some(Selector::new(Quant::The, ObjectSet { zone: Some(zone.clone()), ..ObjectSet::of(Domain::Card) })),
+            _ => None,
+        },
+    )
+}
+
+/// An event of searching a library: what [`searches_part`] replaces.
+fn search_event() -> P<EventPattern> {
+    let search = |p: &EventPattern| !p.actions.is_empty() && p.actions.iter().all(|a| matches!(a, EventAction::Searches { .. }));
+    crate::event::would().map(move |p| search(&p).then_some(p), move |p: &EventPattern| search(p).then(|| p.clone()))
+}
+
 /// An event of damage being dealt: what a redirection redirects.
 fn damage_event() -> P<EventPattern> {
     let damage = |p: &EventPattern| {
@@ -1975,8 +2002,9 @@ fn replacement(body: &P<Body>) -> P<Static> {
     let would = replacement_of(&crate::event::would(), &substitute(body), false);
     let tapped = replacement_of(&tapped_for_mana(), &produces(), true);
     let redirected = replacement_of(&damage_event(), &redirect_to(), true);
+    let searched = replacement_of(&search_event(), &searches_part(), true);
     let caused = replacement_of(&crate::event::caused(), &substitute(body), false);
-    alt("replacement", vec![would, tapped, redirected, caused])
+    alt("replacement", vec![would, tapped, redirected, searched, caused])
 }
 
 /// "Damage that would reduce your life total to less than 1 reduces it to 1 instead": a

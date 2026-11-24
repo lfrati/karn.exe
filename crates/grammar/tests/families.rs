@@ -1055,6 +1055,44 @@ fn r725_1_the_monarch_names_a_player() {
     for text in ["~ can't be blocked by creatures the monarchs control.", "Destroy target creature the monarch."] { declines(text); }
 }
 
+/// CR 401.4: "on the bottom of that library" puts cards in the library the text spoke of, the
+/// place an unsaid library names.
+#[test]
+fn r401_4_that_library_is_the_library_said_before() {
+    let (said, _) = read("Look at the top two cards of target opponent's library. Exile one of them face down and put the other on the bottom of that library.");
+    let (unsaid, _) = read("Look at the top two cards of target opponent's library. Exile one of them face down and put the other on the bottom.");
+    assert_eq!(said, unsaid);
+    let (said, _) = read("Look at the top five cards of target player's library. Put any number of them on the bottom of that library in any order and the rest on top of the library in any order.");
+    let (unsaid, _) = read("Look at the top five cards of target player's library. Put any number of them on the bottom in any order and the rest on top in any order.");
+    assert_eq!(said, unsaid);
+    declines("Look at the top two cards of target opponent's library. Put one of them on the bottom of that libraries.");
+}
+
+/// CR 400.1 and 401.1: "that library", "that graveyard" name the zone the text spoke of again;
+/// its owner is whoever owns that zone, not the player said last.
+#[test]
+fn r400_1_that_zone_names_the_zone_said_before() {
+    for text in [
+        "Whenever an opponent shuffles their library, you may look at the top two cards of that library. You may exile one of those cards. Then put the rest on top in any order.",
+        "When ~ enters, for each graveyard with an instant or sorcery card in it, exile target instant or sorcery card from that graveyard.",
+        "{1}{B}: Exile target card from an opponent's graveyard. If no cards are in that graveyard, draw a card.",
+    ] {
+        let (value, printed) = read(text);
+        assert_eq!(printed, text);
+        assert!(serde_json::to_string(&value).unwrap().contains("ThatZone"), "{text}");
+    }
+    let (value, printed) = read("If an opponent would search a library, that player searches the top four cards of that library instead.");
+    assert_eq!(printed, "If an opponent would search a library, that player searches the top four cards of that library instead.");
+    let json = serde_json::to_string(&value).unwrap();
+    assert!(json.contains("Searches") && json.contains("ThatZone") && json.contains(r#""Top":{"Const":4}"#), "{json}");
+    for text in [
+        "Exile target card from that graveyards.",
+        "Exile all cards from that hand or graveyard.",
+        "If an opponent would search a library, that player searches that library instead.",
+        "If an opponent would draw a card, that player searches the top four cards of that library instead.",
+    ] { declines(text); }
+}
+
 /// CR 701.38: what a vote gave the most votes, and how many votes an option got.
 #[test]
 fn r701_38_most_votes_and_the_number_of_votes() {

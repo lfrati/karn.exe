@@ -2396,8 +2396,13 @@ fn zone_spec(prep: ZonePrep, player_sg: &P<Selector>) -> P<ZoneSpec> {
         |(o, zones)| Some(ZoneSpec { zones, owner: Some(Box::new(o)), slice: None }),
         move |zs| {
             let o = (**zs.owner.as_ref()?).clone();
-            (o != ap2 && zs.slice.is_none()).then(|| (o, zs.zones.clone()))
+            (o != ap2 && o != that_zone() && zs.slice.is_none()).then(|| (o, zs.zones.clone()))
         },
+    );
+    // "from that graveyard", "in that hand": the zone the text last spoke of, said again
+    let again = lit(p).skip(&lit("that")).then_keep(&zone_noun(Number::Sg)).map(
+        |z| Some(ZoneSpec::of(z, Some(that_zone()))),
+        |zs| (zs.owner.as_deref() == Some(&that_zone()) && zs.slice.is_none()).then(|| zs.zone()).flatten(),
     );
     // "in your opponents' graveyards"
     let theirs = lit(&format!("{p} your opponents'")).then_keep(&zone_noun(Number::Pl)).map(
@@ -2435,6 +2440,7 @@ fn zone_spec(prep: ZonePrep, player_sg: &P<Selector>) -> P<ZoneSpec> {
     let mut v = vec![
         exile_and,
         owned,
+        again,
         all,
         theirs,
         each,
@@ -2455,7 +2461,7 @@ fn zone_spec(prep: ZonePrep, player_sg: &P<Selector>) -> P<ZoneSpec> {
             // "a spell from the top of your library": the one card on top of that library
             // (401.1), where a cast or play permission finds it (601.3). A bare card there is
             // the slice "the top card of your library"; `fold_posts` leaves it to that rule.
-            v.push(lit("from the top of").then_keep(&owner).skip(&lit("library")).map(
+            v.push(lit("from the top of").then_keep(&zone_said(player_sg)).skip(&lit("library")).map(
                 |o| Some(ZoneSpec { zones: ir::Coord::one(Zone::Library), owner: Some(Box::new(o)), slice: Some(Slice::Top(Amount::Const(1))) }),
                 |zs| match (zs.zone(), &zs.owner, &zs.slice) {
                     (Some(Zone::Library), Some(o), Some(Slice::Top(Amount::Const(1)))) => Some((**o).clone()),
@@ -2466,6 +2472,18 @@ fn zone_spec(prep: ZonePrep, player_sg: &P<Selector>) -> P<ZoneSpec> {
         ZonePrep::OtherThan => {}
     }
     alt("zone", v)
+}
+
+/// The owner of "that library", "that graveyard": whoever owns the zone of that kind the text
+/// last spoke of ([`Ref::ThatZone`]).
+fn that_zone() -> Selector {
+    Selector::new(Quant::Definite(Ref::ThatZone), ObjectSet::of(Domain::Player))
+}
+
+/// Whose zone, said before one zone noun: as [`zone_owner`], or "that" ("the top two cards of
+/// that library").
+fn zone_said(player_sg: &P<Selector>) -> P<Selector> {
+    alt("zone said", vec![zone_owner(player_sg), lit("that").to(that_zone())])
 }
 
 /// Whose zone: "your", "their", "a" ("a graveyard"), "target player's", "an opponent's".
@@ -3736,7 +3754,7 @@ fn slice(player_sg: &P<Selector>) -> P<Selector> {
     let measured = lit("a number of cards from the")
         .then_keep(&end)
         .skip(&lit("of"))
-        .then(&zone_owner(player_sg))
+        .then(&zone_said(player_sg))
         .skip(&lit("library equal to"))
         .then(&amount)
         .map(
@@ -3769,7 +3787,7 @@ fn slice(player_sg: &P<Selector>) -> P<Selector> {
     let top_of_kind = lit("the top")
         .then_keep(&crate::words::type_word(Number::Sg, false))
         .skip(&lit("card of"))
-        .then(&zone_owner(player_sg))
+        .then(&zone_said(player_sg))
         .skip(&lit("graveyard"))
         .map(
             |(kind, owner)| {
@@ -3793,7 +3811,7 @@ fn slice(player_sg: &P<Selector>) -> P<Selector> {
                     .then(|| (kind.clone(), owner))
             },
         );
-    let by_count = alt("slice", vec![the_top, from_top]).then(&zone_owner(player_sg)).skip(&lit("library")).map(
+    let by_count = alt("slice", vec![the_top, from_top]).then(&zone_said(player_sg)).skip(&lit("library")).map(
         |((top, n), owner)| {
             let mut set = ObjectSet::of(Domain::Card);
             set.zone = Some(ZoneSpec {
@@ -3821,19 +3839,24 @@ fn slice(player_sg: &P<Selector>) -> P<Selector> {
 
 /// The set a slice selector has: cards in a library slice and nothing else.
 /// A whole zone as a definite description: "your hand", "target player's graveyard", "your
-/// library" (every card in it), and several of one player: "their hand and graveyard".
+/// library" (every card in it), and several of one player: "their hand and graveyard". "That
+/// library" is one zone said again.
 fn whole_zone(player_sg: &P<Selector>) -> P<Selector> {
-    zone_owner(player_sg).then(&zones()).map(
-        |(owner, zones)| {
+    let one = |owner: &Selector, zones: &ir::Coord<Zone>| *owner != that_zone() || zones.items.len() == 1;
+    zone_said(player_sg).then(&zones()).map(
+        move |(owner, zones)| {
+            if !one(&owner, &zones) {
+                return None;
+            }
             let mut set = ObjectSet::of(Domain::Card);
             set.zone = Some(ZoneSpec { zones, owner: Some(Box::new(owner)), slice: None });
             Some(Selector::new(Quant::The, set))
         },
-        |s: &Selector| {
+        move |s: &Selector| {
             let z = s.set.zone.as_ref()?;
             let owner = z.owner.as_deref()?;
             let bare = ObjectSet { zone: s.set.zone.clone(), ..ObjectSet::of(Domain::Card) };
-            (s.quant == Quant::The && s.set == bare && z.slice.is_none() && s.chooser.is_none() && s.random.is_none())
+            (s.quant == Quant::The && s.set == bare && z.slice.is_none() && s.chooser.is_none() && s.random.is_none() && one(owner, &z.zones))
                 .then(|| (owner.clone(), z.zones.clone()))
         },
     )

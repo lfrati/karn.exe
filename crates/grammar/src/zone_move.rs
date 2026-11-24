@@ -204,6 +204,10 @@ fn library_place(n: Number) -> P<LibraryPlace> {
             _ => None,
         },
     );
+    // "on the bottom of that library", "on top of the library": the library the text last spoke
+    // of, said again. The same place as the unsaid one, and printed so.
+    let again = alt("that library", vec![lit("that library"), lit("the library")]);
+    let said_again = end.skip(&again).map(|p| Some((None, false, p)), |_: &Ordered| None).alias();
     let back_named = lit("back on top of").then_keep(&library).map(
         |w| Some((Some(w), true, Top)),
         |o: &Ordered| match o {
@@ -212,7 +216,7 @@ fn library_place(n: Number) -> P<LibraryPlace> {
         },
     );
     let back = lit("back").to((None, true, Top));
-    let ordered = alt("placement", vec![named, bare, back_named, back]).then(&order.opt()).map(
+    let ordered = alt("placement", vec![named, bare, said_again, back_named, back]).then(&order.opt()).map(
         |((library, back, p), order)| Some(LibraryPlace { library, back, position: Position::One(p), order }),
         |p: &LibraryPlace| match p {
             LibraryPlace { library, back, position: Position::One(q), order } => Some(((library.clone(), *back, *q), *order)),

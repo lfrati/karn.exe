@@ -383,6 +383,10 @@ pub enum Substitute {
     /// dealt to another; the damage keeps its source, so saying it as passive or active is one
     /// meaning. Only with an event of dealing damage.
     Redirect(Party),
+    /// "that player searches the top four cards of that library instead": the search is of that
+    /// part of the library searched only, and is still a search of that library (701.23; Aven
+    /// Mindcensor rulings). Only with an event of searching.
+    Searches(crate::selector::ZoneSpec),
 }
 
 /// What mana a replaced mana production becomes (106.12b).

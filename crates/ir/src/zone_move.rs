@@ -12,9 +12,10 @@ use serde::Serialize;
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct LibraryPlace {
     /// "on top of your library", "on the bottom of its owner's library". None: the library the
-    /// text last spoke of, which it does not repeat ("put the rest on the bottom in a random
-    /// order" after "look at the top six cards of your library"; "search your library …, then
-    /// shuffle and put that card on top").
+    /// text last spoke of, unsaid or said again as "that library" ("put the rest on the bottom
+    /// in a random order" after "look at the top six cards of your library"; "search your
+    /// library …, then shuffle and put that card on top"; "put the other on the bottom of that
+    /// library").
     pub library: Option<Whose>,
     /// "put one of them back on top of your library", "put them back in any order": into the
     /// library they were looked at in, so the library is the one they came from. With
