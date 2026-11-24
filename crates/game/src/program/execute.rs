@@ -351,12 +351,24 @@ pub(super) fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt
                 _ => unreachable!("target-change answer validated before dispatch"),
             }
         }
-        Instr::CopyStack { cards, times, retarget, out } => {
+        Instr::CopyStack { cards, times, by, retarget, out } => {
             let mut pending = match f.pending.take() {
                 Some(Pending::Copies(pending)) => pending,
                 None => {
+                    // no player to put a copy onto the stack: none is made (800.4a)
+                    let Some(player) = f.actor(*by) else {
+                        f.slots[*out] = Some(Value::Subjects(Vec::new()));
+                        return Ok(());
+                    };
                     let times = times.checked(game, &f.ctx, f)?;
-                    crate::copy::StackCopies::new(action::named(game, f, cards).into_iter().filter_map(|t| if let Target::Object(o) = t { Some(o) } else { None }).collect(), times, f.ctx.controller, *retarget)
+                    let originals: Vec<ObjId> = action::named(game, f, cards).into_iter().filter_map(|t| if let Target::Object(o) = t { Some(o) } else { None }).collect();
+                    // "a new target" is "new targets" only of a copy with at most one (115.7d)
+                    if *retarget == crate::program::Retarget::NewOne
+                        && originals.iter().any(|o| game.get_object(*o).is_some_and(|o| o.targets.iter().map(Vec::len).sum::<usize>() > 1))
+                    {
+                        return Err(Halt::Unsupported(crate::Unsupported("copy: a new target for a copy with several targets".into())));
+                    }
+                    crate::copy::StackCopies::new(originals, times, player, *retarget != crate::program::Retarget::Kept)
                 },
                 _ => unreachable!("spell copy owns its target choice"),
             };

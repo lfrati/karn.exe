@@ -117,6 +117,19 @@ pub enum Who {
     Of(Slot),
 }
 
+/// Whether a stack copy's controller may choose new targets for it before it is put onto
+/// the stack (707.10c).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Retarget {
+    /// Its targets are those of the original (707.10).
+    Kept,
+    /// "You may choose new targets for the copy" (115.7d).
+    New,
+    /// "May choose a new target for that copy": said of a copy with at most one target, for
+    /// which it is the same choice (115.7d). A copy with several is not followed.
+    NewOne,
+}
+
 /// Who may see a shown group (701.20: everyone; looking at cards: one player).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Audience {
@@ -280,7 +293,9 @@ pub enum Instr {
     /// zone it is in, for the controller to cast (707.12). `out`: the copies.
     CopyCards { cards: action::Operand, times: expr::Amount, out: Slot },
     /// Copies of already-announced spells, with retained per-copy optional new targets (707.10).
-    CopyStack { cards: action::Operand, times: expr::Amount, retarget: bool, out: Slot },
+    /// `by`: the player who puts them onto the stack, who controls them and chooses their new
+    /// targets (707.10, 707.10c).
+    CopyStack { cards: action::Operand, times: expr::Amount, by: Who, retarget: Retarget, out: Slot },
     ChangeTargets { object: action::Operand, policy: crate::state::TargetPolicy },
     Connive { objects: action::Operand },
     /// 701.44: the permanents explore, one at a time.
@@ -688,6 +703,7 @@ impl Program {
                     for scalar in object.scalars() { if let Scalar::Local { slot, kind } = scalar { need(&kinds, slot, kind)?; } }
                 }
                 Instr::CopyCards { cards, times, out } | Instr::CopyStack { cards, times, out, .. } => {
+                    if let Instr::CopyStack { by, .. } = i { who(&kinds, *by)?; }
                     let mut scalars = cards.scalars(); scalars.extend(times.scalars());
                     for scalar in scalars { if let Scalar::Local { slot, kind } = scalar { need(&kinds, slot, kind)?; } }
                     make(&mut kinds, *out, Kind::Subjects)?;
@@ -926,7 +942,11 @@ impl fmt::Display for Instr {
             Instr::Permit { player, cards, play, until } => write!(f, "{player:?} may {} {cards:?} until {until:?}", if *play { "play" } else { "cast" }),
             Instr::Cast { player, cards, offered, costs, cast, possible, from, rider, .. } => write!(f, "#{offered}, s{cast}, s{possible} = {player:?} casts of {cards:?} from {from:?} now, for {costs:?}, carrying {rider:?}, or declines"),
             Instr::ChangeTargets { object, policy } => write!(f, "change {object:?} targets: {policy:?}"),
-            Instr::CopyStack { cards, times, retarget, out } => write!(f, "s{out} = {times:?} stack copies of {cards:?}, new targets={retarget}"),
+            Instr::CopyStack { cards, times, by, retarget, out } => {
+                let retarget = match retarget { Retarget::Kept => "false", Retarget::New => "true", Retarget::NewOne => "one" };
+                let by = match by { Who::Controller => String::new(), by => format!(" by {by:?}") };
+                write!(f, "s{out} = {times:?} stack copies of {cards:?}{by}, new targets={retarget}")
+            }
             Instr::CopyCards { cards, times, out } => write!(f, "s{out} = {times:?} copies of each of {cards:?}"),
             Instr::Search { action, by, whose, own: false, out } => write!(f, "s{out} = {by:?} searches {action:?} in {whose:?}"),
             Instr::Search { action, whose, own: true, out, .. } => write!(f, "s{out} = each of {whose:?} searches their own: {action:?}"),

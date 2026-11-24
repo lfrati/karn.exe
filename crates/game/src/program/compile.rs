@@ -1039,7 +1039,10 @@ fn single_actor(subject: Option<&Subject>) -> bool {
         None => true,
         Some(Subject::Selector(s)) => matches!(&s.quant,
             Quant::Definite(Ref::You | Ref::DefendingPlayer | Ref::ControllerOf(_) | Ref::OwnerOf(_) | Ref::Anaphor(ir::Anaphor::That | ir::Anaphor::It | ir::Anaphor::The { plural: false }))
-            | Quant::Target(Count::Exactly(Amount::Const(1)) | Count::UpTo(Amount::Const(1)))),
+            | Quant::Target(Count::Exactly(Amount::Const(1)) | Count::UpTo(Amount::Const(1))))
+            // "that player or that permanent's controller": whichever applies of one target,
+            // which its operand proves ([`Emit::operand`])
+            || matches!(&s.quant, Quant::Definite(Ref::Either(items)) if items.len() == 2),
         _ => false,
     }
 }
@@ -1160,6 +1163,20 @@ fn each_moves_all_their_own(players: &Selector, groups: &[(ir::action::Objects, 
         && players.chooser.is_none() && players.random.is_none()
         && !groups.is_empty() && groups.iter().all(|(objects, to)| objects.items.iter().all(theirs)
             && matches!(to, Destination::Hand(Whose::Their | Whose::Owner | Whose::Owners) | Destination::Graveyard(Whose::Their | Whose::Owner | Whose::Owners)))
+}
+
+/// "If the player does, they may copy this spell and may choose a new target for that copy.":
+/// one player other than the controller who copies a spell and may choose new targets for
+/// the copy. Both are that player's to do: the copy is put onto the stack under their control
+/// and its controller chooses its targets (707.10, 707.10c).
+fn copied_by_its_player(clause: &Clause) -> bool {
+    let one = matches!(clause.subject.as_ref(), Some(Subject::Selector(s))
+        if s.set == ObjectSet::of(Domain::Player) && s.chooser.is_none() && s.random.is_none()
+        && matches!(s.quant, Quant::Definite(Ref::ControllerOf(_) | Ref::Anaphor(ir::Anaphor::That | ir::Anaphor::They | ir::Anaphor::The { plural: false }))));
+    let copies = !clause.first.may && clause.first.mods.is_empty() && matches!(clause.first.action, Action::Copy(_));
+    let retargets = |act: &ir::effect::Act| act.may && act.mods.is_empty() && matches!(&act.action, Action::ChooseNewTargets { for_, .. }
+        if matches!(for_.items.as_slice(), [s] if matches!(s.quant, Quant::Definite(Ref::Anaphor(ir::Anaphor::Copy { .. } | ir::Anaphor::ThatCopy)))));
+    one && copies && !clause.rest.is_empty() && clause.rest.iter().all(|(join, act)| *join == Join::And && retargets(act))
 }
 
 /// Every act of the clause one its player does of their own library and what they find in
@@ -1310,7 +1327,7 @@ fn text_steps<'a>(effect: &'a Effect, support: &Support<'_>) -> Res<Vec<TextStep
                         continue;
                     }
                     if clause.may && !alone {
-                        if !controller_only(clause.subject.as_ref()) && !done_by_its_player(clause) {
+                        if !controller_only(clause.subject.as_ref()) && !done_by_its_player(clause) && !copied_by_its_player(clause) {
                             return unsupported("optional compound instruction by another chooser not lowered");
                         }
                         out.push(TextStep::May(clause));
@@ -1997,6 +2014,41 @@ impl Emit {
                 self.reference_operand(s, referent, support, binder)
             },
             Quant::Definite(Ref::ControllerOf(of)) => Ok(Operand::ControllerOf(Box::new(self.possessor(of, support, binder)?))),
+            // "that player or that permanent's controller", of "any target"; "that player or that
+            // planeswalker's controller", of "target player or planeswalker": whichever applies
+            // of the one player or object that target is (115.4), the player or the object's
+            // controller as it last existed (608.2h). Both alternatives name that one target and
+            // together say what it can be; other alternatives are not followed here.
+            Quant::Definite(Ref::Either(items)) => {
+                let refused = || unsupported("either player: the player or the controller of one named target");
+                let that = |s: &Selector| matches!(s.quant, Quant::Definite(Ref::Anaphor(ir::Anaphor::That))) && s.chooser.is_none() && s.random.is_none();
+                let plain = |set: &ObjectSet| set.controller.is_none() && set.owner.is_none() && set.caster.is_none() && set.zone.is_none() && !set.other;
+                let object = match items.as_slice() {
+                    [a, b] | [b, a] if that(a) && a.set == ObjectSet::of(Domain::Player) && b.set == ObjectSet::of(Domain::Player)
+                        && b.chooser.is_none() && b.random.is_none() => match &b.quant {
+                        Quant::Definite(Ref::ControllerOf(of)) if that(of) && plain(&of.set) && kinds(&of.set) == (false, true) => Some(of.set.clone()),
+                        _ => None,
+                    },
+                    _ => None,
+                };
+                let Some(object) = object else { return refused() };
+                // the one antecedent both alternatives name: "that player or permanent"
+                let mixed = Selector::new(Quant::Definite(Ref::Anaphor(ir::Anaphor::That)),
+                    ObjectSet::of(Domain::Union(vec![ObjectSet::of(Domain::Player), object.clone()])));
+                let Operand::Reference(one) = self.operand_scoped(&mixed, support, binder, dealer)? else { return refused() };
+                let Some(named) = binder.subjects.iter().find(|n| (n.slot == one || n.object == Some(one)) && n.bounds.1 <= 1) else { return refused() };
+                // every object the target can be is one "that permanent" names: not a
+                // planeswalker of "any target" said "that creature's controller or that player"
+                let covered = if object == ObjectSet::of(Domain::Permanent) {
+                    named.set.possibilities().iter().all(|p| p.domain.sort == ir::Sort::Player || p.domain.sort.is_a(ir::Sort::Permanent))
+                } else {
+                    matches!(&named.set.domain, Domain::Union(arms) if arms.iter().all(|arm| *arm == ObjectSet::of(Domain::Player) || *arm == object))
+                };
+                if !covered { return refused(); }
+                // the player, kept as the act begins: "If the player does, they may …"
+                let operand = Operand::Subject(expr::Subject::ControllerOf(Box::new(expr::Subject::Local(one))));
+                Ok(self.keep(operand, ObjectSet::of(Domain::Player), 1, binder))
+            }
             // said by a permanent's ability, of the creature it is on (508.5)
             Quant::Definite(Ref::DefendingPlayer) if !support.spell_text() => Ok(Operand::DefendingPlayer),
             Quant::Definite(Ref::OwnerOf(of)) => Ok(Operand::OwnerOf(Box::new(self.possessor(of, support, binder)?))),
@@ -3790,12 +3842,22 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             continue;
         }
         if let Action::Copy(what) = &act.action {
-            if clause.may || act.may || !durations.is_empty() || !controller_only(clause.subject.as_ref()) { return Err(not_lowered(&act.action)); }
+            // "they may copy this spell and may choose …": the optional clause's gate asked its
+            // player, who puts the copy onto the stack and controls it (707.10)
+            let gated = clause.may && optional_groups > 0;
+            let by = match binder.actor {
+                Some(actor) if gated => Who::Of(actor),
+                _ if controller_only(clause.subject.as_ref()) => Who::Controller,
+                _ => return Err(not_lowered(&act.action)),
+            };
+            if clause.may && !gated || act.may || !durations.is_empty() { return Err(not_lowered(&act.action)); }
             fn stack(set: &ObjectSet) -> bool { matches!(set.domain, Domain::Spell | Domain::Ability) }
+            // "copy this spell" said by an instant or sorcery: the spell as it resolves
+            let this_spell = |s: &Selector| support.spell_text() && s.quant == Quant::Definite(Ref::This) && s.chooser.is_none() && s.random.is_none();
             if what.conj != ir::Conj::And && what.items.len() > 1 {
                 return unsupported("choice between object groups not lowered");
             }
-            if !what.items.iter().all(|s| stack(&s.set) || input::stack_reference(support, s).is_some()) { return unsupported("copy: only stack spells or abilities (707.10)"); }
+            if !what.items.iter().all(|s| stack(&s.set) || this_spell(s) || input::stack_reference(support, s).is_some()) { return unsupported("copy: only stack spells or abilities (707.10)"); }
             let times = match act.mods.as_slice() {
                 [] => expr::Amount::constant(1),
                 [ir::Modifier::Times(n) | ir::Modifier::ForEach(n)] => quantity(n, support, &binder)?,
@@ -3808,11 +3870,11 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                     let out = e.slot();
                     e.instrs.push(Instr::Input { input, out });
                     Ok(action::Operand::Reference(out))
-                } else if stack(&selector.set) { e.object(selector, support, &mut binder) }
+                } else if stack(&selector.set) || this_spell(selector) { e.object(selector, support, &mut binder) }
                 else { unsupported("copy: delayed-body antecedent is not proved a stack participant") }
             }).collect::<Res<Vec<_>>>()?);
             let out = e.slot();
-            e.instrs.push(Instr::CopyStack { cards, times, retarget: false, out });
+            e.instrs.push(Instr::CopyStack { cards, times, by, retarget: crate::program::Retarget::Kept, out });
             binder.copies = Some(out);
             e.end_act(false, None);
             continue;
@@ -3846,14 +3908,27 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             e.instrs.push(Instr::ChangeTargets { object, policy });
             e.end_act(false,None);continue;
         }
-        if let Action::ChooseNewTargets { for_, one: false } = &act.action {
-            if !(clause.may || act.may) || !act.mods.is_empty() || !controller_only(clause.subject.as_ref())
+        if let Action::ChooseNewTargets { for_, one } = &act.action {
+            // the player of the clause: the one who copied, in "they may copy this spell and
+            // may choose a new target for that copy"
+            let chooser = match binder.actor {
+                Some(actor) if clause.may && optional_groups > 0 => Some(Who::Of(actor)),
+                _ if controller_only(clause.subject.as_ref()) => Some(Who::Controller),
+                _ => None,
+            };
+            if !(clause.may || act.may) || !act.mods.is_empty() || chooser.is_none()
                 || !matches!(for_.items.as_slice(), [s] if matches!(s.quant, Quant::Definite(Ref::Anaphor(ir::Anaphor::Copy { .. } | ir::Anaphor::ThatCopy)))) {
                 return unsupported("new targets: optional targets of the preceding spell copies");
             }
-            let Some(Instr::CopyStack { retarget, out, .. }) = e.instrs.last_mut() else { return unsupported("no preceding stack copies"); };
+            // "a new target" of a copy of this spell, which has at most one (115.7d)
+            let single = e.targets.iter().map(|t| t.bounds.1).sum::<u32>() <= 1;
+            let Some(Instr::CopyStack { cards, by, retarget, out, .. }) = e.instrs.last_mut() else { return unsupported("no preceding stack copies"); };
             if binder.copies != Some(*out) { return unsupported("new targets refer to other copies"); }
-            *retarget = true;
+            // its controller chooses the copy's new targets (707.10c)
+            if chooser != Some(*by) { return unsupported("new targets: chosen by another player than the copy's controller"); }
+            *retarget = if !*one { crate::program::Retarget::New }
+                else if single && *cards == action::Operand::Union(vec![action::Operand::Source]) { crate::program::Retarget::NewOne }
+                else { return unsupported("new targets: a new target of a copy not proved to have at most one target") };
             e.end_act(false, None);
             continue;
         }

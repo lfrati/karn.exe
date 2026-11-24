@@ -22,7 +22,7 @@ fn instruction(caller: Caller, n: Amount) -> Instr {
         Caller::SkipTurns => Instr::SkipTurns { players: Controller, count: n },
         Caller::AddPhases => Instr::AddPhases { after: ir::action::AfterPhase::This, kinds: vec![ir::turn::Phase::Combat], count: n },
         Caller::Continuous => Instr::Continuous { objects: vec![Source], changes: vec![change::Change::Fixed(crate::layers::Change::Pt(1, -1))], each: Some(n), duration: change::Duration::Turn },
-        Caller::CopyStack => Instr::CopyStack { cards: Source, times: n, retarget: false, out: 0 },
+        Caller::CopyStack => Instr::CopyStack { cards: Source, times: n, by: Who::Controller, retarget: Retarget::Kept, out: 0 },
         Caller::CopyCards => Instr::CopyCards { cards: Source, times: n, out: 0 },
     }
 }
@@ -209,7 +209,7 @@ fn r707_10c_stack_copy_count_is_frozen_across_target_choices_and_clone() {
     f.ctx.x = Some(2);
     let source = f.ctx.source.unwrap();
     g.obj_mut(source).targets = vec![vec![Target::Player(1)]];
-    if let Instr::CopyStack { retarget, .. } = &mut instr { *retarget = true; }
+    if let Instr::CopyStack { retarget, .. } = &mut instr { *retarget = Retarget::New; }
     assert!(matches!(step(&mut g, &mut f, &instr), Err(Halt::Ask(Decision::Choose { choice: Choice::Retarget { .. }, .. }))));
     assert_eq!(g.stack, [source], "copy goes on stack only after its target choice");
     for (mut branch, mut frame) in [(g.clone(), f.clone()), (g, f)] {
