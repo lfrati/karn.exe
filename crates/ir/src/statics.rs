@@ -268,8 +268,9 @@ pub enum AbilitiesOf {
 pub enum AbilityRule {
     /// "can't be activated", "can't be activated unless they're mana abilities" (`unless_mana`).
     CantBeActivated { unless_mana: bool },
-    /// "cost {2} less to activate".
-    CostChange { more: bool, by: ManaCost },
+    /// "cost {2} less to activate"; `unless_mana`: "… unless they're mana abilities", the
+    /// abilities that aren't mana abilities (605.1a).
+    CostChange { more: bool, by: ManaCost, unless_mana: bool },
     /// "can be activated an additional time".
     AdditionalTimes(Amount),
     /// The named ability family does not trigger (603.2).

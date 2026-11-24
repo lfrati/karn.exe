@@ -1377,3 +1377,14 @@ fn r102_3_that_players_opponents() {
     assert_ne!(theirs, yours);
     assert!(serde_json::to_string(&theirs).unwrap().contains("OpponentOf"), "{printed}");
 }
+
+/// CR 605.1a and 602.1: "cost {2} more to activate unless they're mana abilities" changes the
+/// cost of the abilities that aren't mana abilities only (Anointed Peacekeeper).
+#[test]
+fn r605_1a_cost_more_unless_mana_abilities() {
+    let text = "Activated abilities of sources with the chosen name cost {2} more to activate unless they're mana abilities.";
+    let (unless, printed) = read(text);
+    assert_eq!(printed, text);
+    let (all, _) = read("Activated abilities of sources with the chosen name cost {2} more to activate.");
+    assert_ne!(unless, all);
+}

@@ -167,7 +167,8 @@ pub(crate) fn modifiers(def: &CardDef) -> Vec<crate::program::registration::Regi
             let mut bind = expr::linked(&support);
             let sources = expr::Set::compile(set, &support, &mut bind)?;
             let change = match rule {
-                AbilityRule::CostChange { more, by } => {
+                AbilityRule::CostChange { unless_mana: true, .. } => return crate::unsupported("activation modifier: a cost change except for mana abilities"),
+                AbilityRule::CostChange { more, by, unless_mana: false } => {
                     let mut amount = 0;
                     for symbol in &by.0 {
                         let ManaSymbol::Generic(n) = symbol else { return crate::unsupported("activation modifier: only generic mana cost changes"); };

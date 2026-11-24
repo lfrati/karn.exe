@@ -921,7 +921,7 @@ pub(crate) fn ability_cost_sentence(body: &Body) -> Option<Static> {
     let StaticAct::CostChange { more, by, of: CostOf::Activate } = action.as_ref() else { return None };
     Some(Static::ActivatedAbilities {
         of: AbilitiesOf::Of { kind, of: ir::Coord::one(Who::Set(source.clone())) },
-        rule: AbilityRule::CostChange { more: *more, by: by.clone() }, this_turn: false,
+        rule: AbilityRule::CostChange { more: *more, by: by.clone(), unless_mana: false }, this_turn: false,
     })
 }
 
@@ -1338,10 +1338,11 @@ fn activated_abilities() -> P<Static> {
             ),
             lit("can be activated an additional time").to(AbilityRule::AdditionalTimes(Amount::Const(1))),
             lit("don't trigger").to(AbilityRule::DontTrigger),
-            lit("cost").then_keep(&mana_cost()).then(&more).skip(&lit("to activate")).map(
-                |(by, more)| Some(AbilityRule::CostChange { more, by }),
+            lit("cost").then_keep(&mana_cost()).then(&more).skip(&lit("to activate"))
+                .then(&lit("unless they're mana abilities").opt()).map(
+                |((by, more), unless)| Some(AbilityRule::CostChange { more, by, unless_mana: unless.is_some() }),
                 |r| match r {
-                    AbilityRule::CostChange { more, by } => Some((by.clone(), *more)),
+                    AbilityRule::CostChange { more, by, unless_mana } => Some(((by.clone(), *more), unless_mana.then_some(()))),
                     _ => None,
                 },
             ),
