@@ -261,6 +261,10 @@ enum Says {
     /// "If that creature would die this turn, exile it instead." (614.1a): where it would go
     /// from the battlefield to a graveyard, it is exiled.
     ExiledInsteadOfDying,
+    /// "If it would leave the battlefield, exile it instead of putting it anywhere else."
+    /// (614.1a, 702.84a): wherever else it would go from the battlefield, it is exiled. Said of
+    /// that permanent, it no longer applies once it has left (400.7).
+    ExiledInsteadOfLeaving,
     /// "Prevent all combat damage that would be dealt to and dealt by this creature." (615.1):
     /// a permanent's prevention, of damage dealt to any of `to` (or to anything when empty),
     /// by any of `by` (or by anything); `to_or_by`: either suffices.
@@ -478,27 +482,40 @@ impl Rule {
         }
     }
 
-    /// "If that creature would die this turn, exile it instead." said by a resolving spell or
-    /// ability: the objects it is said of. Only "it", of them, is exiled; nothing else is
-    /// done instead.
-    pub(crate) fn exiled_instead_of_dying(s: &ir::statics::Static) -> Option<&ir::Selector> {
+    /// Said by a resolving spell or ability, "If that creature would die this turn, exile it
+    /// instead." or "If it would leave the battlefield, exile it instead of putting it
+    /// anywhere else." (702.84a): the objects it is said of, and which departure it replaces.
+    /// Only "it", of them, is exiled; nothing else is done instead.
+    pub(crate) fn exiled_instead_of(s: &ir::statics::Static) -> Option<(&ir::Selector, Exiled)> {
         use ir::statics::{Static, Substitute};
         let Static::Replacement(r) = s else { return None };
         let event = r.single_event()?;
-        if r.next_time || !r.this_turn || r.while_.is_some() || r.instead_first || event.counted()
+        if r.next_time || r.while_.is_some() || r.instead_first || event.counted()
             || event.during.is_some() || event.condition.is_some() || event.cause.is_some()
             || event.nth_each_turn.is_some() || event.except_nth_in_step.is_some() { return None; }
         let [who] = event.subjects.as_slice() else { return None };
         let [ir::EventAction::Deed(deed)] = event.actions.as_slice() else { return None };
-        if deed.verb != ir::Verb::Die || deed.passive || !deed.args.is_empty() { return None; }
+        if deed.passive || !deed.args.is_empty() { return None; }
         let Substitute::Body(body) = &r.with else { return None };
         let ir::Clause { subject: None, may: false, also: false, first, rest } = &body.first else { return None };
-        if !rest.is_empty() || !body.rest.is_empty() || first.may || first.mods.as_slice() != [Modifier::Instead] { return None; }
+        if !rest.is_empty() || !body.rest.is_empty() || first.may { return None; }
+        let exiled = match (deed.verb, r.this_turn, first.mods.as_slice()) {
+            (ir::Verb::Die, true, [Modifier::Instead]) => Exiled::Dying,
+            (ir::Verb::LeaveBattlefield, false, [Modifier::InsteadOf(ir::statics::Elsewhere::AnywhereElse)]) => Exiled::Leaving,
+            _ => return None,
+        };
         let Action::Exile(objects) = &first.action else { return None };
         let [it] = objects.items.as_slice() else { return None };
-        (*it == ir::Selector::new(ir::Quant::Definite(ir::Ref::Anaphor(ir::Anaphor::It)), ir::ObjectSet::of(ir::Domain::Object))).then_some(who)
+        (*it == ir::Selector::new(ir::Quant::Definite(ir::Ref::Anaphor(ir::Anaphor::It)), ir::ObjectSet::of(ir::Domain::Object))).then_some((who, exiled))
     }
-    pub(crate) fn exiled_instead() -> Rule { Rule(Says::ExiledInsteadOfDying) }
+    /// The rule of [`Rule::exiled_instead_of`], and how long it lasts: "this turn", or with no
+    /// duration stated, until the game ends (611.2a).
+    pub(crate) fn exiled_instead(exiled: Exiled) -> (Rule, Lifetime) {
+        match exiled {
+            Exiled::Dying => (Rule(Says::ExiledInsteadOfDying), Lifetime::ThisTurn),
+            Exiled::Leaving => (Rule(Says::ExiledInsteadOfLeaving), Lifetime::Game),
+        }
+    }
 
     /// A permanent's "Prevent all [combat|noncombat] damage that would be dealt to … [by …]"
     /// (615.1), in force while the ability functions rather than for a duration.
@@ -572,6 +589,17 @@ pub enum Lifetime {
     /// names that combat phase, or the next one of the turn when none is in progress. With
     /// none, it applies to nothing.
     ThisCombat(Option<crate::turn::PhaseId>),
+    /// No duration stated: until the game ends (611.2a).
+    Game,
+}
+
+/// Which departure of the objects it is said of a resolved "exile it instead" replaces.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Exiled {
+    /// Its death: from the battlefield to a graveyard (700.4).
+    Dying,
+    /// Its leaving the battlefield, for anywhere but exile (702.84a).
+    Leaving,
 }
 
 impl Lifetime {
@@ -790,6 +818,12 @@ impl Game {
     /// said of one of its combat phases outlives it.
     pub(crate) fn end_turn_rules(&mut self) {
         self.lasting.retain(|l| !matches!(l.lifetime, Lifetime::ThisTurn | Lifetime::ThisCombat(_)));
+        // what is said only of permanents that have left the battlefield since no longer
+        // applies to anything (400.7)
+        let mut lasting = std::mem::take(&mut self.lasting);
+        lasting.retain(|l| !(l.rule.0 == Says::ExiledInsteadOfLeaving && matches!(&l.affected,
+            crate::statement::Affected::Things(things) if things.iter().all(|t| !matches!(t, Target::Object(o) if self.battlefield.contains(o))))));
+        self.lasting = lasting;
     }
 
     /// A combat phase ends: what lasts "this combat" of it is over (500.5a). An effect that
@@ -1070,7 +1104,18 @@ impl Game {
     /// Does an effect say this permanent is exiled if it would die (614.1a)? The first that
     /// does, as a replacement its controller can choose (616.1): any of them comes to the same.
     pub(crate) fn exiled_instead_of_dying(&self, permanent: ObjId) -> Option<crate::operation::ReplacementId> {
-        self.in_force().iter().find(|r| r.rule.0 == Says::ExiledInsteadOfDying && self.affects(r, permanent)).map(|r| crate::operation::ReplacementId::from_ability(r.ctx.source.unwrap_or(permanent), r.ctx.ability.clone().unwrap_or(crate::binding::AbilityKey { origin: crate::binding::Origin::Own, index: 0 }), 0))
+        self.exiled_by(Says::ExiledInsteadOfDying, permanent)
+    }
+
+    /// Does an effect say this permanent is exiled if it would leave the battlefield, instead
+    /// of being put anywhere else (614.1a, 702.84a)? Only a resolved effect says it of one.
+    pub(crate) fn exiled_instead_of_leaving(&self, permanent: ObjId) -> Option<crate::operation::ReplacementId> {
+        if !self.lasting.iter().any(|l| l.rule.0 == Says::ExiledInsteadOfLeaving) { return None; }
+        self.exiled_by(Says::ExiledInsteadOfLeaving, permanent)
+    }
+
+    fn exiled_by(&self, says: Says, permanent: ObjId) -> Option<crate::operation::ReplacementId> {
+        self.in_force().iter().find(|r| r.rule.0 == says && self.affects(r, permanent)).map(|r| crate::operation::ReplacementId::from_ability(r.ctx.source.unwrap_or(permanent), r.ctx.ability.clone().unwrap_or(crate::binding::AbilityKey { origin: crate::binding::Origin::Own, index: 0 }), 0))
     }
 
     /// Is this attacking creature unblockable by landwalk (702.14c)? "A creature with landwalk

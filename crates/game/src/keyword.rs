@@ -459,6 +459,7 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     static OUTLAST: OnceLock<Ability> = OnceLock::new();
     static NINJUTSU: OnceLock<Ability> = OnceLock::new();
     static TRANSMUTE: OnceLock<Ability> = OnceLock::new();
+    static UNEARTH: OnceLock<Ability> = OnceLock::new();
     let (kept, type_line, rule, number) = match item.keyword.name() {
         "Ninjutsu" => (&NINJUTSU, "Creature", "{0}, Reveal this card from your hand, Return an unblocked attacking creature you control to its owner's hand: Put this card from your hand onto the battlefield tapped attacking the same player, planeswalker, or battle as that creature.", "702.49a-c"),
         "Transmute" => (&TRANSMUTE, "Artifact", "{0}, Discard this card: Search your library for a card with mana value equal to this card's mana value, reveal it, put it into your hand, then shuffle. Activate only as a sorcery.", "702.53a"),
@@ -469,6 +470,9 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
         // "Outlast [cost]" means "[Cost], {T}: Put a +1/+1 counter on this creature. Activate
         // only as a sorcery." (702.107a)
         "Outlast" => (&OUTLAST, "Creature", "{0}, {T}: Put a +1/+1 counter on this creature. Activate only as a sorcery.", "702.107a"),
+        // It functions while the card is in a graveyard: "Return this card from your graveyard
+        // …" (702.84a, 113.6m).
+        "Unearth" => (&UNEARTH, "Creature", "{0}: Return ~ from your graveyard to the battlefield. It gains haste. Exile it at the beginning of the next end step. If it would leave the battlefield, exile it instead of putting it anywhere else. Activate only as a sorcery.", "702.84a"),
         _ => return None,
     };
     let cost = match &item.param {

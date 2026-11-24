@@ -71,21 +71,28 @@ impl Game {
     }
 
     /// Every replacement effect that would change where this object goes if it were put into
-    /// `to` now (614.1a), each with where it sends it: its own first ("If this creature would
-    /// die, put it on the bottom of its owner's library instead.", "If Darksteel Colossus would
-    /// be put into a graveyard from anywhere, …"), then a resolved "If that creature would die
-    /// this turn, exile it instead", then the static abilities of permanents. Each replaces a
-    /// move to a graveyard with one elsewhere, so once one is applied no other applies (616.1f).
+    /// `to` now (614.1a), each with where it sends it: a resolved "If it would leave the
+    /// battlefield, exile it instead of putting it anywhere else" wherever it would go, then,
+    /// of a move to a graveyard, its own ("If this creature would die, put it on the bottom of
+    /// its owner's library instead.", "If Darksteel Colossus would be put into a graveyard
+    /// from anywhere, …"), then a resolved "If that creature would die this turn, exile it
+    /// instead", then the static abilities of permanents. Each replaces a move with one
+    /// elsewhere, so once one is applied no other applies (616.1f).
     pub(crate) fn redirects(&self, object: ObjId, to: Zone) -> Vec<Destination> {
         use crate::replace::{Replacement, Moved, Instead};
         use crate::operation::ReplacementId;
         let o = self.obj(object);
-        if to != Zone::Graveyard || o.zone == Zone::Graveyard || o.zone == Zone::Gone { return Vec::new(); }
+        let mut found = Vec::new();
+        // a permanent being exiled is exiled as the effect says (702.84a)
+        if o.zone == Zone::Battlefield && !matches!(to, Zone::Battlefield | Zone::Exile)
+            && let Some(id) = self.exiled_instead_of_leaving(object) {
+            found.push(Destination { zone: Zone::Exile, position: None, by: Some(Redirect { id, shuffle: false, gain: None, then: None }) });
+        }
+        if to != Zone::Graveyard || o.zone == Zone::Graveyard || o.zone == Zone::Gone { return found; }
         let dies = o.zone == Zone::Battlefield;
         let owner = o.owner;
         let redirect = |source: ObjId, key, zone: Zone, position, shuffle, gain, then| Destination { zone, position,
             by: Some(Redirect { id: ReplacementId::from_ability(source, key, 0), shuffle, gain, then }) };
-        let mut found = Vec::new();
         for (key, r) in self.replacements(object) {
             match r {
                 Replacement::DeathToLibrary(position) if dies => found.push(redirect(object, key, Zone::Library, Some(*position), false, None, None)),
@@ -194,7 +201,11 @@ impl Batch {
             let regenerates = matches!(kind, Kind::Destroy { regenerable: true }) && game.shields.contains(&object);
             let zone = kind.clone().zone();
             let chosen = selected.is_some();
-            let destination = selected.unwrap_or_else(|| if let Kind::Library {position,..}=kind {Destination {zone,position:Some(position),by:None}} else if regenerates { Destination::to(zone) } else { game.departure_destination(object, zone) });
+            let destination = selected.unwrap_or_else(|| if regenerates { Destination::to(zone) } else {
+                // put at a position in a library, unless a replacement puts it elsewhere
+                let destination = game.departure_destination(object, zone);
+                match kind { Kind::Library { position, .. } if destination.zone == Zone::Library => Destination { zone, position: Some(position), by: None }, _ => destination }
+            });
             Some(Proposed { object, kind, destination, regenerates, chosen })
         }).collect();
         for (at, event) in events.iter().enumerate() {

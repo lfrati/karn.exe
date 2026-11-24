@@ -221,6 +221,11 @@ struct Binder {
     /// What a result no subject names became as this text put it onto the battlefield: "put
     /// it onto the battlefield tapped, … untap that land" untaps the permanent (400.7j).
     result_entered: Option<(Slot, Slot)>,
+    /// What the ability's own object became as this text put it onto the battlefield: "Return
+    /// this card from your graveyard to the battlefield. It gains haste" gives haste to the
+    /// permanent, which this effect can find (400.7j); "~" and its characteristics stay the
+    /// card's.
+    source_entered: Option<Slot>,
     /// Result-free alternatives cannot supply an object anaphor or reuse an older producer.
     alternative_result: bool,
     /// A printed single token may become a group under 614.6. Its singular noun
@@ -1084,7 +1089,7 @@ enum TextStep<'a> { Reflexive(&'a Sentence, &'a [Sentence], Option<&'a ir::Event
     CastRider(&'a ir::statics::Static),
     /// "If that creature would die this turn, exile it instead.": a replacement kept for the
     /// objects it names (614.1a).
-    ExiledInstead(&'a Selector),
+    ExiledInstead(&'a Selector, crate::restrict::Exiled),
     /// One optional retained-card selection for each card type, committed together.
     CardTypes(&'a Sentence),
     CardPayments(&'a ObjectSet, &'a Sentence),
@@ -1419,7 +1424,10 @@ fn text_steps<'a>(effect: &'a Effect, support: &Support<'_>) -> Res<Vec<TextStep
             // "If an instant or sorcery spell cast this way would be put into your graveyard,
             // exile it instead.": said of the cast the sentence before offers
             Sentence::Static(rule) if cast_rider(rule).is_some() => out.push(TextStep::CastRider(rule)),
-            Sentence::Static(rule) if crate::restrict::Rule::exiled_instead_of_dying(rule).is_some() => out.push(TextStep::ExiledInstead(crate::restrict::Rule::exiled_instead_of_dying(rule).expect("read as one"))),
+            Sentence::Static(rule) if crate::restrict::Rule::exiled_instead_of(rule).is_some() => {
+                let (who, exiled) = crate::restrict::Rule::exiled_instead_of(rule).expect("read as one");
+                out.push(TextStep::ExiledInstead(who, exiled));
+            }
             Sentence::Static(rule) if matches!(rule.as_ref(), ir::statics::Static::KeywordCost { .. }) => {
                 let ir::statics::Static::KeywordCost { keyword, of } = rule.as_ref() else { unreachable!("matched") };
                 out.push(TextStep::KeywordCost(*keyword, of));
@@ -2246,7 +2254,8 @@ impl Emit {
                 [slot] => Ok(Operand::Reference(binder.object(*slot))),
                 _ => Ok(Operand::Union(slots.into_iter().map(|slot| Operand::Reference(binder.object(slot))).collect())),
             },
-            Referent::Source => Ok(Operand::Source),
+            // an object pronoun for the source this effect moved: what it became (400.7j)
+            Referent::Source => Ok(binder.source_entered.map_or(Operand::Source, Operand::Reference)),
             Referent::Input(input) => {
                 let out = self.slot();
                 self.instrs.push(Instr::Input { input, out });
@@ -2862,7 +2871,7 @@ impl TextStep<'_> {
     fn instructions(&self) -> (usize, usize) {
         let all = |rest: &Sentence, more: &[Sentence]| instructions(std::slice::from_ref(rest)) + instructions(more);
         match self {
-            TextStep::Act(..) | TextStep::Rule(_) | TextStep::CastRider(_) | TextStep::ExiledInstead(_) | TextStep::KeywordCost(..) => (1, 0),
+            TextStep::Act(..) | TextStep::Rule(_) | TextStep::CastRider(_) | TextStep::ExiledInstead(..) | TextStep::KeywordCost(..) => (1, 0),
             TextStep::Alternative(clause) => (1 + clause.rest.len(), 0),
             TextStep::CardTypes(rest) | TextStep::CardPayments(_, rest) => (all(rest, &[]), 0),
             TextStep::Reflexive(rest, more, _, _) | TextStep::Later(_, _, rest, more, _) => (0, all(rest, more)),
@@ -3559,21 +3568,22 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 *rider = Some(crate::permission::Rider { types, by: None });
                 continue;
             }
-            TextStep::ExiledInstead(who) => {
+            TextStep::ExiledInstead(who, exiled) => {
                 if !durations.is_empty() || optional_groups != 0 { return unsupported("program: a replacement under a duration or an option"); }
+                let (rule, lifetime) = crate::restrict::Rule::exiled_instead(exiled);
                 // "If a permanent dealt damage by ~ would die this turn": of whatever this
                 // spell dealt damage to, asked as each would die. Its "this turn" is the
                 // replacement's (614.1a).
-                if let Some(dealt) = dealt_damage_by_this(who, support) {
+                if exiled == crate::restrict::Exiled::Dying && let Some(dealt) = dealt_damage_by_this(who, support) {
                     let subject = e.operand(&dealt, support, &mut binder)?;
-                    e.instrs.push(Instr::Register { subject, rule: crate::restrict::Rule::exiled_instead(), lifetime: crate::restrict::Lifetime::ThisTurn });
+                    e.instrs.push(Instr::Register { subject, rule, lifetime });
                     e.end_act(false, None);
                     continue;
                 }
                 // what it names as it is put in force, and nothing that is that later (614.1a)
                 let subject = e.operand(who, support, &mut binder)?;
-                if matches!(subject, action::Operand::All(_)) { return unsupported("death replacement: of whatever would die, not of objects named"); }
-                e.instrs.push(Instr::Register { subject, rule: crate::restrict::Rule::exiled_instead(), lifetime: crate::restrict::Lifetime::ThisTurn });
+                if matches!(subject, action::Operand::All(_)) { return unsupported("exile replacement: of whatever would depart, not of objects named"); }
+                e.instrs.push(Instr::Register { subject, rule, lifetime });
                 e.end_act(false, None);
                 continue;
             }
@@ -5643,6 +5653,15 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             // 400.7j: a later anaphor referring to the one object this move named
             // acts on its completed entry result. Preserve the original named card for
             // characteristic amounts, including failed entry (608.2h; Reanimate ruling).
+            if let Some(cards) = created && binder.entered.last() == Some(&cards)
+                && let Some(Instr::Action { action: action::Action::Move { groups, .. }, .. }) = e.instrs.last()
+                && let [(objects, _)] = groups.as_slice()
+                && let [action::Operand::Source] = objects.as_slice()
+            {
+                let subjects = e.slot();
+                e.instrs.push(Instr::Subjects { cards, out: subjects, still_in: Some(Zone::Battlefield) });
+                binder.source_entered = Some(subjects);
+            }
             if let Some(cards) = created && binder.entered.last() == Some(&cards)
                 && let Some(Instr::Action { action: action::Action::Move { groups, .. }, .. }) = e.instrs.last()
                 && let [(objects, _)] = groups.as_slice()
