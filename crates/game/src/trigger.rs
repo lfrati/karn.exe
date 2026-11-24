@@ -1044,7 +1044,14 @@ impl Watch {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DelayedPattern(DelayedWatch);
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum DelayedWatch { Event(Occurrence), Any(Pattern), Step(Watch) }
+enum DelayedWatch {
+    Event(Occurrence),
+    Any(Pattern),
+    Step(Watch),
+    /// "the next turn's upkeep": the step as it begins in the turn after the one the ability
+    /// was made in, whose number it keeps once it is made (603.7a).
+    LaterTurn(Watch, u32),
+}
 impl DelayedPattern {
     /// Rule-level timing for portable outstanding subscriptions. This profile
     /// has no dynamic player predicate or retained event subject to summarize.
@@ -1063,7 +1070,7 @@ impl DelayedPattern {
     pub(crate) fn any(pattern: Pattern) -> Self { Self(DelayedWatch::Any(pattern)) }
     /// Does it watch a mana event (605.1b), as [`mana_event`] asks of a printed trigger?
     fn mana_event(&self) -> bool {
-        let actions = match &self.0 { DelayedWatch::Event(Occurrence(actions)) => actions, DelayedWatch::Any(pattern) => &pattern.actions, DelayedWatch::Step(_) => return false };
+        let actions = match &self.0 { DelayedWatch::Event(Occurrence(actions)) => actions, DelayedWatch::Any(pattern) => &pattern.actions, DelayedWatch::Step(_) | DelayedWatch::LaterTurn(..) => return false };
         actions.iter().any(|a| a.verb == Verb::TapForMana)
     }
     fn described(&self, game: &Game, ctx: &Ctx, fact: &Fact) -> Option<Matched> {
@@ -1080,12 +1087,28 @@ impl DelayedPattern {
             StepOwner::First { .. } if !support.opening() => return unsupported("delayed trigger: the first upkeep, said other than by an opening-hand action"),
             StepOwner::First { who: Some(who) } => StepOwner::Player { who: who.clone(), next: false },
             StepOwner::First { who: None } => StepOwner::The { next: false },
+            // "at the beginning of the next turn's upkeep": the first upkeep of a later turn
+            StepOwner::NextTurns => {
+                let whose = StepOwner::The { next: false };
+                return Watch::compile(&Trigger::Step { step, whose }, support).map(|w| Self(DelayedWatch::LaterTurn(w, 0)));
+            }
             _ => return unsupported("delayed trigger: relative turn or recurring step"),
         };
         Watch::compile(&Trigger::Step { step, whose }, support).map(|w| Self(DelayedWatch::Step(w)))
     }
     fn begins(&self, game: &Game, ctx: &Ctx, part: Part) -> bool {
-        matches!(&self.0, DelayedWatch::Step(w) if w.begins(game,ctx,part))
+        match &self.0 {
+            DelayedWatch::Step(w) => w.begins(game, ctx, part),
+            DelayedWatch::LaterTurn(w, made) => game.turn == *made + 1 && w.begins(game, ctx, part),
+            DelayedWatch::Event(_) | DelayedWatch::Any(_) => false,
+        }
+    }
+    /// The ability as it is made, in this turn (603.7a).
+    pub(crate) fn made(&self, turn: u32) -> Self {
+        match &self.0 {
+            DelayedWatch::LaterTurn(w, _) => Self(DelayedWatch::LaterTurn(w.clone(), turn)),
+            _ => self.clone(),
+        }
     }
     fn times_on(&self, game: &Game, ctx: &Ctx, fact: &Fact, subjects: &[Target]) -> Option<u32> {
         match &self.0 { DelayedWatch::Event(w) => w.times_on(game,ctx,fact,subjects), _ => None }

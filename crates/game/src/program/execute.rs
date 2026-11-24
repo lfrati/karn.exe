@@ -85,7 +85,8 @@ pub(super) fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt
             let subjects = subjects.iter().flat_map(|s| action::found(game, f, s)).collect();
             let captured = Captured { ctx: f.ctx.clone(), body: Body::Plain(program.clone()), intervening: None, triggered: true, chapter: false, values: f.slots.clone(), keyword_producer: None, granted_keyword: None, sparse_checked: false };
             let bound = crate::state::Bound { inputs: f.inputs.clone(), event_amount: f.event_amount, became: f.transitions.clone(), linked_ability: f.ctx.ability.clone(), ..Default::default() };
-            game.delayed.push(crate::state::Delayed { source: f.ctx.object_source(), controller: f.ctx.controller, pattern: pattern.clone(), subjects, captured, bound, lasts: *lasts, once: *once });
+            let pattern = pattern.made(game.turn);
+            game.delayed.push(crate::state::Delayed { source: f.ctx.object_source(), controller: f.ctx.controller, pattern, subjects, captured, bound, lasts: *lasts, once: *once });
         }
         Instr::Place { objects, position, chooser, order, attempt, by, before_shuffle } => {
             let cards = if matches!(f.pending, Some(Pending::Library(_))) { Vec::new() } else {
