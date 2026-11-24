@@ -1188,3 +1188,12 @@ fn r702_8a_a_free_cast_as_though_it_had_flash() {
     assert!(printed.ends_with("you may cast ~ without paying its mana cost and as though it had flash."), "{printed}");
     for text in ["You may cast ~ and as though it had flash.", "Draw a card and as though it had flash."] { declines(text); }
 }
+
+/// CR 608.2c: ", or" between two long instructions is the choice "or" offers.
+#[test]
+fn r608_2c_a_comma_before_or_between_instructions() {
+    let (comma, printed) = read("Tap all untapped permanents of the chosen type target player controls, or untap all tapped permanents of that type that player controls.");
+    let (bare, _) = read("Tap all untapped permanents of the chosen type target player controls or untap all tapped permanents of that type that player controls.");
+    assert_eq!(comma, bare);
+    assert!(printed.contains(" or untap all tapped permanents"), "{printed}");
+}

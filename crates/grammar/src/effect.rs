@@ -51,6 +51,10 @@ fn join() -> P<Join> {
             lit(",").to(Join::Comma),
             lit("and").to(Join::And),
             lit("or").to(Join::Or),
+            // "Tap all untapped permanents of the chosen type target player controls, or untap
+            // all tapped permanents of that type that player controls": the comma sets off a
+            // long first act; the same choice as "or"
+            lit(", or").to(Join::Or).alias(),
         ],
     )
 }
