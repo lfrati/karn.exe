@@ -1700,3 +1700,17 @@ fn r601_2f_cost_of_a_spell_cast_during_a_window() {
     // a window said of a cast, not of what a permanent's controller controls
     declines("Creatures your opponents control during your turn cost {1} more to cast.");
 }
+
+/// CR 702.11b, 702.11c: hexproof on a player and on permanents, said once of a list. A comma list a
+/// player opens takes complete sets after it, each saying whose it is ("You, planeswalkers you
+/// control, and other creatures you control have hexproof", Shalai, Voice of Plenty); a bare
+/// set there would leave unsaid whose it is.
+#[test]
+fn r702_11c_hexproof_of_a_player_and_permanents() {
+    let text = "You, planeswalkers you control, and other creatures you control have hexproof.";
+    let (_, printed) = read(text);
+    assert_eq!(printed, text);
+    let (_, printed) = read("You and permanents you control gain hexproof until end of turn.");
+    assert_eq!(printed, "You and permanents you control gain hexproof until end of turn.");
+    declines("You, Ninjas, and Rogues you control have hexproof.");
+}

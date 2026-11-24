@@ -102,13 +102,17 @@ fn subjects() -> Vec<(P<Option<Subject>>, Form)> {
     );
     // bare sets alone are one set with a type union ("Ninjas and Rogues you control"), and a
     // quantifier carries over a bare set after it ("All creatures and Vehicles"): a bare set
-    // follows only a definite member ("You and permanents you control")
+    // follows only a definite member ("You and permanents you control"), or, each saying whose
+    // it is, another bare set in a comma list a definite member opens ("You, planeswalkers you
+    // control, and other creatures you control")
     let not_all_sets = |items: &Vec<Subject>| {
+        let opened = items.len() > 2 && matches!(&items[0], Subject::Selector(s) if matches!(s.quant, ir::Quant::Definite(_)));
         !items.iter().all(|m| matches!(m, Subject::Set(_)))
             && items.windows(2).all(|w| match &w[1] {
                 Subject::Set(set) => matches!(&w[0], Subject::Selector(s)
                     if matches!(s.quant, ir::Quant::Definite(_))
-                        || (s.quant == ir::Quant::All && s.set.domain == ir::Domain::Player && set.domain != ir::Domain::Player)),
+                        || (s.quant == ir::Quant::All && s.set.domain == ir::Domain::Player && set.domain != ir::Domain::Player))
+                    || (opened && set.controller.is_some() && matches!(&w[0], Subject::Set(a) if a.controller.is_some())),
                 _ => true,
             })
     };
