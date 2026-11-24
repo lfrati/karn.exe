@@ -1637,8 +1637,9 @@ class KarnAdapter:
             row = self._row_index(permission["source"], permission["ability"])
             rows = self.audit["objects"][str(source)].get("abilities", [])
             chosen = next((r for r in rows if r.get("index") == row), {})
-            if source == move["card"] and (chosen.get("keyword") or keyword_name(chosen.get("text") or "") or "").lower() == "retrace":
-                move["route"] = "retrace"
+            keyword = (chosen.get("keyword") or keyword_name(chosen.get("text") or "") or "").lower()
+            if source == move["card"] and keyword in ("retrace", "jump-start"):
+                move["route"] = keyword
             else:
                 move["route"] = {"source": source, "ability": row}
         # An omitted MGN cost means mana cost. Never let the native default route
@@ -1669,8 +1670,8 @@ class KarnAdapter:
     def _alternative_cost(self, do: dict, cost: dict, move: dict):
         routes = {"flashback", "retrace", "escape", "foretell", "harmonize"}
         keyword = cost.get("keyword")
-        if keyword == "retrace":
-            raise unsupported("unsupported_kind", "retrace is a casting permission and additional discard, not an alternative cost (702.81a)", "do.cost")
+        if keyword in ("retrace", "jump-start"):
+            raise unsupported("unsupported_kind", f"{keyword} is a casting permission and additional discard, not an alternative cost (702.81a, 702.133a)", "do.cost")
         if keyword in routes:
             move["route"] = {"harmonize": self._engine_id(cost["tapped"])} if keyword == "harmonize" and cost.get("tapped") else keyword
             return
@@ -2732,16 +2733,16 @@ class KarnAdapter:
             if owner.get("unavailable") or owner.get("source") != route.get("source") or not owner.get("definition_identity") or not owner.get("origin"):
                 raise unsupported("unsupported_fact", "casting permission exact frozen owner unavailable", f"objects.{record_id}.cast.permission")
             out["permission"] = {"source": self._record_id(owner["source"]), "ability": self._ability_ref(owner, owner["source"])}
-        elif kind == "retrace" and item.get("stack_copy_of") is not None:
+        elif kind in ("retrace", "jump-start") and item.get("stack_copy_of") is not None:
             pass
-        elif kind == "retrace":
+        elif kind in ("retrace", "jump-start"):
             if "unavailable" in (item.get("casting_costs") or {}):
-                raise unsupported("unsupported_fact", "retrace declaring definition is unavailable", f"objects.{record_id}.cast.permission")
-            rows = [row for row in item.get("abilities", []) if (row.get("keyword") or "").lower() == "retrace"]
+                raise unsupported("unsupported_fact", f"{kind} declaring definition is unavailable", f"objects.{record_id}.cast.permission")
+            rows = [row for row in item.get("abilities", []) if (row.get("keyword") or "").lower() == kind]
             if not rows:
-                rows = [row for row in item.get("abilities", []) if keyword_name(row.get("text") or "") == "retrace"]
+                rows = [row for row in item.get("abilities", []) if keyword_name(row.get("text") or "") == kind]
             if len(rows) != 1 or rows[0].get("source") is None:
-                raise unsupported("unsupported_fact", "retrace needs one authenticated declaring ability", f"objects.{record_id}.cast.permission")
+                raise unsupported("unsupported_fact", f"{kind} needs one authenticated declaring ability", f"objects.{record_id}.cast.permission")
             owner = rows[0]
             out["permission"] = {"source": record_id, "ability": self._ability_ref(owner, owner["source"])}
         elif kind != "normal":

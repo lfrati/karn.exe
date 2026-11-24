@@ -1682,13 +1682,14 @@ fn read_move_at_pools(v: &Value, pool: &Pool, offered: &[game::operation::Replac
             Some("normal") => game::announcement::CastRoute::Normal,
             Some("flashback") => game::announcement::CastRoute::Flashback,
             Some("retrace") => game::announcement::CastRoute::Retrace,
+            Some("jump-start") => game::announcement::CastRoute::JumpStart,
             Some("escape") => game::announcement::CastRoute::Escape,
             Some("foretell") => game::announcement::CastRoute::Foretell,
             // the creature tapped as its harmonize cost is paid, chosen as it is cast (702.180b)
             Some("harmonize") => game::announcement::CastRoute::Harmonize { tapped: None },
             None if route.get("harmonize").is_some() => game::announcement::CastRoute::Harmonize { tapped: Some(read_id(&route["harmonize"])?) },
             None if route.is_object() => game::announcement::CastRoute::Permission {source:read_id(&route["source"])?,ability:route["ability"].as_u64().ok_or("permission ability index")? as usize},
-            _ => return Err("a casting route is normal, flashback, retrace, escape, foretell, harmonize ({\"harmonize\": a creature to tap}) or a permission source and ability".into()),
+            _ => return Err("a casting route is normal, flashback, retrace, jump-start, escape, foretell, harmonize ({\"harmonize\": a creature to tap}) or a permission source and ability".into()),
         };
         mv = Move::CastVia(route, Box::new(mv));
     }
@@ -5789,9 +5790,31 @@ fn r702_81_casting_routes_round_trip_with_the_discard_selection() {
     assert!(g.exile.is_empty());
     assert_eq!(g.players[0].graveyard.len(),2);
     for route in [json!("unknown"),json!(7),json!(["retrace","flashback"])] {
-        assert_eq!(read_move(&json!({"kind":"cast","card":card.0,"route":route}),&Pool::default()), Err("a casting route is normal, flashback, retrace, escape, foretell, harmonize ({\"harmonize\": a creature to tap}) or a permission source and ability".into()));
+        assert_eq!(read_move(&json!({"kind":"cast","card":card.0,"route":route}),&Pool::default()), Err("a casting route is normal, flashback, retrace, jump-start, escape, foretell, harmonize ({\"harmonize\": a creature to tap}) or a permission source and ability".into()));
     }
     assert_eq!(read_move(&json!({"kind":"pass","route":"retrace"}),&Pool::default()), Err("a pass move has no \"route\"; it says nothing more".into()));
+}
+
+#[test]
+fn r702_133a_the_jump_start_route_round_trips_with_the_discard_selection() {
+    let defs=vec![
+        CardDef::new("Jump-start witness","{0}","Sorcery","You gain 1 life.\nJump-start",None).unwrap(),
+        CardDef::new("Forest","","Basic Land — Forest","",None).unwrap(),
+    ];
+    for d in &defs {check(d).unwrap();}
+    let mut g=Game::new(defs,2,20);
+    let card=g.put(0,0,Zone::Graveyard);
+    let land=g.put(0,1,Zone::Hand);
+    // the discard is the route's additional cost, paid as the cast says (702.133a, 601.2f)
+    let unpaid=json!({"kind":"cast","card":card.0,"route":"jump-start","targets":[]});
+    assert!(g.clone().act(0, read_move(&unpaid, &Pool::default()).unwrap()).unwrap_err().contains("exactly 1 card"));
+    let command=json!({"kind":"cast","card":card.0,"route":"jump-start","targets":[],"paying":[[land.0]]});
+    g.act(0,read_move(&command,&Pool::default()).unwrap()).unwrap();
+    for _ in 0..2 {g.act(g.priority,Move::Pass).unwrap();}
+    assert_eq!(g.players[0].life,21);
+    // the Forest was discarded; the witness is exiled, not put into the graveyard
+    assert_eq!(g.players[0].graveyard.iter().map(|o|g.obj(*o).card).collect::<Vec<_>>(),vec![Some(1)]);
+    assert_eq!(g.exile.iter().map(|o|g.obj(*o).card).collect::<Vec<_>>(),vec![Some(0)]);
 }
 
 #[test]

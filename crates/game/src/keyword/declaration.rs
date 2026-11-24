@@ -265,6 +265,15 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
             (grave, Gives::Asked),
             (grave, Gives::Route { route: crate::announcement::CastRoute::Retrace, cost: RouteCost::Additional }),
         ], vec![])),
+        // "You may cast this card from your graveyard if the resulting spell is an instant or
+        // sorcery spell by discarding a card as an additional cost to cast it" and "If this
+        // spell was cast using its jump-start ability, exile this card instead of putting it
+        // anywhere else any time it would leave the stack" (702.133a)
+        "Jump-Start" if plain => Ok(Declared::new(vec![
+            (grave, Gives::Asked),
+            (grave, Gives::Route { route: crate::announcement::CastRoute::JumpStart, cost: RouteCost::Additional }),
+            (stack, Gives::Destination { when: Departure::Any, to: Zone::Exile, then: None }),
+        ], vec![Context::SpellsOnly])),
         "Delve" | "Convoke" | "Improvise" if plain => Ok(Declared::new(vec![
             (stack, Gives::Asked),
             (stack, Gives::Substitute(match item.keyword.name() { "Delve" => Substitution::Delve, "Convoke" => Substitution::Convoke, _ => Substitution::Improvise })),

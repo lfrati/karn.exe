@@ -5,9 +5,13 @@ use crate::Res;
 use ir::Selector;
 
 /// The permission used to cast the chosen spell (601.3). A route is distinct from
-/// its cost: retrace adds a discard cost; flashback and escape supply alternative costs.
+/// its cost: retrace and jump-start add a discard cost; flashback and escape supply
+/// alternative costs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum CastRoute { #[default] Normal, Flashback, Retrace, Escape, Foretell, Permission { source: crate::ObjId, ability: usize },
+    /// From a graveyard by discarding a card as an additional cost; the spell is exiled
+    /// whenever it would leave the stack (702.133a).
+    JumpStart,
     /// Its harmonize cost from a graveyard (702.180a), and the untapped creature its caster
     /// chose, if any, to tap as it is paid, its power taken from the generic mana (702.180b).
     Harmonize { tapped: Option<crate::ObjId> } }

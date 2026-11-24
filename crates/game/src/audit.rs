@@ -413,6 +413,7 @@ impl Game {
                 None => json!({"kind":"flashback"}),
             },
             CastRoute::Retrace => json!({"kind":"retrace"}),
+            CastRoute::JumpStart => json!({"kind":"jump-start"}),
             CastRoute::Escape => json!({"kind":"escape"}),
             CastRoute::Foretell => json!({"kind":"foretell"}),
             CastRoute::Harmonize { tapped } => json!({"kind":"harmonize","tapped":tapped.map(|id|id.0)}),

@@ -62,6 +62,7 @@ const SENTENCES: &[(&str, &str, &str)] = &[
 const ASKED: &[(&str, &str)] = &[
     ("Reach", "702.17b"),
     ("Retrace", "702.81a"),
+    ("Jump-Start", "702.133a"),
     ("Delve", "702.66a"),
     ("Convoke", "702.51a"),
     ("Improvise", "702.126a"),
@@ -383,6 +384,14 @@ pub(crate) fn retrace_cost() -> &'static crate::cost::Plan {
     crate::token::init(&COST, || CardDef::new("Retrace rule", "{0}", "Artifact",
         "As an additional cost to cast this spell, discard a land card.", None)
         .expect("the grammar reads 702.81a's additional cost").costs.additional.expect("discard land cost compiles"))
+}
+
+/// Jump-start's additional cost, "discarding a card" (702.133a).
+pub(crate) fn jump_start_cost() -> &'static crate::cost::Plan {
+    static COST: OnceLock<crate::cost::Plan> = OnceLock::new();
+    crate::token::init(&COST, || CardDef::new("Jump-start rule", "{0}", "Sorcery",
+        "As an additional cost to cast this spell, discard a card.", None)
+        .expect("the grammar reads 702.133a's additional cost").costs.additional.expect("discard cost compiles"))
 }
 
 /// Does this spell have bargain (702.166a)? Only one is ever printed; more would say nothing more.

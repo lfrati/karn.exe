@@ -1838,6 +1838,8 @@ impl Game {
             CastRoute::Flashback => return Err("that card cannot be cast using flashback (702.34a)".into()),
             CastRoute::Retrace if self.retrace_of(player, card, cast_as) => self.def(card).ok_or("not a card")?,
             CastRoute::Retrace => return Err("that card cannot be cast using retrace (702.81a)".into()),
+            CastRoute::JumpStart if self.jump_start_of(player, card, cast_as) => self.def(card).ok_or("not a card")?,
+            CastRoute::JumpStart => return Err("that card cannot be cast using jump-start (702.133a)".into()),
             CastRoute::Normal if self.command_cast_allowed(player, card) => self.def(card).ok_or("not a card")?,
             CastRoute::Normal if self.permitted_from_graveyard(player, card, cast_as) => self.def(card).ok_or("not a card")?,
             CastRoute::Normal if self.mayhem_of(player, card, cast_as, Some(chosen)) => self.def(card).ok_or("not a card")?,
@@ -1978,7 +1980,11 @@ impl Game {
             let (_, _, plan) = def.costs.optional.first().ok_or("that spell has no optional additional cost (118.8b)")?;
             cost.plus(plan.as_ref().map_err(Clone::clone)?)
         } else { cost };
-        let cost = if route == CastRoute::Retrace { cost.plus(crate::keyword::retrace_cost()) } else { cost };
+        let cost = match route {
+            CastRoute::Retrace => cost.plus(crate::keyword::retrace_cost()),
+            CastRoute::JumpStart => cost.plus(crate::keyword::jump_start_cost()),
+            _ => cost,
+        };
         let cost = match crate::keyword::replicate(def) {
             Some(_) if replicate > MOST_KICKS => return Err("too many replicate payments (601.2h)".into()),
             Some(mana) => cost.kicked(mana, replicate),
@@ -2044,6 +2050,15 @@ impl Game {
         self.players[player].graveyard.contains(&card) && cast_as != CastAs::Fused
             && self.def(card).is_some_and(|d| check(d).is_ok())
             && self.cast_seen(card, cast_as).is_some_and(|s| s.has(ir::Keyword::from_name("Retrace").unwrap()))
+    }
+
+    /// A card in this player's graveyard with jump-start, cast as an instant or sorcery
+    /// spell (702.133a).
+    pub(crate) fn jump_start_of(&self, player: PlayerId, card: ObjId, cast_as: CastAs) -> bool {
+        self.players[player].graveyard.contains(&card) && cast_as != CastAs::Fused
+            && self.def(card).is_some_and(|d| check(d).is_ok() && d.spell(cast_as)
+                .is_ok_and(|d| d.types.iter().any(|t| matches!(t, ir::CardType::Instant | ir::CardType::Sorcery))))
+            && self.cast_seen(card, cast_as).is_some_and(|s| s.has(ir::Keyword::from_name("Jump-Start").unwrap()))
     }
 
     pub(crate) fn escape_of(&self, player: PlayerId, card: ObjId, cast_as: CastAs) -> bool {
@@ -2121,7 +2136,8 @@ impl Game {
     pub(crate) fn announce_spell(&mut self, player: PlayerId, card: ObjId, cast_as: CastAs, route: CastRoute, modes: &[usize], targets: Vec<Vec<Target>>, x: Option<u32>, kicks: u32, buyback: bool, optional: bool, entwine: bool, face_down: Option<crate::face::Concealment>) -> ActionResult<ObjId> {
         let flashback = route == CastRoute::Flashback || matches!(route, CastRoute::Harmonize { .. });
         let def = self.def(card).ok_or("not a card")?.spell(cast_as)?;
-        let departure = if route == CastRoute::Flashback {
+        // what the route itself says, whether printed or given (702.34a, 702.133a)
+        let departure = if matches!(route, CastRoute::Flashback | CastRoute::JumpStart) {
             Some((crate::functions::Scope::In(Zone::Stack), Zone::Exile))
         } else {
             crate::keyword::contributions(def).find_map(|(scope, gives)| match gives {
