@@ -190,7 +190,20 @@ pub(crate) fn choice(objects: &P<Objects>, modes: &P<Modes>, set_sg: &P<ObjectSe
             _ => None,
         },
     );
-    let single = alt("choice", vec![of_objects, one_member, one, any_name, several, number, words, among_colors, among_types, among_keywords, color_of, modal]);
+    // "a land of each basic land type", "a permanent they control of each permanent type": one
+    // object for each value of the class
+    let per = alt("per", vec![value_class(Number::Sg), lit("permanent type").to(ValueKind::PermanentType)]);
+    let of_each = objects.skip(&lit("of each")).then(&per).map(
+        move |(what, per)| match what.items.as_slice() {
+            [one] if a_one(one) => Some(Choice::OfEach { what: one.clone(), per }),
+            _ => None,
+        },
+        |c| match c {
+            Choice::OfEach { what, per } => Some((ir::Coord::one(what.clone()), per.clone())),
+            _ => None,
+        },
+    );
+    let single = alt("choice", vec![of_objects, of_each, one_member, one, any_name, several, number, words, among_colors, among_types, among_keywords, color_of, modal]);
     // "a color and an opponent": two kinds of thing; objects joined to objects are one object phrase
     let together = single.list("and").map(
         |v| (!v.iter().any(|c| matches!(c, Choice::All(_))) && !v.windows(2).any(|w| matches!(w, [Choice::Objects(_), Choice::Objects(_)])))

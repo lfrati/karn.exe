@@ -367,6 +367,11 @@ pub enum Choice {
     All(Vec<Choice>),
     /// "choose both instead", "choose one or more instead": how many modes (700.2).
     Modes(crate::effect::Modes),
+    /// "choose a land of each basic land type", "chooses a permanent they control of each
+    /// permanent type": one object of `what` for each value of the class `per` that some such
+    /// object has. One object may be chosen for several values, and a value no such object has
+    /// gets none (Sundering Titan rulings of 2020-08-07).
+    OfEach { what: Selector, per: ValueKind },
 }
 
 /// A class of values a choice draws from.
@@ -380,6 +385,9 @@ pub enum ValueKind {
     CardType,
     /// "a basic land type" (305.6).
     BasicLandType,
+    /// "a permanent type": artifact, battle, creature, enchantment, land or planeswalker
+    /// (110.4); only distributed over ("a permanent of each permanent type").
+    PermanentType,
     /// "a land type".
     LandType,
     /// "a planeswalker type".

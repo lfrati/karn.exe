@@ -1504,3 +1504,20 @@ fn r101_2_cant_cause_you_to_discard_or_sacrifice() {
     let (sacrifice, _) = read("Spells or abilities your opponents control can't cause you to sacrifice permanents.");
     assert_ne!(both, sacrifice);
 }
+
+/// CR 608.2d: "choose a land of each basic land type" chooses one land for each basic land type
+/// (Sundering Titan); "chooses a permanent they control of each permanent type" one permanent
+/// for each permanent type (Liliana, Dreadhorde General).
+#[test]
+fn r608_2d_choose_one_of_each_type() {
+    for text in [
+        "When ~ enters or leaves the battlefield, choose a land of each basic land type, then destroy those lands.",
+        "Each opponent chooses a permanent they control of each permanent type and sacrifices the rest.",
+    ] {
+        let (_, printed) = read(text);
+        assert_eq!(printed, text);
+    }
+    let (each, _) = read("Choose a land of each basic land type.");
+    let (one, _) = read("Choose a land.");
+    assert_ne!(each, one);
+}
