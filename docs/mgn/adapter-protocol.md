@@ -111,8 +111,12 @@ key's queue. An outcome still unconsumed when the next transition begins is a
 divergence at L1 (an outcome the engine never asked for); a random event with
 no outcome left is a `random_missing` fault, never a seeded draw.
 
-Karn prefetches `random_order` without its set, then the native execution authenticates
-the exact physical members at the operation. Missing or malformed native receipts
+Karn prefetches `random_order` and `random_choice` without their sets, then the native
+execution authenticates the exact physical members at the operation. A `random_choice` ("at
+random", 701.9b) is sent as a random order of its `from`, the `chosen` cards first: Karn picks
+the first cards of one random order of the cards it picks from. A choice the engine makes with
+nothing random (every card of the set chosen) consumes no outcome, so such a receipt is
+returned unused. Missing or malformed native receipts
 return a transactional replay-input error, reported as `random_mismatch`; they cannot
 satisfy an illegal-action expectation. Unused input indices identify exact occurrences,
 including repeated same-seat shuffles and consumption outside a list prefix.

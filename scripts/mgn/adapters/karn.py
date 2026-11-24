@@ -325,7 +325,7 @@ class KarnAdapter:
         source = (version.get("source") or {}).get("revision") or "unknown"
         return {"mgn": "1", "engine": {"name": "karn", "version": f"{version.get('package', '?')}+{source[:8]}"},
                 "adapter": dict(ADAPTER), "tiers": [1, 2], "starts": ["decks", "position"], "kinds": sorted(ANSWER_KINDS),
-                "random": ["shuffle", "random_order", "coin", "starting_player"], "formats": ["standard", "commander", "custom"],
+                "random": ["shuffle", "random_order", "random_choice", "coin", "starting_player"], "formats": ["standard", "commander", "custom"],
                 "unsupported_facts": list(UNSUPPORTED_FACTS)}
 
     # ----- protocol: setup -----
@@ -898,7 +898,8 @@ class KarnAdapter:
         The engine authenticates each operation and reports the exact unused inputs.
         """
         if not self.outcomes:
-            keys = [{"kind": "shuffle", "seat": seat} for seat in self.seats] + [{"kind": "random_order"}]
+            keys = ([{"kind": "shuffle", "seat": seat} for seat in self.seats]
+                    + [{"kind": "random_order"}, {"kind": "random_choice"}])
             # A called flip cannot consume randomness before its call (705.2).
             if (self.state.get("asked") or {}).get("kind") == "coin_call":
                 keys.append({"kind": "coin"})
@@ -953,6 +954,9 @@ class KarnAdapter:
                 continue
             if outcome.get("pile") is not None:
                 raise unsupported("unsupported_random", "shuffles of piles are not consumed", "random")
+            if outcome["kind"] == "random_choice":
+                orders.append(self._random_pick(outcome))
+                continue
             native = {"kind": outcome["kind"], "order": [self._random_id(card) for card in outcome["order"]]}
             if outcome["kind"] == "shuffle":
                 native["player"] = self._player(outcome["seat"])
@@ -969,6 +973,17 @@ class KarnAdapter:
                 raise fault("random_mismatch", "random_order must be a permutation of its objects")
             orders.append(native)
         return orders
+
+    def _random_pick(self, outcome: dict) -> dict:
+        """A `random_choice` ("at random", 701.9b) in the engine's form. The engine picks the
+        first cards of one random order of the cards it picks from, so the order is the chosen
+        cards, then the rest; it checks the set against its own when it picks."""
+        chosen, pool = outcome.get("chosen"), outcome.get("from")
+        if (not isinstance(chosen, list) or not isinstance(pool, list) or len(set(pool)) != len(pool)
+                or len(set(chosen)) != len(chosen) or not set(chosen) <= set(pool)):
+            raise fault("random_mismatch", "random_choice must choose distinct objects from its set")
+        order = chosen + [card for card in pool if card not in chosen]
+        return {"kind": "random_order", "order": [self._random_id(card) for card in order]}
 
     # ----- sending moves -----
 

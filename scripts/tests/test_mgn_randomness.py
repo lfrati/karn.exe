@@ -60,6 +60,35 @@ class RandomBoundaryTests(unittest.TestCase):
         self.assertEqual(run._on_random({'kind': 'shuffle', 'seat': 'A'}), a)
         self.assertIsNone(run._on_random({'kind': 'shuffle', 'seat': 'B'}))
 
+    def test_a_random_choice_is_sent_as_a_random_order_with_the_chosen_cards_first(self):
+        # CR 701.9b: Hymn to Tourach's two cards discarded at random. The engine picks the
+        # first cards of one random order of the hand, and checks that set as it picks.
+        choice = {'kind': 'random_choice', 'from': ['x', 'y', 'z'], 'chosen': ['z', 'x']}
+        run = self.queue([choice])
+        adapter = KarnAdapter(Path('/unused'), oracle=object())
+        adapter.seats = ['A', 'B']
+        adapter.session_id = 1
+        adapter.state = {'request_id': 1}
+        adapter._engine_id = {'x': 30, 'y': 31, 'z': 32}.__getitem__
+        adapter._observe = lambda state: None
+        sent = []
+
+        def send(request):
+            sent.append(request)
+            return {'ok': True, 'state': {'random_outcomes_unused_indices': []}}
+
+        adapter.engine = SimpleNamespace(send=send)
+        adapter._send_move(1, {'kind': 'pass'}, run._on_random)
+        self.assertEqual(sent[0]['random_outcomes'], [{'kind': 'random_order', 'order': [32, 30, 31]}])
+        self.assertEqual(adapter.used_outcomes, [choice])
+        for bad in ({'kind': 'random_choice', 'from': ['x', 'y'], 'chosen': ['z']},
+                    {'kind': 'random_choice', 'from': ['x', 'x'], 'chosen': ['x']},
+                    {'kind': 'random_choice', 'from': ['x', 'y'], 'chosen': ['x', 'x']}):
+            adapter.outcomes = [bad]
+            with self.assertRaises(Refusal) as caught:
+                adapter._engine_random_outcomes()
+            self.assertEqual((caught.exception.class_, caught.exception.code), ('fault', 'random_mismatch'))
+
     def test_bad_replay_input_cannot_satisfy_an_illegal_action_expectation(self):
         adapter = KarnAdapter(Path('/unused'), oracle=object())
         adapter.seats = ['A', 'B']
