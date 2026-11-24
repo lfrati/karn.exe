@@ -454,6 +454,7 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if let Some(ability) = mobilize(item) { return Some(ability); }
     static EQUIP: OnceLock<Ability> = OnceLock::new();
     static LEVEL_UP: OnceLock<Ability> = OnceLock::new();
+    static OUTLAST: OnceLock<Ability> = OnceLock::new();
     static NINJUTSU: OnceLock<Ability> = OnceLock::new();
     static TRANSMUTE: OnceLock<Ability> = OnceLock::new();
     let (kept, type_line, rule, number) = match item.keyword.name() {
@@ -463,6 +464,9 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
         // "Level up [cost]" means "[Cost]: Put a level counter on this permanent. Activate
         // only as a sorcery." (702.87a)
         "Level Up" => (&LEVEL_UP, "Creature", "{0}: Put a level counter on this permanent. Activate only as a sorcery.", "702.87a"),
+        // "Outlast [cost]" means "[Cost], {T}: Put a +1/+1 counter on this creature. Activate
+        // only as a sorcery." (702.107a)
+        "Outlast" => (&OUTLAST, "Creature", "{0}, {T}: Put a +1/+1 counter on this creature. Activate only as a sorcery.", "702.107a"),
         _ => return None,
     };
     let cost = match &item.param {
