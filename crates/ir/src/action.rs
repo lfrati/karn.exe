@@ -1041,5 +1041,8 @@ pub enum VoteFor {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
 pub enum DamageDivision {
     Chosen,
+    /// "divided as its controller chooses among any number of those Wolves": the source's
+    /// controller divides it as the effect resolves (608.2d).
+    ChosenByItsController,
     Evenly { round_up: bool },
 }

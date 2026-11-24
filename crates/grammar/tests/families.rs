@@ -1554,3 +1554,15 @@ fn r702_16a_protection_from_colorless() {
     let (artifacts, _) = read("{T}: Another target creature you control gains protection from artifacts or from the color of your choice until end of turn.");
     assert_ne!(colorless, artifacts);
 }
+
+/// CR 608.2d: "divided as its controller chooses among any number of those Wolves" divides
+/// the damage as the effect resolves, by the source's controller, not by the ability's
+/// (Master of the Wild Hunt).
+#[test]
+fn r608_2d_damage_divided_as_its_controller_chooses() {
+    let text = "{T}: Tap all untapped Wolf creatures you control. Each Wolf tapped this way deals damage equal to its power to target creature. That creature deals damage equal to its power divided as its controller chooses among any number of those Wolves.";
+    let (theirs, printed) = read(text);
+    assert_eq!(printed, text);
+    let (yours, _) = read("{T}: Tap all untapped Wolf creatures you control. Each Wolf tapped this way deals damage equal to its power to target creature. That creature deals damage equal to its power divided as you choose among any number of those Wolves.");
+    assert_ne!(theirs, yours);
+}

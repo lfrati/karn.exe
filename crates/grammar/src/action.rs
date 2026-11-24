@@ -900,6 +900,7 @@ fn build(form: Form, base: &P<Action>) -> P<Action> {
         .then_keep(&noun_amount("damage"))
         .then(&alt("damage division", vec![
             lit("divided as you choose").to(ir::action::DamageDivision::Chosen),
+            lit("divided as its controller chooses").to(ir::action::DamageDivision::ChosenByItsController),
             lit("divided evenly, rounded").then_keep(&alt("rounding", vec![lit("up").to(true), lit("down").to(false)])).skip(&lit(","))
                 .map(|round_up| Some(ir::action::DamageDivision::Evenly { round_up }),
                     |d| match d { ir::action::DamageDivision::Evenly { round_up } => Some(*round_up), _ => None }),
