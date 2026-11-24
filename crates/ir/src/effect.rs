@@ -439,6 +439,8 @@ pub enum CopyChange {
     Loses(crate::statics::Lost),
     /// "its name is ~".
     NamedThis,
+    /// "it has no mana cost" (embalm, eternalize: 707.9b).
+    NoManaCost,
     /// "it enters with a shield counter on it if you control that creature", "it enters with X
     /// additional +1/+1 counters on it": counters the copy enters with (614.1c).
     EntersWith { counters: crate::action::Counters, if_: Option<Box<crate::condition::Condition>> },

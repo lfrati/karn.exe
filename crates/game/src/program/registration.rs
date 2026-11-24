@@ -476,6 +476,11 @@ impl Characteristic {
                 if keywords.iter().any(|held| held.keyword.name() == "Flash"))) && when.holds(game, ctx))
     }
 
+    /// Whether it defines its object's colors (604.3): devoid's none as well.
+    pub(crate) fn defines_colors(&self) -> bool {
+        self.acts.iter().flat_map(|(_, _, changes)| changes).any(|change| matches!(change, Change::DefineColors(_)))
+    }
+
     /// Colors stated by a characteristic-defining ability, including outside games (903.4).
     pub(crate) fn defined_colors(&self) -> impl Iterator<Item = ir::Color> + '_ {
         self.acts.iter().flat_map(|(_, _, changes)| changes).flat_map(|change| match change {

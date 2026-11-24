@@ -618,6 +618,11 @@ impl CardDef {
                     for t in &c.supertypes { if !printed.supertypes.contains(t) { printed.supertypes.push(*t); } }
                 },
                 ir::CopyChange::NotLegendary => printed.supertypes.retain(|s| *s != ir::Supertype::Legendary),
+                ir::CopyChange::NoManaCost => printed.cost = None,
+                ir::CopyChange::Is(ir::action::Becoming::Colors { colors, added }) => {
+                    if !*added { printed.colors.clear(); }
+                    for c in colors { if !printed.colors.contains(c) { printed.colors.push(*c); } }
+                }
                 &ir::CopyChange::Is(ir::action::Becoming::Pt(ir::token::Pt::Const(power), ir::token::Pt::Const(toughness))) =>
                     printed.pt = Some((power as i32, toughness as i32)),
                 ir::CopyChange::Has(abilities) => for a in abilities {
@@ -632,11 +637,14 @@ impl CardDef {
             }
         }
         let mut copied = Self::compile(printed.clone());
-        // a copy given a power and toughness does not copy the abilities that define them
-        // (707.9d)
-        if changes.iter().any(|c| matches!(c, ir::CopyChange::Is(ir::action::Becoming::Pt(..)))) {
+        // a copy given a power and toughness, or a color, does not copy the abilities that
+        // define them (707.9d)
+        let pt = changes.iter().any(|c| matches!(c, ir::CopyChange::Is(ir::action::Becoming::Pt(..))));
+        let colors = changes.iter().any(|c| matches!(c, ir::CopyChange::Is(ir::action::Becoming::Colors { added: false, .. })));
+        if pt || colors {
             let defining: Vec<usize> = copied.characteristics.iter()
-                .filter(|r| r.result.as_ref().is_ok_and(|c| c.changes_in(crate::layers::Layer::DefinePt))).map(|r| r.ability).collect();
+                .filter(|r| r.result.as_ref().is_ok_and(|c| pt && c.changes_in(crate::layers::Layer::DefinePt)
+                    || colors && c.defines_colors())).map(|r| r.ability).collect();
             if !defining.is_empty() {
                 let keep = |i: &usize| !defining.contains(i);
                 printed.abilities = printed.abilities.into_iter().enumerate().filter(|(i, _)| keep(i)).map(|(_, a)| a).collect();

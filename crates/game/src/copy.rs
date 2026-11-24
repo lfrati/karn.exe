@@ -147,7 +147,10 @@ pub(crate) fn changes(exceptions: &[ir::Exception], token: bool) -> Res<Vec<ir::
     exceptions.iter().map(|e| {
         if !token && e.subject != ir::CopyRef::It { return unsupported("copy exception subject"); }
         match &e.change {
-            ir::CopyChange::NotLegendary => {},
+            ir::CopyChange::NotLegendary | ir::CopyChange::NoManaCost => {},
+            // "except it's white": its color (707.9b), and what defines it is not copied
+            // (707.9d)
+            ir::CopyChange::Is(ir::action::Becoming::Colors { colors, .. }) if !colors.is_empty() => {},
             ir::CopyChange::Is(ir::action::Becoming::Is(c)) if c.keeps == ir::action::Keeps::OtherTypes
                 && c.pt.is_none() && c.colors.is_none() && c.name.is_none() && c.abilities.is_empty() && c.base_pt.is_none() => {},
             // "except it's 1/1": a power and toughness of its copiable values (707.9b), and

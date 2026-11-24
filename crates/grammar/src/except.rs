@@ -106,7 +106,8 @@ fn changes(n: Number, is: P<()>, isnt: P<()>, has: &str, loses: &str) -> Vec<P<C
         },
     );
     let this_ability = lit(has).skip(&lit("this ability")).to(CopyChange::HasThisAbility);
-    vec![becomes, not_legendary, granted, this_ability, lost]
+    let no_mana_cost = lit(has).skip(&lit("no mana cost")).to(CopyChange::NoManaCost);
+    vec![becomes, not_legendary, no_mana_cost, granted, this_ability, lost]
 }
 
 /// One item of the list of exceptions as it is read: with its copy named, or without

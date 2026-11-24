@@ -474,6 +474,8 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     static TRANSMUTE: OnceLock<Ability> = OnceLock::new();
     static UNEARTH: OnceLock<Ability> = OnceLock::new();
     static SCAVENGE: OnceLock<Ability> = OnceLock::new();
+    static EMBALM: OnceLock<Ability> = OnceLock::new();
+    static ETERNALIZE: OnceLock<Ability> = OnceLock::new();
     let (kept, type_line, rule, number) = match item.keyword.name() {
         "Ninjutsu" => (&NINJUTSU, "Creature", "{0}, Reveal this card from your hand, Return an unblocked attacking creature you control to its owner's hand: Put this card from your hand onto the battlefield tapped attacking the same player, planeswalker, or battle as that creature.", "702.49a-c"),
         "Transmute" => (&TRANSMUTE, "Artifact", "{0}, Discard this card: Search your library for a card with mana value equal to this card's mana value, reveal it, put it into your hand, then shuffle. Activate only as a sorcery.", "702.53a"),
@@ -491,6 +493,10 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
         // +1/+1 counters equal to the power of the card you exiled on target creature. Activate
         // only as a sorcery." (702.97a): its power as it last existed in the graveyard (608.2h)
         "Scavenge" => (&SCAVENGE, "Creature", "{0}, Exile this card from your graveyard: Put a number of +1/+1 counters equal to this card's power on target creature. Activate only as a sorcery.", "702.97a"),
+        // a copy of the card as it last existed in the graveyard (608.2h), with the
+        // exceptions its rule says (707.9b)
+        "Embalm" => (&EMBALM, "Creature", "{0}, Exile this card from your graveyard: Create a token that's a copy of this card, except it's white, it has no mana cost, and it's a Zombie in addition to its other types. Activate only as a sorcery.", "702.128a"),
+        "Eternalize" => (&ETERNALIZE, "Creature", "{0}, Exile this card from your graveyard: Create a token that's a copy of this card, except it's black, it's 4/4, it has no mana cost, and it's a Zombie in addition to its other types. Activate only as a sorcery.", "702.129a"),
         _ => return None,
     };
     let cost = match &item.param {
