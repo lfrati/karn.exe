@@ -339,7 +339,7 @@ impl Functioning {
             cast_from,
             casting_costs: def.abilities.iter().enumerate().filter_map(|(i, a)| Some((i, casting_cost(a)?.clone()))).collect(),
             alternative_costs: def.abilities.iter().enumerate().filter_map(|(i, a)| Some((i, alternative_cost(a)?)))
-                .chain(crate::keyword::alternative_costs(def).map(|(i, cost)| (i, (cost.clone(), None)))).collect(),
+                .chain(crate::keyword::alternative_costs(def).map(|(i, cost, when)| (i, (cost.clone(), when.cloned())))).collect(),
         }
     }
 }

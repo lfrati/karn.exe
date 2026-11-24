@@ -58,8 +58,9 @@ pub(crate) enum Gives {
     Suspend { count: u32, cost: ir::mana::ManaCost },
     /// An alternative cost the spell may be cast for rather than its mana cost (118.9): from
     /// any zone it is cast from, its evoke cost (702.74a); `from` one zone only, its warp
-    /// cost, from a hand (702.185a).
-    Alternative { cost: ir::Cost, from: Option<Zone> },
+    /// cost, from a hand (702.185a). `when`: only while this holds as it is cast, spectacle's
+    /// "if an opponent lost life this turn" (702.137a).
+    Alternative { cost: ir::Cost, from: Option<Zone>, when: Option<ir::Condition> },
     /// Cast face down for {3} rather than its mana cost, and turned face up for this cost
     /// (702.37a/e, 702.168a/d); a megamorph cost puts a +1/+1 counter on it as it turns
     /// face up (702.37b).
@@ -206,7 +207,7 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
         // your hand have warp {2}{R}"): held there, and cast for as [`crate::Game::given_alternatives`]
         "Dash" => {
             let Some(cost) = route_cost(item) else { return refused(item) };
-            Ok(Declared::new(vec![(stack, Gives::Alternative { cost, from: None }),
+            Ok(Declared::new(vec![(stack, Gives::Alternative { cost, from: None, when: None }),
                 (bf, Gives::Ability(dash_haste()))], vec![Context::PermanentsOnly, Context::PrintedOnly]))
         }
         // "As you cast this spell, you may choose to cast it bestowed. If you do, you pay
@@ -214,18 +215,18 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
         // [`crate::Game::bestowed`]'s (702.103b–f)
         "Bestow" => {
             let Some(cost) = route_cost(item) else { return refused(item) };
-            one(stack, Gives::Alternative { cost, from: None }, vec![Context::CreaturesOnly, Context::PrintedOnly])
+            one(stack, Gives::Alternative { cost, from: None, when: None }, vec![Context::CreaturesOnly, Context::PrintedOnly])
         }
         // "You may choose to pay [cost] rather than pay this spell's mana cost" and, if it was
         // paid, its text with "target" changed to "each" (702.96a): what it is cast as then is
         // its definition's [`crate::CardDef::overloaded`]
         "Overload" => {
             let Some(cost) = route_cost(item) else { return refused(item) };
-            one(stack, Gives::Alternative { cost, from: None }, vec![Context::SpellsOnly, Context::PrintedOnly])
+            one(stack, Gives::Alternative { cost, from: None, when: None }, vec![Context::SpellsOnly, Context::PrintedOnly])
         }
         "Warp" => {
             let Some(cost) = route_cost(item) else { return refused(item) };
-            Ok(Declared::new(vec![(hand, Gives::Asked), (stack, Gives::Alternative { cost, from: Some(Zone::Hand) })], vec![Context::PermanentsOnly]))
+            Ok(Declared::new(vec![(hand, Gives::Asked), (stack, Gives::Alternative { cost, from: Some(Zone::Hand), when: None })], vec![Context::PermanentsOnly]))
         }
         // "Any time you could cast an instant during your declare blockers step, you may cast
         // this spell by paying [cost] and returning an unblocked creature you control to its
@@ -235,20 +236,26 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
         "Sneak" => {
             let Some(mut cost) = route_cost(item) else { return refused(item) };
             cost.0.extend(sneak_return().0.iter().cloned());
-            one(stack, Gives::Alternative { cost, from: None }, vec![Context::PrintedOnly])
+            one(stack, Gives::Alternative { cost, from: None, when: None }, vec![Context::PrintedOnly])
         }
         // "You may cast this spell by paying [cost] and returning a tapped creature you control
         // to its owner's hand rather than paying its mana cost" (702.188a)
         "Web-slinging" => {
             let Some(mut cost) = route_cost(item) else { return refused(item) };
             cost.0.extend(web_slinging_return().0.iter().cloned());
-            one(stack, Gives::Alternative { cost, from: None }, vec![Context::PrintedOnly])
+            one(stack, Gives::Alternative { cost, from: None, when: None }, vec![Context::PrintedOnly])
         }
         // "As long as you discarded this card this turn, you may cast it from your graveyard by
         // paying [cost] rather than paying its mana cost" (702.187b): [`crate::Game::mayhem_of`]
         "Mayhem" => {
             let Some(cost) = route_cost(item) else { return refused(item) };
-            one(grave, Gives::Alternative { cost, from: Some(Zone::Graveyard) }, vec![Context::PrintedOnly])
+            one(grave, Gives::Alternative { cost, from: Some(Zone::Graveyard), when: None }, vec![Context::PrintedOnly])
+        }
+        // "You may pay [cost] rather than pay this spell's mana cost if an opponent lost life
+        // this turn" (702.137a)
+        "Spectacle" => {
+            let Some(cost) = route_cost(item) else { return refused(item) };
+            one(stack, Gives::Alternative { cost, from: None, when: Some(spectacle_condition().clone()) }, vec![Context::PrintedOnly])
         }
         "Escape" => {
             let Some(cost) = escape_cost(item) else { return refused(item) };
@@ -366,7 +373,7 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
             };
             let ability = evoke_trigger();
             Ok(Declared::new(vec![
-                (stack, Gives::Alternative { cost, from: None }),
+                (stack, Gives::Alternative { cost, from: None, when: None }),
                 (crate::functions::scope(&ability, &[])?, Gives::Ability(ability)),
             ], vec![Context::PermanentsOnly, Context::PrintedOnly]))
         }
@@ -376,7 +383,7 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
         "Impending" => {
             let KeywordParam::NumberAndMana(ir::Amount::Const(n), mana) = &item.param else { return refused(item) };
             let Some(abilities) = impending(*n) else { return refused(item) };
-            let mut gives = vec![(stack, Gives::Alternative { cost: ir::Cost(vec![ir::CostPart::Mana(mana.clone())]), from: None })];
+            let mut gives = vec![(stack, Gives::Alternative { cost: ir::Cost(vec![ir::CostPart::Mana(mana.clone())]), from: None, when: None })];
             for ability in abilities { gives.push((crate::functions::scope(&ability, &[])?, Gives::Ability(ability))); }
             Ok(Declared::new(gives, vec![Context::PermanentsOnly, Context::PrintedOnly]))
         }
@@ -477,6 +484,16 @@ fn sneak_return() -> &'static ir::Cost {
         def.abilities.iter().find_map(crate::functions::casting_cost).expect("an additional cost").clone()
     })
 }
+/// Spectacle's "if an opponent lost life this turn" (702.137a), as the grammar reads it of a
+/// printed alternative cost.
+fn spectacle_condition() -> &'static ir::Condition {
+    static WHEN: std::sync::OnceLock<ir::Condition> = std::sync::OnceLock::new();
+    crate::token::init(&WHEN, || {
+        let def = CardDef::new("Spectacle rule", "{0}", "Instant", "If an opponent lost life this turn, you may pay {0} rather than pay this spell's mana cost.", None)
+            .expect("the grammar reads rule 702.137a");
+        def.abilities.iter().find_map(crate::functions::alternative_cost).and_then(|(_, when)| when).expect("a conditional alternative cost")
+    })
+}
 fn web_slinging_return() -> &'static ir::Cost {
     static RETURN: std::sync::OnceLock<ir::Cost> = std::sync::OnceLock::new();
     crate::token::init(&RETURN, || {
@@ -548,11 +565,12 @@ fn impending(n: u32) -> Option<Vec<Ability>> {
     let def = CardDef::new("Impending rule", "", "Enchantment Creature", &text, Some((0, 0))).expect("the grammar reads rule 702.176a");
     Some(def.abilities.clone())
 }
-/// Each alternative cost a keyword of the definition states, by its row (118.9, 702.74a).
-pub(crate) fn alternative_costs(def: &CardDef) -> impl Iterator<Item = (usize, &ir::Cost)> {
+/// Each alternative cost a keyword of the definition states, by its row, and the condition
+/// it may be paid under (118.9, 702.74a, 702.137a).
+pub(crate) fn alternative_costs(def: &CardDef) -> impl Iterator<Item = (usize, &ir::Cost, Option<&ir::Condition>)> {
     def.keyword_declarations.iter().filter_map(|i| Some((i.row, i.declared.as_ref().ok()?)))
         .flat_map(|(row, d)| d.gives.iter().filter_map(move |(_, gives)| match gives {
-            Gives::Alternative { cost, .. } => Some((row, cost)),
+            Gives::Alternative { cost, when, .. } => Some((row, cost, when.as_ref())),
             _ => None,
         }))
 }
