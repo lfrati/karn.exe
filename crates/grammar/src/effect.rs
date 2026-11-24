@@ -816,6 +816,36 @@ fn except_controller_turn_cost_clause() -> P<Clause> {
         .alias()
 }
 
+/// "Spells your opponents cast during your turn cost {1} more to cast" (Paladin Class), "The
+/// first non-Lemur creature spell with flying you cast during each of your turns costs {1} less
+/// to cast" (Momo, Friendly Flier): the window said of the cast. A spell's cost is determined as
+/// it is cast (601.2f), so the modification applies during that window: said as "… cost {1} more
+/// to cast during your turn", and printed that way.
+fn cast_during_cost_clause() -> P<Clause> {
+    let more = || alt("more or less", vec![lit("more").to(true), lit("less").to(false)]);
+    let cost = |verb: &'static str| lit(verb).then_keep(&crate::mana::mana_cost()).then(&more()).skip(&lit("to cast"));
+    let cast = |set: &ir::ObjectSet| set.domain == ir::Domain::Spell && set.caster.is_some();
+    let during = lit("during").then_keep(&crate::event::during());
+    let spells = selectors().subject_pl.then(&during).then(&cost("cost")).map(
+        move |((set, d), (by, more))| cast(&set).then(|| (Subject::Set(set), d, by, more)),
+        |_| None,
+    );
+    let nth = selectors().nth_during.then(&cost("costs")).map(
+        move |((s, d), (by, more))| cast(&s.set).then(|| (Subject::Selector(s), d, by, more)),
+        |_| None,
+    );
+    alt("cast during", vec![spells, nth])
+        .map(
+            |(subject, d, by, more)| {
+                let cost = ir::Action::Static(Box::new(ir::StaticAct::CostChange { more, by, of: ir::CostOf::Cast }));
+                let first = Act { action: cost, mods: vec![Modifier::During(d)], may: false };
+                Some(Clause { subject: Some(subject), may: false, also: false, first, rest: Vec::new() })
+            },
+            |_: &Clause| None,
+        )
+        .alias()
+}
+
 /// "after this phase, there is an additional combat phase", "after this main phase, there are two
 /// additional combat phases followed by an additional main phase", "there is an additional
 /// beginning phase after this phase": phases added directly after the one named (500.8). Nobody
@@ -929,6 +959,7 @@ fn build() -> Effects {
     clauses.push(life_floor_clause());
     clauses.push(additional_cast_clause());
     clauses.push(except_controller_turn_cost_clause());
+    clauses.push(cast_during_cost_clause());
     clauses.push(additional_phase_clause());
     let any_clause = alt("clause", clauses);
     // a later clause names its subject, or is an instruction after ", then" that follows one

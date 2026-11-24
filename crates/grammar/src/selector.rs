@@ -79,6 +79,10 @@ pub struct Selectors {
     pub plural: P<Selector>,
     /// A zone phrase spelled with "in": "in your graveyard", "on the battlefield", "in hand".
     pub zone: P<ZoneSpec>,
+    /// "the first creature spell you cast during each of your turns": [`Quant::NthEachTurn`]
+    /// counted in the turns of a window, with that window (parse only: what holds the window
+    /// prints it).
+    pub nth_during: P<(Selector, ir::event::During)>,
 }
 
 pub fn selectors() -> &'static Selectors {
@@ -3716,6 +3720,17 @@ fn nth_each_turn(posts: &P<Vec<Post>>) -> P<Selector> {
     )
 }
 
+/// "the first non-Lemur creature spell with flying you cast during each of your turns": the nth
+/// such object of each turn, in the turns of the window that follows. A selector has no window:
+/// the clause that reads this says when it holds.
+fn nth_during(posts: &P<Vec<Post>>) -> P<(Selector, ir::event::During)> {
+    let during = crate::kernel::lazy("during", crate::event::during);
+    lit("the").then_keep(&crate::event::ordinal()).then(&core(Number::Sg, Union::Or)).then(posts).skip(&lit("during")).then(&during).map(
+        |(((n, core), posts), d)| Some((assemble(((Quant::NthEachTurn(n), false), core), posts)?, d)),
+        |_| None,
+    )
+}
+
 /// "half the creatures they control of their choice, rounded up".
 fn half_of(posts: &P<Vec<Post>>) -> P<Selector> {
     let rounding = alt(
@@ -4531,6 +4546,7 @@ fn build() -> Selectors {
             zones,
         ],
     );
+    let nth_during = nth_during(&post_sequence(ZonePrep::In, Number::Sg, &player_sg_any, &player_pl, &any_sel.rule()));
     Selectors {
         possessive: zone_owner(&player_sg_any),
         singular,
@@ -4544,6 +4560,7 @@ fn build() -> Selectors {
         subject_pl,
         set_pl_from,
         set_each,
+        nth_during,
     }
 }
 

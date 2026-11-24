@@ -1680,3 +1680,23 @@ fn r614_1_would_happen_during_a_window() {
     let (_, printed) = read("The first time you would create one or more tokens during each of your turns, you may instead choose a creature other than ~ and create that many tokens that are copies of that creature.");
     assert_eq!(printed, "The first time you would create one or more tokens during your turn, instead you may choose a creature other than ~ and create that many tokens that are copies of that creature.");
 }
+
+/// CR 601.2f: a spell's total cost is determined as it is cast, so "spells your opponents cast
+/// during your turn cost {1} more" (Paladin Class) and "the first … spell … you cast during each
+/// of your turns costs {1} less" (Momo, Friendly Flier) modify costs during that window, as
+/// "… cost {1} more to cast during your turn" says, and print that way.
+#[test]
+fn r601_2f_cost_of_a_spell_cast_during_a_window() {
+    let (inside, printed) = read("Spells your opponents cast during your turn cost {1} more to cast.");
+    assert_eq!(printed, "Spells your opponents cast cost {1} more to cast during your turn.");
+    let (after, _) = read("Spells your opponents cast cost {1} more to cast during your turn.");
+    assert_eq!(inside, after);
+    let (always, _) = read("Spells your opponents cast cost {1} more to cast.");
+    assert_ne!(inside, always);
+    let (nth, printed) = read("The first non-Lemur creature spell with flying you cast during each of your turns costs {1} less to cast.");
+    assert_eq!(printed, "The first non-Lemur creature spell you cast with flying each turn costs {1} less to cast during your turn.");
+    let (each, _) = read("The first non-Lemur creature spell with flying you cast each turn costs {1} less to cast.");
+    assert_ne!(nth, each);
+    // a window said of a cast, not of what a permanent's controller controls
+    declines("Creatures your opponents control during your turn cost {1} more to cast.");
+}
