@@ -12,6 +12,15 @@ mod value_iteration;
 /// block would have made is empty ([`Instr::skipped_result`]); a payment the block would
 /// have asked for was not made and could not be (false, false); anything else the block
 /// bound is not known outside it.
+/// Inside an "otherwise" or "instead", what the branch before it did is nothing: "that many"
+/// and "the damage dealt this way" of it would read its skipped, empty result ("target player
+/// mills X cards. If …, that player mills twice that many cards instead": not twice none). After
+/// both, a later sentence still reads whichever was done.
+fn alternative_path(binder: &mut Binder, (produced, damage): (usize, usize)) {
+    binder.produced.truncate(produced);
+    binder.damage.truncate(damage);
+}
+
 fn close_branch(instrs: &mut [Instr], at: usize, inner: &Binder, outer: &mut Binder) {
     // A conditional body is not proof of one immediately preceding movement.
     outer.past_inputs.clear();
@@ -2829,6 +2838,9 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
     // named before the act, the first target the act may declare)
     let mut deferred: Vec<(usize, &ir::Condition, Binder, usize)> = Vec::new();
     let mut previous_if = None;
+    // How many groups and damage results there were before the branch an "otherwise" or
+    // "instead" follows: what that branch produced is not done on the alternative's path.
+    let mut untaken = (0, 0);
     let mut target_branches = Vec::new();
     let mut previous_target_if = None;
     // the next act is the one a sentence says is done instead
@@ -3281,6 +3293,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 branches.push((e.instrs.len(), outgoing, remember));
                 e.instrs.push(Instr::Branch { condition: condition::Condition::stored(remember, false), end: 0, remember: None, skipped_values: Vec::new() });
                 e.end_act(false, None);
+                alternative_path(&mut binder, untaken);
                 continue;
             }
             TextStep::Instead(alternative) => {
@@ -3307,6 +3320,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 branches.push((e.instrs.len(), binder.clone(), remember));
                 e.instrs.push(Instr::Branch { condition: condition::Condition::stored(remember, true), end: 0, remember: None, skipped_values: Vec::new() });
                 e.end_act(false, None);
+                alternative_path(&mut binder, untaken);
                 replacing = true;
                 continue;
             }
@@ -3341,6 +3355,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                     *placeholder = condition;
                 }
                 let incoming_completed = outer.completed_subject;
+                let (produced_before, damage_before) = (outer.produced.len(), outer.damage.len());
                 close_branch(&mut e.instrs, at, &binder, &mut outer);
                 // Announcement targets exist on either path; their captures are hoisted below.
                 // Otherwise starts before the taken branch's moves: its object references
@@ -3354,6 +3369,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 otherwise.subjects.retain(|named| !named.attached);
                 otherwise.subjects.extend(before.iter().filter(|named| named.attached).cloned());
                 otherwise.completed_subject = incoming_completed;
+                untaken = (produced_before, damage_before);
                 for named in &mut otherwise.subjects {
                     named.object = before.iter().find(|n| n.slot == named.slot).and_then(|n| n.object);
                 }

@@ -1,6 +1,6 @@
 //! What a reference names when an earlier sentence made something, or an earlier branch was not
 //! taken (608.2c): the text's own nouns, as the instruction is followed.
-use crate::support::{Board, cite, mana_pool};
+use crate::support::{Board, cite, mana_pool, oracle_read, refused};
 use game::announcement::CastRoute;
 use game::{Move, Zone};
 
@@ -16,5 +16,13 @@ fn r111_3_the_final_days_from_a_graveyard_creates_those_tokens_tapped() {
     let horrors: Vec<_> = t.g.battlefield.iter().copied().filter(|o| t.g.obj(*o).chars.name == "Horror Token").collect();
     cite!(["608.2c"]; assert_eq!(horrors.len(), 3, "X is the three creature cards"));
     cite!(["111.3", "110.5b"]; assert!(horrors.iter().all(|o| t.g.obj(*o).tapped), "each enters tapped"));
+}
+
+#[test]
+fn r608_2c_increasing_confusion_stays_refused_until_that_many_reads_the_replaced_amount() {
+    // Uncited (admission): "mills X cards. If cast from a graveyard, that player mills twice that
+    // many cards instead": that many is X, the amount of the act it replaces; the act's own
+    // result is never made on this path, so it is refused rather than milling none.
+    refused(game::play::check(&oracle_read("Increasing Confusion")).map_err(|e| e.0), "that many: no preceding group of objects");
 }
 
