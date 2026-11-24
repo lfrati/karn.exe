@@ -66,6 +66,7 @@ fn close_branch(instrs: &mut [Instr], at: usize, inner: &Binder, outer: &mut Bin
     outer.damage.extend(inner.damage.iter().filter(|slot| produced_here(**slot)).copied());
     outer.countered.extend(inner.countered.iter().filter(|(_, slot)| produced_here(*slot)).cloned());
     outer.exiled_now.extend(inner.exiled_now.iter().filter(|slot| produced_here(**slot)).copied());
+    outer.participles.extend(inner.participles.iter().filter(|(_, slot)| produced_here(*slot)).copied());
     skipped_values.extend(produced);
     // A skipped conditional payment did not begin. Export its explicit false
     // outcome on this path; the taken path produces the same typed values.
@@ -218,6 +219,9 @@ struct Binder {
     /// What earlier instructions of this text put into exile, as it is there: what "the
     /// exiled cards" names before any card exiled by another ability (608.2c, 400.7).
     exiled_now: Vec<Slot>,
+    /// What this text's own instructions sacrificed or revealed, named as they did it, by the
+    /// verb that did it: what "the sacrificed creature" and "the revealed cards" name (608.2c).
+    participles: Vec<(Verb, Slot)>,
     /// The explicit card-producing action in this discourse scope. Search opens a new
     /// result scope; empty output still binds it. This is lexical, never a log lookup.
     result: Option<(Slot, ObjectSet, u32)>,
@@ -641,20 +645,7 @@ impl Binder {
         if let Quant::Definite(Ref::Anaphor(ir::Anaphor::TheParticiple { what: Verb::Choose, plural })) = selector.quant {
             // A noun describes an existing choice; it never reselects by live
             // characteristics. Prove only literal noun/conjunction containment.
-            let describes = |said: &ObjectSet| {
-                let noun = &selector.set;
-                let filter = said.filter == noun.filter || match (&said.filter, &noun.filter) {
-                    (_, ir::Filter::All(parts)) if parts.is_empty() => true,
-                    (ir::Filter::All(said), ir::Filter::All(noun)) => noun.iter().all(|part| said.contains(part)),
-                    _ => false,
-                };
-                said.domain == noun.domain && filter
-                    && noun.controller.as_ref().is_none_or(|r| said.controller.as_ref() == Some(r))
-                    && noun.owner.as_ref().is_none_or(|r| said.owner.as_ref() == Some(r))
-                    && noun.caster.as_ref().is_none_or(|r| said.caster.as_ref() == Some(r))
-                    && noun.zone.as_ref().is_none_or(|r| said.zone.as_ref() == Some(r))
-                    && !noun.other
-            };
+            let describes = |said: &ObjectSet| input::describes(said, &selector.set);
             let candidates: Vec<_> = self.subjects.iter().filter(|n|
                 n.explicit_choice && (plural || n.bounds.1 <= 1) && describes(&n.set)).collect();
             if !candidates.is_empty() && input::find(support, selector)?.is_some() {
@@ -675,7 +666,20 @@ impl Binder {
                 _ => return unsupported("chosen reference: ambiguous explicit choices"),
             }
         }
-        if let Quant::Definite(Ref::Anaphor(ir::Anaphor::TheParticiple { what, .. }))=selector.quant {
+        if let Quant::Definite(Ref::Anaphor(ir::Anaphor::TheParticiple { what, plural }))=selector.quant {
+            // "Sacrifice a creature. You gain life equal to the sacrificed creature's
+            // toughness": what this text's own instruction did (608.2c), as it was named; a
+            // payment of the same kind as well, or several such instructions, is not followed.
+            let done: Vec<Slot> = self.participles.iter().filter(|(by, slot)| *by == what && self.subjects.iter()
+                .any(|n| n.slot == *slot && (plural || n.bounds.1 <= 1) && input::describes(&n.set, &selector.set)))
+                .map(|(_, slot)| *slot).collect();
+            if !done.is_empty() {
+                if input::find(support, selector)?.is_some() { return unsupported("reference: participial cost/body producers are ambiguous"); }
+                return match done.as_slice() {
+                    [one] => Ok(Referent::Local(vec![*one])),
+                    _ => unsupported("reference: ambiguous participial body producers"),
+                };
+            }
             // A named payment action supplies its own participant, independently of targets.
             // An earlier body action of the same kind still needs explicit disambiguation.
             if self.groups.iter().any(|g|g.by==what) {
@@ -1194,6 +1198,9 @@ fn said_of_named(c: &ir::Condition) -> bool {
         ir::Condition::Is { what, .. } => matches!(what.quant, Quant::Definite(Ref::Anaphor(_))),
         ir::Condition::Was(before) => said_of_named(before),
         ir::Condition::Controls { player, .. } => matches!(player.quant, Quant::Definite(Ref::Anaphor(_))),
+        // "Counter target spell if its mana value is 2 or less"
+        ir::Condition::Compare { left, right, .. } => [left, right].into_iter().any(|amount|
+            matches!(amount, Amount::Stat { of, .. } if matches!(of.quant, Quant::Definite(Ref::Anaphor(_))))),
         _ => false,
     }
 }
@@ -1779,6 +1786,7 @@ impl Emit {
                     };
                     let out = self.slot();
                     binder.name(out, selector.set.clone(), (0, max), false);
+                    binder.participles.push((Verb::Sacrifice, out));
                     chosen = Some(out);
                 }
                 let count = match &selector.quant {
@@ -4944,6 +4952,9 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 let chooser = binder.actor.map_or(Who::Controller, Who::Of);
                 let (operand, selected) = e.select_cards(from, set, mention.set, pick, zone, chooser, &mut binder);
                 binder.resolve(&mention.reference)?.taken.push(selected);
+                if let (Action::Reveal(_), action::Operand::Reference(revealed)) = (&act.action, &operand) {
+                    binder.participles.push((Verb::Reveal, *revealed));
+                }
                 vec![operand]
             } else { e.objects(objects, support, &mut binder)? };
             let zone = match operands.as_slice() {

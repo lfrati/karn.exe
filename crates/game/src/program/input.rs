@@ -71,6 +71,30 @@ impl Producer {
     }
 }
 
+/// The parts a conjunction says, however it nests: "a Goblin creature" says Goblin and
+/// creature.
+fn conjuncts(filter: &ir::Filter) -> Vec<&ir::Filter> {
+    match filter {
+        ir::Filter::All(parts) => parts.iter().flat_map(conjuncts).collect(),
+        other => vec![other],
+    }
+}
+
+/// Whether a noun can be said again of what was said as `said`: the same noun, or a plainer
+/// one of the same kind ("the sacrificed creature" of "a Goblin creature", "the revealed card"
+/// of "a creature card from your hand"). Only literal containment of its parts: it never asks
+/// of what the object now is.
+pub(super) fn describes(said: &ir::ObjectSet, noun: &ir::ObjectSet) -> bool {
+    let parts = conjuncts(&said.filter);
+    let filter = said.filter == noun.filter || conjuncts(&noun.filter).iter().all(|part| parts.contains(part));
+    said.domain == noun.domain && filter
+        && noun.controller.as_ref().is_none_or(|r| said.controller.as_ref() == Some(r))
+        && noun.owner.as_ref().is_none_or(|r| said.owner.as_ref() == Some(r))
+        && noun.caster.as_ref().is_none_or(|r| said.caster.as_ref() == Some(r))
+        && noun.zone.as_ref().is_none_or(|r| said.zone.as_ref() == Some(r))
+        && !noun.other
+}
+
 /// A participant's declared upper bound. Selector alternatives describe the same
 /// occurrence slot, so their bound is the maximum, not a combined object count.
 fn maximum<'a>(selectors: impl IntoIterator<Item = &'a Selector>) -> u32 {
@@ -162,7 +186,13 @@ fn schema(support: &Support<'_>) -> Vec<Producer> {
                         standing: Standing::Introduced, said: true, described: vec![from.set.clone()] });
                     continue;
                 }
-                let Some((verb, objects)) = crate::activate::object_payment(action) else { continue };
+                // "reveal a creature card from your hand" (701.20a): paid as an object payment is,
+                // in its place among them
+                let payment = match action {
+                    ir::Action::Reveal(objects) => Some((ir::Verb::Reveal, objects)),
+                    action => crate::activate::object_payment(action),
+                };
+                let Some((verb, objects)) = payment else { continue };
                 let max = objects.items.iter().try_fold(0u32, |sum, s| {
                     let n = match &s.quant { Quant::Definite(Ref::This) => 1,
                         Quant::Indefinite(Count::Exactly(Amount::Const(n))) => *n, _ => return None };
@@ -240,7 +270,14 @@ pub(super) fn find(support: &Support<'_>, selector: &Selector) -> Res<Option<Inp
     let Quant::Definite(Ref::Anaphor(form)) = selector.quant else { return unsupported("input reference: unsupported form"); };
     use ir::selector::Anaphor;
     if let Anaphor::TheParticiple { what, plural } = form {
-        let candidates:Vec<_>=schema(support).into_iter().filter(|p|p.paid_by==Some(what) && (plural || p.max<=1) && p.named_by(&selector.set)).collect();
+        // "Sacrifice a Goblin creature: … the sacrificed creature's power": the participle
+        // names the payment; its noun is the payment's own, else a plainer one that fits all
+        // of what the payment could be
+        let paid: Vec<_> = schema(support).into_iter().filter(|p| p.paid_by == Some(what) && (plural || p.max <= 1)).collect();
+        let named: Vec<_> = paid.iter().filter(|p| p.named_by(&selector.set)).collect();
+        let candidates = if named.is_empty() {
+            paid.iter().filter(|p| !p.described.is_empty() && p.described.iter().all(|d| describes(d, &selector.set))).collect()
+        } else { named };
         return match candidates.as_slice() {
             [one]=>Ok(Some(one.input)), []=>Ok(None),
             _=>unsupported("input reference: ambiguous paid-action producers"),
