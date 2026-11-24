@@ -1316,3 +1316,14 @@ fn r603_12_pay_up_to_three_times_choose_up_to_that_many() {
     let (two, _) = read("When ~ enters, you may pay {G} up to three times. When you pay this cost one or more times, choose up to two —");
     assert_ne!(up_to, two);
 }
+
+/// CR 702.33b and 702.33d: a spell with two kicker costs is kicked once for each one paid;
+/// "if it was kicked twice" asks for both (Archangel of Wrath rulings of 2022-09-09).
+#[test]
+fn r702_33d_kicked_twice() {
+    let (twice, printed) = read("When ~ enters, if it was kicked twice, it deals 2 damage to any target.");
+    assert_eq!(printed, "When ~ enters, if there are two or more times it was kicked, it deals 2 damage to any target.");
+    let (once, _) = read("When ~ enters, if it was kicked, it deals 2 damage to any target.");
+    assert_ne!(twice, once);
+    assert!(serde_json::to_string(&twice).unwrap().contains("Kicked"));
+}

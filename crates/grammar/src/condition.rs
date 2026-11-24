@@ -639,6 +639,16 @@ fn cast_was() -> P<Condition> {
             _ => None,
         },
     );
+    // "if it was kicked twice": both of its kicker costs were paid (702.33b, 702.33d); a spell
+    // is kicked once for each kicker cost paid, so it is "two or more times it was kicked"
+    let kicked_twice = object.skip(&lit("was kicked twice")).map(
+        |what| Some(Condition::Compare {
+            left: Amount::Times { what: Box::new(what), fact: ir::amount::Occurrence::Kicked },
+            cmp: Cmp::Ge,
+            right: Amount::Const(2),
+        }),
+        |_: &Condition| None,
+    ).alias();
     // "it's bargained": the same as "it was bargained"
     let its = lit("it").then_keep(&clitic_s()).then_keep(&fact).map(
         |fact| Some(Condition::CastWas { what: Box::new(it()), fact, negated: false }),
@@ -649,6 +659,7 @@ fn cast_was() -> P<Condition> {
         vec![
             its.alias(),
             kicked_with,
+            kicked_twice,
             subject_was,
             cost_paid,
             cast_for,
