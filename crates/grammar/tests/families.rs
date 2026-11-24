@@ -1208,3 +1208,14 @@ fn r614_1a_one_of_each_kind_of_token_instead() {
     assert_eq!(printed, "If you would create one or more Clue, Food, and/or Treasure tokens, instead create that many Clue tokens, that many Food tokens, and that many Treasure tokens.");
     for text in ["If you would create a Clue token, instead create one of each.", "If you would draw a card, instead create one of each."] { declines(text); }
 }
+
+/// CR 115.1: "any target of an opponent's choice" is a target an opponent chooses, as "target
+/// creature of an opponent's choice" is (Cuombajj Witches ruling of 2020-11-10).
+#[test]
+fn r115_1_any_target_of_an_opponents_choice() {
+    let (witches, printed) = read("{T}: ~ deals 1 damage to any target and 1 damage to any target of an opponent's choice.");
+    assert_eq!(printed, "{T}: ~ deals 1 damage to any target and 1 damage to any target of an opponent's choice.");
+    let (plain, _) = read("{T}: ~ deals 1 damage to any target and 1 damage to any other target.");
+    assert_ne!(witches, plain);
+    declines("{T}: ~ deals 1 damage to any target of an opponent's choosing.");
+}

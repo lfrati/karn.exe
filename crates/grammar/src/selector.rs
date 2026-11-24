@@ -4041,6 +4041,15 @@ fn specials(possessor: &P<Selector>) -> P<Selector> {
                 },
             ),
             lit("any other target").to(any_target(true)),
+            // "1 damage to any target of an opponent's choice" (Cuombajj Witches): chosen by an
+            // opponent, as "target creature of an opponent's choice" is
+            lit("any target of an opponent's choice").to({
+                let mut s = any_target(false);
+                let mut opponents = ObjectSet::of(Domain::Player);
+                opponents.filter = Filter::All(vec![Filter::Atom(Atom::Opponent)]);
+                s.chooser = Some(Box::new(Selector::new(Quant::Indefinite(Count::Exactly(Amount::Const(1))), opponents)));
+                s
+            }),
         ],
     )
 }
