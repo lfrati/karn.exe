@@ -406,7 +406,7 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
         "Fuse" if plain => one(stack, Gives::Fuse, vec![Context::SpellsOnly]),
         "Toxic" if matches!(item.param, KeywordParam::Number(ir::Amount::Const(_))) =>
             one(bf, Gives::Asked, vec![Context::PermanentsOnly]),
-        "Undying" | "Persist" | "Extort" | "Living Weapon" | "Job Select" | "Prowess" | "Battle Cry" | "Renown" | "Annihilator" => generated(ability(item)?, true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
+        "Undying" | "Persist" | "Extort" | "Living Weapon" | "For Mirrodin!" | "Job Select" | "Prowess" | "Battle Cry" | "Renown" | "Annihilator" => generated(ability(item)?, true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
         "Affinity" => generated(ability(item)?, false, vec![Context::PrintedOnly]),
         "Cumulative Upkeep" => generated(ability(item)?, true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
         "Echo" => generated(ability(item)?, true, vec![Context::PrintedOnly, Context::PermanentsOnly]),

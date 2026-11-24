@@ -562,6 +562,7 @@ fn triggered(item: &ir::token::KeywordInstance) -> Option<&'static Ability> {
         "Persist" => Some(death_return(false)),
         "Extort" => Some(extort()),
         "Living Weapon" => Some(living_weapon()),
+        "For Mirrodin!" => Some(for_mirrodin()),
         "Job Select" => Some(job_select()),
         "Prowess" => Some(prowess()),
         "Battle Cry" => Some(battle_cry()),
@@ -1033,6 +1034,15 @@ fn living_weapon() -> &'static Ability {
             .expect("the grammar reads rule 702.92a");
         def.abilities[0].clone()
     })
+}
+
+/// For Mirrodin! is the create-then-attach trigger living weapon is, with a 2/2 red Rebel
+/// (702.163a). The Rebel enters as a 2/2 and only then is the Equipment attached.
+fn for_mirrodin() -> &'static Ability {
+    static FOR_MIRRODIN: OnceLock<Ability> = OnceLock::new();
+    crate::token::init(&FOR_MIRRODIN, || CardDef::new("For Mirrodin! rule", "", "Artifact — Equipment",
+        "When this Equipment enters, create a 2/2 red Rebel creature token, then attach this Equipment to it.", None)
+        .expect("the grammar reads rule 702.163a").abilities[0].clone())
 }
 
 /// Job select uses the ordinary retained create/entry/attachment program (702.182a).
