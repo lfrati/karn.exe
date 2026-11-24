@@ -4079,8 +4079,9 @@ fn specials(possessor: &P<Selector>) -> P<Selector> {
             relative_player(possessor, true),
             relative_player(possessor, false),
             lit("any target").to(any_target(false)),
-            // "any target that isn't a Dragon"
-            lit("any target").then_keep(&relative(Number::Sg)).map(
+            // "any target that isn't a Dragon", "any target that was dealt damage this turn" (a
+            // player or a permanent alike)
+            lit("any target").then_keep(&alt("any target relative", vec![relative(Number::Sg), event_relative(Number::Sg, possessor)])).map(
                 move |post| {
                     let mut s = any_target(false);
                     fold_posts(&mut s.set, vec![post])?;
@@ -4093,7 +4094,7 @@ fn specials(possessor: &P<Selector>) -> P<Selector> {
                     }
                     match unfold_posts(&s.set, &None, None)? {
                         (core, posts) if core.is_empty() => match posts.as_slice() {
-                            [p @ Post::Relative { .. }] => Some(p.clone()),
+                            [p @ (Post::Relative { .. } | Post::Event { .. })] => Some(p.clone()),
                             _ => None,
                         },
                         _ => None,

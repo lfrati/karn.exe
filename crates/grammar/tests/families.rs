@@ -1566,3 +1566,18 @@ fn r608_2d_damage_divided_as_its_controller_chooses() {
     let (yours, _) = read("{T}: Tap all untapped Wolf creatures you control. Each Wolf tapped this way deals damage equal to its power to target creature. That creature deals damage equal to its power divided as you choose among any number of those Wolves.");
     assert_ne!(theirs, yours);
 }
+
+/// CR 115.4: "any target" may be a creature, player, planeswalker or battle, and "that
+/// was dealt damage this turn" is said of any of them alike (Needle Drop), as "that isn't a
+/// Dragon" is.
+#[test]
+fn r115_4_any_target_that_was_dealt_damage() {
+    let text = "~ deals 1 damage to any target that was dealt damage this turn.";
+    let (dealt, printed) = read(text);
+    assert_eq!(printed, text);
+    let (any, _) = read("~ deals 1 damage to any target.");
+    assert_ne!(dealt, any);
+    let (combat, _) = read("~ deals 1 damage to any target that was dealt combat damage this turn.");
+    assert_ne!(dealt, combat);
+    declines("~ deals 1 damage to any target who lost life this turn.");
+}
