@@ -1255,3 +1255,15 @@ fn r601_2a_cast_from_graveyards_or_from_exile() {
     let (exile, _) = read("Spells your opponents cast from exile cost {2} more to cast.");
     assert_ne!(both, exile);
 }
+
+/// CR 106.12 and 106.12b: "is tapped for two or more mana" says how much mana the tapping
+/// produces, which a replacement of that mana production may ask (Damping Sphere).
+#[test]
+fn r106_12_tapped_for_two_or_more_mana() {
+    let text = "If a land is tapped for two or more mana, it produces {C} instead of any other type and amount.";
+    let (two, printed) = read(text);
+    assert_eq!(printed, text);
+    let (any, _) = read("If a land is tapped for mana, it produces {C} instead of any other type and amount.");
+    assert_ne!(two, any);
+    declines("If a land is tapped for two or more life, it produces {C} instead of any other type and amount.");
+}

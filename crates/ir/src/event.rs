@@ -102,6 +102,9 @@ pub enum Arg {
     /// What a die roll shows ([`Role::Result`]): "rolls a natural 20", "rolls a 4 or higher",
     /// "rolls a die's highest natural result" (CR 706.2).
     Roll(RollResult),
+    /// How much mana tapping a permanent for mana produces ([`Role::Result`]): "is tapped for
+    /// two or more mana" (CR 106.12).
+    Mana(Quantity),
 }
 
 /// A result of a die roll (706.2): the natural result is the number on the die's top face,

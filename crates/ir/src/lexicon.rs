@@ -58,7 +58,8 @@ pub enum Role {
     By,
     /// "created *under your control*": the player who controls what comes to be.
     Under,
-    /// "rolls *a natural 20*": what a die roll shows (706.2).
+    /// "rolls *a natural 20*": what a die roll shows (706.2); "is tapped *for two or more
+    /// mana*": what tapping for mana produces (106.12).
     Result,
     /// "enters *tapped*": the status it has as it arrives (110.5, 614.12).
     As,
@@ -793,7 +794,7 @@ impl EventAction {
                 .iter()
                 .filter_map(|(r, a)| match a {
                     Arg::Noun(s) => Some((*r, s)),
-                    Arg::Zone(_) | Arg::Status(_) | Arg::Roll(_) => None,
+                    Arg::Zone(_) | Arg::Status(_) | Arg::Roll(_) | Arg::Mana(_) => None,
                 })
                 .collect(),
             E::Attacks { defender, with, .. } => {

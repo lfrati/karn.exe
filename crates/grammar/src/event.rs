@@ -1372,7 +1372,19 @@ fn participle_phrase() -> P<Deed> {
         .then(&selectors().selector).map(
             move |((), who)| with_agent(Deed { verb: Verb::Champion, passive: true, args: Vec::new() }, who), |_| None,
         ).alias();
-    alt("participle", vec![cast, done, done_under, done_by, championed_with])
+    // "If a land is tapped for two or more mana": how much mana the tapping produces (106.12)
+    let much = crate::words::count_amount().skip(&lit("or more")).map(
+        |n| Some(Quantity::AtLeast(n)),
+        |q: &Quantity| match q { Quantity::AtLeast(n) => Some(n.clone()), Quantity::Exactly(_) => None },
+    );
+    let tapped_for = lit("tapped for").then_keep(&much).skip(&lit("mana")).map(
+        |q| Some(Deed { verb: Verb::TapForMana, passive: true, args: vec![(Role::Result, Arg::Mana(q))] }),
+        |d: &Deed| match (d.verb, d.passive, d.args.as_slice()) {
+            (Verb::TapForMana, true, [(Role::Result, Arg::Mana(q))]) => Some(q.clone()),
+            _ => None,
+        },
+    );
+    alt("participle", vec![cast, done, done_under, done_by, championed_with, tapped_for])
 }
 
 /// The be-verb of a passive, agreeing with its subject: "is"/"are", "was"/"were", "has
