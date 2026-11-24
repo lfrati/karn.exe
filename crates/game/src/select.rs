@@ -298,11 +298,12 @@ impl<'a> Support<'a> {
         self.def?.scope(self.ability.clone()?.index)?.ok()
     }
     /// Only the generated last-counter ability carries Suspend's haste rule (702.62a).
-    pub(crate) fn suspend_offer(&self) -> bool { self.generated_by("Suspend") }
-    pub(crate) fn generated_by(&self, name: &str) -> bool {
+    pub(crate) fn suspend_offer(&self) -> bool { self.generated_by(crate::keyword::carried().suspend) }
+    /// Is this ability one this keyword generated ([`crate::keyword::generated_by`])?
+    pub(crate) fn generated_by(&self, keyword: ir::Keyword) -> bool {
         let (Some(def), Some(key)) = (self.def, self.ability.clone()) else { return false };
         crate::keyword::generated_by(def).find_map(|(index, instance)| (index == key.index).then_some(instance))
-            .is_some_and(|instance| instance.item.keyword.name() == name)
+            .is_some_and(|instance| instance.item.keyword == keyword)
     }
     pub(crate) fn ability_key(&self) -> Option<crate::binding::AbilityKey> { self.ability.clone() }
     pub(crate) fn cost_exile_writer(&self, key: crate::binding::AbilityKey) -> bool {

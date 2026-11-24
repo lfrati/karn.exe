@@ -3,11 +3,6 @@
 use crate::{Game,ObjId};
 use crate::select::{Ctx,Support};
 impl Game {
-    /// Was one of this spell's warp costs paid (702.185a, 702.185c)? A copy of a spell cast
-    /// for it has its cost paid too (707.10).
-    pub(crate) fn warp_paid(&self,spell:ObjId) -> bool {
-        ir::Keyword::from_name("Warp").is_some_and(|warp| self.paid_for(spell,warp))
-    }
     /// Was this spell, or the permanent it became, cast for an alternative cost of this
     /// keyword (601.2b): "that creature was cast for its warp cost"? A copy of a spell, and
     /// the token it becomes, has the alternative cost of what it copies but was not cast
@@ -15,11 +10,12 @@ impl Game {
     pub(crate) fn cast_for(&self,object:ObjId,keyword:ir::Keyword) -> bool {
         self.obj(object).cast_by.is_some() && self.paid_for(object,keyword)
     }
-    /// Is this object's alternative cost, paid or copied, one of this keyword?
+    /// Is this object's alternative cost, paid or copied, one of this keyword (702.185a,
+    /// 702.185c)? A copy of a spell cast for it has its cost paid too (707.10).
     fn paid_for(&self,object:ObjId,keyword:ir::Keyword) -> bool {
         let Some(row)=self.obj(object).alternative else { return false };
         // a row past those it prints is a warp cost an effect gave it ([`Game::given_alternatives`])
-        let given=|def:&crate::CardDef| row>=given_base(def) && Some(keyword)==ir::Keyword::from_name("Warp");
+        let given=|def:&crate::CardDef| row>=given_base(def) && keyword==crate::keyword::carried().warp;
         // its rows are those its card prints, whatever it now is: a face-down spell's
         // definition prints none, its morph cost being a row of its card (702.37c)
         self.underlying(object).is_some_and(|def| crate::keyword::alternative_rows(def,keyword).contains(&row) || given(def))
@@ -37,7 +33,8 @@ impl Game {
         self.given_warps(card,cast_as).into_iter().find(|(at,_,_)| *at==row).map(|(_,item,_)| item)
     }
     fn given_warps(&self,card:ObjId,cast_as:crate::card::CastAs) -> Vec<(usize,ir::token::KeywordInstance,crate::Res<crate::cost::Plan>)> {
-        let (Some(def),Some(warp))=(self.def(card),ir::Keyword::from_name("Warp")) else { return Vec::new() };
+        let Some(def)=self.def(card) else { return Vec::new() };
+        let warp=crate::keyword::carried().warp;
         let Ok(spell)=def.spell(cast_as) else { return Vec::new() };
         if self.obj(card).zone!=crate::Zone::Hand { return Vec::new() }
         let Some(seen)=self.cast_seen(card,cast_as) else { return Vec::new() };
@@ -55,24 +52,21 @@ impl Game {
     /// The resolving spell creates the delayed consequence of its paid alternative cost;
     /// it is independent of enters triggers and later ability loss (702.109a, 702.185a).
     pub(crate) fn alternative_resolved(&mut self,spell:ObjId,permanent:ObjId) {
-        let name = if self.warp_paid(spell) { "Warp" }
-            else if ir::Keyword::from_name("Dash").is_some_and(|dash| self.paid_for(spell, dash)) { "Dash" }
-            else { return; };
+        let carried = crate::keyword::carried();
+        let Some(keyword) = [carried.warp, carried.dash].into_iter().find(|keyword| self.paid_for(spell, *keyword)) else { return };
         let controller=self.obj(spell).controller;
         let mut ctx=Ctx::for_spell(controller,spell);
         // The paid alternative is the declaring keyword row, not a guessed ability
         // index on the resulting permanent. Granted alternatives have no printed row.
         if let Some(row)=self.obj(spell).alternative {
             let origin=self.copy_origin(spell);
-            if self.definition(spell,&origin).is_some_and(|def|
-                ir::Keyword::from_name(name).is_some_and(|keyword|
-                    crate::keyword::alternative_rows(def,keyword).contains(&row))) {
+            if self.definition(spell,&origin).is_some_and(|def| crate::keyword::alternative_rows(def,keyword).contains(&row)) {
                 ctx=ctx.with_key(crate::binding::AbilityKey{origin,index:row});
             }
         }
         let pattern=crate::trigger::DelayedPattern::step(ir::Step::End,&ir::StepOwner::The{next:true},&Support::runtime(self,&ctx))
             .expect("alternative casting costs watch the next end step");
-        let captured=if name == "Warp" { crate::program::warp_exile(self,ctx,permanent) }
+        let captured=if keyword == carried.warp { crate::program::warp_exile(self,ctx,permanent) }
             else { crate::program::dash_return(self,ctx,permanent) };
         self.delayed.push(crate::state::Delayed{source:spell,controller,pattern,subjects:Vec::new(),
             captured,bound:Default::default(),lasts:crate::state::Lasts::Indefinite,once:true});

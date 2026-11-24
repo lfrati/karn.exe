@@ -8,7 +8,7 @@ use crate::card::CardDef;
 impl Game {
     /// Is the alternative cost at this row of the definition a sneak cost (702.190a)?
     pub(crate) fn sneak_row(def:&CardDef,row:usize) -> bool {
-        ir::Keyword::from_name("Sneak").is_some_and(|sneak| crate::keyword::alternative_rows(def,sneak).contains(&row))
+        crate::keyword::alternative_rows(def,crate::keyword::carried().sneak).contains(&row)
     }
     /// When a sneak cost is paid: any time this player could cast an instant during their
     /// declare blockers step (702.190a).

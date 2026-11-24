@@ -3856,7 +3856,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 }).collect::<Vec<_>>();
                 let from = if matches!(costs, Costs::Only(_)) {
                     // The owning linked keyword proves its exact source zone.
-                    CastOrigin::Fixed(if support.generated_by("Miracle") { Zone::Hand } else { Zone::Exile })
+                    CastOrigin::Fixed(if support.generated_by(crate::keyword::carried().miracle) { Zone::Hand } else { Zone::Exile })
                 } else {
                     let mut origins = cards.iter().map(|card| {
                         if *card == action::Operand::Source {
@@ -3873,7 +3873,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 let (offered, cast, possible) = (e.slot(), e.slot(), e.slot());
                 // "If you don't, …": whether a cast was made (601.2h)
                 binder.outcome = Some((player.clone(), cast, possible, e.instrs.len()));
-                let ceiling = if support.generated_by("Cascade") {
+                let ceiling = if support.generated_by(crate::keyword::carried().cascade) {
                     let scan = e.instrs.iter().rev().find_map(|instruction| match instruction {
                         Instr::LibraryScan { hit, bound, .. } => Some((*hit, *bound)), _ => None,
                     }).ok_or_else(|| crate::Unsupported("cascade: a retained scan must precede its cast offer".into()))?;
