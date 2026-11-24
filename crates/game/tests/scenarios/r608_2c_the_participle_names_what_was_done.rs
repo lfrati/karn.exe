@@ -29,14 +29,20 @@ fn prohibit(spell: &str, cost: &str, pool: &str, kicked: bool) -> (T, ObjId) {
     let mut t = Board::new(2).hand(0, &[spell]).hand(1, &["Prohibit"]).build();
     t.mana(0, cost).cast(0, spell, vec![], mana_pool(pool)).unwrap();
     let cast = t.g.stack[0];
+    answer_with_prohibit(&mut t, cast, kicked);
+    (t, cast)
+}
+
+/// Player 0 passes with the spell on the stack; player 1 casts Prohibit, kicked or not, aimed
+/// at it, and it resolves.
+fn answer_with_prohibit(t: &mut T, cast: ObjId, kicked: bool) {
     t.g.act(0, Move::Pass).unwrap();
     let card = t.find_in(1, Zone::Hand, "Prohibit");
     let (cost, pool) = if kicked { ("{3}{U}", "CCCU") } else { ("{1}{U}", "CU") };
     t.mana(1, cost);
     t.g.act(1, Move::Paying(mana_pool(pool), Box::new(Move::WithKicks(u32::from(kicked),
         Box::new(Move::Cast { card, targets: vec![vec![Target::Object(cast)]] }))))).unwrap();
-    settle(&mut t);
-    (t, cast)
+    settle(t);
 }
 
 // Rules: 608.2c, 702.33d
@@ -61,6 +67,26 @@ fn r608_2c_prohibit_counters_by_mana_value_and_more_when_kicked() {
     }
 }
 
+// Rules: 202.3e, 608.2c, 702.33d
+// Given: Blaze aimed at player 1 with X 1, 2, 3 or 4: on the stack, of mana value 2, 3, 4 or 5.
+// When: player 1 answers with Prohibit, unkicked for X 1 and 2, kicked for X 3 and 4.
+// Expect: X counts while the spell is on the stack: unkicked, Prohibit counters Blaze with X 1,
+// not with X 2; kicked, it counters X 3, not X 4. Blaze not countered deals X damage.
+#[test]
+fn r202_3e_prohibit_counts_the_x_of_the_spell_it_counters() {
+    for (x, kicked, countered) in [(1u32, false, true), (2, false, false), (3, true, true), (4, true, false)] {
+        let mut t = Board::new(2).hand(0, &["Blaze"]).hand(1, &["Prohibit"]).build();
+        let blaze = t.find_in(0, Zone::Hand, "Blaze");
+        t.mana(0, &format!("{{{x}}}{{R}}"));
+        t.g.act(0, Move::Paying(mana_pool(&format!("{}R", "C".repeat(x as usize))),
+            Box::new(Move::WithX(x, Box::new(Move::Cast { card: blaze, targets: vec![vec![Target::Player(1)]] }))))).unwrap();
+        let cast = t.g.stack[0];
+        answer_with_prohibit(&mut t, cast, kicked);
+        let life = if countered { 20 } else { 20 - x as i32 };
+        cite!(["202.3e", "608.2c", "702.33d"]; case: format!("X {x}, kicked {kicked}"); assert_eq!((t.g.players[1].life, t.g.stack.is_empty()), (life, true)));
+    }
+}
+
 // Rules: 608.2c, 701.20a
 // Given: Lead the Stampede; the top five cards of its caster's library are Grizzly Bears, a
 // Mountain, Centaur Courser, an Island and Hill Giant; a Forest is sixth.
@@ -69,10 +95,7 @@ fn r608_2c_prohibit_counters_by_mana_value_and_more_when_kicked() {
 // Forest is on top.
 #[test]
 fn r608_2c_lead_the_stampede_puts_the_revealed_cards_into_its_casters_hand() {
-    let mut t = Board::new(2).hand(0, &["Lead the Stampede"])
-        .library(0, &["Grizzly Bears", "Mountain", "Centaur Courser", "Island", "Hill Giant", "Forest"]).build();
-    t.mana(0, "{2}{G}").cast(0, "Lead the Stampede", vec![], mana_pool("CCG")).unwrap();
-    t.pass_all();
+    let mut t = stampede();
     // "You may reveal any number": whether to is asked first
     if let Some((0, Asked::May)) = t.asked() { t.answer(0, Answer::Yes).unwrap(); }
     let among = match t.asked() {
@@ -87,6 +110,39 @@ fn r608_2c_lead_the_stampede_puts_the_revealed_cards_into_its_casters_hand() {
     cite!(["608.2c"]; assert_eq!(names(&t.g, &hand), ["Grizzly Bears", "Hill Giant"]));
     let top = *t.g.players[0].library.last().expect("a library");
     t.expect().rules(["401.4"]).holds(|g| g.obj(top).chars.name == "Forest" && g.players[0].library.len() == 4, "the rest are on the bottom").check();
+}
+
+/// Lead the Stampede resolving; the top five cards of its caster's library are Grizzly Bears,
+/// a Mountain, Centaur Courser, an Island and Hill Giant; a Forest is sixth.
+fn stampede() -> T {
+    let mut t = Board::new(2).hand(0, &["Lead the Stampede"])
+        .library(0, &["Grizzly Bears", "Mountain", "Centaur Courser", "Island", "Hill Giant", "Forest"]).build();
+    t.mana(0, "{2}{G}").cast(0, "Lead the Stampede", vec![], mana_pool("CCG")).unwrap();
+    t.pass_all();
+    t
+}
+
+// Rules: 608.2d, 401.4
+// Given: Lead the Stampede over the same library.
+// When: it resolves and its caster declines to reveal, or reveals no card after trying to reveal
+// the Island.
+// Expect: the Island can't be revealed; with no card revealed, none goes to the hand and all five
+// go to the bottom, so the Forest is on top.
+#[test]
+fn r608_2d_lead_the_stampede_revealing_nothing_puts_all_five_on_the_bottom() {
+    for decline in [true, false] {
+        let mut t = stampede();
+        if let Some((0, Asked::May)) = t.asked() { t.answer(0, if decline { Answer::No } else { Answer::Yes }).unwrap(); }
+        if let Some((0, Asked::Select { .. } | Asked::Objects { .. })) = t.asked() {
+            let island = *t.g.players[0].library.iter().find(|o| t.g.obj(**o).chars.name == "Island").expect("the Island");
+            cite!(["608.2d"]; case: format!("declined {decline}"); refused("not among the offered objects"): t.g.clone().act(0, Move::Choose(Answer::Objects(vec![island]))));
+            t.answer(0, Answer::Objects(vec![])).unwrap();
+        }
+        settle(&mut t);
+        let top = *t.g.players[0].library.last().expect("a library");
+        cite!(["608.2d"]; case: format!("declined {decline}"); assert!(t.g.players[0].hand.is_empty()));
+        cite!(["401.4"]; case: format!("declined {decline}"); assert!(t.g.obj(top).chars.name == "Forest" && t.g.players[0].library.len() == 6));
+    }
 }
 
 // Rules: 608.2h, 118.3
