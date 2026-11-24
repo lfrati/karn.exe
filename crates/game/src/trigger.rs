@@ -1343,6 +1343,13 @@ fn watched(def: &CardDef) -> impl Iterator<Item = (usize, &Template)> {
     def.triggers.iter().filter_map(|r| Some((r.ability, r.result.as_ref().ok()?))).filter(|(_, t)| !t.applied)
 }
 
+/// Does one of its triggered abilities ask, as its intervening "if", whether it came under its
+/// controller's control since an upkeep began (Echo, 702.30a)?
+pub(crate) fn asks_control_history(def: &CardDef) -> bool {
+    def.triggers.iter().filter_map(|r| r.result.as_ref().ok())
+        .any(|t| t.intervening.as_ref().is_some_and(condition::Condition::asks_control_history))
+}
+
 impl Game {
     /// The triggered abilities this object has that the engine watches for, each with its
     /// key: those of its own definition, and those effects give it now or had given it as

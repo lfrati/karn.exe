@@ -484,6 +484,15 @@ impl Condition {
         outcomes(&self.0)
     }
 
+    /// Does it ask whether its source came under its controller's control since an upkeep
+    /// began (702.30a)?
+    pub(crate) fn asks_control_history(&self) -> bool {
+        fn history(asks: &Asks) -> bool {
+            match asks { Asks::CameUnderControlSinceUpkeep => true, Asks::And(v) | Asks::Or(v) => v.iter().any(history), _ => false }
+        }
+        history(&self.0)
+    }
+
     pub(crate) fn reads_targets(&self) -> bool {
         fn reads(asks: &Asks) -> bool {
             match asks { Asks::Targets { .. } => true, Asks::And(v) | Asks::Or(v) => v.iter().any(reads), _ => false }

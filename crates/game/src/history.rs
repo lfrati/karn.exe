@@ -84,11 +84,7 @@ impl Game {
     pub(crate) fn validate_setup_control_history(&self) -> crate::Res<()> {
         for object in &self.battlefield {
             let Some(def) = self.def(*object) else { continue };
-            fn needs(value: &serde_json::Value) -> bool { match value {
-                serde_json::Value::Object(fields) => fields.contains_key("CameUnderControl") || fields.values().any(needs),
-                serde_json::Value::Array(items) => items.iter().any(needs), _ => false,
-            } }
-            if serde_json::to_value((&def.abilities, &def.keyword_abilities, &def.modes)).is_ok_and(|value| needs(&value))
+            if crate::trigger::asks_control_history(def)
                 && self.obj(*object).control_acquisitions.since(self.controller(*object), crate::event::Seq::default()).is_none() {
                 return crate::unsupported("initial permanent requires known control acquisition/upkeep history");
             }
