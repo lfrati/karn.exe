@@ -1581,3 +1581,15 @@ fn r115_4_any_target_that_was_dealt_damage() {
     assert_ne!(dealt, combat);
     declines("~ deals 1 damage to any target who lost life this turn.");
 }
+
+/// CR 608.2c: "instead only you draw a card" replaces what the sentence before does, as
+/// "instead you draw a card" does; "only" adds nothing to "instead" (Kumena's Awakening,
+/// Golden Demise).
+#[test]
+fn r608_2c_instead_only() {
+    let (only, printed) = read("At the beginning of your upkeep, each player draws a card. If you have the city's blessing, instead only you draw a card.");
+    assert_eq!(printed, "At the beginning of your upkeep, each player draws a card. If you have the city's blessing, instead you draw a card.");
+    let (plain, _) = read(&printed);
+    assert_eq!(only, plain);
+    read("All creatures get -2/-2 until end of turn. If you have the city's blessing, instead only creatures your opponents control get -2/-2 until end of turn.");
+}

@@ -1394,7 +1394,13 @@ fn build() -> Effects {
         ],
     )
     .skip(&lit(","));
-    let bare = alt("lead", vec![lit("then").to(Lead::Then), lit("instead").to(Lead::Modifier(Modifier::Instead))]);
+    // "If you have the city's blessing, instead only you draw a card": "only" stresses that the
+    // new instruction is all that happens, which "instead" already says (608.2c)
+    let bare = alt("lead", vec![
+        lit("then").to(Lead::Then),
+        lit("instead").to(Lead::Modifier(Modifier::Instead)),
+        lit("instead only").to(Lead::Modifier(Modifier::Instead)).alias(),
+    ]);
     let any_sentence = forward::<Sentence>("sentence");
     let led = alt("lead", vec![with_comma, bare]).then(&any_sentence.rule()).map(
         |(lead, rest)| Some(Sentence::Led { lead, rest: Box::new(rest) }),
