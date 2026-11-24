@@ -1166,3 +1166,14 @@ fn r603_7b_your_next_spell_is_the_next_one_you_cast() {
     assert_eq!(said, other);
     assert_eq!(printed, "When you next cast an instant or sorcery spell this turn, copy that spell.");
 }
+
+/// CR 715.3: a card that has an Adventure may be cast as that Adventure; "as an Adventure" says
+/// how a cast is made, never how anything else is done.
+#[test]
+fn r715_3_cast_as_an_adventure() {
+    let (adventure, printed) = read("When ~ dies, you may cast it from your graveyard as an Adventure until the end of your next turn.");
+    let (plain, _) = read("When ~ dies, you may cast it from your graveyard until the end of your next turn.");
+    assert_ne!(adventure, plain);
+    assert_eq!(printed, "When ~ dies, you may cast it from your graveyard as an Adventure until the end of your next turn.");
+    for text in ["When ~ dies, exile it as an Adventure.", "When ~ dies, return it to your hand as an Adventure."] { declines(text); }
+}

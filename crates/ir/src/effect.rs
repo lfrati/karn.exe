@@ -251,6 +251,9 @@ pub enum Modifier {
     WithoutPayingManaCosts,
     /// "using its blitz ability": the keyword ability the cast is made with.
     Using(crate::vocab::Keyword),
+    /// "cast it from your graveyard as an Adventure": as the Adventure the card has, its
+    /// alternative characteristics (715.3); never as the card itself.
+    AsAdventure,
     /// "in a face-down pile" ("exile them in a face-down pile", 700.3): the cards exiled are
     /// grouped into a pile.
     InPile(crate::procedure::PileKind),

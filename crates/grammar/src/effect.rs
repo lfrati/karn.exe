@@ -382,6 +382,7 @@ fn build_modifiers() -> Modifiers {
             duration,
             lit("instead").to(Modifier::Instead),
             lit("face down").to(Modifier::FaceDown),
+            lit("as an Adventure").to(Modifier::AsAdventure),
             lit(", divided as you choose").to(Modifier::DividedAsYouChoose),
             lit("without paying their mana costs").to(Modifier::WithoutPayingManaCosts),
             lit("using its").then_keep(&crate::selector::keyword_name()).skip(&lit("ability")).map(
@@ -546,6 +547,7 @@ fn act(form: Form) -> P<Act> {
         (!by || matches!(a.action, ir::Action::Cast { free: false, .. }) || flash || play(true) || play(false))
             && (by || unpaid || !play(false))
             && (!a.mods.contains(&Modifier::FaceDown) || exile)
+            && (!a.mods.contains(&Modifier::AsAdventure) || matches!(a.action, ir::Action::Cast { play: false, .. }))
             && (!a.mods.iter().any(|m| matches!(m, Modifier::InPile(_))) || exile)
             && (!with_counters || (exile && !permanent))
             && !(exile && ends_in_counters && !permanent)
