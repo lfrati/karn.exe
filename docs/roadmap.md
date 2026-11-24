@@ -97,53 +97,41 @@ branch: `git worktree remove ~/git/karn-wt/<lane>` and `git branch -d <lane>`.
 
 ### If you were given the whole round
 
-Move the tag to where the round starts (`git tag -f round-start origin/main`), start one
-builder per lane as a subagent, keep them working until the user explicitly stops them, and
-then run the review pass in a fresh one. If you cannot start subagents, take Lane 1 yourself.
+You are the orchestrator; the lanes do the building. Close the previous round first if its
+review has not landed. Then move the tag to where the round starts (`git tag -f round-start
+origin/main`), take the baseline (`uv run scripts/blocker_report.py --out .cache/round-baseline`)
+and rewrite *This round* from it. Start one builder per lane as a subagent, each in its own
+worktree, and a fifth, `quality`, alongside them. Quality fixes the wrong play the last review
+left open, merges duplication, and reads the cards each builder commit newly runs. While the
+builders work, integrate what they push, check their newly running cards, and give a lane
+its next targets from a fresh report before its list runs out. Keep them working until the
+user explicitly stops them, then run the review pass in a fresh session. If you cannot start
+subagents, take Lane 1 yourself.
 
 ### This round
 
-The numbers are from the blocker report at `80dae61` (2026-11-22). They estimate what a target
-unlocks. A card can show a second blocker once the first is gone.
+The numbers are from the blocker report at `6ca6da8` (round-start, 2026-11-24). They estimate
+what a target unlocks. A card can show a second blocker once the first is gone.
 
 #### Lane 1: keywords (worktree `keywords`)
 
-132 keywords are recognised and not implemented. They block 2,161 cards, and for 1,464 of
-those the keyword is the only known blocker. Each keyword is declared once, in
-`crates/game/src/keyword.rs` and `keyword/declaration.rs`, and its entry in rule 702 is the
-specification. A keyword whose rule is one sentence about its permanent, as flying's is, may
-need only a row in `SENTENCES`.
+Each keyword is declared once, in `crates/game/src/keyword.rs` and `keyword/declaration.rs`,
+and its entry in rule 702 is the specification. A keyword whose rule is one sentence about its
+permanent, as flying's is, may need only a row in `SENTENCES`. Unearth, Bestow and Overload
+are Lane 4's.
 
-| Keyword | Cards it alone blocks | Roster decks it touches |
-| --- | ---: | ---: |
-| Fear | 50 | 29 |
-| Intimidate | 25 | 6 |
-| Shadow | 35 | 25 |
-| Horsemanship | 28 | 0 |
-| Exalted | 36 | 44 |
-| Flanking | 20 | 18 |
-| Bushido | 28 | 4 |
-| Bloodthirst | 20 | 4 |
-| Echo | 48 | 31 |
-| Cumulative Upkeep | 40 | 5 |
-| Affinity | 56 | 48 |
-| Dash | 19 | 33 |
-| Unearth | 49 | 26 |
-| Storm | 27 | 83 |
-| Cascade | 30 | 32 |
-| Suspend | 33 | 63 |
-| Overload | 18 | 29 |
-| Miracle | 14 | 31 |
-
-That is 576 cards if every estimate holds. If the first three keywords gain less than half of
-their numbers, the estimate behind this lane is wrong: say so in the commit message.
-
-After these, take the `keyword:` labels of the report by cards blocked alone (Bestow,
-Soulshift, Myriad, Splice, Improvise, Aftermath and on). Banding, Partner, Mutate, Daybound
-and Nightbound need larger machinery and can wait.
+In order, with the cards each alone blocks and the roster decks it completes: Escalate
+(Collective Brutality, 3 decks); Soulbond (Silverblade Paladin, 3 decks, with its static
+"Selector" subject); Outlast (10 cards, 2 decks); Cumulative Upkeep beyond generic mana (26,
+1); the Equip variants still refused (17, 1); For Mirrodin! (10, 1); Spectacle (9, 1). Then by
+cards blocked alone: Splice 22, Backup 18, Encore 18, Prototype 15, Awaken 14, Embalm 14 with
+Eternalize 11, Unleash 13, Reconfigure 13, Devour 13, Umbra Armor 12, Riot 12, Scavenge 12,
+Squad 12, Champion 11, Graft 11, Cipher 11, Blitz 10, Reinforce 10, Jump-Start 9, Emerge 9,
+Enlist 9. After these, the report's `keyword:` labels by cards blocked alone. Banding,
+Partner, Mutate, Daybound and Nightbound need larger machinery and can wait.
 
 Some tests use today's refusals as examples: `crates/game/tests/engine/admission_blockers.rs`
-expects `keyword: Fear`. When a keyword lands, point them at one that is still refused.
+expects a keyword refusal. When a keyword lands, point them at one that is still refused.
 
 *Skipped:*
 
@@ -160,45 +148,29 @@ Cumulative upkeep currently supports fixed generic mana only; colored, life and 
 
 #### Lane 2: deck closers (worktree `closers`)
 
-Current priority, in order: Liliana of the Veil; Atraxa, Grand Unifier; The Wandering
-Emperor; Jegantha, the Wellspring; Time Vault; Intuition; Hydroid Krasis; Once Upon a Time;
-Tishana's Tidebinder; Preacher of the Schism; Agadeem's Awakening; Sylvan Library; Oath of
-Druids; Heart of Kiran. These newly readable cards need engine consumers. Then take the
-report's blocker families ranked by decks completed (`sole_decks`), continuing until the
-user explicitly says stop. Publish coherent completed batches along the way.
-
 Mechanisms in the program and binding owner (`crates/game/src/program.rs` and `program/`),
 each the last thing keeping several roster decks from running. One builder: these all meet in
 the same files.
 
-Completed foundations:
+The order is greedy: each card is the one that completes the most roster decks once every
+card before it runs (decks completed in brackets). Chain Lightning (6), with Chain of Vapor,
+Plasma and Smog; Vendilion Clique (4); True-Name Nemesis (5); Hymn to Tourach (4), with the
+49 cards that select at random; Mishra's Bauble (4); Dragon's Rage Channeler (4); Prohibit and
+Lead the Stampede (4 each); Urza's Rage and Gideon Jura (3 each). Then Tamiyo, the Moon Sage;
+Voice of Resurgence; Cunning Wish; Vedalken Shackles; Blightning; Counterbalance; Chrome Mox;
+Threads of Disloyalty; Gempalm Incinerator; Glimpse of Nature; Tasigur, the Golden Fang;
+Garruk Relentless; Liliana, the Last Hope; Fires of Invention; Rising Waters; Demonfire; Glint
+Hawk Idol; Tribal Flames; Gaddock Teeg; Surgical Extraction; Merrow Reejerey; Urza's Bauble;
+Pillar of Flame (2 to 3 each). Chain Lightning and Urza's Rage were skipped last round; their
+notes below say what they need, and they still close the most decks. After the list, recompute
+the greedy order from a fresh report, or sort `deck-labels.jsonl` by `sole_decks`.
 
 - [#33](https://github.com/lfrati/karn.exe/issues/33): copy exceptions discard a Room's
   halves. This is known wrong play.
-- The report sorts blockers by the decks they touch, which does not predict what they
-  complete. Sort `deck-labels.jsonl` by decks completed (`sole_decks`) and count the cards
-  each label alone blocks over the whole corpus, so later targets come from the report.
-
-Then, by the report's label:
-
-| Blocker | Cards such as | Decks it completes, about |
-| --- | --- | ---: |
-| result group: no earlier instruction did what "Some(Reveal) this way" names | Delver of Secrets | 6 |
-| optional compound instruction by another chooser not lowered | Chain Lightning, Chain of Vapor | 5 |
-| selection not lowered: Indefinite(UpTo(Const(2))) | Collected Company | 5 |
-| program: lead not lowered: Modifier | Urza's Rage, Gideon Jura | 5 |
-| reference: the exiled card, of the ability that exiles it | Expressive Iteration | 5 |
-| mana: of Chosen | Utopia Sprawl, Coldsteel Heart | 5 |
-| program: a cast offered to another player | Spell Queller | 4 |
-| description: ThatType | Distant Melody, Tsabo's Decree | 4 |
-| modifier: ForEach of Counter | Circular Logic | 4 |
-| noun phrase: an unsupported zone or zone owner | Crime // Punishment, Relic of Progenitus | 4 |
-| program: optional compound clause or other chooser not lowered | Browbeat, Vexing Devil | 3 |
-| token: Those | Conqueror's Pledge, Gather the Townsfolk | 3 |
 
 The widest labels are many mechanisms under one name: `input reference: nothing before it
-supplies the required participant/cardinality` holds 278 cards and `program: control flow not
-lowered` 394. Take a family of cards inside one, not the label.
+supplies the required participant/cardinality` holds 236 cards and `program: control flow not
+lowered` 341. Take a family of cards inside one, not the label.
 
 This lane is slower than the keywords: each target is a different mechanism. It is here
 because it is what moves the deck count.
@@ -230,11 +202,14 @@ Unread phrasing families, in `crates/grammar` only. 839 roster decks hold an unr
 581 of them hold exactly one. Reading a card does not make it run: it moves the card into the
 other lanes' queues.
 
-Read the family each of these belongs to, most roster decks first: Liliana of the Veil (41),
-Atraxa, Grand Unifier (38), The Wandering Emperor (31), Jegantha, the Wellspring (29), Time
-Vault (24), Intuition (22), Hydroid Krasis (21), Once Upon a Time (21), Tishana's Tidebinder
-(20), Preacher of the Schism (19), Agadeem's Awakening (18), Sylvan Library (17), Oath of
-Druids (16), Heart of Kiran (15). After these, take unread roster cards from the report.
+Take the family each of these stops in, by decks completed: at "of" (Winding Constrictor,
+Cemetery Illuminator; completes 3, held by 15 decks); "monarch" (Azure Fleet Admiral, 2);
+"library" (Aven Mindcensor, Gonti); "votes" (Council's Judgment, 2); "," (Pelt Collector, held
+by 13); "instead" (Abundance); "until" (Mosswood Dreadknight); "as" (Aluren); "and" (Lunar
+Convocation); "or" (Crystal Shard, Turnabout); "/" (Anje, Maid of Dishonor); Ghostfire Blade,
+Improvisation Capstone, Master of the Wild Hunt, Twinferno; then "." (held by 24). After
+these, take unread roster cards from the report. A card that newly reads must run right or be
+refused by the engine; check what the compiler does with each.
 
 The word where reading stops is not the unit of work. One word is the stop of many different
 phrases, and a rule written for one card's sentence is a patch. The unit is a **family**: one
@@ -250,12 +225,27 @@ the first goal: a family's rule covers them too.
 
 #### Lane 4: mechanisms (worktree `mechanisms`)
 
-Take Suspend, Cascade, Echo, Miracle, Bestow, Overload and Unearth, in that order.
+Take Bestow (29 cards; Boon Satyr completes 3 decks), Unearth (49 cards, 2 decks), Overload
+(18 cards; Counterflux, 2 decks), then Myriad and the grants Cascade, Suspend, Miracle and Echo
+still refuse, and Echo's nonmana costs. Then the report's mechanism-shaped labels: delayed
+triggers on a relative turn or a recurring step (40 cards), keywords granted by a program
+(149), continuous changes to players (38).
 Read each mechanism in the pinned Ironsmith checkout before designing it, then build the
-missing capability named in Lane 1's skip notes. The two-attempt skip rule does not apply:
+missing capability named in the skip notes. The two-attempt skip rule does not apply:
 stay with each mechanism until actual Oracle cards run with tested behavior. Publish useful
 steps that pass `make check`, continuing immediately after a structural step while its cards
 remain refused. Continue until the user explicitly stops the builders.
+
+#### Quality (worktree `quality`)
+
+Alongside the builders, from the review of the round before: the wrong play it left open
+(Aurora Phoenix's "spell with cascade", Deep-Sea Kraken's "it", "while it's exiled" on
+Dinosaurs on a Spaceship and Veiling Oddity); the cards it refused to support properly
+(Underworld Cerberus, Loaming Shaman, Increasing Confusion, Rally the Righteous); the
+duplication it found (Cascade and Discover's scans, name-checked Suspend haste and Warp,
+Rampage/Afflict/Bushido, Echo's JSON search), with unchanged programs and blocker report to
+show behaviour kept. Then the newly running cards of each builder commit that their builder
+did not test.
 
 #### Not this round
 

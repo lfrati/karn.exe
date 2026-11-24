@@ -153,3 +153,22 @@ faces and admission results for all 32,872 corpus faces against `6f32ac1`.
 `.cache/quality/verification.json` records that comparison and the passing Rust and
 Python/tooling checks. Generated targets and the temporary round-start source archive
 were removed after validation; rebuilding them is necessary to repeat a measurement.
+
+## November 22 keyword round, measured at its review
+
+The whole round, `round-start` (`500f3bf`) against `f51586d` once every lane had landed,
+on the three complete-game supplied-action traces with `perf_core.py` and the `release`
+profile. The order was B,C,C,B, five runs of each trace per phase, ten samples per trace and
+binary, with no build or game running alongside. The table compares medians; positive time
+changes are slower.
+
+| Trace | Round start | Round end | Change |
+| --- | ---: | ---: | ---: |
+| Bant | 41.66 ms | 42.88 ms | +2.9% |
+| Vivi | 20.17 ms | 20.66 ms | +2.4% |
+| Torch | 26.00 ms | 27.04 ms | +4.0% |
+
+Runs of one binary spread by about 1%, so the round made these games slower. The cause is
+not yet attributed. The mid-round snapshot with its cleanup was within 1.5% of the round
+start (above), so most of it came from work that landed after `398f0c9`. Raw results and logs are in
+`.cache/round-performance/review-2026-11-24/`.
