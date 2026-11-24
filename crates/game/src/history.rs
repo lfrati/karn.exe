@@ -418,6 +418,7 @@ impl Game {
     /// An existence predicate needs one matching occurrence, independent of how
     /// many events any individual player produced. Keep exact counts separate.
     pub(crate) fn has_happened(&self, ctx: &Ctx, pattern: &Pattern, turn: Turn) -> bool {
+        if pattern.this_ability() { return self.happened(ctx, pattern, turn, false) > 0; }
         if turn == Turn::This && pattern.exhaust_starts() {
             return self.activation_started.iter().any(|(player, keyword, mana)|
                 pattern.described(self, ctx, &Fact::activation(*player, *keyword, *mana, None)).is_some());
@@ -534,6 +535,14 @@ impl Game {
     /// `each`: said of a player ("a player cast two or more spells"), so the most that any
     /// one player did it.
     pub(crate) fn happened(&self, ctx: &Ctx, pattern: &Pattern, turn: Turn, each: bool) -> usize {
+        // "this ability has been activated": each activation of it on this object this turn,
+        // as it is reserved (602.5b); a mana ability's too, which has no object on the stack
+        // (605.3b)
+        if pattern.this_ability() {
+            if turn != Turn::This { return 0; }
+            let (Some(source), Some(key)) = (ctx.source, ctx.ability.as_ref()) else { return 0 };
+            return self.activated.iter().filter(|(of, k)| *of == source && k == key).count();
+        }
         if turn == Turn::This && pattern.exhaust_starts() {
             let facts: Vec<_> = self.activation_started.iter().map(|(player, keyword, mana)|
                 Fact::activation(*player, *keyword, *mana, None)).collect();

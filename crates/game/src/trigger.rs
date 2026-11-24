@@ -388,6 +388,10 @@ pub(crate) enum Noun {
     Activation(crate::activate::ActivationFilter),
     /// "the chosen player": the player chosen as the permanent entered (607.2d).
     Chosen(expr::Subject),
+    /// "this ability", what is activated: counted from the turn's own record of each ability
+    /// activated ([`Pattern::this_ability`]), as an ability on the stack or a mana ability
+    /// alike (605.3b); never an object or player an event names.
+    ThisAbility,
 }
 
 impl Noun {
@@ -410,6 +414,7 @@ impl Noun {
             return expr::Set::compile(&s.set, support, &mut linked(support)).map(Noun::Described);
         }
         match &s.quant {
+            Quant::Definite(Ref::This) if s.set.domain == ir::Domain::Ability => Ok(Noun::ThisAbility),
             Quant::Definite(Ref::This) => Ok(Noun::This),
             Quant::Definite(Ref::You) => Ok(Noun::You),
             Quant::Definite(Ref::AttachedTo(Attachment::Enchanted | Attachment::Equipped)) => Ok(Noun::Attached),
@@ -429,6 +434,7 @@ impl Noun {
     pub(crate) fn is(&self, game: &Game, ctx: &Ctx, t: Target) -> bool {
         match self {
             Noun::Activation(_) => false, // matches occurrence metadata, never a permanent
+            Noun::ThisAbility => false, // counted from the turn's activations, never an object
             Noun::This => Some(t) == ctx.source.map(Target::Object),
             Noun::You => t == Target::Player(ctx.controller),
             // what it was attached to as that left the battlefield is still what it names
@@ -851,7 +857,36 @@ impl Pattern {
                 && !nouns.is_empty() && nouns.iter().all(|noun| matches!(noun, Noun::Activation(filter) if filter.only_exhaust()))))
     }
 
+    /// "This ability has been activated four or more times this turn": its activations are
+    /// counted from the turn's record of each ability activated, of the object it is now
+    /// (602.5b, 400.7), not from the events of the turn.
+    pub(crate) fn this_ability(&self) -> bool {
+        matches!(self.subjects.as_slice(), [Noun::ThisAbility])
+            && !self.actions.is_empty() && self.actions.iter().all(|a| a.verb == Verb::Activate && a.arguments.iter().all(|(_, nouns)| nouns.is_empty()))
+            && self.nth.is_none() && self.during.is_none() && self.during_part.is_none() && self.condition.is_none()
+    }
+
+    /// A pattern of the turn's history, as a condition or a number counts it: what
+    /// [`Pattern::compile`] lowers, and also "this ability has been activated"
+    /// ([`Pattern::this_ability`]).
+    pub(crate) fn counted(p: &EventPattern, support: &Support<'_>) -> Res<Pattern> {
+        let pattern = Self::compile_any(p, support)?;
+        if pattern.names_this_ability() && !pattern.this_ability() { return unsupported("trigger: \"this ability\" other than as activated this turn"); }
+        Ok(pattern)
+    }
+
     pub(crate) fn compile(p: &EventPattern, support: &Support<'_>) -> Res<Pattern> {
+        let pattern = Self::compile_any(p, support)?;
+        if pattern.names_this_ability() { return unsupported("trigger: \"this ability\" other than in what happened this turn"); }
+        Ok(pattern)
+    }
+
+    fn names_this_ability(&self) -> bool {
+        self.subjects.contains(&Noun::ThisAbility)
+            || self.actions.iter().any(|a| a.arguments.iter().any(|(_, nouns)| nouns.contains(&Noun::ThisAbility)))
+    }
+
+    fn compile_any(p: &EventPattern, support: &Support<'_>) -> Res<Pattern> {
         let (mut during, mut during_part) = (None, None);
         match &p.during {
             None => {}

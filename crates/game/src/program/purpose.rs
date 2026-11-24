@@ -112,6 +112,7 @@ pub(super) fn done_by(instr: &Instr) -> Option<(Verb, Option<Placement>)> {
         Instr::Explore { .. } => (Verb::Explore, None),
         Instr::Connive { .. } => (Verb::Connive, None),
         Instr::Proliferate { .. } => (Verb::Proliferate, None),
+        Instr::ChooseSome { verb, .. } => (*verb, None),
         _ => return None,
     })
 }

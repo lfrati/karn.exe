@@ -243,6 +243,8 @@ struct Binder {
     each: Option<Slot>,
     /// Each of those players does the acts said under it, rather than the controller for them.
     each_does: bool,
+    /// "For each opponent, you may create …": those of them the controller chose it is done for.
+    each_chosen: Option<Slot>,
     /// The player who does the clause being lowered, when it is another than the controller
     /// ("Its controller may search their library …"): named once, in this slot.
     actor: Option<Slot>,
@@ -397,6 +399,12 @@ impl expr::Binding for Scoped<'_, '_> {
         if self.binder.unrepresented_movement && verb.is_none_or(|v| v == Verb::Move) {
             return unsupported("result group: complete search-partition movement result not modeled");
         }
+        // "if one or more tokens are created this way": what the creations made
+        if verb == Some(Verb::Create) && into.is_none() {
+            let groups: Vec<_> = self.binder.created_groups.iter().map(|slot| (*slot, expr::Shape::Created, true)).collect();
+            if groups.is_empty() { return unsupported("result group: no earlier instruction created tokens"); }
+            return Ok(groups);
+        }
         // what destroyed puts each where it went; every other instruction one zone (400.7)
         let groups: Vec<_> = self.binder.produced.iter()
             .filter(|p| verb.is_none_or(|v| p.verb == v) && (into.is_none() || p.shape == expr::Shape::Destroyed || p.into == into))
@@ -427,6 +435,41 @@ impl expr::Binding for Scoped<'_, '_> {
             [] => unsupported("life lost this way: no result producer"),
             _ => unsupported("life lost this way: ambiguous result producers"),
         }
+    }
+}
+
+/// Of players described as "other than defending player", the description without that, and
+/// the players it is other than.
+fn other_than_players(set: &ObjectSet) -> (ObjectSet, Vec<Selector>) {
+    let named = |f: &ir::Filter| match f {
+        ir::Filter::Not(b) => match b.as_ref() {
+            ir::Filter::Atom(ir::Atom::Among(s)) if s.set.domain == Domain::Player && matches!(s.quant, Quant::Definite(_)) => Some((**s).clone()),
+            _ => None,
+        },
+        _ => None,
+    };
+    let mut kept = set.clone();
+    let minus = match &mut kept.filter {
+        ir::Filter::All(items) => {
+            let minus: Vec<_> = items.iter().filter_map(named).collect();
+            items.retain(|f| named(f).is_none());
+            minus
+        }
+        f => match named(f) {
+            Some(s) => { *f = ir::Filter::All(Vec::new()); vec![s] }
+            None => Vec::new(),
+        },
+    };
+    (kept, minus)
+}
+
+/// "create a token that's tapped and attacking that player …": a creation whose tokens attack
+/// what it names (508.4).
+fn attacking_that_player(action: &Action) -> bool {
+    match action {
+        Action::CreateCopy { defender: Some(_), .. } => true,
+        Action::Create(tokens) => matches!(tokens.items.as_slice(), [ir::token::TokenSpec { combat: Some(ir::token::Combat::Attacking(Some(_))), .. }]),
+        _ => false,
     }
 }
 
@@ -1107,7 +1150,11 @@ enum TextStep<'a> { Reflexive(&'a Sentence, &'a [Sentence], Option<&'a ir::Event
     /// A cost-component rider attached to the body's one proved mana producer.
     ManaGenericForbidden,
     /// A keyword cost defined by the recipient's own mana cost (702.34a).
-    KeywordCost(ir::Keyword, &'a Selector) }
+    KeywordCost(ir::Keyword, &'a Selector),
+    /// "… return it to the battlefield … at the beginning of your next upkeep. It gains
+    /// haste.": the sentences the delayed instruction just after this does too, after it
+    /// ([`changes_what_returns_later`]).
+    Follows(&'a [Sentence]) }
 
 /// "If an instant or sorcery spell cast this way would be put into your graveyard, exile it
 /// instead": the card types of the spells cast under the offer before it that are exiled
@@ -1448,7 +1495,9 @@ fn text_steps<'a>(effect: &'a Effect, support: &Support<'_>) -> Res<Vec<TextStep
         Ok(())
     }
     let mut out = Vec::new();
+    let mut folded = None;
     for (i, sentence) in effect.0.iter().enumerate() {
+        if folded == Some(i) { continue; }
         if let Some(change) = crate::announcement::activation_change(sentence, support) { change?; continue; }
         if let Sentence::Restrictions(items) = sentence {
             if !matches!(support.ability(), Some(ir::Ability::Activated { .. })) { return unsupported("activation restriction on non-activated effect"); }
@@ -1511,6 +1560,10 @@ fn text_steps<'a>(effect: &'a Effect, support: &Support<'_>) -> Res<Vec<TextStep
             if i == 0 { return unsupported("program: instead, of nothing said before it"); }
             continue; // lowered with the sentence it replaces
         }
+        if let Some(next) = effect.0.get(i + 1) && changes_what_returns_later(sentence, next) {
+            out.push(TextStep::Follows(std::slice::from_ref(next)));
+            folded = Some(i + 1);
+        }
         walk(sentence, &mut out)?;
     }
     if out.is_empty() { return unsupported("program: empty body"); }
@@ -1525,6 +1578,27 @@ fn sentence_acts(sentence: &Sentence) -> Vec<&ir::effect::Act> {
         Sentence::Led { rest, .. } => sentence_acts(rest),
         _ => Vec::new(),
     }
+}
+/// "If you do, return it to the battlefield under its owner's control at the beginning of your
+/// next upkeep. It gains haste.": a lasting change said of what a delayed instruction returns
+/// to the battlefield is of the new object the return makes (400.7), so it is the delayed
+/// triggered ability that makes it, after the return (603.7a).
+fn changes_what_returns_later(sentence: &Sentence, next: &Sentence) -> bool {
+    fn returns_later(sentence: &Sentence) -> bool {
+        match sentence {
+            Sentence::Led { lead: Lead::Modifier(ir::effect::Modifier::If(_)), rest } => returns_later(rest),
+            Sentence::Do(body) => body.rest.is_empty() && body.first.rest.is_empty()
+                && body.first.first.mods.iter().any(|m| matches!(m, ir::effect::Modifier::At { .. }))
+                && matches!(&body.first.first.action, Action::Move { moves, .. }
+                    if moves.iter().all(|(_, to)| matches!(to, ir::action::Destination::Battlefield(_)))),
+            _ => false,
+        }
+    }
+    let Sentence::Do(body) = next else { return false };
+    returns_later(sentence) && body.rest.is_empty() && body.first.rest.is_empty()
+        && matches!(&body.first.subject, Some(Subject::Selector(s)) if matches!(s.quant, Quant::Definite(Ref::Anaphor(ir::Anaphor::It | ir::Anaphor::That))))
+        && crate::layers::changes(&body.first.first.action)
+        && !body.first.first.mods.iter().any(|m| matches!(m, ir::effect::Modifier::Duration(_)))
 }
 fn turns_face_down(sentence: &Sentence) -> bool {
     sentence_acts(sentence).iter().any(|a| matches!(a.action, Action::TurnFace { up: false, .. }))
@@ -1816,6 +1890,15 @@ impl Emit {
         Ok(())
     }
 
+    /// What is lowered so far, as a program of its own: what a delayed or reflexive ability
+    /// made here may read. A conditional block it is made in ("If one or more tokens are
+    /// created this way, exile the tokens at end of combat") ends here, for this.
+    fn prefix(&self, initial: &[Option<Kind>]) -> Res<Program> {
+        let mut instrs = self.instrs.clone();
+        let end = instrs.len();
+        for instr in &mut instrs { if let Instr::Branch { end: to @ 0, .. } = instr { *to = end; } }
+        Program::with_initial(instrs, self.acts.clone(), self.targets.clone(), initial.to_vec())
+    }
     fn end_act(&mut self, moves: bool, branch: Option<usize>) {
         if let Some(at) = branch {
             let count = self.instrs.len() - at - 1;
@@ -2455,6 +2538,33 @@ impl Emit {
     /// "A token that's a copy of a creature token you control": the original is chosen as the
     /// token is created, by the player who creates it, among the permanents that can be copied
     /// (608.2d). With none, no token is created (701.36b).
+    /// "that's tapped and attacking that player or a planeswalker they control": what tokens
+    /// entering attacking may attack, as the effect says (508.4). Under "for each opponent",
+    /// "that player" is each of them in turn: the tokens are made for each (or, where "you
+    /// may" was said, for each the controller chose).
+    fn defenders(&mut self, who: &ir::Objects, support: &Support<'_>, binder: &mut Binder) -> Res<action::Defenders> {
+        let player_named = |s: &Selector| s.set.domain == Domain::Player && matches!(s.quant, Quant::Definite(_)) && s.chooser.is_none() && s.random.is_none();
+        // "a planeswalker they control", "a planeswalker that player controls"
+        let theirs = |s: &Selector| s.quant == Quant::Indefinite(Count::Exactly(Amount::Const(1))) && s.chooser.is_none() && s.random.is_none()
+            && s.set.domain == Domain::Permanent && s.set.zone.is_none() && s.set.owner.is_none() && !s.set.other
+            && s.set.filter == ir::Filter::All(vec![ir::Filter::Atom(ir::Atom::Type(ir::CardType::Planeswalker))])
+            && s.set.controller.as_ref().is_some_and(|r| !r.negated && !r.past && player_named(&r.who)
+                && matches!(r.who.quant, Quant::Definite(Ref::Anaphor(ir::Anaphor::They | ir::Anaphor::That))));
+        let (player, planeswalkers) = match who.items.as_slice() {
+            [player] if player_named(player) => (player, false),
+            [player, walker] if who.conj == ir::Conj::Or && player_named(player) && theirs(walker) => (player, true),
+            _ => return unsupported("tokens entering attacking: what they attack, other than a named player or a planeswalker they control"),
+        };
+        let players = self.operand(player, support, binder)?;
+        match binder.each {
+            Some(each) if players == action::Operand::Reference(each) => {
+                let players = action::Operand::Reference(binder.each_chosen.unwrap_or(each));
+                Ok(action::Defenders { players, planeswalkers, each: true })
+            }
+            Some(_) => unsupported("for each player: tokens attacking other than that player"),
+            None => Ok(action::Defenders { players, planeswalkers, each: false }),
+        }
+    }
     fn chosen_copy_source(&mut self, of: &Selector, clause: &Clause, optional: bool, support: &Support<'_>, binder: &mut Binder) -> Res<action::Operand> {
         if optional || binder.each.is_some() || binder.actor.is_some() || !controller_only(clause.subject.as_ref()) {
             return unsupported("chosen copy original: one mandatory choice by the controller");
@@ -2910,6 +3020,7 @@ impl TextStep<'_> {
             TextStep::CardTypes(rest) | TextStep::CardPayments(_, rest) => (all(rest, &[]), 0),
             TextStep::Reflexive(rest, more, _, _) | TextStep::Later(_, _, rest, more, _) => (0, all(rest, more)),
             TextStep::Delayed(_, _, _, rest, _) | TextStep::ManaSpent(_, rest, _) => (0, all(rest, &[])),
+            TextStep::Follows(more) => (0, instructions(more)),
             _ => (0, 0),
         }
     }
@@ -3001,6 +3112,8 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             .then_some((pair[0], pair[1], b))
     }).collect();
     let mut skip_rider = false;
+    // what the next delayed instruction does after it ([`TextStep::Follows`])
+    let mut follows: &[Sentence] = &[];
     let mut branches = Vec::new();
     // conditions said after their act, read once it has been: (branch, condition, what was
     // named before the act, the first target the act may declare)
@@ -3086,6 +3199,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             _ => { binder.clause = None; binder.at = (usize::MAX, index); }
         }
         let (clause, act, alone) = match part {
+            TextStep::Follows(more) => { follows = more; continue; }
             TextStep::ManaGenericForbidden => {
                 if !non_generic { return unsupported("mana: non-generic spending rider needs one unconditional producer"); }
                 continue;
@@ -3175,7 +3289,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                     return unsupported("spending trigger: no immediately preceding mana production");
                 };
                 if production.has_spending_trigger() || e.instrs.iter().filter(|i|matches!(i,Instr::Mana{..})).count()!=1 { return unsupported("spending trigger: ambiguous produced mana reference"); }
-                let prefix = Program::with_initial(e.instrs.clone(), e.acts.clone(), e.targets.clone(), initial.clone())?;
+                let prefix = e.prefix(&initial)?;
                 let mut scope=binder.clone(); scope.sentences=base+effect.0.len();scope.clause=None;scope.outcome=None;scope.turn=None;scope.condition_amount=None;
                 // the delayed ability's text is its own sentence, "When that mana is spent …"
                 // (603.3, 603.7a), said beside the mana ability that creates it (106.6)
@@ -3227,7 +3341,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                     condition::Condition::stored(paid, true)
                 };
                 e.end_act(false, None);
-                let prefix = Program::with_initial(e.instrs.clone(), e.acts.clone(), e.targets.clone(), initial.clone())?;
+                let prefix = e.prefix(&initial)?;
                 let mut kinds = prefix.kinds;
                 let mut scope = binder.clone();
                 scope.sentences = base + effect.0.len(); scope.clause = None; scope.outcome = None;
@@ -3287,7 +3401,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 let nested = support.clone().with_event(event);
                 let support = if bound_subjects { support } else { &nested };
                 e.end_act(false, None);
-                let prefix = Program::with_initial(e.instrs.clone(), e.acts.clone(), e.targets.clone(), initial.clone())?;
+                let prefix = e.prefix(&initial)?;
                 let mut captured_scope = binder.clone();
                 captured_scope.sentences = base + effect.0.len();
                 captured_scope.clause = None;
@@ -3324,7 +3438,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 if !durations.is_empty() { return unsupported("delayed step: with a duration"); }
                 let pattern = crate::trigger::DelayedPattern::step(step, whose, support)?;
                 e.end_act(false, None);
-                let prefix = Program::with_initial(e.instrs.clone(), e.acts.clone(), e.targets.clone(), initial.clone())?;
+                let prefix = e.prefix(&initial)?;
                 let mut scope = binder.clone();
                 scope.sentences = base + effect.0.len(); scope.clause = None; scope.outcome = None;
                 // Like other delayed bodies, this is a new future resolution.
@@ -3574,7 +3688,13 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             TextStep::Each(set, does) => {
                 each_completed = Some(binder.completed_subject);
                 if binder.each.is_some() || !durations.is_empty() || optional_groups != 0 { return unsupported("for each player: nested, lasting or optional"); }
-                let players = e.operand(&Selector::new(Quant::All, set.clone()), support, &mut binder)?;
+                // "each opponent other than defending player": of those, all but that one
+                let (kept, minus) = other_than_players(set);
+                let mut players = e.operand(&Selector::new(Quant::All, kept), support, &mut binder)?;
+                if !minus.is_empty() {
+                    let minus = minus.iter().map(|s| e.operand(s, support, &mut binder)).collect::<Res<Vec<_>>>()?;
+                    players = action::Operand::Except { of: Box::new(players), minus };
+                }
                 let out = e.slot();
                 e.instrs.push(Instr::Capture { operand: players, out });
                 binder.name(out, set.clone(), (0, 1), false);
@@ -3584,6 +3704,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             }
             TextStep::EndEach => {
                 binder.each_does = false;
+                binder.each_chosen = None;
                 binder.completed_subject = each_completed.take().expect("for-each completed context").joined(binder.completed_subject);
                 let each = binder.each.take().expect("for-each scope");
                 binder.subjects.retain(|n| n.slot != each);
@@ -3666,9 +3787,22 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
         binder.past_inputs.clear();
         // "For each opponent, you may discard a card": once for each of them, which an act
         // done once doesn't say
-        if binder.each.is_some() && (clause.may || act.may || !(matches!(act.action, Action::Search { .. } | Action::Exile(_) | Action::Shuffle(ir::procedure::Shuffled::Default))
+        // "For each opponent, create a token that's tapped and attacking that player": one
+        // creation, of those made for each attacking that player (508.4); "you may" is the
+        // controller choosing, at once, those of them it is done for
+        let for_each_creation = binder.each.is_some() && !binder.each_does && attacking_that_player(&act.action);
+        if binder.each.is_some() && !for_each_creation && (clause.may || act.may || !(matches!(act.action, Action::Search { .. } | Action::Exile(_) | Action::Shuffle(ir::procedure::Shuffled::Default))
             || binder.each_does && matches!(act.action, Action::Move { .. } | Action::Reveal(_)))) {
             return unsupported("for each player: an act the engine does not do for each of them alike");
+        }
+        let chosen_for_each = for_each_creation && (clause.may || act.may);
+        if chosen_for_each {
+            if !alone || !act.mods.is_empty() || !controller_only(clause.subject.as_ref()) || binder.each_chosen.is_some() {
+                return unsupported("for each player, you may: one creation by the controller, alone");
+            }
+            let (among, out) = (binder.each.expect("for-each scope"), e.slot());
+            e.instrs.push(Instr::ChooseSome { among, by: Who::Controller, verb: Verb::Create, out });
+            binder.each_chosen = Some(out);
         }
         let replaces = std::mem::take(&mut replacing);
         e.alternative_kicker_targets = replaces && !alternative_targets && (support.has_kicker() || support.has_bargain());
@@ -3710,19 +3844,21 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             let mut body = clause.clone();
             body.first.mods.retain(|m| !matches!(m,ir::effect::Modifier::At { .. } | ir::effect::Modifier::AtEndOfCombat));
             e.end_act(false,None);
-            let prefix = Program::with_initial(e.instrs.clone(),e.acts.clone(),e.targets.clone(),initial.clone())?;
+            let prefix = e.prefix(&initial)?;
             let mut scope = binder.clone();
             scope.sentences = base + effect.0.len(); scope.clause = None; scope.outcome = None;
             scope.turn = None; scope.created_turn = None; scope.condition_amount = None;
             scope.searched = None; scope.found_waiting = false;
-            let effect = Effect(vec![Sentence::Do(ir::effect::Body { first: body, rest: Vec::new() })]);
+            let more = std::mem::take(&mut follows);
+            let effect = Effect(std::iter::once(Sentence::Do(ir::effect::Body { first: body, rest: Vec::new() })).chain(more.iter().cloned()).collect());
             // its text is the instruction with the step it is done at
             let whole = Sentence::Do(ir::effect::Body { first: clause.clone(), rest: Vec::new() });
-            let program = said(lower_scoped(&effect,support,scope,prefix.kinds)?, &whole, &[]);
+            let program = said(lower_scoped(&effect,support,scope,prefix.kinds)?, &whole, more);
             e.instrs.push(Instr::Delayed { pattern, subjects: Vec::new(), program, lasts: crate::state::Lasts::Indefinite, once: true });
             e.end_act(false,None);
             continue;
         }
+        if !follows.is_empty() { return unsupported("delayed instruction: what follows it is not after a delayed return"); }
         e.relative_targets = matches!(act.action, Action::DealDamage(_)).then_some(e.targets.len());
         let player_control = matches!(&act.action,Action::GainControl(of) if of.items.iter().all(|s|s.set.domain==Domain::Player));
         let extra_turn = matches!(act.action,Action::Keyword(ir::KeywordAction::ExtraTurn));
@@ -4099,7 +4235,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
         let scoped_support = support.clone().with_x(support.x_available() || x_defined || stated.is_some());
         let support = &scoped_support;
         let mut moves = false;
-        let optional = draw_bound.is_some() || (clause.may && optional_groups == 0) || act.may;
+        let optional = (draw_bound.is_some() || (clause.may && optional_groups == 0) || act.may) && !chosen_for_each;
         let result_move = matches!(&act.action, Action::Move { moves, .. } if moves.iter().any(|(objects, _)| objects.items.iter().any(|s| mention(s).is_some())));
         // "You may exile it": of objects already named, an optional payment like a discard
         // (118.12), offered only where it can be done and answered by whether it was begun
@@ -4450,7 +4586,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             e.instrs.push(Instr::Branch { condition, end: branch + 2, remember: None, skipped_values: Vec::new() });
             e.instrs.push(Instr::Action { action: action::Action::Create { players: player.clone(),
                 tokens: vec![(action::Token::Defined(crate::token::empower_jace()?), expr::Amount::constant(1), false)],
-                attacking: false, attached: None }, created: None, attempt: None });
+                attacking: false, attached: None, defenders: None }, created: None, attempt: None });
             // The conditional creation is one written instruction boundary; this
             // checkpoint notes its events without SBA or priority during resolution.
             e.end_act(true, None);
@@ -5478,9 +5614,9 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 let from = e.chosen_copy_source(&of, clause, optional, support, &mut binder)?;
                 moves = true;
                 Some(action::Action::Create { players: e.clause_subject(clause, support, &mut binder)?,
-                    tokens: vec![(action::Token::Copy { of: Box::new(from), changes: Vec::new() }, expr::Amount::constant(1), false)], attacking: false, attached: None })
+                    tokens: vec![(action::Token::Copy { of: Box::new(from), changes: Vec::new() }, expr::Amount::constant(1), false)], attacking: false, attached: None, defenders: None })
             }
-            Action::CreateCopy { count, tapped, attacking: false, of }
+            Action::CreateCopy { count, tapped, attacking, of, defender }
                 if matches!(of.quant, Quant::Definite(Ref::This | Ref::Anaphor(ir::Anaphor::That | ir::Anaphor::It)) | Quant::Target(Count::Exactly(Amount::Const(1)) | Count::UpTo(Amount::Const(1))))
                     || (of.quant == Quant::Indefinite(Count::Exactly(Amount::Const(1)))
                         && (expr::linked_exile_filter(&of.set.filter).is_some() || chosen_on_resolution(&of.set) == Some(Zone::Battlefield))) => {
@@ -5499,9 +5635,16 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 }
                 let changes = act.mods.iter().filter_map(|m| if let ir::Modifier::Except(e) = m { Some(e) } else { None })
                     .map(|exceptions| crate::copy::changes(exceptions, true)).collect::<Res<Vec<_>>>()?.into_iter().flatten().collect();
+                let players = e.clause_subject(clause, support, &mut binder)?;
+                // "a tapped and attacking token that's a copy of …": its controller chooses
+                // what it attacks as it enters, of what the effect allows (508.4)
+                if *attacking && (players != action::Operand::Controller || each.is_some()) {
+                    return unsupported("tokens entering attacking: created by the controller, no per-member quantity");
+                }
+                let defenders = defender.as_deref().map(|who| e.defenders(who, support, &mut binder)).transpose()?;
                 moves = true;
-                Some(action::Action::Create { players: e.clause_subject(clause, support, &mut binder)?,
-                    tokens: vec![(action::Token::Copy { of: Box::new(from), changes }, quantity(count, support, &binder)?, *tapped)], attacking: false, attached: None })
+                Some(action::Action::Create { players,
+                    tokens: vec![(action::Token::Copy { of: Box::new(from), changes }, quantity(count, support, &binder)?, *tapped)], attacking: *attacking, attached: None, defenders })
             }
             Action::GetEmblem(granted) => Some(action::Action::GetEmblem {
                 players: e.clause_subject(clause, support, &mut binder)?, definition: crate::ability::emblem(granted)?,
@@ -5519,7 +5662,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                         if token.tapped || token.combat.is_some() || token.attached_to.is_some() { return unsupported("token alternative entry modifiers are not implemented"); }
                         let values = crate::token::token_values(&token.kind)?;
                         actions.push(action::Action::Create { players: action::Operand::Controller,
-                            tokens: vec![(action::Token::Defined(values), expr::Amount::constant(count), false)], attacking: false, attached: None });
+                            tokens: vec![(action::Token::Defined(values), expr::Amount::constant(count), false)], attacking: false, attached: None, defenders: None });
                         options.push(crate::state::ActionOption { index, body: crate::state::ActionOptionBody::Create { tokens: vec![(kind, count)] } });
                     }
                     binder.result = None;
@@ -5546,10 +5689,15 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 }
                 // "create two 1/1 Soldier tokens that are tapped and attacking": the controller
                 // chooses what each attacks as it enters (508.4)
-                let attacking = tokens.items.iter().any(|t| matches!(t.combat, Some(ir::token::Combat::Attacking(None))));
+                let attacking = tokens.items.iter().any(|t| matches!(t.combat, Some(ir::token::Combat::Attacking(_))));
                 if attacking && (tokens.items.len() != 1 || players != action::Operand::Controller || each.is_some() || multiplier.is_some()) {
                     return unsupported("tokens entering attacking: one kind, created by the controller, no per-member quantity");
                 }
+                // "that's tapped and attacking that player or a planeswalker they control" (508.4)
+                let defenders = match tokens.items.as_slice() {
+                    [ir::token::TokenSpec { combat: Some(ir::token::Combat::Attacking(Some(who))), .. }] => Some(e.defenders(who, support, &mut binder)?),
+                    _ => None,
+                };
                 // "Create a Monster Role token attached to it": an Aura put onto the battlefield
                 // attached to what the effect names (303.4f, 303.4i)
                 let attached = match tokens.items.as_slice() {
@@ -5571,21 +5719,21 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                     _ => None,
                 };
                 let tokens: Vec<_> = tokens.items.iter().map(|t| {
-                    if !matches!(t.combat, None | Some(ir::token::Combat::Attacking(None))) || (t.attached_to.is_some() && attached.is_none()) { return unsupported("program: token combat/attachment not lowered"); }
+                    if matches!(t.combat, Some(ir::token::Combat::Blocking(_))) || (t.attached_to.is_some() && attached.is_none()) { return unsupported("program: token combat/attachment not lowered"); }
                     if multiplier.is_some() && !matches!(t.count, Amount::Const(_)) { return unsupported("result creation: per-member token quantity not implemented"); }
                     let amount = quantity(&t.count, support, &binder)?;
                     let amount = multiplier.clone().map_or(amount.clone(), |each| amount.times(each));
                     Ok((action::Token::Defined(crate::token::token_values(&t.kind)?), amount, t.tapped))
                 }).collect::<Res<_>>()?;
                 moves = true;
-                Some(action::Action::Create { players, tokens, attacking, attached })
+                Some(action::Action::Create { players, tokens, attacking, attached, defenders })
             }
             // "Investigate" means "Create a Clue token" (701.16a): the predefined token of 111.10f
             Action::Keyword(ir::KeywordAction::Investigate) => {
                 let clue = crate::token::token_values(&ir::token::TokenKind::Predefined(ir::Predefined::Clue))?;
                 moves = true;
                 Some(action::Action::Create { players: e.clause_subject(clause, support, &mut binder)?,
-                    tokens: vec![(action::Token::Defined(clue), expr::Amount::constant(1), false)], attacking: false, attached: None })
+                    tokens: vec![(action::Token::Defined(clue), expr::Amount::constant(1), false)], attacking: false, attached: None, defenders: None })
             }
             _ => None,
         };

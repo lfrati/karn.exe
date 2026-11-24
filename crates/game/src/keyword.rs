@@ -585,6 +585,7 @@ fn triggered(item: &ir::token::KeywordInstance) -> Option<&'static Ability> {
         "Dethrone" => Some(dethrone()),
         "Training" => Some(training()),
         "Ingest" => Some(ingest()),
+        "Myriad" => Some(myriad()),
         _ => None,
     }
 }
@@ -598,6 +599,16 @@ pub(crate) fn soulbond() -> &'static Vec<Ability> {
     crate::token::init(&RULE, || CardDef::new("Soulbond rule", "", "Creature",
         "When this creature enters, if this creature is unpaired and you control another unpaired creature, you may pair this creature with another unpaired creature you control.\nWhenever another creature you control enters, if this creature is unpaired and that creature is unpaired, you may pair that creature with this creature.", None)
         .expect("the grammar reads rule 702.95a").abilities)
+}
+
+/// 702.116a: a token for each opponent other than defending player the controller chooses,
+/// attacking that player or a planeswalker they control, all entering at once; each instance
+/// triggers on its own (702.116b).
+fn myriad() -> &'static Ability {
+    static RULE: OnceLock<Ability> = OnceLock::new();
+    crate::token::init(&RULE, || CardDef::new("Myriad rule", "", "Creature",
+        "Whenever this creature attacks, for each opponent other than defending player, you may create a token that's a copy of this creature that's tapped and attacking that player or a planeswalker they control. If one or more tokens are created this way, exile the tokens at end of combat.", None)
+        .expect("the grammar reads rule 702.116a").abilities[0].clone())
 }
 
 /// 702.115a: the damaged player exiles one library card, regardless of damage amount.

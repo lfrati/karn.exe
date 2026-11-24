@@ -1945,9 +1945,13 @@ pub enum Shape {
     Moved,
     /// Its destructions.
     Destroyed,
+    /// The tokens it created.
+    Created,
 }
 impl Shape {
-    pub(crate) fn kind(self) -> Kind { if self == Self::Destroyed { Kind::Destructions } else { Kind::Cards } }
+    pub(crate) fn kind(self) -> Kind {
+        match self { Self::Destroyed => Kind::Destructions, Self::Created => Kind::Subjects, Self::Cards | Self::Moved => Kind::Cards }
+    }
 }
 
 /// The members of result groups, each as it was before or as it became, with where it was
@@ -1959,6 +1963,7 @@ pub(super) fn members(locals: &dyn Locals, groups: &[(super::Slot, Shape)], befo
         match (shape, locals.local(*slot)) {
             (Shape::Cards, Some(Value::Cards(cards))) => out.extend(cards.iter().map(|c| (*c, None))),
             (Shape::Moved, Some(Value::Cards(pairs))) => out.extend(pairs.chunks(2).map(|p| (if before { p[0] } else { p[1] }, None))),
+            (Shape::Created, Some(Value::Subjects(tokens))) => out.extend(tokens.iter().filter_map(|t| if let Target::Object(o) = t { Some((*o, None)) } else { None })),
             (Shape::Destroyed, Some(Value::Destructions(results))) => out.extend(results.iter().map(|r| (if before { r.before } else { r.after }, Some(r.to)))),
             _ => unreachable!("verified completed result group"),
         }
@@ -2297,7 +2302,7 @@ impl Number {
                 original.filter = death_filter(&set.filter).unwrap();
                 Self::death_count(&original, support, bind)?
             }
-            ir::Amount::Count(set) if history_count(set).is_some() => Number::Happened(Box::new(crate::trigger::Pattern::compile(&history_count(set).unwrap(), support)?)),
+            ir::Amount::Count(set) if history_count(set).is_some() => Number::Happened(Box::new(crate::trigger::Pattern::counted(&history_count(set).unwrap(), support)?)),
             ir::Amount::Count(set) if of_one(set) => Number::CountZone(Box::new(ZoneCards::compile(set, support, bind)?)),
             ir::Amount::Distinct { what: ir::amount::Characteristic::Color, among } => Number::Colors(Box::new(Set::compile(among, support, bind)?)),
             ir::Amount::Distinct { what: ir::amount::Characteristic::CardType, among } => Number::CardTypes(Box::new(Set::compile(among, support, bind)?)),

@@ -933,6 +933,8 @@ pub(crate) struct Choices {
     pub attached_to: Option<Target>,
     pub attacking: Option<Target>,
     pub choose_defender: bool,
+    /// Of what its controller chooses it attacks, what the effect that made it allows (508.4).
+    pub defending: Option<crate::creation::Defending>,
     pub arrivals: Vec<Enters>,
     pub values: Vec<Record>,
     /// What a replacement being applied asks next (614.12a): asked of it as it began, not

@@ -257,6 +257,9 @@ pub enum Instr {
     Mana { players: action::Operand, production: mana::Production },
     /// Choose counter holders, then run one result-free placement child (701.34a).
     Proliferate { by: Who },
+    /// "For each opponent, you may …": `by` chooses, at once, those of these players it is
+    /// done for, in `out` in the order offered.
+    ChooseSome { among: Slot, by: Who, verb: Verb, out: Slot },
     /// A player searches a library for cards (701.23): `by`, in their own, or in each of
     /// these players', one after another. `out`: every card found, which `by` alone has seen.
     /// `own`: each of these players searches their own instead, choosing in APNAP order
@@ -774,6 +777,11 @@ impl Program {
                     }
                 }
                 Instr::Proliferate { by } => who(&kinds, *by)?,
+                Instr::ChooseSome { among, by, out, .. } => {
+                    need(&kinds, *among, Kind::Subjects)?;
+                    who(&kinds, *by)?;
+                    make(&mut kinds, *out, Kind::Subjects)?;
+                }
                 Instr::Connive { objects } | Instr::Explore { objects } => {for scalar in objects.scalars() {if let Scalar::Local{slot,kind}=scalar {need(&kinds,slot,kind)?;}}}
                 Instr::Endure { permanent, amount } => {
                     for scalar in permanent.scalars().into_iter().chain(amount.scalars()) { if let Scalar::Local { slot,kind }=scalar { need(&kinds,slot,kind)?; } }
@@ -934,6 +942,7 @@ impl fmt::Display for Instr {
             Instr::Capture { operand, out } => write!(f, "s{out} = capture {operand:?}"),
             Instr::Register { subject, rule, lifetime } => write!(f, "keep {subject:?}: {rule:?}; {lifetime:?}"),
             Instr::Proliferate { by } => write!(f, "{by:?} proliferate"),
+            Instr::ChooseSome { among, by, verb, out } => write!(f, "s{out} = {by:?} chooses some of s{among} to {verb:?} for"),
             Instr::Connive { objects } => write!(f,"{objects:?} connive"),
             Instr::Explore { objects } => write!(f,"{objects:?} explore"),
             Instr::Arrange { players, verb, amount, .. } => write!(f, "{players:?} {verb:?} {amount:?}"),

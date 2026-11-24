@@ -20,15 +20,30 @@ pub(crate) struct Request {
     pub tapped: bool,
     pub attacking: Option<Target>,
     pub choose_defender: bool,
+    /// Of what its controller chooses it attacks, what the effect allows (508.4).
+    pub defending: Option<Defending>,
     pub attached: Option<Target>,
+}
+/// "Attacking that player or a planeswalker they control": what a token put onto the
+/// battlefield attacking may attack, as the effect that made it says (508.4). Of a player no
+/// longer in the game, or no planeswalker of theirs, it enters attacking nothing (508.4a).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Defending { pub players: Vec<PlayerId>, pub planeswalkers: bool }
+impl Defending {
+    pub(crate) fn allows(&self, game: &Game, defender: Target) -> bool {
+        match defender {
+            Target::Player(p) => self.players.contains(&p),
+            Target::Object(o) => self.planeswalkers && game.is_a(o, ir::CardType::Planeswalker) && self.players.contains(&game.controller(o)),
+        }
+    }
 }
 impl Request {
     pub(crate) fn new(player:PlayerId,count:u32,values:crate::copy::Token,tapped:bool)->Self {
-        Self { player,count,values,tapped,attacking:None,choose_defender:false,attached:None }
+        Self { player,count,values,tapped,attacking:None,choose_defender:false,defending:None,attached:None }
     }
     fn entries(&self)->impl Iterator<Item=EntryRequest> + '_ {
         (0..self.count).map(|_|EntryRequest::token(self.player,self.values.clone(),self.tapped)
-            .attacking(self.attacking).choose_defender(self.choose_defender).attached(self.attached))
+            .attacking(self.attacking).choose_defender(self.choose_defender).defending(self.defending.clone()).attached(self.attached))
     }
 }
 
@@ -36,9 +51,9 @@ impl Request {
 /// A heterogeneous inventory retains each original specification; append-one currently
 /// refuses differing instruction sets rather than guessing which applies to the extra token.
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct Instructions { tapped:bool, attacking:Option<Target>, choose_defender:bool, attached:Option<Target> }
+struct Instructions { tapped:bool, attacking:Option<Target>, choose_defender:bool, defending:Option<Defending>, attached:Option<Target> }
 impl Request {
-    fn instructions(&self)->Instructions { Instructions {tapped:self.tapped,attacking:self.attacking,choose_defender:self.choose_defender,attached:self.attached} }
+    fn instructions(&self)->Instructions { Instructions {tapped:self.tapped,attacking:self.attacking,choose_defender:self.choose_defender,defending:self.defending.clone(),attached:self.attached} }
 }
 #[derive(Debug, Clone)]
 pub(crate) struct Event {
@@ -84,7 +99,7 @@ impl Replaced for Event {
             self.inventory.iter().try_fold(1u32,|total,r|total.checked_add(r.count))
                 .ok_or_else(||crate::Unsupported("token creation exceeds the engine numerical range".into()))?;
             let mut request=Request::new(self.player,1,values,instructions.tapped);
-            request.choose_defender=instructions.choose_defender;request.attached=instructions.attached;request.attacking=instructions.attacking;
+            request.choose_defender=instructions.choose_defender;request.attached=instructions.attached;request.attacking=instructions.attacking;request.defending=instructions.defending.clone();
             self.inventory.push(request);self.modified=true;return Ok(());
         };
         let counts=self.inventory.iter().map(|request|if scope.matches(&request.values) {

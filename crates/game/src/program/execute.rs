@@ -183,6 +183,20 @@ pub(super) fn step(game: &mut Game, f: &mut Frame, i: &Instr) -> Result<(), Halt
                 }
             }
         }
+        Instr::ChooseSome { among, by, verb, out } => {
+            let among = match f.slot(*among) { Some(Value::Subjects(among)) => among.clone(), _ => unreachable!("Program::new checked that the slot holds subjects") };
+            let chosen = match f.actor(*by).filter(|p| !game.players[*p].lost) {
+                Some(player) if !among.is_empty() => {
+                    let Answer::Holders(chosen) = f.ask(player, Choice::Holders { verb: *verb, among: among.clone() })? else {
+                        unreachable!("play validates holder answers before dispatch")
+                    };
+                    // an answer is a set: what is done follows the order offered
+                    among.into_iter().filter(|t| chosen.contains(t)).collect()
+                }
+                _ => Vec::new(),
+            };
+            f.slots[*out] = Some(Value::Subjects(chosen));
+        }
         Instr::Connive { objects } => {
             let mut pending=match f.pending.take(){Some(Pending::Connive(p))=>p,None=>connive::Pending::new(game,f,objects),_=>unreachable!("connive resumes its own operation")};
             if let Some(decision)=pending.advance(game,f)? {f.pending=Some(Pending::Connive(pending));return Err(Halt::Ask(decision));}

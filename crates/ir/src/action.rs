@@ -312,8 +312,12 @@ pub enum Action {
     /// "you get {E}{E}", "you get an experience counter", "get a poison counter" (122.1).
     GetCounters { count: Amount, kind: PlayerCounter },
     /// "create a token that's a copy of target creature" (707.2); "two tokens", "a tapped token".
-    /// `attacking`: "a tapped and attacking token" (508.4).
-    CreateCopy { count: Amount, tapped: bool, attacking: bool, of: Box<Selector> },
+    /// `attacking`: "a tapped and attacking token" (508.4). `defender`: what it is attacking,
+    /// where the effect says ("that's tapped and attacking that player or a planeswalker they
+    /// control"); none, its controller chooses (508.4).
+    CreateCopy { count: Amount, tapped: bool, attacking: bool, of: Box<Selector>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        defender: Option<Box<Objects>> },
     /// "have it deal 2 damage to target creature": the actor has another object or player act.
     Have { who: Box<Selector>, action: Box<Action> },
     /// A static verb phrase: "has flying", "enters tapped", "costs {1} less to cast"

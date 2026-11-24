@@ -369,7 +369,7 @@ fn cast_from(pattern: &ir::EventPattern) -> Option<&ir::event::ZoneArg> {
 pub(super) fn this_way_members(pattern: &ir::EventPattern) -> Option<(ir::Verb, &Selector, bool, Option<crate::Zone>)> {
     if *pattern != ir::event::EventPattern::new(pattern.subjects.clone(), pattern.actions.clone()) { return None; }
     let ([subject], [ir::event::EventAction::Deed(deed)]) = (pattern.subjects.as_slice(), pattern.actions.as_slice()) else { return None };
-    if !matches!(deed.verb, ir::Verb::Exile | ir::Verb::Mill | ir::Verb::Discard | ir::Verb::Destroy | ir::Verb::Move | ir::Verb::Reveal) { return None; }
+    if !matches!(deed.verb, ir::Verb::Exile | ir::Verb::Mill | ir::Verb::Discard | ir::Verb::Destroy | ir::Verb::Move | ir::Verb::Reveal | ir::Verb::Create) { return None; }
     match deed.args.as_slice() {
         [] if deed.passive => Some((deed.verb, subject, false, None)),
         [(ir::Role::What, ir::event::Arg::Noun(what))] if !deed.passive && is_you(subject) => Some((deed.verb, what, true, None)),
@@ -816,7 +816,7 @@ impl Asks {
                     (Some(ir::event::Quantity::Exactly(n)), []) => Quantity::Exactly(expr::Number::compile(n, support, &mut *bind)?),
                     _ => return unsupported("condition: how many times, said more than once"),
                 };
-                Asks::Happened { pattern: crate::trigger::Pattern::compile(&one, support)?, turn, each, times, negated: *negated }
+                Asks::Happened { pattern: crate::trigger::Pattern::counted(&one, support)?, turn, each, times, negated: *negated }
             }
             ir::Condition::Happened { pattern, window: None, times: None, tense: _, negated }
                 if matches!(pattern.actions.as_slice(), [ir::EventAction::Deed(d)] if d.verb == ir::Verb::Cast && !d.passive) => {

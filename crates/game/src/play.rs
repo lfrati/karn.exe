@@ -1137,10 +1137,11 @@ impl Game {
                         return Err(format!("{} chosen (608.2d): {count}", chosen.len()).into());
                     }
                 }
-                (Choice::Holders { among, .. }, answer) => {
+                (Choice::Holders { verb, among }, answer) => {
                     let legal = matches!(answer, Answer::Holders(chosen) if chosen.iter().all(|t| among.contains(t))
                         && chosen.iter().enumerate().all(|(i,t)| !chosen[..i].contains(t)));
-                    if !legal { return Err("choose a distinct subset of the offered counter holders (701.34a)".into()); }
+                    if !legal && *verb == ir::Verb::Proliferate { return Err("choose a distinct subset of the offered counter holders (701.34a)".into()); }
+                    if !legal { return Err("choose a distinct subset of the offered players".into()); }
                 }
                 (Choice::Defender { among, .. }, Answer::Defender(t)) if among.contains(t) => {}
                 (Choice::Defender { .. }, _) => return Err("choose one of the offered players or planeswalkers for it to attack (508.4)".into()),

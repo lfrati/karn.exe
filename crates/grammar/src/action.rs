@@ -1194,23 +1194,36 @@ fn build(form: Form, base: &P<Action>) -> P<Action> {
         |(n, st)| (n != Amount::Const(1)).then_some((n, st)),
         |(n, st)| (*n != Amount::Const(1)).then(|| (n.clone(), *st)),
     );
-    let create_copy = v("creates", "create").then_keep(&alt("copies", vec![one_copy, copies])).then(&np(Verb::CreateCopy, Role::Of)).map(
-        |((count, (tapped, attacking)), of)| Some(Action::CreateCopy { count, tapped, attacking, of: Box::new(of) }),
+    // "a token that's a copy of ~ that's tapped and attacking that player or a planeswalker
+    // they control": what it attacks, said after what it copies (508.4). Said without what
+    // it attacks, the state is the early "a tapped and attacking token", which prints.
+    let copy = |number: Number, head: &P<(Amount, (bool, bool))>| v("creates", "create").then_keep(head)
+        .then(&np(Verb::CreateCopy, Role::Of)).then(&crate::token::placement(number).opt()).map(
+        |(((count, (tapped, attacking)), of), late)| match late {
+            None => Some(Action::CreateCopy { count, tapped, attacking, of: Box::new(of), defender: None }),
+            Some((late_tapped, ir::token::Combat::Attacking(Some(who)))) if !tapped && !attacking =>
+                Some(Action::CreateCopy { count, tapped: late_tapped, attacking: true, of: Box::new(of), defender: Some(who) }),
+            Some(_) => None,
+        },
         |a| match a {
-            Action::CreateCopy { count, tapped, attacking, of } => {
-                Some(((count.clone(), (*tapped, *attacking)), (**of).clone()))
+            Action::CreateCopy { count, tapped, attacking, of, defender: None } => {
+                Some((((count.clone(), (*tapped, *attacking)), (**of).clone()), None))
+            }
+            Action::CreateCopy { count, tapped, attacking: true, of, defender: Some(who) } => {
+                Some((((count.clone(), (false, false)), (**of).clone()), Some((*tapped, ir::token::Combat::Attacking(Some(who.clone()))))))
             }
             _ => None,
         },
     );
-    // "create a token that's a copy of that card and that's tapped and attacking": the state
-    // said after what is copied
+    let create_copy = alt("create copy", vec![copy(Number::Sg, &one_copy), copy(Number::Pl, &copies)]);
+    // "create a token that's a copy of that card and that's tapped and attacking", "… that
+    // card that's tapped and attacking": the state said after what is copied
     let create_copy_late = v("creates", "create")
         .skip(&lit("a token that's a copy of"))
         .then_keep(&np(Verb::CreateCopy, Role::Of))
-        .skip(&lit("and that's tapped and attacking"))
+        .skip(&alt("late state", vec![lit("and that's tapped and attacking"), lit("that's tapped and attacking")]))
         .map(
-            |of| Some(Action::CreateCopy { count: Amount::Const(1), tapped: true, attacking: true, of: Box::new(of) }),
+            |of| Some(Action::CreateCopy { count: Amount::Const(1), tapped: true, attacking: true, of: Box::new(of), defender: None }),
             |_: &Action| None,
         )
         .alias();

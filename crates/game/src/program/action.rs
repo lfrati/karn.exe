@@ -35,6 +35,8 @@ pub enum Operand {
     Reference(super::Slot),
     Subject(expr::Subject),
     Union(Vec<Operand>),
+    /// What `of` names that none of `minus` does: "each opponent other than defending player".
+    Except { of: Box<Operand>, minus: Vec<Operand> },
     /// Matching members of a retained group, queried as the action runs. A
     /// separate Capture freezes a condition's subset before its body.
     Matching(Matching),
@@ -57,6 +59,13 @@ pub enum Operand {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Matching { pub(super) of: Box<Operand>, pub(super) filter: Box<expr::Filter>, pub(super) controller: Option<expr::Controller> }
+
+/// "that's tapped and attacking that player or a planeswalker they control" (508.4): what a
+/// token entering attacking may attack, of these players. `each`: "for each opponent, create
+/// …": the tokens are made for each of these players, all at once, those made for one
+/// attacking that player or, with `planeswalkers`, a planeswalker they control.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Defenders { pub(super) players: Operand, pub(super) planeswalkers: bool, pub(super) each: bool }
 
 /// A compiled player projection; construction stays with the typed result binder.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -147,7 +156,9 @@ pub enum Action {
     /// before its battlefield entry (508.4).
     Create { players: Operand, tokens: Vec<(Token, expr::Amount, bool)>, attacking: bool,
         /// "a Monster Role token attached to it": what each Aura token enters attached to (303.4f).
-        attached: Option<Operand> },
+        attached: Option<Operand>,
+        /// What the tokens entering attacking attack, where the effect says (508.4).
+        defenders: Option<Defenders> },
     /// Turn-long damage prevention, evaluated once by its resolving occurrence.
     Prevent { to: Vec<Operand>, by: Vec<Operand>, to_or_by: bool, kind: ir::event::DamageKind, next: Option<u32> },
     /// A regeneration shield for each permanent (701.19a).
@@ -211,9 +222,9 @@ impl Action {
     pub(super) fn output(&self) -> Option<Output> {
         match self {
             Self::Counter { .. } => Some(Output::Countered),
-            Self::Create { players, tokens, .. } => {
+            Self::Create { players, tokens, defenders, .. } => {
                 // Printed cardinality describes the noun, never the actual result group.
-                let max=if *players==Operand::Controller {tokens.iter().try_fold(0u32,|n,(_,amount,_)|n.checked_add(amount.as_constant()?))} else {None};
+                let max=if *players==Operand::Controller && !defenders.as_ref().is_some_and(|d| d.each) {tokens.iter().try_fold(0u32,|n,(_,amount,_)|n.checked_add(amount.as_constant()?))} else {None};
                 Some(Output::Created {max:max.unwrap_or(u32::MAX)})
             }
             Self::Destroy { .. } => Some(Output::Destroyed),
@@ -256,8 +267,9 @@ impl Action {
         match self {
             Action::Draw { players, .. } | Action::Mill { players, .. } | Action::GainLife { players, .. }
             | Action::LoseLife { players, .. } | Action::BecomeMonarch { players } | Action::IncreaseSpeed { players } | Action::GetEmblem { players, .. } => vec![players],
-            Action::Create { players, tokens, attached, .. } => std::iter::once(players).chain(tokens.iter().filter_map(|(token,_,_)|
-                if let Token::Copy { of, .. } = token { Some(of.as_ref()) } else { None })).chain(attached.as_ref()).collect(),
+            Action::Create { players, tokens, attached, defenders, .. } => std::iter::once(players).chain(tokens.iter().filter_map(|(token,_,_)|
+                if let Token::Copy { of, .. } = token { Some(of.as_ref()) } else { None })).chain(attached.as_ref())
+                .chain(defenders.as_ref().map(|d| &d.players)).collect(),
             Action::Move { groups, .. } => groups.iter().flat_map(|(objects, _)| objects).collect(),
             Action::Tap { objects, .. } | Action::Transform { objects } | Action::Level { objects, .. } | Action::Unprepare { objects } | Action::Designate { objects, .. } | Action::TurnFace { objects, .. } | Action::Destroy { objects, .. } | Action::Counter { objects, .. } | Action::ExileUntil { objects } | Action::Regenerate { objects } => objects.iter().collect(),
             Action::Attach { objects, to } => objects.iter().chain(std::iter::once(to)).collect(),
@@ -360,6 +372,7 @@ impl Operand {
             Self::Within { of, place: Place::Shared(_) } => of.scalars(),
             Self::Subject(subject) => { let mut scalars = Vec::new(); subject.scalars(&mut scalars); scalars },
             Self::Union(items) => items.iter().flat_map(Self::scalars).collect(),
+            Self::Except { of, minus } => of.scalars().into_iter().chain(minus.iter().flat_map(Self::scalars)).collect(),
             _ => Vec::new(),
         }
     }
@@ -396,6 +409,10 @@ pub(super) fn named(game: &Game, f: &Frame, operand: &Operand) -> Vec<Target> {
                 if !all.contains(&t) { all.push(t); }
             }
             all
+        }
+        Operand::Except { of, minus } => {
+            let minus: Vec<_> = minus.iter().flat_map(|m| named(game, f, m)).collect();
+            named(game, f, of).into_iter().filter(|t| !minus.contains(t)).collect()
         }
         Operand::Matching(Matching {of,filter,controller}) => named(game,f,of).into_iter().filter(|t|
             filter.matches(game,&f.ctx,f,*t) && controller.is_none_or(|who| match t {
@@ -689,7 +706,7 @@ pub(super) fn evaluate(game: &Game, f: &Frame, action: &Action) -> crate::Res<pe
             }
             perform::Action::PutCounters(batch)
         }
-        Action::Create { players: who, tokens, attacking, attached } => {
+        Action::Create { players: who, tokens, attacking, attached, defenders } => {
             let who = players(game, f, who);
             // what the text attaches it to, where it still is (400.7); an Aura token attached
             // to what is not there, or what it cannot enchant, is not created (303.4i)
@@ -700,8 +717,18 @@ pub(super) fn evaluate(game: &Game, f: &Frame, action: &Action) -> crate::Res<pe
                 },
                 None => None,
             };
+            // what those made for each attack: that player, or a planeswalker they control
+            // (508.4); "for each opponent": a creation for each of them, all at once
+            let defending = match defenders {
+                None => vec![None],
+                Some(Defenders { players: named, planeswalkers, each }) => {
+                    let named = players(game, f, named);
+                    let of = |players: Vec<PlayerId>| Some(crate::creation::Defending { players, planeswalkers: *planeswalkers });
+                    if *each { named.into_iter().map(|p| of(vec![p])).collect() } else { vec![of(named)] }
+                }
+            };
             let mut requests = Vec::new();
-            for (token, n, tapped) in tokens {
+            for defending in defending { for (token, n, tapped) in tokens {
                 let values = match token {
                     Token::Defined(token) => token.clone(),
                     Token::Copy { of, changes } => {
@@ -714,10 +741,10 @@ pub(super) fn evaluate(game: &Game, f: &Frame, action: &Action) -> crate::Res<pe
                 for p in &who {
                     let n = n.checked_for_actor(game, &f.ctx, f, *p)?;
                     let mut request=crate::creation::Request::new(*p,n,values.clone(),*tapped);
-                    request.choose_defender=*attacking;request.attached=attached;
+                    request.choose_defender=*attacking;request.attached=attached;request.defending=defending.clone();
                     requests.push(request);
                 }
-            }
+            } }
             perform::Action::Create(requests)
         }
         // a permanent is regenerated (701.19a): what is named elsewhere gets no shield

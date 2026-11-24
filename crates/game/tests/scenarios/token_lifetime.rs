@@ -234,14 +234,14 @@ fn r401_7_numbered_library_positions_count_cards_not_transient_tokens() {
     cite!(["111.6"]; assert_eq!(names, ["Forest", "Forest", "Bear", "Forest"]));
 }
 
-/// 201.5, 111.4: a token named from its creator's own name (`~`), and a token created in combat,
-/// are not run by the engine; a token with a plain name is, wherever the text puts the name.
+/// 201.5, 111.4: a token named from its creator's own name (`~`), and a token created blocking,
+/// are not run by the engine; a token with a plain name is, wherever the text puts the name. (A
+/// token created tapped and attacking is: `r702_116_myriad`.)
 #[test]
 fn r111_4_names_from_the_creators_name_and_combat_placement_are_refused() {
 
     for text in [
         "Create a 3/3 blue Serpent creature token named ~'s Coil.",
-        "Create a 1/1 white Soldier creature token that's tapped and attacking that opponent.",
         "Create a 1/1 white Cat Soldier creature token that's blocking target creature.",
     ] {
         let d=CardDef::new("Maker", "{0}", "Instant", text, None).unwrap();

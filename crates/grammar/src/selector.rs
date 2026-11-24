@@ -1655,7 +1655,9 @@ fn is_player_filter(f: &Filter) -> bool {
                 | Atom::DidSo(_)
                 | Atom::Counters { .. }
         ),
-        Filter::Not(b) => matches!(b.as_ref(), Filter::Atom(Atom::Controls(_))),
+        // "each opponent other than defending player": not one of the players named
+        Filter::Not(b) => matches!(b.as_ref(), Filter::Atom(Atom::Controls(_)))
+            || matches!(b.as_ref(), Filter::Atom(Atom::Among(s)) if s.set.domain == Domain::Player && matches!(s.quant, Quant::Definite(_))),
         _ => false,
     }
 }

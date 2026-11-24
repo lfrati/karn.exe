@@ -32,6 +32,11 @@ impl EntryRequest {
         if let Self::Token {chosen,..}=&mut self {chosen.choose_defender=pending;}
         self
     }
+    /// Of what it may attack, what the effect allows (508.4).
+    pub(crate) fn defending(mut self, defending: Option<crate::creation::Defending>) -> Self {
+        if let Self::Token { chosen, .. } = &mut self { chosen.defending = defending; }
+        self
+    }
     /// A token put onto the battlefield attached to this (303.4f): an Aura's choice made by
     /// the effect, its legality checked as it enters (303.4i).
     pub(crate) fn attached(mut self, to: Option<Target>) -> Self {
@@ -202,7 +207,9 @@ impl Game {
     pub(crate) fn entry_defenders(&mut self,card:ObjId,controller:PlayerId,chosen:&Choices)->(PlayerId,Vec<Target>) {
         let view=self.entry_view(card,controller,chosen);
         let player=view.game.controller(card);
-        let among=if view.game.is_a(card,CardType::Creature) && view.game.entering_attacking(player) {view.game.attack_recipients()} else {Vec::new()};
+        let mut among=if view.game.is_a(card,CardType::Creature) && view.game.entering_attacking(player) {view.game.attack_recipients()} else {Vec::new()};
+        // "attacking that player or a planeswalker they control": of those, what the effect allows
+        if let Some(defending) = &chosen.defending { among.retain(|t| defending.allows(view.game, *t)); }
         (player,among)
     }
     pub(crate) fn entry_choice(&mut self, card: ObjId, controller: PlayerId, chosen: &Choices) -> Option<crate::replace::Entering> {
