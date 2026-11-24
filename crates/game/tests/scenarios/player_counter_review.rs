@@ -75,8 +75,9 @@ fn per_actor_amounts_versus_controller_amounts() {
     }
 }
 
-/// Player replacements: which typed forms are read and admitted, and an opponent-restricted
-/// one applies only to opponents (616.1). A kind-changing substitute is a different event.
+/// Player replacements: which typed forms are read and admitted; an opponent-restricted one
+/// applies only to opponents, and one "on you" only to its controller (616.1). A kind-changing
+/// substitute is a different event.
 #[test]
 fn typed_player_replacement_restrictions() {
     let texts = [
@@ -89,11 +90,8 @@ fn typed_player_replacement_restrictions() {
     ];
     let opp = def("Opp", "Enchantment", texts[0], None);
     admitted(&opp).expect("opponent player replacement must remain admitted");
-    for text in [texts[2], texts[5]] {
-        let d = def("Rep", "Enchantment", text, None);
-        // Uncited (admission): only the explicitly retained player form is supported.
-        crate::support::refused(admitted(&d), "ability on a permanent: sentence: Replacement");
-    }
+    // Uncited (admission): "put on it" of a player is not read as that player.
+    crate::support::refused(admitted(&def("Rep", "Enchantment", texts[2], None)), "ability on a permanent: sentence: Replacement");
     let rad = def("Rep", "Enchantment", texts[3], None);
     crate::support::refused(admitted(&rad), "player counter: rad upkeep trigger (122.1i) is not implemented");
     admitted(&def("Rep", "Enchantment", texts[4], None)).unwrap();
@@ -103,6 +101,12 @@ fn typed_player_replacement_restrictions() {
     g.put(0, 1, Zone::Battlefield);
     cast(&mut g, 0, vec![], &[]);
     cite!(["614.1a"]; assert_eq!((n(&g, 0, "poison"), n(&g, 1, "poison")), (1, 2)));
+    // "on you": of its controller alone
+    let spell = def("Probe", "Sorcery", "Each player gets a poison counter.", None);
+    let mut g = Game::new(vec![spell, def("Rep", "Enchantment", texts[5], None)], 2, 20);
+    g.put(0, 1, Zone::Battlefield);
+    cast(&mut g, 0, vec![], &[]);
+    cite!(["614.1a", "122.1"]; assert_eq!((n(&g, 0, "poison"), n(&g, 1, "poison")), (2, 1)));
 }
 
 /// "That player" in a single target's amount is the target (per-holder evaluation).
