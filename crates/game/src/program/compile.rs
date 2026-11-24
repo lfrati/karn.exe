@@ -88,7 +88,8 @@ struct Named {
     target: bool,
     /// Explicitly selected by a "choose" object instruction.
     explicit_choice: bool,
-    /// This captured player is the controller of this particular target slot.
+    /// This captured player is the controller of this particular target slot, or the owner of
+    /// the zone a target card was said to be in ("from an opponent's graveyard").
     controlled_target: Option<Slot>,
     /// A direct attached-object mention, superseded by its next direct mention.
     attached: bool,
@@ -1992,6 +1993,19 @@ impl Emit {
                         self.instrs.push(Instr::Capture { operand: Operand::ControllerOf(Box::new(Operand::Reference(out))), out: player });
                         binder.name(player, relation.who.set.clone(), (0, 1), false);
                         binder.subjects.last_mut().expect("controller just named").controlled_target = Some(out);
+                        self.target_relations.push(player);
+                    } else if s.set.domain == Domain::Card
+                        && let Some(who) = s.set.zone.as_ref().and_then(|z| z.owner.as_deref())
+                        && matches!(who.quant, Quant::Indefinite(Count::Exactly(Amount::Const(1))))
+                        && who.set.domain == Domain::Player && who.chooser.is_none() && who.random.is_none()
+                    {
+                        // "exile target card from an opponent's graveyard. … that player loses
+                        // 1 life": the owner of the graveyard it is in is named too, captured
+                        // before it moves, though moving keeps its owner (400.3, 608.2c)
+                        let player = self.slot();
+                        self.instrs.push(Instr::Capture { operand: Operand::OwnerOf(Box::new(Operand::Reference(out))), out: player });
+                        binder.name(player, who.set.clone(), (0, 1), false);
+                        binder.subjects.last_mut().expect("owner just named").controlled_target = Some(out);
                         self.target_relations.push(player);
                     }
                 }
@@ -4716,6 +4730,12 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                         },
                     };
                     let mut actor = action::Operand::Controller;
+                    // "up to one target player puts all the cards from their graveyard …": the
+                    // player the clause is said of is named before what they put, so "their"
+                    // is theirs and not the unsaid controller's (608.2c)
+                    if !controller_only(clause.subject.as_ref()) && single_actor(clause.subject.as_ref()) {
+                        e.clause_subject(clause, support, &mut binder)?;
+                    }
                     let objects = if let [selector] = objects.items.as_slice()
                         && let Quant::Indefinite(Count::Exactly(Amount::Const(n))) = selector.quant
                         && selector.set.domain == Domain::Card && selector.set.zone.is_some()

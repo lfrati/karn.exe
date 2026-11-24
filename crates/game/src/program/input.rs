@@ -218,6 +218,13 @@ pub(super) fn resolve(support: &Support<'_>, selector: &Selector) -> Res<Input> 
     find(support, selector)?.ok_or_else(|| crate::Unsupported("input reference: nothing before it supplies the required participant/cardinality".into()))
 }
 
+/// Whether the phrase says the participant this input is ("whenever a player casts …": the
+/// caster), rather than one every such event has that the phrase leaves unsaid (the player a
+/// permanent enters under, of "when this creature enters").
+pub(super) fn said(support: &Support<'_>, input: Input) -> bool {
+    schema(support).iter().any(|p| p.input == input && p.said)
+}
+
 /// One defender retained from one cost participant. A plural payment cannot silently
 /// choose the first of several attacked players (508.4, 702.49c).
 pub(super) fn cost_defender(support: &Support<'_>, selector: &Selector) -> Res<Input> {

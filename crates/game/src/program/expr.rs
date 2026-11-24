@@ -1399,6 +1399,15 @@ impl Set {
                 // A card in an owned zone has that zone's owner (400.3). Reuse the
                 // ordinary relation rather than building a second zone predicate.
                 let relation = Relation::compile(&ir::Relation { who: Box::new(who.clone()), negated: false, past: false }, bind)?;
+                // "their graveyard" is the graveyard of a player the text named: not, where it
+                // named none, of the player the event leaves unsaid ("each player returns all
+                // creature cards from their graveyard" is each one's own, 608.2c)
+                if matches!(who.quant, Quant::Definite(ir::Ref::Anaphor(_)))
+                    && let Relation::Named { who: Subject::Input(input), .. } = &relation
+                    && !super::input::said(support, *input)
+                {
+                    return unsupported("noun phrase: a zone owner's pronoun with no player named before it");
+                }
                 if owner.as_ref().is_some_and(|existing| existing != &relation) {
                     return unsupported("noun phrase: distinct card and zone owner constraints");
                 }
