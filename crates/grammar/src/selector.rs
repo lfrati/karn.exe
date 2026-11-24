@@ -3942,6 +3942,7 @@ fn specials(possessor: &P<Selector>) -> P<Selector> {
             lit("the permanent it becomes").to(def(Ref::PermanentItBecomes, Domain::Permanent)),
             lit("your team").to(def(Ref::YourTeam, Domain::Player)),
             lit("the active player").to(def(Ref::ActivePlayer, Domain::Player)),
+            lit("the monarch").to(def(Ref::Monarch, Domain::Player)),
             lit("the amassed Army").to(def(Ref::AmassedArmy, Domain::Permanent)),
             lit("the attacking player").to(def(Ref::AttackingPlayer, Domain::Player)),
             lit("that attacking player").to(def(Ref::AttackingPlayer, Domain::Player)).alias(),

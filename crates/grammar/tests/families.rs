@@ -1032,3 +1032,25 @@ fn r122_1_player_gets_each_kind_of_counter() {
         "If one or more counters would be put on a creature you control, it gets that many plus one of each of those kinds of counters instead.",
     ] { declines(text); }
 }
+
+/// CR 725.1 and 725.3: "the monarch" names the one player with that designation, wherever a
+/// player is named.
+#[test]
+fn r725_1_the_monarch_names_a_player() {
+    for text in [
+        "~ can't be blocked by creatures the monarch controls.",
+        "At the beginning of the monarch's end step, that player draws a card.",
+        "The monarch controls enchanted creature.",
+        "Whenever equipped creature attacks the monarch, destroy target tapped nonland permanent that player controls.",
+    ] {
+        let (value, printed) = read(text);
+        assert_eq!(printed, text);
+        assert!(serde_json::to_string(&value).unwrap().contains("Monarch"), "{text}");
+    }
+    // the designation itself is still a condition and an action, not the player
+    for text in ["When ~ enters, you become the monarch.", "At the beginning of your upkeep, if that player is the monarch, draw a card."] {
+        let (_, printed) = read(text);
+        assert_eq!(printed, text);
+    }
+    for text in ["~ can't be blocked by creatures the monarchs control.", "Destroy target creature the monarch."] { declines(text); }
+}

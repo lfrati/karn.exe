@@ -608,6 +608,9 @@ pub enum Ref {
     YourTeam,
     /// "the active player" (102.1).
     ActivePlayer,
+    /// "the monarch": the player who has that designation (725.1, 725.3), if any; a static
+    /// effect about the monarch does nothing while there is none (725.5).
+    Monarch,
     /// "the amassed Army": the Army the amass before put counters on (701.47).
     AmassedArmy,
     /// "all revealed cards not cast this way": every card the effect revealed, the one it
