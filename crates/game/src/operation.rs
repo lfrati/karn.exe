@@ -579,6 +579,13 @@ impl Game {
         self.run_operation(Operation::Damage(crate::damage::Dealing::new(self,damage,combat,origin)?))
     }
 
+    /// Damage an effect says can't be prevented (615.12): nothing prevents it, though what
+    /// modifies its amount still applies (616.1).
+    pub(crate) fn unpreventable_damage(&mut self, damage: &[(ObjId, Target, u32)]) -> crate::Res<Result<Completed, Decision>> {
+        let dealing = crate::damage::Dealing::new(self, damage, false, EventOrigin::Effect)?.unpreventable();
+        self.run_operation(Operation::Damage(dealing))
+    }
+
     /// Discard these cards, asking the affected player which replacement applies where
     /// more than one would (616.1).
     pub(crate) fn discard_operation(&mut self, events: Vec<crate::discard::Discarding>) -> crate::Res<Result<Completed, Decision>> {

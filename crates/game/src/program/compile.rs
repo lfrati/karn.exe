@@ -1155,6 +1155,9 @@ enum TextStep<'a> { Reflexive(&'a Sentence, &'a [Sentence], Option<&'a ir::Event
     ManaGenericForbidden,
     /// A keyword cost defined by the recipient's own mana cost (702.34a).
     KeywordCost(ir::Keyword, &'a Selector),
+    /// "… and the damage can't be prevented", "The damage can't be prevented." (615.12): said
+    /// of the damage the act just before deals.
+    DamageUnpreventable,
     /// "… return it to the battlefield … at the beginning of your next upkeep. It gains
     /// haste.": the sentences the delayed instruction just after this does too, after it
     /// ([`changes_what_returns_later`]).
@@ -1316,6 +1319,21 @@ fn dealt_damage_by_this(who: &Selector, support: &Support<'_>) -> Option<Selecto
     Some(all)
 }
 
+/// "The damage can't be prevented.": said of the damage just dealt, not of all damage this turn
+/// (615.12).
+fn the_damage_unpreventable(rule: &ir::statics::Static) -> bool {
+    let that = ir::Prevention { amount: ir::Prevented::That, kind: ir::event::DamageKind::Any, to: None, by: None, to_or_by: false, this_turn: None };
+    matches!(rule, ir::statics::Static::Unpreventable { damage, this_turn: false, redirect: false } if *damage == that)
+}
+
+/// "[deals damage] and the damage can't be prevented": the act it is said of.
+fn unpreventable_after(rule: &ir::statics::Static) -> Option<&ir::Body> {
+    match rule {
+        ir::statics::Static::After { body, join: Join::And, rest } if the_damage_unpreventable(rest) => Some(body),
+        _ => None,
+    }
+}
+
 /// "If [condition], [one act] instead.": the condition of a sentence that replaces the one
 /// before it.
 fn instead(sentence: &Sentence) -> Option<&ir::Condition> {
@@ -1325,7 +1343,11 @@ fn instead(sentence: &Sentence) -> Option<&ir::Condition> {
         Sentence::Led { lead: Lead::Modifier(ir::effect::Modifier::Instead), rest } => (&**rest, true),
         rest => (rest, false),
     };
-    let Sentence::Do(body) = rest else { return None };
+    let body = match rest {
+        Sentence::Do(body) => body,
+        Sentence::Static(rule) => unpreventable_after(rule)?,
+        _ => return None,
+    };
     // "If this spell was bargained, instead it deals 3 damage to that permanent and you scry
     // 1.": an "instead" that leads the sentence is said of all of it; one said after an act,
     // only of that act
@@ -1395,44 +1417,55 @@ pub(crate) fn replaces_previous(ability: &ir::Ability) -> Option<Sentence> {
 }
 
 fn text_steps<'a>(effect: &'a Effect, support: &Support<'_>) -> Res<Vec<TextStep<'a>>> {
+    fn walk_body<'a>(body: &'a ir::Body, out: &mut Vec<TextStep<'a>>) -> Res<()> {
+        if body.rest.iter().any(|(join, _)| *join == Join::Or) { return unsupported("program: alternative clauses not lowered"); }
+        for clause in std::iter::once(&body.first).chain(body.rest.iter().map(|(_, c)| c)) {
+            if !clause.also && !clause.rest.is_empty() && clause.rest.iter().all(|(join,_)| *join == Join::Or) {
+                out.push(TextStep::Alternative(clause));
+                continue;
+            }
+            // "it also gains trample": done as said, in addition to what came before
+            if clause.rest.iter().any(|(join, _)| *join == Join::Or) {
+                return unsupported("program: clause connective not lowered");
+            }
+            let alone = clause.rest.is_empty();
+            if let Some(players) = done_by_each_player(clause) {
+                out.push(TextStep::Each(players, true));
+                for act in std::iter::once(&clause.first).chain(clause.rest.iter().map(|(_, a)| a)) {
+                    out.push(TextStep::Act(clause, act, alone));
+                }
+                out.push(TextStep::EndEach);
+                continue;
+            }
+            if clause.may && !alone {
+                if !controller_only(clause.subject.as_ref()) && !done_by_its_player(clause) && !copied_by_its_player(clause) {
+                    return unsupported("optional compound instruction by another chooser not lowered");
+                }
+                out.push(TextStep::May(clause));
+            }
+            for act in std::iter::once(&clause.first).chain(clause.rest.iter().map(|(_, a)| a)) {
+                let guards: Vec<_> = act.mods.iter().filter_map(|m| match m { ir::effect::Modifier::If(c) => Some(c), _ => None }).collect();
+                if !alone && !guards.is_empty() { return unsupported("program: trailing condition on a compound clause not lowered"); }
+                for condition in &guards { out.push(TextStep::If(condition, true)); }
+                out.push(TextStep::Act(clause, act, alone));
+                for _ in guards { out.push(TextStep::EndIf); }
+            }
+            if clause.may && !alone { out.push(TextStep::EndMay); }
+        }
+        Ok(())
+    }
     fn walk<'a>(sentence: &'a Sentence, out: &mut Vec<TextStep<'a>>) -> Res<()> {
         match sentence {
-            Sentence::Do(body) => {
-                if body.rest.iter().any(|(join, _)| *join == Join::Or) { return unsupported("program: alternative clauses not lowered"); }
-                for clause in std::iter::once(&body.first).chain(body.rest.iter().map(|(_, c)| c)) {
-                    if !clause.also && !clause.rest.is_empty() && clause.rest.iter().all(|(join,_)| *join == Join::Or) {
-                        out.push(TextStep::Alternative(clause));
-                        continue;
-                    }
-                    // "it also gains trample": done as said, in addition to what came before
-                    if clause.rest.iter().any(|(join, _)| *join == Join::Or) {
-                        return unsupported("program: clause connective not lowered");
-                    }
-                    let alone = clause.rest.is_empty();
-                    if let Some(players) = done_by_each_player(clause) {
-                        out.push(TextStep::Each(players, true));
-                        for act in std::iter::once(&clause.first).chain(clause.rest.iter().map(|(_, a)| a)) {
-                            out.push(TextStep::Act(clause, act, alone));
-                        }
-                        out.push(TextStep::EndEach);
-                        continue;
-                    }
-                    if clause.may && !alone {
-                        if !controller_only(clause.subject.as_ref()) && !done_by_its_player(clause) && !copied_by_its_player(clause) {
-                            return unsupported("optional compound instruction by another chooser not lowered");
-                        }
-                        out.push(TextStep::May(clause));
-                    }
-                    for act in std::iter::once(&clause.first).chain(clause.rest.iter().map(|(_, a)| a)) {
-                        let guards: Vec<_> = act.mods.iter().filter_map(|m| match m { ir::effect::Modifier::If(c) => Some(c), _ => None }).collect();
-                        if !alone && !guards.is_empty() { return unsupported("program: trailing condition on a compound clause not lowered"); }
-                        for condition in &guards { out.push(TextStep::If(condition, true)); }
-                        out.push(TextStep::Act(clause, act, alone));
-                        for _ in guards { out.push(TextStep::EndIf); }
-                    }
-                    if clause.may && !alone { out.push(TextStep::EndMay); }
-                }
+            Sentence::Do(body) => walk_body(body, out)?,
+            // "Urza's Rage deals 10 damage to that permanent or player and the damage can't be
+            // prevented."
+            Sentence::Static(rule) if unpreventable_after(rule).is_some() => {
+                walk_body(unpreventable_after(rule).expect("matched"), out)?;
+                out.push(TextStep::DamageUnpreventable);
             }
+            // "Pinpoint Avalanche deals 4 damage to target creature. The damage can't be
+            // prevented."
+            Sentence::Static(rule) if the_damage_unpreventable(rule) => out.push(TextStep::DamageUnpreventable),
             Sentence::Led { lead: Lead::Modifier(ir::effect::Modifier::During(ir::event::During::Step(ir::event::Step::Turn,ir::event::StepOwner::ThatTurns))), rest } => {
                 out.push(TextStep::DuringCreatedTurn);walk(rest,out)?;out.push(TextStep::EndDuringCreatedTurn);
             }
@@ -3208,6 +3241,13 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
         }
         let (clause, act, alone) = match part {
             TextStep::Follows(more) => { follows = more; continue; }
+            // the damage the act just before deals can't be prevented (615.12)
+            TextStep::DamageUnpreventable => {
+                let dealt = e.instrs.iter_mut().rev().find_map(|i| match i { Instr::Action { action, .. } => Some(action), _ => None });
+                let Some(action::Action::Damage { unpreventable, .. }) = dealt else { return unsupported("unpreventable: no damage dealt just before"); };
+                *unpreventable = true;
+                continue;
+            }
             TextStep::ManaGenericForbidden => {
                 if !non_generic { return unsupported("mana: non-generic spending rider needs one unconditional producer"); }
                 continue;
@@ -5394,11 +5434,14 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 // "If this spell was bargained, instead it deals 3 damage to that permanent":
                 // what deals the damage is not what it is dealt to, which would be "itself"
                 // (the converse of a recipient "it"); the "it" is the source
+                // "instead it deals 10 damage to that permanent or player": "it" read as a
+                // permanent or a player names the target, too
                 let it = |s: &Selector| s.quant == Quant::Definite(Ref::Anaphor(ir::Anaphor::It));
+                let it_names = |to: &Selector, named: &_| [ObjectSet::of(Domain::Object), ObjectSet { filter: ir::Filter::any_object(), ..to.set.clone() }].into_iter()
+                    .any(|set| binder.subject(&Selector::new(Quant::Definite(Ref::Anaphor(ir::Anaphor::It)), set)).is_ok_and(|dealer| dealer == *named));
                 let dealer_is_source = matches!(clause.subject.as_ref(), Some(Subject::Selector(s)) if it(s))
-                    && binder.subject(&Selector::new(Quant::Definite(Ref::Anaphor(ir::Anaphor::It)), ObjectSet::of(Domain::Object))).is_ok_and(|dealer| !dealer.is_empty()
-                        && hits.iter().all(|h| h.to.items.iter().all(|to| matches!(to.quant, Quant::Definite(Ref::Anaphor(ir::Anaphor::That | ir::Anaphor::The { .. })))
-                            && binder.subject(to).is_ok_and(|named| named == dealer))));
+                    && hits.iter().all(|h| h.to.items.iter().all(|to| matches!(to.quant, Quant::Definite(Ref::Anaphor(ir::Anaphor::That | ir::Anaphor::The { .. })))
+                        && binder.subject(to).is_ok_and(|named| !named.is_empty() && it_names(to, &named))));
                 let source = if clause.subject.is_none() || dealer_is_source { binder.clause = Some(expr::Subject::Source); action::Operand::Source }
                     else {
                         match e.clause_subject_scoped(clause, support, &mut binder, true)? {
@@ -5463,7 +5506,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                     if amounts.x.as_ref().is_some_and(|read| read.get()) && let Some(read) = &binder.x { read.set(true); }
                     Ok((to, amount))
                 }).collect::<Res<_>>()?;
-                Some(action::Action::Damage { source, hits })
+                Some(action::Action::Damage { source, hits, unpreventable: false })
             }
             // "deals 3 damage divided as you choose among one, two, or three targets" (601.2d)
             Action::DealDivided { amount, among, division: ir::action::DamageDivision::Chosen } => {
@@ -5561,9 +5604,9 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
             Action::Static(s) if replaces && matches!(**s, ir::StaticAct::DealsToSame(_)) => {
                 let ir::StaticAct::DealsToSame(n) = &**s else { unreachable!() };
                 let dealt = e.instrs.iter().rev().find_map(|i| match i { Instr::Action { action, .. } => Some(action), _ => None });
-                let Some(action::Action::Damage { source, hits }) = dealt else { return unsupported("damage dealt instead of something other than damage"); };
+                let Some(action::Action::Damage { source, hits, unpreventable }) = dealt else { return unsupported("damage dealt instead of something other than damage"); };
                 let [(to, _)] = hits.as_slice() else { return unsupported("damage dealt instead of several amounts of damage"); };
-                Some(action::Action::Damage { source: source.clone(), hits: vec![(to.clone(), quantity(n, support, &binder)?)] })
+                Some(action::Action::Damage { source: source.clone(), hits: vec![(to.clone(), quantity(n, support, &binder)?)], unpreventable: *unpreventable })
             }
             Action::GetCounters { count, kind } => {
                 let on = e.clause_subject(clause, support, &mut binder)?;

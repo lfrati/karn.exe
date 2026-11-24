@@ -878,6 +878,8 @@ struct Proposal {
 #[derive(Debug, Clone)]
 pub(crate) struct Proposals {
     combat: bool,
+    /// "The damage can't be prevented" is said of these hits (615.12).
+    unpreventable: bool,
     hits: Vec<Proposal>,
     recipients: Vec<Target>,
     at: usize,
@@ -913,6 +915,7 @@ impl Proposals {
         });
         Ok(Self {
             combat,
+            unpreventable: false,
             hits,
             recipients,
             at: 0,
@@ -999,7 +1002,7 @@ impl Proposals {
             .into_iter()
             .map(|(offer, change)| (DamageOption::Modifier(offer), Edit::Amount(change)))
             .collect();
-        if game.unpreventable() {
+        if self.unpreventable || game.unpreventable() {
             return options;
         }
         for hit in self.hits.iter().filter(|h| h.to == on && h.amount > 0) {
@@ -1337,6 +1340,11 @@ impl Dealing {
             used: Vec::new(),
             choices: Vec::new(),
         })
+    }
+    /// This damage can't be prevented (615.12).
+    pub(crate) fn unpreventable(mut self) -> Self {
+        if let Stage::Proposed(p) = &mut self.stage { p.unpreventable = true; }
+        self
     }
     pub(crate) fn waiting(&self) -> bool {
         match &self.stage {

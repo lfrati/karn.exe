@@ -54,6 +54,8 @@ pub(crate) enum Action {
     TurnFace { objects: Vec<ObjId>, up: bool },
     /// One simultaneous damage event: source, recipient, amount (120.4).
     Damage(Vec<(ObjId, Target, u32)>),
+    /// One such event that can't be prevented (615.12): "… and the damage can't be prevented".
+    UnpreventableDamage(Vec<(ObjId, Target, u32)>),
     Prevent(crate::prevention::Effect),
     /// Counters put at once, as the replacement effects that apply have made each
     /// placement (616.1).
@@ -256,6 +258,7 @@ pub(crate) fn run(game: &mut Game, action: Action) -> crate::Res<Result<Complete
             game.stamped_at_once(first);
         }
         Action::Damage(damage) => return game.damage_operation(&damage, false,crate::operation::EventOrigin::Effect),
+        Action::UnpreventableDamage(damage) => return game.unpreventable_damage(&damage),
         Action::PutCounters(batch) => if let Err(decision)=game.put_counter_batch(batch,crate::operation::EventOrigin::Effect)? { return Ok(Err(decision)); },
         Action::Create(requests) => return game.create_tokens(requests,crate::operation::EventOrigin::Effect),
         Action::Prevent(effect) => game.begin_prevention(effect),

@@ -144,7 +144,8 @@ pub enum Action {
     /// names.
     Fight { one: Operand, other: Vec<Operand> },
     /// Damage dealt by the named sources, as they are or last were (113.7a, 120.4).
-    Damage { source: Operand, hits: Vec<(Vec<Operand>, expr::Amount)> },
+    /// `unpreventable`: "the damage can't be prevented" (615.12) is said of this damage.
+    Damage { source: Operand, hits: Vec<(Vec<Operand>, expr::Amount)>, unpreventable: bool },
     /// Remove at most Some(n), or all with None, of one named kind (122.1, 609.3).
     RemoveCounters { from: Operand, counters: CounterRemoval },
     /// Counters put on supported holders: each group, and the counters put on each of its members.
@@ -281,7 +282,7 @@ impl Action {
             Action::Tap { objects, .. } | Action::Transform { objects } | Action::Level { objects, .. } | Action::Unprepare { objects } | Action::Designate { objects, .. } | Action::TurnFace { objects, .. } | Action::Destroy { objects, .. } | Action::Counter { objects, .. } | Action::ExileUntil { objects } | Action::Regenerate { objects } | Action::PhaseOut { objects } => objects.iter().collect(),
             Action::Attach { objects, to } => objects.iter().chain(std::iter::once(to)).collect(),
             Action::Pair { one, other } => vec![one, other],
-            Action::Damage { source, hits } => std::iter::once(source).chain(hits.iter().flat_map(|(to, _)| to)).collect(),
+            Action::Damage { source, hits, .. } => std::iter::once(source).chain(hits.iter().flat_map(|(to, _)| to)).collect(),
             Action::Prevent { to, by, .. } => to.iter().chain(by).collect(),
             Action::Fight { one, other } => std::iter::once(one).chain(other).collect(),
             Action::RemoveCounters { from, .. } => vec![from],
@@ -666,7 +667,7 @@ pub(super) fn evaluate(game: &Game, f: &Frame, action: &Action) -> crate::Res<pe
             };
             perform::Action::Prevent(effect)
         }
-        Action::Damage { source, hits } => {
+        Action::Damage { source, hits, unpreventable } => {
             // one simultaneous event, of numbers counted before any of it is dealt (120.4)
             let mut damage = Vec::new();
             for (to, n) in hits {
@@ -682,7 +683,7 @@ pub(super) fn evaluate(game: &Game, f: &Frame, action: &Action) -> crate::Res<pe
                     }
                 }
             }
-            perform::Action::Damage(damage)
+            if *unpreventable { perform::Action::UnpreventableDamage(damage) } else { perform::Action::Damage(damage) }
         }
         Action::DealDivided { source, group } => {
             let mut damage = Vec::new();
