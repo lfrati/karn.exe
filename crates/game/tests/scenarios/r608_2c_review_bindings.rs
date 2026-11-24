@@ -26,3 +26,9 @@ fn r608_2c_increasing_confusion_stays_refused_until_that_many_reads_the_replaced
     refused(game::play::check(&oracle_read("Increasing Confusion")).map_err(|e| e.0), "that many: no preceding group of objects");
 }
 
+#[test]
+fn r608_2c_rally_the_righteous_stays_refused_until_those_creatures_include_its_target() {
+    // Uncited (admission): "untap target creature and each other creature that shares a color
+    // with it. Those creatures get +2/+0": those are both; the engine kept only the others.
+    refused(game::play::check(&oracle_read("Rally the Righteous")).map_err(|e| e.0), "reference: a plural of one act's single and several objects");
+}

@@ -139,6 +139,9 @@ struct RecipientContext {
 /// Resolves references to producers by lexical scope.
 #[derive(Default, Clone)]
 struct Binder {
+    /// What one act named together as its objects ("untap target creature and each other
+    /// creature that shares a color with it"), each list of their slots.
+    coordinated: Vec<Vec<Slot>>,
     /// The exact preceding local flip; unrelated numbers and actions do not replace it.
     coin: Option<Slot>,
     turn: Option<Slot>,
@@ -710,7 +713,17 @@ impl Binder {
             if candidates.len() > 1 && candidates.iter().any(|n| keep(n)) { candidates.retain(|n| keep(n)); }
         };
         narrow(&mut candidates, &|n| !n.own);
-        if !singular { narrow(&mut candidates, &|n| n.bounds.1 > 1); }
+        if !singular {
+            // "untap target creature and each other creature that shares a color with it.
+            // Those creatures get +2/+0": what one act named together is not split in two
+            let several = |slot: Slot| candidates.iter().any(|m| m.slot == slot && m.bounds.1 > 1);
+            if candidates.iter().any(|n| n.bounds.1 <= 1
+                && self.coordinated.iter().any(|group| group.contains(&n.slot) && group.iter().any(|s| several(*s))))
+            {
+                return unsupported("reference: a plural of one act's single and several objects");
+            }
+            narrow(&mut candidates, &|n| n.bounds.1 > 1);
+        }
         // A definite qualified noun identifies a declared participant. By contrast,
         // "those/that creatures you don't control" may restrict an existing group
         // through the action's current-state filter (e.g. Lost in the Maze).
@@ -2375,7 +2388,10 @@ impl Emit {
         if objects.conj != ir::Conj::And && objects.items.len() > 1 {
             return unsupported("choice between object groups not lowered");
         }
-        objects.items.iter().map(|s| self.object(s, support, binder)).collect()
+        let operands: Vec<_> = objects.items.iter().map(|s| self.object(s, support, binder)).collect::<Res<_>>()?;
+        let slots: Vec<Slot> = operands.iter().filter_map(|o| match o { action::Operand::Reference(slot) => Some(*slot), _ => None }).collect();
+        if slots.len() > 1 { binder.coordinated.push(slots); }
+        Ok(operands)
     }
     /// What an action is done to. A described set of objects, and whoever controls or owns
     /// something, is fixed as the action begins and kept for what the text says of it
