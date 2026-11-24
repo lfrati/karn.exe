@@ -1219,15 +1219,17 @@ pub(crate) fn entwine_count(def: &CardDef) -> usize {
     contributions(def).filter(|(_,g)| matches!(g,Gives::Additional {then:Paid::AllModes,..})).count()
 }
 
-/// Its escalate cost, paid once for each mode chosen beyond the first (702.120a).
-pub(crate) fn escalate(def: &CardDef) -> Option<&ir::mana::ManaCost> {
-    contributions(def).find_map(|(scope, gives)| match gives {
-        Gives::Additional { cost, then: Paid::Escalated, .. } if scope.contains(crate::Zone::Stack) => Some(cost),
-        _ => None,
-    })
+/// Its escalate cost, paid once for each mode chosen beyond the first (702.120a), with the
+/// row printing it.
+pub(crate) fn escalate(def: &CardDef) -> Option<(usize, &ir::Cost)> {
+    def.keyword_declarations.iter().filter_map(|i| Some((i.row, i.declared.as_ref().ok()?)))
+        .find_map(|(row, d)| d.gives.iter().find_map(|(scope, gives)| match gives {
+            Gives::Escalate(cost) if scope.contains(crate::Zone::Stack) => Some((row, cost)),
+            _ => None,
+        }))
 }
 pub(crate) fn escalate_count(def: &CardDef) -> usize {
-    contributions(def).filter(|(_, g)| matches!(g, Gives::Additional { then: Paid::Escalated, .. })).count()
+    contributions(def).filter(|(_, g)| matches!(g, Gives::Escalate(_))).count()
 }
 
 pub(crate) fn buyback(def: &CardDef) -> Option<&ir::mana::ManaCost> {

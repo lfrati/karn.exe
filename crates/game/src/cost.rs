@@ -1033,9 +1033,13 @@ pub(crate) struct Definitions {
     /// Each optional additional cost (118.8b), by the row stating it: added to the cost it is
     /// cast for when its controller announces it paid (601.2b, 601.2f).
     pub(crate) optional: Vec<(usize, crate::keyword::Optional, Res<Plan>)>,
+    /// Its escalate cost, added once for each mode chosen beyond the first (702.120a). The
+    /// count of modes is announced before the total cost is (601.2b, 601.2f), so a choice
+    /// among alternatives within it would need its own announcement for each payment.
+    pub(crate) escalate: Option<Res<Plan>>,
 }
 impl Default for Definitions {
-    fn default() -> Self { Self { normal: None, flashback: None, escape: None, harmonize: None, foretell: None, alternatives: Vec::new(), offered: Vec::new(), face_down: Vec::new(), additional: Ok(Plan::default()), abilities: Vec::new(), optional: Vec::new() } }
+    fn default() -> Self { Self { normal: None, flashback: None, escape: None, harmonize: None, foretell: None, alternatives: Vec::new(), offered: Vec::new(), face_down: Vec::new(), additional: Ok(Plan::default()), abilities: Vec::new(), optional: Vec::new(), escalate: None } }
 }
 impl Definitions {
     /// The plan of an alternative cost an effect gives the card (613.1f), with the additional
@@ -1091,6 +1095,11 @@ impl Definitions {
                 plan.validate_selections()?;
                 Ok(plan)
             })())).collect(),
+            escalate: crate::keyword::escalate(def).map(|(row, cost)| {
+                let plan = Plan::compile(cost, &Support::definition(def, Some(AbilityKey::printed(row))))?;
+                if plan.chooses() { return unsupported("escalate: a choice among alternatives in a cost paid for each extra mode"); }
+                Ok(plan)
+            }),
         }
     }
 }

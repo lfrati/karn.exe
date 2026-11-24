@@ -619,6 +619,8 @@ fn check_face_as(def: &CardDef, alternative: bool, r: &mut Refusals) -> Res<()> 
         r.need(crate::program::spell_choices(def, true))?;
     }
     if crate::keyword::escalate_count(def) > 1 { r.say("multiple escalate costs (702.120b)")?; }
+    r.part(|| format!("{}, its escalate cost", def.name()));
+    if let (Some(plan), Some((_, cost))) = (&def.costs.escalate, crate::keyword::escalate(def)) { r.several(plan.clone(), cost.0.len(), "cost parts")?; }
     if crate::keyword::escalate(def).is_some() && matches!(r.lowered(crate::program::spell_modal(def), || Some("whether it is modal, as escalate requires (702.120a): checked of its bodies".into()))?, Some(None)) {
         r.say("escalate requires a modal spell (702.120a)")?;
     }
@@ -1958,8 +1960,11 @@ impl Game {
         // for each mode chosen beyond the first (702.120a): additional costs (601.2f)
         let rows = match crate::program::spell_modal(def)? { Some(i) => def.modes_of(i), None => &[] };
         let cost = crate::modes::costs(rows, modes).fold(cost, |cost, mode| cost.kicked(mode, 1));
-        let cost = match crate::keyword::escalate(def) {
-            Some(extra) => cost.kicked(extra, modes.len().saturating_sub(1) as u32),
+        let cost = match &def.costs.escalate {
+            Some(extra) => {
+                let extra = extra.as_ref().map_err(Clone::clone)?;
+                (1..modes.len()).fold(cost, |cost, _| cost.plus(extra))
+            }
             None => cost,
         };
         let mut slots = Vec::new();

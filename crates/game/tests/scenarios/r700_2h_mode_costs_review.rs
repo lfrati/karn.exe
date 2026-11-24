@@ -204,16 +204,16 @@ fn an_up_to_trigger_with_a_targetless_mode_still_asks() {
     assert_eq!(g.players[0].life, 21);
 }
 
-/// Escalate with a cost that is not mana is not a mode's mana cost: not admitted by this
-/// change. ("Discard a card or pay 3 life", a choice between additional costs (601.2b), is
-/// covered by r601_2b_cost_alternatives.)
+/// An escalate cost that is a choice among alternatives would be chosen once for each mode
+/// beyond the first (601.2b); one announcement for all of them is not that. Nonmana escalate
+/// costs without a choice are covered by r702_120_escalate.
 #[test]
-fn costs_that_are_not_modes_mana_costs_stay_refused() {
-    // Isolate nonmana Escalate admission from Collective Brutality's independent
-    // reveal/discard program. Its real Oracle card is a sorcery.
-    let text = "Escalate—Discard a card.\nChoose one or more —\n• You gain 1 life.\n• You gain 2 life.";
-    let def = CardDef::new("Nonmana escalate witness", "{1}{B}", "Sorcery", text, None).unwrap();
-    assert_eq!(game::play::check(&def).expect_err("nonmana escalate is not executable").0, "keyword: Escalate");
+fn an_escalate_cost_with_a_choice_stays_refused() {
+    let text = "Escalate—Discard a card or pay 3 life.\nChoose one or more —\n• You gain 1 life.\n• You gain 2 life.";
+    let def = CardDef::new("Choice escalate witness", "{1}{B}", "Sorcery", text, None).unwrap();
+    // Uncited (admission): each payment's own choice is not announced.
+    assert_eq!(game::play::check(&def).expect_err("a choice in an escalate cost is not executable").0,
+        "escalate: a choice among alternatives in a cost paid for each extra mode");
 }
 
 /// 702.120a with 700.2d: a mode chosen twice is two modes chosen, the second beyond the first.

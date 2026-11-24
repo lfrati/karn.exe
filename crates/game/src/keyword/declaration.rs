@@ -24,7 +24,7 @@ pub(crate) enum Context {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Times { Once, Repeatable }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Paid { Kicked, Replicated, ReturnsToHand, AllModes, Escalated }
+pub(crate) enum Paid { Kicked, Replicated, ReturnsToHand, AllModes }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Departure { Any, Resolution, AnyIfCastFrom(Zone) }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -69,6 +69,9 @@ pub(crate) enum Gives {
     /// How many of the modes printed under the keyword are chosen: Spree's one or more,
     /// Tiered's one (702.172a, 702.183a).
     Modes(ir::effect::Modes),
+    /// An additional cost paid once for each mode chosen beyond the first (702.120a): mana,
+    /// or an action such as Collective Brutality's discard.
+    Escalate(ir::Cost),
     Enchant,
     Fuse,
 }
@@ -148,9 +151,10 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
         ], vec![Context::SpellsOnly, Context::PrintedOnly])),
         // an additional cost for each mode chosen beyond the first (702.120a)
         "Escalate" => {
-            let KeywordParam::Mana(cost) = &item.param else { return refused(item); };
-            if !cost.0.iter().all(|s| s.mana_payments().is_some()) { return refused(item); }
-            one(stack, Gives::Additional { cost: cost.clone(), times: Times::Repeatable, then: Paid::Escalated }, vec![Context::SpellsOnly, Context::PrintedOnly])
+            let Some(cost) = route_cost(item) else { return refused(item) };
+            // an {X} would be announced with the spell (107.3a); no escalate cost has one
+            if cost.0.iter().any(|p| p.mana().is_some_and(|m| m.0.contains(&crate::cost::X))) { return refused(item); }
+            one(stack, Gives::Escalate(cost), vec![Context::SpellsOnly, Context::PrintedOnly])
         }
         "Entwine" => {
             let KeywordParam::Mana(cost) = &item.param else { return refused(item); };
