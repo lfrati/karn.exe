@@ -116,7 +116,7 @@ pub(crate) fn asks_back(defs: &[crate::card::CardDef]) -> bool {
     }
     fn of(def: &crate::card::CardDef) -> bool {
         serde_json::to_value((&def.abilities, &def.keyword_abilities, &def.modes)).is_ok_and(|v| walk(&v))
-            || def.halves.iter().any(of) || def.back.as_deref().is_some_and(of) || def.alternative_spell().is_some_and(of)
+            || def.halves.iter().any(of) || def.back.as_deref().is_some_and(of) || def.alternative_spell().is_some_and(of) || def.overloaded().is_some_and(of)
     }
     defs.iter().any(of)
 }
@@ -156,7 +156,7 @@ pub(crate) fn initial_cast_history_needs_more(defs:&[crate::CardDef]) -> bool {
     fn of(def:&crate::CardDef)->bool {
         def.abilities.iter().chain(def.keyword_abilities.iter().map(|(_,ability)|ability)).any(needs)
             || serde_json::to_value(&def.modes).is_ok_and(|value|walk(&value))
-            || def.halves.iter().any(of) || def.back.as_deref().is_some_and(of) || def.alternative_spell().is_some_and(of)
+            || def.halves.iter().any(of) || def.back.as_deref().is_some_and(of) || def.alternative_spell().is_some_and(of) || def.overloaded().is_some_and(of)
     }
     defs.iter().any(of)
 }

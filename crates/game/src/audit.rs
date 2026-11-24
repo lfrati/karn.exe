@@ -265,6 +265,7 @@ impl Game {
                     CastAs::Whole=>json!("whole"),CastAs::Half(index)=>json!(index),
                     CastAs::Fused=>json!("fused"),CastAs::Adventure=>json!("adventure"),
                     CastAs::Omen=>json!("omen"),CastAs::Face(index)=>json!({"face":index}),
+                    CastAs::Overloaded=>json!("overloaded"),
                 };
                 rows.push(json!({"player":player,"cast_as":cast_as,
                     "without_paying":permission.costs==Costs::Free,"during_resolution":true}));
@@ -283,6 +284,7 @@ impl Game {
                         CastAs::Whole => json!("whole"), CastAs::Half(index) => json!(index),
                         CastAs::Fused => json!("fused"), CastAs::Adventure => json!("adventure"),
                         CastAs::Omen => json!("omen"), CastAs::Face(index) => json!({"face": index}),
+                        CastAs::Overloaded => json!("overloaded"),
                     };
                     rows.push(json!({"player": player, "cast_as": cast_as, "without_paying": false,
                         "during_resolution": true, "alternative": row}));

@@ -61,6 +61,9 @@ pub struct CardDef {
     pub(crate) alternative_spell: Option<Box<CardDef>>,
     /// Copiable inset characteristics, which the physical card cannot cast (722.2b, 722.3).
     pub(crate) prepare_spell: Option<Box<CardDef>>,
+    /// Of a spell with overload: the same characteristics, with the text its overload cost
+    /// changes, "target" to "each" (702.96a, 612); or why that text is not read.
+    pub(crate) overloaded: Option<Result<Box<CardDef>, String>>,
     /// This definition describes the generated spell, including its copies (722.3d).
     pub(crate) is_prepare_spell: bool,
     /// Of the back face of a double-faced card: the mana value of its front face, which is
@@ -142,9 +145,12 @@ impl CardDef {
         let (supertypes, types, subtypes) = type_line_parts(type_line)?;
         let cost = mana_cost_of(mana_cost)?;
         let colors = cost.as_ref().map(colors_of).unwrap_or_default();
-        let (abilities, modes, text_colors, forms, station) = read_as(text, name, name, type_line, pt, None)?;
-        let pt = pt.filter(|_| !station);
-        Ok(Self::compile(Printed { halves: Vec::new(), name: name.to_string(), cost, supertypes, types, subtypes, colors, text_colors, pt, loyalty: None, abilities, modes }).with_forms(forms))
+        let def = |text: Text| -> Result<CardDef, String> {
+            let (abilities, modes, text_colors, forms, station) = read_as(text, name, name, type_line, pt, None)?;
+            let pt = pt.filter(|_| !station);
+            Ok(Self::compile(Printed { halves: Vec::new(), name: name.to_string(), cost: cost.clone(), supertypes: supertypes.clone(), types: types.clone(), subtypes: subtypes.clone(), colors: colors.clone(), text_colors, pt, loyalty: None, abilities, modes }).with_forms(forms))
+        };
+        def(Text::Printed(text))?.with_overload(|| def(Text::Overloaded(text)))
     }
 
     /// A planeswalker card from its printed parts, with the loyalty printed on it (306.5a):
@@ -154,7 +160,7 @@ impl CardDef {
         let (supertypes, types, subtypes) = type_line_parts(type_line)?;
         let cost = mana_cost_of(mana_cost)?;
         let colors = cost.as_ref().map(colors_of).unwrap_or_default();
-        let (abilities, modes, text_colors, forms, _) = read_as(text, name, name, type_line, None, None)?;
+        let (abilities, modes, text_colors, forms, _) = read_as(Text::Printed(text), name, name, type_line, None, None)?;
         Ok(Self::compile(Printed { halves: Vec::new(), name: name.to_string(), cost, supertypes, types, subtypes, colors, text_colors, pt: None, loyalty: Some(loyalty), abilities, modes }).with_forms(forms))
     }
 
@@ -195,7 +201,7 @@ impl CardDef {
         let keyword_declarations = crate::keyword::declarations(&abilities);
         let keyword_abilities = crate::keyword::executable_in(&keyword_declarations);
         let opening = crate::start::compile(&abilities);
-        let mut def = CardDef { activation_timing: Vec::new(), activation_modifiers: Vec::new(), unused_permissions: Vec::new(), declaration_abilities, activation_keywords, companion: None, cast_permissions: Vec::new(), library_permissions: Vec::new(), opening, back: None, modal: false, alternative_spell: None, prepare_spell: None, is_prepare_spell: false, front_mana_value: None, admission: Ok(()), costs: Default::default(), plot: None, suspend: None, keyword_declarations, keyword_abilities, keywords: Vec::new(), halves, name, cost, supertypes, types, subtypes, colors, text_colors, pt, loyalty, abilities, modes, programs: Vec::new(), links: crate::binding::Links::default(), functioning: Default::default(), cost_changes: Vec::new(), restrictions: Vec::new(), characteristics: Vec::new(), triggers: Vec::new(), trigger_modifiers: Vec::new(), replacements: Vec::new(), enchant: Ok(None), forms: Forms::default(), room: None, door: None };
+        let mut def = CardDef { activation_timing: Vec::new(), activation_modifiers: Vec::new(), unused_permissions: Vec::new(), declaration_abilities, activation_keywords, companion: None, cast_permissions: Vec::new(), library_permissions: Vec::new(), opening, back: None, modal: false, alternative_spell: None, prepare_spell: None, overloaded: None, is_prepare_spell: false, front_mana_value: None, admission: Ok(()), costs: Default::default(), plot: None, suspend: None, keyword_declarations, keyword_abilities, keywords: Vec::new(), halves, name, cost, supertypes, types, subtypes, colors, text_colors, pt, loyalty, abilities, modes, programs: Vec::new(), links: crate::binding::Links::default(), functioning: Default::default(), cost_changes: Vec::new(), restrictions: Vec::new(), characteristics: Vec::new(), triggers: Vec::new(), trigger_modifiers: Vec::new(), replacements: Vec::new(), enchant: Ok(None), forms: Forms::default(), room: None, door: None };
         def.functioning = crate::functions::Functioning::compile(&def);
         def.links = crate::binding::compile(&def);
         def.keywords = crate::keyword::held(&def);
@@ -318,7 +324,20 @@ impl CardDef {
     }
 
     fn read_face(f: &oracle::corpus::Face) -> Result<CardDef, String> {
-        let (abilities, modes, text_colors, forms, station) = read_as(&f.oracle_text, &f.name, &f.face_name, &f.type_line, boxed_pt(f), None)?;
+        Self::read_face_as(f, Text::Printed(&f.oracle_text))?.with_overload(|| Self::read_face_as(f, Text::Overloaded(&f.oracle_text)))
+    }
+
+    /// A spell with overload, with what it is cast as for its overload cost: its text with
+    /// "target" changed to "each" (702.96a), read as `overloaded` reads it.
+    fn with_overload(mut self, overloaded: impl FnOnce() -> Result<CardDef, String>) -> Result<CardDef, String> {
+        if !crate::overload::prints(&self) { return Ok(self); }
+        self.overloaded = Some(overloaded().map(Box::new));
+        self.admission = crate::play::validate_definition(&self);
+        Ok(self)
+    }
+
+    fn read_face_as(f: &oracle::corpus::Face, text: Text) -> Result<CardDef, String> {
+        let (abilities, modes, text_colors, forms, station) = read_as(text, &f.name, &f.face_name, &f.type_line, boxed_pt(f), None)?;
         let pt = match (&f.power, &f.toughness) {
             // it has them only from its station symbol, on the battlefield (721.2b, 721.2c)
             _ if station => None,
@@ -344,7 +363,7 @@ impl CardDef {
     /// ability defines, 208.2a) is left unanalyzed, and said to be.
     pub fn unread_face(f: &oracle::corpus::Face) -> Vec<crate::play::Blocker> {
         let mut all = Vec::new();
-        let text = read_as(&f.oracle_text, &f.name, &f.face_name, &f.type_line, boxed_pt(f), Some(&mut all));
+        let text = read_as(Text::Printed(&f.oracle_text), &f.name, &f.face_name, &f.type_line, boxed_pt(f), Some(&mut all));
         if let (Some(p), Some(t)) = (&f.power, &f.toughness) {
             for (printed, power) in [(p, true), (t, false)] {
                 match &text {
@@ -439,6 +458,11 @@ impl CardDef {
     pub(crate) fn alternative_spell(&self) -> Option<&CardDef> { self.alternative_spell.as_deref() }
     pub fn adventure(&self) -> Option<&CardDef> {
         self.alternative_spell().filter(|d| d.subtypes.contains(&ir::Subtype::adventure()))
+    }
+    /// Of a spell with overload, what it is cast for its overload cost: its text with "target"
+    /// changed to "each" (702.96a).
+    pub fn overloaded(&self) -> Option<&CardDef> {
+        self.overloaded.as_ref().and_then(|d| d.as_deref().ok())
     }
     pub fn omen(&self) -> Option<&CardDef> {
         self.alternative_spell().filter(|d| d.subtypes.contains(&ir::Subtype::omen()))
@@ -537,6 +561,7 @@ impl CardDef {
             CastAs::Face(i) => self.modal_face(i),
             CastAs::Adventure => self.adventure().ok_or_else(|| "this card has no Adventure (715.2)".into()),
             CastAs::Omen => self.omen().ok_or_else(|| "this card has no Omen (720.2)".into()),
+            CastAs::Overloaded => self.overloaded().ok_or_else(|| "this spell has no overload (702.96a)".into()),
             CastAs::Half(i) => self.halves.get(i).ok_or_else(|| "no such split half (709.3)".into()),
             CastAs::Fused if !self.halves.is_empty() && self.fuse() => Ok(self),
             _ => Err("choose one split half, or both with fuse (709.3, 702.102)".into()),
@@ -736,7 +761,14 @@ pub enum CastAs {
     Omen,
     /// Chosen face of a modal double-faced card (712.11b).
     Face(usize),
+    /// For its overload cost, with "target" in its text changed to "each" (702.96a): chosen
+    /// with that cost, before its targets would be (601.2b–c).
+    Overloaded,
 }
+
+/// The text a face is read with: as printed, or as its overload cost changes it (702.96a).
+#[derive(Clone, Copy)]
+enum Text<'a> { Printed(&'a str), Overloaded(&'a str) }
 
 /// The abilities of a face, one per printed ability row, and the mode rows under each.
 /// The Oracle text's words for each "~" and "§" it prints, in order: of each ability's own
@@ -756,7 +788,8 @@ type Read = (Vec<Ability>, Vec<Vec<Mode>>, Vec<Color>, Forms, bool);
 /// the last value says whether it took them. `unread`, collecting: each row is read on its
 /// own (113.2c), so a row the grammar does not read is kept there and the next one read; the
 /// text is then refused with the first.
-fn read_as(text: &str, name: &str, face_name: &str, type_line: &str, pt: Option<(i32, i32)>, mut unread: Option<&mut Vec<crate::play::Blocker>>) -> Result<Read, String> {
+fn read_as(text: Text, name: &str, face_name: &str, type_line: &str, pt: Option<(i32, i32)>, mut unread: Option<&mut Vec<crate::play::Blocker>>) -> Result<Read, String> {
+    let (text, overloaded) = match text { Text::Printed(text) => (text, false), Text::Overloaded(text) => (text, true) };
     let n = normalize(text, name, face_name, type_line);
     // each row's words for the objects it names as "~" and "§", in text order
     let mut refs = n.self_refs().iter();
@@ -786,6 +819,7 @@ fn read_as(text: &str, name: &str, face_name: &str, type_line: &str, pt: Option<
         }
         for (i, r) in b.rows.clone().enumerate() {
             let toks = tokenize(&n.rows[r]);
+            let toks = if overloaded { crate::overload::changed(toks) } else { toks };
             collect_symbols(&toks, &mut symbols);
             if toks.is_empty() {
                 continue;

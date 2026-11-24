@@ -478,7 +478,7 @@ impl Game {
         if let Some(card) = o.card {
             let def = &self.defs[card];
             defs.push(def);
-            defs.extend(def.back.as_deref().into_iter().chain(&def.halves).chain(def.alternative_spell()));
+            defs.extend(def.back.as_deref().into_iter().chain(&def.halves).chain(def.alternative_spell()).chain(def.overloaded()));
         }
         use crate::face::Concealment;
         defs.extend([Concealment::Manifested, Concealment::Cloaked].map(|by| &**crate::face::definition(by)));

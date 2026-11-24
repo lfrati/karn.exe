@@ -216,6 +216,13 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
             let Some(cost) = route_cost(item) else { return refused(item) };
             one(stack, Gives::Alternative { cost, from: None }, vec![Context::CreaturesOnly, Context::PrintedOnly])
         }
+        // "You may choose to pay [cost] rather than pay this spell's mana cost" and, if it was
+        // paid, its text with "target" changed to "each" (702.96a): what it is cast as then is
+        // its definition's [`crate::CardDef::overloaded`]
+        "Overload" => {
+            let Some(cost) = route_cost(item) else { return refused(item) };
+            one(stack, Gives::Alternative { cost, from: None }, vec![Context::SpellsOnly, Context::PrintedOnly])
+        }
         "Warp" => {
             let Some(cost) = route_cost(item) else { return refused(item) };
             Ok(Declared::new(vec![(hand, Gives::Asked), (stack, Gives::Alternative { cost, from: Some(Zone::Hand) })], vec![Context::PermanentsOnly]))

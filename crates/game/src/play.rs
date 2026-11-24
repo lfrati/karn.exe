@@ -472,6 +472,20 @@ fn admit(def: &CardDef, r: &mut Refusals) -> Res<()> {
     }
     if let Some(alternative) = def.alternative_spell() { check_face_as(alternative, true, r)?; }
     if let Some(spell) = def.prepare_spell() { validate_into(spell, r)?; }
+    match &def.overloaded {
+        None => {}
+        Some(Err(e)) => r.say(format!("overload: its text with \"each\" for \"target\" is not read: {e}"))?,
+        Some(Ok(overloaded)) => {
+            validate_into(overloaded, r)?;
+            // the changed text has no target for the spell to announce (702.96b)
+            if crate::program::spell_bodies(overloaded).is_ok_and(|bodies| bodies.iter().any(|(_, body)| match body {
+                crate::program::Body::Plain(p) => !p.targets().is_empty(),
+                crate::program::Body::Modes { programs, .. } => programs.iter().any(|p| !p.targets().is_empty()),
+            })) {
+                r.say("overload: its text with \"each\" for \"target\" still targets (702.96b)")?;
+            }
+        }
+    }
     Ok(())
 }
 
@@ -1742,6 +1756,9 @@ impl Game {
     /// chosen target (700.2c), and its total cost (601.2f).
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn castable(&self, player: PlayerId, card: ObjId, cast_as: CastAs, route: CastRoute, chosen: crate::announcement::CastCost, modes: &[usize], x: Option<u32>, kicks: u32, buyback: bool, optional: bool, entwine: bool, replicate: u32, gift: Option<PlayerId>) -> ActionResult<(Vec<TargetSpec>, crate::cost::Plan)> {
+        // cast for its overload cost, it is announced with its changed text, before its
+        // targets would be (702.96a, 601.2b–c)
+        let cast_as = self.cast_as_for(card, cast_as, chosen)?;
         // Cast face down with a morph or disguise ability: the card is turned face down
         // before anything is asked about the spell, so prohibitions, timing and permissions
         // see only the face-down spell (708.4, 702.37c, 702.168b). It has no text: nothing
@@ -2183,6 +2200,8 @@ impl Game {
     fn begin_cast(&mut self, player: PlayerId, card: ObjId, cast_as: CastAs, route: Option<CastRoute>, substitutions: &Substitutions, chosen: crate::announcement::CastCost, modes: &[usize], targets: Vec<Vec<Target>>, division: &[Vec<u32>], paying: &[Vec<ObjId>], with: Option<&Pool>, plan: &[crate::legal::Step], x: Option<u32>, kicks: u32, buyback: bool, optional: bool, entwine: bool, replicate: u32, gift: Option<PlayerId>, life: &[bool], chose: &[usize], branches: Option<&[crate::cost::BranchSelection]>, reports: bool) -> ActionResult<()> {
         let proposed = self;
         let route = route.unwrap_or(CastRoute::Normal);
+        // what it is cast as for its overload cost (702.96a)
+        let cast_as = proposed.cast_as_for(card, cast_as, chosen)?;
         // what goes back if the cast is reversed: the card as it was, face down if foretold
         let original = proposed.obj(card).clone();
         // a foretold card is turned face up just before it is announced (406.3a), and is

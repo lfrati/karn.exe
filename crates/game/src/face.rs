@@ -233,7 +233,7 @@ impl Game {
         if let Some(faces) = &o.token_faces {
             let def = faces.face(o.transformed || o.cast_as == crate::card::CastAs::Face(1)).definition(self)?;
             // A cast split-card copy has only its chosen half on the stack (709.3c).
-            return match o.cast_as { crate::card::CastAs::Half(i) if o.zone == Zone::Stack => def.halves.get(i), crate::card::CastAs::Adventure if o.zone == Zone::Stack => def.adventure().or_else(|| def.subtypes.contains(&ir::Subtype::adventure()).then_some(def)), crate::card::CastAs::Omen if o.zone == Zone::Stack => def.omen().or_else(|| def.subtypes.contains(&ir::Subtype::omen()).then_some(def)), _ => Some(def) };
+            return match o.cast_as { crate::card::CastAs::Half(i) if o.zone == Zone::Stack => def.halves.get(i), crate::card::CastAs::Adventure if o.zone == Zone::Stack => def.adventure().or_else(|| def.subtypes.contains(&ir::Subtype::adventure()).then_some(def)), crate::card::CastAs::Omen if o.zone == Zone::Stack => def.omen().or_else(|| def.subtypes.contains(&ir::Subtype::omen()).then_some(def)), crate::card::CastAs::Overloaded if o.zone == Zone::Stack => def.overloaded().or(Some(def)), _ => Some(def) };
         }
         let Some(card) = o.card else {
             return o.chars.predefined.and_then(|kind| crate::token::definition(kind).ok());
@@ -241,7 +241,7 @@ impl Game {
         let def = &self.defs[card];
         // a double-faced permanent with its back face up is only that face (712.8e)
         if o.transformed { return def.back.as_deref(); }
-        match o.cast_as { crate::card::CastAs::Half(i) => def.halves.get(i), crate::card::CastAs::Face(i) => def.modal_face(i).ok(), crate::card::CastAs::Adventure => def.adventure(), crate::card::CastAs::Omen => def.omen(), _ => Some(def) }
+        match o.cast_as { crate::card::CastAs::Half(i) => def.halves.get(i), crate::card::CastAs::Face(i) => def.modal_face(i).ok(), crate::card::CastAs::Adventure => def.adventure(), crate::card::CastAs::Omen => def.omen(), crate::card::CastAs::Overloaded => def.overloaded(), _ => Some(def) }
     }
 
     /// The characteristics the object has face up: its copy effects' values (708.10), or

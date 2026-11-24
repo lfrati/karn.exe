@@ -34,6 +34,7 @@ impl Definition {
             Self::Card(i, CastAs::Face(face)) => defs[*i].modal_face(*face).ok(),
             Self::Card(i, CastAs::Adventure) => defs[*i].adventure(),
             Self::Card(i, CastAs::Omen) => defs[*i].omen(),
+            Self::Card(i, CastAs::Overloaded) => defs[*i].overloaded(),
             Self::Card(i, _) => Some(&defs[*i]),
             Self::Back(i) => defs[*i].back(),
             Self::Derived(d) => Some(d),
@@ -371,8 +372,9 @@ impl Game {
             announcement.permission = None;
             announcement
         });
-        // Completion rules also apply to copies of alternative spells (715.3c, 701.24c).
-        if matches!(old.cast_as, CastAs::Adventure | CastAs::Omen) { made.cast_as = old.cast_as; }
+        // Completion rules also apply to copies of alternative spells (715.3c, 701.24c); a
+        // copy of an overloaded spell resolves as overloaded (707.10, 702.96a).
+        if matches!(old.cast_as, CastAs::Adventure | CastAs::Omen | CastAs::Overloaded) { made.cast_as = old.cast_as; }
         // and the division announced, which new targets do not change (707.10, 115.7f)
         made.division = old.division;
         made.replicated = old.replicated; made.gift = old.gift; made.announced = old.announced; made.bound = old.bound;

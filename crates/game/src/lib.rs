@@ -29,6 +29,7 @@ pub mod ability;
 pub mod activate;
 pub mod attach;
 mod bestow;
+mod overload;
 pub mod card;
 pub mod binding;
 pub mod combat;
