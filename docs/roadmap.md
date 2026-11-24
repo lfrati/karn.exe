@@ -135,7 +135,7 @@ expects a keyword refusal. When a keyword lands, point them at one that is still
 
 *Skipped:*
 
-- Echo moved to Lane 4: printed fixed mana costs use observed per-player acquisitions and actual upkeep boundaries, including repeated upkeeps; nonmana costs, grants and unproved positioned history remain refused.
+- Echo moved to Lane 4: printed fixed mana costs use observed per-player acquisitions and actual upkeep boundaries, including repeated upkeeps; a nonmana echo cost ("Echo—Discard a card.") is paid or declined at the same upkeep trigger; grants and unproved positioned history remain refused.
 - Unearth moved to Lane 4: printed unearth returns the card with haste and exiles it at the next end step; a resolved rule exiles the permanent instead of any other departure from the battlefield until it leaves (400.7), and a pronoun for a source the effect returned names the permanent it became (400.7j). Granted unearth (Dregscape Sliver, Sedris) remains refused.
 - Cascade moved to Lane 4: printed instances share the retained library scan with Discover, check the resulting spell's mana value and return uncast exiles in a captured random order; grants remain refused.
 - Suspend moved to Lane 4: fixed-count printed suspend now has its hand action, exile-counter scope and last-counter cast; variable announcements and grants remain refused.

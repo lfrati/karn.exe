@@ -139,14 +139,13 @@ fn positioned_echo_without_control_acquisition_history_is_refused() {
 }
 
 #[test]
-fn fixed_echo_oracle_family_compiles_while_nonmana_and_other_history_queries_stay_refused() {
-    for name in ["Pouncing Jaguar", "Albino Troll", "Goblin Patrol", "Urza's Blueprints", "Mogg War Marshal", "Avalanche Riders"] {
+fn fixed_and_nonmana_echo_oracle_family_compiles_while_other_history_queries_stay_refused() {
+    for name in ["Pouncing Jaguar", "Albino Troll", "Goblin Patrol", "Urza's Blueprints", "Mogg War Marshal", "Avalanche Riders",
+        "Deepcavern Imp", "Rakdos Headliner", "Skizzik Surger"] {
         // Uncited (admission): full pinned focus and consumer cards.
         game::play::check(&oracle_read(name)).unwrap_or_else(|why| panic!("{name}: {}", why.0));
     }
-    let nonmana = CardDef::new("Nonmana echo", "{0}", "Creature", "Echo—Discard a card.", Some((1, 1))).unwrap();
-    // Uncited (implementation boundaries): only fixed mana Echo and its own-upkeep window are in this step.
-    crate::support::refused(game::play::check(&nonmana).map_err(|why| why.0), "keyword: Echo");
+    // Uncited (implementation boundaries): only Echo's own-upkeep window is in this step.
     let other_window = CardDef::new("Other window", "{0}", "Creature", "At the beginning of your end step, if this permanent came under your control this turn, you gain 1 life.", Some((1, 1))).unwrap();
     crate::support::refused(game::play::check(&other_window).map_err(|why| why.0), "control acquisition:");
     crate::support::refused(game::play::check(&oracle_read("Erg Raiders")).map_err(|why| why.0), "program: control flow not lowered");
@@ -221,4 +220,43 @@ fn r603_4_copied_echo_uses_another_players_last_upkeep_not_its_previous_upkeep()
     cite!(["707.10", "707.10b"]; assert_eq!(game.stack.len(), 2)); passes(&mut game);
     cite!(["603.4", "702.30a"]; assert!(game.decision.is_none()));
     cite!(["603.4", "702.30a"]; assert_eq!(game.stack, vec![original]));
+}
+
+/// Deepcavern Imp ("Echo—Discard a card.") cast, with these cards in its controller's hand at
+/// its controller's next upkeep, its echo trigger resolving.
+fn imp(hand: usize) -> (Game, ObjId, Vec<ObjId>) {
+    let defs = vec![oracle_read("Deepcavern Imp"), oracle_read("Mountain")];
+    let mut game = Game::new(defs, 2, 20);
+    for player in 0..2 { for _ in 0..15 { game.put(player, 1, Zone::Library); } }
+    let card = game.put(0, 0, Zone::Hand); game.players[0].pool = mana_pool("CCB");
+    game.act(0, paid("CCB", Move::Cast { card, targets: vec![] })).unwrap(); passes(&mut game);
+    let permanent = game.battlefield[0];
+    next_upkeep(&mut game, 0);
+    // the first player skipped their first draw (103.8a): their hand is empty
+    assert!(game.players[0].hand.is_empty());
+    let cards = (0..hand).map(|_| game.put(0, 1, Zone::Hand)).collect();
+    cite!(["702.30a", "603.3"]; assert_eq!(game.stack.len(), 1)); passes(&mut game);
+    (game, permanent, cards)
+}
+
+#[test]
+fn r702_30a_an_echo_cost_that_is_not_mana_is_paid_by_discarding() {
+    let (mut game, permanent, cards) = imp(2);
+    cite!(["702.30a", "118.12"]; assert!(matches!(game.asked(), Some((0, game::legal::Asked::May))), "{:?}", game.asked()));
+    let mut declined = game.clone();
+    game.act(0, Move::Choose(Answer::Yes)).unwrap();
+    cite!(["702.30a", "701.9a"]; assert!(matches!(game.asked(), Some((0, game::legal::Asked::Objects { count: 1, .. }))), "{:?}", game.asked()));
+    game.act(0, Move::Choose(Answer::Objects(vec![cards[1]]))).unwrap();
+    cite!(["702.30a", "701.9a"]; assert_eq!(game.players[0].hand, vec![cards[0]]));
+    cite!(["702.30a"]; assert!(game.battlefield.contains(&permanent)));
+    // declined, it is sacrificed and no card is discarded
+    declined.act(0, Move::Choose(Answer::No)).unwrap();
+    cite!(["702.30a", "701.21a"]; assert!(!declined.battlefield.contains(&permanent)));
+    cite!(["702.30a"]; assert_eq!(declined.players[0].hand, cards));
+}
+
+#[test]
+fn r118_3_with_no_card_to_discard_the_echo_cost_cannot_be_paid() {
+    let (game, permanent, _) = imp(0);
+    cite!(["702.30a", "118.3"]; assert!(!game.battlefield.contains(&permanent)));
 }

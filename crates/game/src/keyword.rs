@@ -801,14 +801,43 @@ fn objects_for_each_age_counter(action: &ir::Action) -> Option<Ability> {
     Some(ability)
 }
 
-/// 702.30a: a fixed mana echo cost is paid through the ordinary retained unless-payment.
+/// 702.30a: an echo cost is paid through the ordinary retained unless-payment: a fixed mana
+/// cost, or one that is not just mana ("Echo—Discard a card."), its actions said in the
+/// rule's "unless" as ward's are.
 fn echo(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if item.keyword.name() != "Echo" { return None; }
-    let KeywordParam::Mana(mana) = &item.param else { return None };
-    if mana.0.is_empty() || mana.0.iter().any(|symbol| *symbol == crate::cost::X || symbol.mana_payments().is_none()) { return None; }
+    let fixed = |mana: &ir::mana::ManaCost| !mana.0.is_empty() && mana.0.iter().all(|symbol| *symbol != crate::cost::X && symbol.mana_payments().is_some());
+    let mana = match &item.param {
+        KeywordParam::Mana(mana) if fixed(mana) => mana,
+        KeywordParam::Cost(cost) if !cost.0.is_empty() && cost.0.iter().all(|part| match part {
+            ir::CostPart::Mana(mana) => fixed(mana),
+            ir::CostPart::Action(_) => true,
+            _ => false,
+        }) => return Some(echo_paying(cost)),
+        _ => return None,
+    };
     let cost: String = mana.0.iter().map(|symbol| format!("{{{}}}", symbol.text())).collect();
     let text = format!("At the beginning of your upkeep, if this permanent came under your control since the beginning of your last upkeep, sacrifice this permanent unless you pay {cost}.");
     CardDef::new("Echo rule", "", "Enchantment", &text, None).ok()?.abilities.into_iter().next()
+}
+
+/// The echo trigger, its "unless" the actions of a cost that is not just mana (702.30a).
+fn echo_paying(cost: &ir::Cost) -> Ability {
+    static ECHO: OnceLock<Ability> = OnceLock::new();
+    let mut ability = crate::token::init(&ECHO, || CardDef::new("Echo rule", "", "Enchantment",
+        "At the beginning of your upkeep, if this permanent came under your control since the beginning of your last upkeep, sacrifice this permanent unless you pay {0}.", None)
+        .unwrap_or_else(|e| panic!("the grammar reads rule 702.30a: {e}")).abilities[0].clone()).clone();
+    let Ability::Triggered { effect: ir::Effect(sentences), .. } = &mut ability else { unreachable!("echo is a triggered ability") };
+    let mut sentence = sentences.first_mut().expect("the rule's sentence is its sacrifice");
+    while let ir::Sentence::Led { rest, .. } = sentence { sentence = rest; }
+    let ir::Sentence::Do(body) = sentence else { unreachable!("the rule's sentence is its sacrifice") };
+    let Some(ir::effect::Modifier::Unless { actions, .. }) = body.first.first.mods.first_mut() else { unreachable!("the sacrifice is unless a payment") };
+    actions.items = cost.0.iter().map(|part| match part {
+        ir::CostPart::Mana(mana) => ir::Action::PayMana(mana.clone()),
+        ir::CostPart::Action(action) => action.clone(),
+        _ => unreachable!("an echo cost is mana and actions"),
+    }).collect();
+    ability
 }
 
 /// 702.54a: the ordinary prospective-entry replacement checks damage history.
