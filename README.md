@@ -155,6 +155,13 @@ Use `make test-rules` or `make test-mgn` for focused runs. See
 [MGN game notation](docs/mgn/README.md) for the neutral format,
 adapter entry points and current limits.
 
+## Contributing
+
+Bug reports and PRs are welcome with a minimal reproduction. AI-generated
+submissions must use Fable or Astra, or their successors, at high or greater
+thinking/reasoning and disclose the model and setting. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for the details.
+
 ## Find your way around
 
 - [Architecture](docs/architecture-map.md) — code ownership and execution paths.
