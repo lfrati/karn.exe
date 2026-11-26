@@ -1755,3 +1755,14 @@ fn r120_4a_excess_damage_when_the_lead_holds() {
     assert_eq!(printed, text);
     declines("If you control a Forest, this ability triggers only once each turn.");
 }
+
+/// CR 106.4: mana an ability added to a player's mana pool, as an event a history condition asks
+/// about ("if you haven't added mana with this ability this turn", Carpet of Flowers); what adds
+/// it is an ability.
+#[test]
+fn r106_4_mana_added_with_an_ability() {
+    let text = "At the beginning of your main phase, if you haven't added mana with this ability this turn, you may add X mana of any one color, where X is the number of Islands target opponent controls.";
+    let (_, printed) = read(text);
+    assert_eq!(printed, text);
+    declines("At the beginning of your main phase, if you haven't added mana with ~ this turn, draw a card.");
+}

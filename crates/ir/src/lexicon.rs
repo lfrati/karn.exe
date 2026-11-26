@@ -321,6 +321,9 @@ lexicon! {
     Activate: "activate", "602.2", Player, [What => ABILITY];
     /// Activating a mana ability of a permanent that has {T} in its cost.
     TapForMana: "tap _ for mana", "106.12", Player, [What => PERMANENT];
+    /// Adding mana to a mana pool (106.4) with an ability (`With`): "if you haven't added mana
+    /// with this ability this turn".
+    AddMana: "add mana", "106.4", Player, [With => ABILITY];
     /// Discarding a card to pay the cost of its cycling ability, from the hand, where alone
     /// that ability functions (702.29a, 702.29c).
     Cycle: "cycle", "702.29", Player, [What => CARD];

@@ -286,6 +286,7 @@ pub(crate) fn own_rule(v: Verb) -> bool {
                 | Champion
                 | ExchangeLifeTotals
                 | ExchangeLifeWithStat
+                | AddMana
         )
 }
 
@@ -1026,6 +1027,19 @@ pub fn action(form: Form, plural: bool) -> P<EventAction> {
                 },
             ),
             puts_counters(v("puts", "put", "put")),
+            // "if you haven't added mana with this ability this turn" (Carpet of Flowers): mana an
+            // ability added to the player's mana pool (106.4)
+            v("adds mana with", "add mana with", "added mana with").then_keep(&s.selector).map(
+                |with| (with.set.domain == Domain::Ability)
+                    .then(|| EventAction::Deed(Deed { verb: Verb::AddMana, passive: false, args: vec![(Role::With, Arg::Noun(with))] })),
+                |a| match a {
+                    EventAction::Deed(Deed { verb: Verb::AddMana, passive: false, args }) => match args.as_slice() {
+                        [(Role::With, Arg::Noun(with))] if with.set.domain == Domain::Ability => Some(with.clone()),
+                        _ => None,
+                    },
+                    _ => None,
+                },
+            ),
             // "you get one or more {E}", "you would get one or more poison counters"
             v("gets one or more", "get one or more", "got one or more")
                 .then_keep(&alt(
