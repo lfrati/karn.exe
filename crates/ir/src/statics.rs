@@ -157,6 +157,12 @@ pub enum Static {
     /// activating an ability they control, that player must choose at least one Flagbearer on
     /// the battlefield if able." (115)
     Flagbearer,
+    /// "You control your opponents while they're searching their libraries." (723.2, 723.5:
+    /// their controller makes the choices and decisions of the search; Opposition Agent)
+    ControlsOpponentsWhileSearching,
+    /// "While an opponent is searching their library, they exile each card they find." (701.23a:
+    /// a card found goes to exile rather than where the search would have put it)
+    OpponentsExileWhatTheyFind,
     /// "Room abilities of dungeons you own trigger an additional time." (309.4)
     RoomAbilitiesTriggerAgain,
     /// "Your opponents can't cast spells or activate abilities of artifacts, creatures, or

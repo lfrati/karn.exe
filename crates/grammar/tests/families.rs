@@ -1777,3 +1777,18 @@ fn r707_9b_the_starting_loyalty_of_a_copy() {
     let (_, printed) = read("The copy isn't legendary and has starting loyalty X.");
     assert_eq!(printed, "The copy isn't legendary and has starting loyalty X.");
 }
+
+/// CR 723.2, 723.5, 701.23a: Opposition Agent. Its controller controls each opponent who is
+/// searching their library, and what such an opponent finds goes to exile, where the permission
+/// after it lets that player play it.
+#[test]
+fn r723_2_control_of_opponents_while_they_search() {
+    for text in [
+        "You control your opponents while they're searching their libraries.",
+        "While an opponent is searching their library, they exile each card they find. You may play those cards for as long as they remain exiled, and you may spend mana as though it were mana of any color to cast them.",
+    ] {
+        let (_, printed) = read(text);
+        assert_eq!(printed, text);
+    }
+    declines("You control your opponents.");
+}

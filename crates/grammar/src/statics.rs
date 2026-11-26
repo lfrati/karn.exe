@@ -1124,6 +1124,8 @@ pub fn sentence(body: &P<Body>) -> P<Static> {
             lit("remove ~ from your deck before playing if you're not playing for ante").to(Static::AnteOnly),
             lit("while an opponent is choosing targets as part of casting a spell they control or activating an ability they control, that player must choose at least one Flagbearer on the battlefield if able")
                 .to(Static::Flagbearer),
+            lit("you control your opponents while they're searching their libraries").to(Static::ControlsOpponentsWhileSearching),
+            lit("while an opponent is searching their library, they exile each card they find").to(Static::OpponentsExileWhatTheyFind),
             lit("Room abilities of dungeons you own trigger an additional time").to(Static::RoomAbilitiesTriggerAgain),
             lit("your opponents can't cast spells or activate abilities of artifacts, creatures, or enchantments")
                 .to(Static::OpponentsCantCastOrActivate),
