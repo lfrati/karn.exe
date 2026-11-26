@@ -321,7 +321,7 @@ pub enum Lifetime {
     SourcePresent { source: ObjId },
 }
 impl Lifetime {
-    fn holds(self, game: &Game) -> bool {
+    pub(crate) fn holds(self, game: &Game) -> bool {
         match self {
             Self::SourcePresent { source } => game.get_object(source).is_some_and(|o| o.zone == Zone::Battlefield),
             Self::Controlled { source, player } => game.get_object(source).is_some_and(|o|
@@ -1304,6 +1304,7 @@ impl Game {
         }
     }
     pub(crate) fn end_control_durations(&mut self) {
+        self.end_source_rules();
         if !self.continuous.iter().any(|c| matches!(c.lifetime, Lifetime::Controlled { .. } | Lifetime::SourcePresent { .. })) { return; }
         let previous = self.control_snapshot();
         self.prune_control_durations();

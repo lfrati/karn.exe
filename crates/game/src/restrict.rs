@@ -639,6 +639,11 @@ pub enum Lifetime {
     /// begins after it was put in force, and over once that turn ends. `player` is who that
     /// is, named as it is put in force; `began`, once that turn has begun.
     NextTurnOf { player: Option<crate::PlayerId>, began: bool },
+    /// "For as long as you control this creature", "for as long as this Saga remains on the
+    /// battlefield": as compiled, of the source of the ability that puts it in force.
+    WhileSource(crate::program::change::Duration),
+    /// The same, put in force: over for good once it doesn't hold (611.2b).
+    While(crate::layers::Lifetime),
 }
 
 /// Which departure of the objects it is said of a resolved "exile it instead" replaces.
@@ -663,6 +668,15 @@ impl Lifetime {
             Ok(Lifetime::UntilYourNextTurn)
         } else if through_next_untap(modifiers, action) {
             Ok(Lifetime::NextUntap)
+        } else if matches!(modifiers, [Modifier::Duration(ir::effect::Duration::ThisCombat)]) {
+            Ok(Lifetime::ThisCombat(None))
+        } else if matches!(modifiers, [Modifier::Duration(ir::effect::Duration::RestOfGame)]) {
+            Ok(Lifetime::Game)
+        } else if let [Modifier::Duration(ir::effect::Duration::While(_))] = modifiers {
+            match crate::program::change::Duration::compile(modifiers)? {
+                d @ (crate::program::change::Duration::SourceControlled | crate::program::change::Duration::SourcePresent) => Ok(Lifetime::WhileSource(d)),
+                _ => unsupported("a rule that lasts while something other than its source's presence or control holds"),
+            }
         } else {
             unsupported("a rule that lasts other than this turn")
         }
@@ -881,6 +895,7 @@ impl Game {
                 self.sync_plan();
                 Lifetime::ThisCombat(self.plan.this_combat())
             }
+            Lifetime::WhileSource(d) => Lifetime::While(d.evaluate(&ctx)),
             other => other,
         };
         self.lasting.push(Lasting { ctx, affected, rule, lifetime, locals, untap_steps });
@@ -902,6 +917,15 @@ impl Game {
     /// lasts this turn is not: it applies in each combat of the turn (508.1d).
     pub(crate) fn end_combat_rules(&mut self, combat: Option<crate::turn::PhaseId>) {
         self.lasting.retain(|l| !matches!(l.lifetime, Lifetime::ThisCombat(id) if id == combat || id.is_none()));
+    }
+
+    /// What lasts while its source is present or controlled ends once that doesn't hold
+    /// (611.2b), and isn't back if it holds again.
+    pub(crate) fn end_source_rules(&mut self) {
+        if !self.lasting.iter().any(|l| matches!(l.lifetime, Lifetime::While(_))) { return; }
+        let mut lasting = std::mem::take(&mut self.lasting);
+        lasting.retain(|l| !matches!(l.lifetime, Lifetime::While(w) if !w.holds(self)));
+        self.lasting = lasting;
     }
 
     pub(crate) fn begin_turn_rules(&mut self) {
@@ -996,7 +1020,8 @@ impl Game {
         } else { None };
         // what lasts during a player's next turn applies in that turn only
         out.extend(self.lasting.iter().filter(|l| !matches!(l.lifetime, Lifetime::ThisCombat(id) if id.is_none() || id != combat)
-            && !matches!(l.lifetime, Lifetime::NextTurnOf { began: false, .. })).map(|l| InForce {
+            && !matches!(l.lifetime, Lifetime::NextTurnOf { began: false, .. })
+            && !matches!(l.lifetime, Lifetime::While(w) if !w.holds(self))).map(|l| InForce {
             ctx: l.ctx.clone(),
             of: Of::Kept(&l.affected),
             rule: &l.rule,
