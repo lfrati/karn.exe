@@ -1,13 +1,14 @@
 //! "All permanent cards in your graveyard that were put there from the battlefield this turn":
 //! the card in the graveyard is a new object (400.7), and the permanent it was is what the event
 //! is said of, as it last was on the battlefield (603.10a). The card is still the one that was
-//! put there, so it is found. Every card is read from its Oracle text.
+//! put there, so it is found. "From anywhere" is said of the card where it arrived.
+//! Every card is read from its Oracle text.
 use crate::support;
 use support::*;
 
 #[test]
 fn the_cards_of_these_tests_run() {
-    for name in ["Faith's Reward", "Grim Return", "Shock", "Murder", "Grizzly Bears", "Hill Giant"] {
+    for name in ["Faith's Reward", "Grim Return", "Garna, the Bloodflame", "Shock", "Murder", "Grizzly Bears", "Hill Giant"] {
         // Uncited (admission): the engine runs each card of these tests.
         assert_eq!(game::play::check(&oracle(name)).err().map(|u| u.0), None, "{name}");
     }
@@ -70,4 +71,20 @@ fn r400_7_grim_return_can_target_only_the_card_put_there_from_the_battlefield() 
     t.resolve();
     cite!(["400.7", "603.10a"]; assert_eq!(names(&t, 0, Zone::Battlefield), ["Grizzly Bears"]));
     cite!(["400.7"]; assert_eq!(names(&t, 1, Zone::Graveyard), ["Hill Giant"]));
+}
+
+// Rules: 400.7, 608.2c
+// Given: player 0's Grizzly Bears on the battlefield, and Hill Giant already in their graveyard.
+// When: player 0 Shocks the Bears, then casts Garna, the Bloodflame ("When Garna enters, return to
+// your hand all creature cards in your graveyard that were put there from anywhere this turn.").
+// Expect: the Bears, put there this turn, returns to player 0's hand; the Hill Giant stays.
+#[test]
+fn r400_7_garna_returns_the_creature_card_put_into_the_graveyard_this_turn() {
+    let mut t = Board::new(2).fill(8).hand(0, &["Shock", "Garna, the Bloodflame"]).battlefield(0, &["Grizzly Bears"]).graveyard(0, &["Hill Giant"]).build();
+    let bears = t.find_in_battlefield("Grizzly Bears");
+    t.mana(0, "{R}").cast(0, "Shock", vec![Tgt::Object(bears)], mana_pool("R")).unwrap();
+    t.resolve();
+    t.mana(0, "{3}{B}{R}").cast(0, "Garna, the Bloodflame", vec![], mana_pool("CCCBR")).unwrap();
+    t.resolve();
+    t.expect().rules(["400.7", "608.2c"]).zone(0, Zone::Hand, &["Grizzly Bears"]).zone(0, Zone::Graveyard, &["Hill Giant", "Shock"]).check();
 }
