@@ -2155,6 +2155,15 @@ pub(crate) enum Number {
     CardTypes(Box<Set>),
     /// Union of the five colors among current effective members (105.2–3).
     Colors(Box<Set>),
+    /// "The number of basic land types among lands you control" (domain): of the five basic
+    /// land types (305.6), how many any member has.
+    LandTypes(Box<Set>),
+    /// "Permanent types among permanents you control": of artifact, battle, creature,
+    /// enchantment, land and planeswalker (110.4), how many any member is.
+    PermanentTypes(Box<Set>),
+    /// "The number of different powers among creatures you control", "different mana values":
+    /// how many values of the stat the members have, each counted once.
+    DistinctStat(Stat, Box<Set>),
     /// "Its power", "that card's mana value": of the object named, as it is or last was.
     Stat(Subject, Stat),
     /// The counters on what is named.
@@ -2215,8 +2224,8 @@ impl Number {
             Number::Half { of, .. } => of.reads_pt(),
             Number::Product(a,b) | Number::Sum(a,b) | Number::Difference(a,b) => a.reads_pt() || b.reads_pt(),
             Number::Stat(_,stat) => *stat != Stat::ManaValue,
-            Number::Aggregate(_,stat,among) => *stat != Stat::ManaValue || set(among),
-            Number::Colors(among) | Number::CardTypes(among) | Number::Count(among) | Number::CountersAmong(among,_) => set(among),
+            Number::Aggregate(_,stat,among) | Number::DistinctStat(stat,among) => *stat != Stat::ManaValue || set(among),
+            Number::Colors(among) | Number::CardTypes(among) | Number::LandTypes(among) | Number::PermanentTypes(among) | Number::Count(among) | Number::CountersAmong(among,_) => set(among),
             Number::CountZone(zone) => filter(&zone.cards.filter),
             Number::Const(_) | Number::X | Number::SpellX | Number::CastX | Number::EventAmount | Number::ManaColorsSpent | Number::LifeLost(_) | Number::Damage { .. } | Number::ResultCount(_) | Number::RemovedCount { .. }
                 | Number::Counters(_,_) | Number::PlayerCounters(_,_) | Number::Life(_) | Number::Speed(_) | Number::Kicked(_) | Number::Replicated(_) | Number::EarlierCasts(_) => false,
@@ -2232,7 +2241,8 @@ impl Number {
             Number::Happened(_) => Reads::ALL,
             Number::Half { of, .. } => of.reads(),
             Number::Product(a,b) | Number::Sum(a,b) | Number::Difference(a,b) => a.reads() | b.reads(),
-            Number::Aggregate(_,_,among) | Number::Colors(among) | Number::CardTypes(among) | Number::Count(among) | Number::CountersAmong(among,_) => among.reads(),
+            Number::Aggregate(_,_,among) | Number::DistinctStat(_,among) | Number::Colors(among) | Number::CardTypes(among) | Number::LandTypes(among) | Number::PermanentTypes(among)
+                | Number::Count(among) | Number::CountersAmong(among,_) => among.reads(),
             Number::CountZone(zone) => zone.cards.reads(),
             Number::X => Reads::X,
             Number::Const(_) | Number::SpellX | Number::CastX | Number::EventAmount | Number::LifeLost(_) | Number::Damage { .. } | Number::ResultCount(_) | Number::RemovedCount { .. } | Number::Stat(_,_)
@@ -2373,6 +2383,12 @@ impl Number {
             ir::Amount::Count(set) if of_one(set) => Number::CountZone(Box::new(ZoneCards::compile(set, support, bind)?)),
             ir::Amount::Distinct { what: ir::amount::Characteristic::Color, among } => Number::Colors(Box::new(Set::compile(among, support, bind)?)),
             ir::Amount::Distinct { what: ir::amount::Characteristic::CardType, among } => Number::CardTypes(Box::new(Set::compile(among, support, bind)?)),
+            ir::Amount::Distinct { what: ir::amount::Characteristic::BasicLandType, among } => Number::LandTypes(Box::new(Set::compile(among, support, bind)?)),
+            ir::Amount::Distinct { what: ir::amount::Characteristic::PermanentType, among } => Number::PermanentTypes(Box::new(Set::compile(among, support, bind)?)),
+            ir::Amount::Distinct { what: what @ (ir::amount::Characteristic::Power | ir::amount::Characteristic::ManaValue), among } => {
+                let stat = if *what == ir::amount::Characteristic::Power { ir::Stat::Power } else { ir::Stat::ManaValue };
+                Number::DistinctStat(Stat::compile(stat, "amount")?, Box::new(Set::compile(among, support, bind)?))
+            }
             ir::Amount::Count(set) => Number::Count(Box::new(Set::compile(set, support, bind)?)),
             ir::Amount::Stat { of, stat } => {
                 let subject = Subject::compile_amount(of, bind)?;
@@ -2480,6 +2496,26 @@ impl Number {
                 colors.len() as i64
             },
             Number::CardTypes(set) => objects(set).fold(0u16, |mask, object| mask | card_type_mask(game, ctx, object)).count_ones() as i64,
+            Number::PermanentTypes(set) => {
+                let permanent = ir::CardType::ALL.iter().enumerate().filter(|(_, kind)| kind.permanent()).fold(0u16, |mask, (i, _)| mask | (1u16 << i));
+                (objects(set).fold(0u16, |mask, object| mask | card_type_mask(game, ctx, object)) & permanent).count_ones() as i64
+            }
+            Number::LandTypes(set) => {
+                let basics = ir::Subtype::basic_land_types();
+                let mut had = [false; 5];
+                for object in objects(set) {
+                    for subtype in &ctx.seen_for(game, object, crate::layers::Aspect::Types).subtypes {
+                        if let Some(i) = basics.iter().position(|b| b == subtype) { had[i] = true; }
+                    }
+                }
+                had.iter().filter(|h| **h).count() as i64
+            }
+            Number::DistinctStat(stat, among) => {
+                let mut values: Vec<i64> = objects(among).map(|o| stat.value(game, ctx, o)).collect();
+                values.sort_unstable();
+                values.dedup();
+                values.len() as i64
+            }
             Number::Count(set) => set.counted(game, ctx, locals) as i64,
             Number::Happened(pattern) => game.happened(ctx, pattern, crate::history::Turn::This, false) as i64,
             // of each object named, which is one where the text says "its"; of nothing, zero
@@ -2509,7 +2545,8 @@ impl Number {
                 count.owner.scalars(out);
                 count.cards.filter.scalars(out);
             }
-            Number::Colors(set) | Number::CardTypes(set) | Number::Count(set) | Number::CountersAmong(set, _) | Number::Aggregate(_, _, set) => set.collect(out),
+            Number::Colors(set) | Number::CardTypes(set) | Number::LandTypes(set) | Number::PermanentTypes(set) | Number::Count(set) | Number::CountersAmong(set, _)
+                | Number::Aggregate(_, _, set) | Number::DistinctStat(_, set) => set.collect(out),
             Number::Stat(subject, _) | Number::Counters(subject, _) | Number::PlayerCounters(subject, _) | Number::Life(subject) | Number::Speed(subject) | Number::Kicked(subject) | Number::Replicated(subject) | Number::EarlierCasts(subject) => subject.scalars(out),
             Number::Half { of, .. } => of.scalars(out),
             Number::Happened(_) => {}

@@ -115,7 +115,9 @@ fn r105_2_native_other_artifact_filter_excludes_the_five_color_source() {
 }
 #[test]
 fn unmodeled_distinct_characteristics_remain_explicitly_refused() {
-    let native = native("Lunar Insight");
+    // colors, card types, permanent types, basic land types, powers and mana values are
+    // counted (r305_6_basic_land_types_among); kinds of counters are not
+    let native = native("Hundred-Battle Veteran");
     let error = game::play::check(&native).unwrap_err();
     assert!(error.0.contains("amount: Distinct"), "{error:?}");
 }
