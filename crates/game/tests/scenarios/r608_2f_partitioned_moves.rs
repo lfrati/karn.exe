@@ -186,3 +186,23 @@ fn r608_2f_random_library_arm_is_a_permutation_without_an_owner_order_choice() {
     assert!(cards[1..].iter().all(|card|g.obj(*card).zone==Zone::Gone));
     for original in cards {assert_eq!(g.log.iter().filter(|e|matches!(e,Event::Moved {object,..} if *object==original)).count(),1);}
 }
+
+#[test]
+fn r608_2c_each_later_one_of_a_partition_is_chosen_among_the_cards_not_yet_chosen() {
+    // Synthetic shared mechanism (issue #44, Moment of Truth's and Telling Time's shape): no card
+    // admission claim. Each "one" is another of the cards (608.2c).
+    let text="Look at the top three cards of your library. Put one of them into your hand and one of them into your graveyard.";
+    let (mut g,cards,_)=setup(text,0);
+    let Some(Decision::Choose{choice:Choice::Objects{among,..},..})=g.decision.clone() else {panic!("{:?}",g.decision)};
+    assert_eq!(among.len(),3);
+    let first=among[0];
+    choose(&mut g,vec![first]);
+    let Some(Decision::Choose{choice:Choice::Objects{among,..},..})=g.decision.clone() else {panic!("{:?}",g.decision)};
+    cite!(["608.2c"];assert!(among.len()==2&&!among.contains(&first),"{among:?}"));
+    let second=among[0];
+    choose(&mut g,vec![second]);
+    for _ in 0..4 { if g.stack.is_empty() {break;} g.act(g.priority,Move::Pass).unwrap(); }
+    let (hand,grave)=(physical(&g,&g.players[0].hand.clone()),physical(&g,&g.players[0].graveyard.iter().copied().filter(|c|g.obj(*c).chars.name!="Partition").collect::<Vec<_>>()));
+    cite!(["608.2c"];assert_eq!((hand.len(),grave.len()),(1,1)));
+    cite!(["608.2c"];assert_ne!(hand,grave));
+}

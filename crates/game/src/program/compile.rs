@@ -6411,6 +6411,9 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 let mut gate = None;
                 let mut together = Vec::new();
                 let mut partition_entries = Vec::new();
+                // what earlier parts of this move took, of which group: the move is one event,
+                // so those cards are still there as later parts choose (608.2c)
+                let mut taken_here: Vec<(Slot, Slot)> = Vec::new();
                 for (objects, to) in parts {
                     let [selector] = objects.items.as_slice() else { return unsupported("program: multiple moved groups not lowered"); };
                     if mention(selector).is_none() && !optional && parts.len() > 1
@@ -6427,9 +6430,18 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                     let set = binder.selection(&mention.set, support)?;
                     e.unite(&mention.reference, &mut binder);
                     let group = binder.resolve(&mention.reference)?;
-                    let (from, zone) = (group.slot, group.zone);
+                    let (group_slot, zone) = (group.slot, group.zone);
+                    let mut from = group_slot;
                     if optional && mention.taking == Taking::Remainder {
                         return unsupported("\"you may\" put the rest");
+                    }
+                    // "one into your hand, one into your graveyard": each later "one" is
+                    // another of the cards, chosen among those not yet chosen
+                    let earlier: Vec<_> = taken_here.iter().filter(|(g, _)| *g == group_slot).map(|(_, out)| *out).collect();
+                    if !earlier.is_empty() && mention.taking != Taking::Remainder {
+                        let remaining = e.slot();
+                        e.instrs.push(Instr::Remainder { of: from, minus: earlier, still_in: zone, out: remaining });
+                        from = remaining;
                     }
                     if optional && mention.taking != Taking::AnyNumber {
                         let probe = match &mention.taking {
@@ -6460,6 +6472,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                         }
                     }
                     binder.resolve(&mention.reference)?.taken.push(out);
+                    taken_here.push((group_slot, out));
                     match to {
                         Destination::Battlefield(entries) => {
                             let to = battlefield_destination(entries, support, &binder)?;
