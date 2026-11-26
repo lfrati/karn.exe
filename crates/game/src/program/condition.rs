@@ -723,6 +723,14 @@ impl Asks {
                 };
                 let margin = margin.as_ref().map(|a| expr::Number::compile(a, support, &mut *bind)).transpose()?;
                 let than = match than {
+                    // "than each other player": other than the player measured, whom the
+                    // comparison leaves out, not other than you ("if that player controls more
+                    // lands than each other player", Rivalry)
+                    ir::condition::Than::Players(who) if who.set.domain == ir::Domain::Player && who.set.other => {
+                        let mut all = who.clone();
+                        all.set.other = false;
+                        Than::Players(Players::compile(&all, support, bind)?)
+                    }
                     ir::condition::Than::Players(who) => Than::Players(Players::compile(who, support, bind)?),
                     ir::condition::Than::Amount(a) => Than::Values(Values::compile(a, support, bind)?),
                 };
