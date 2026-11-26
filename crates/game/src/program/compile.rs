@@ -4520,11 +4520,19 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                 None => e.clause_subject(clause, support, &mut binder)?,
             };
             let chosen = choose_protection_color(&mut e, &mut binder, &act.action);
-            let rule = crate::restrict::Rule::compile(chosen.as_ref().unwrap_or(&act.action), support, &mut binder.scope(support))?;
+            let mut mods = duration_mods(clause, act, &durations);
+            // "can't be blocked this turn except by creatures with haste": how long it lasts,
+            // said inside the act
+            let inside = crate::restrict::duration_inside(&act.action);
+            if let Some((_, duration)) = &inside {
+                if !mods.is_empty() || chosen.is_some() { return unsupported("a rule that says how long it lasts twice"); }
+                mods.push(duration.clone());
+            }
+            let said = inside.as_ref().map_or(&act.action, |(action, _)| action);
+            let rule = crate::restrict::Rule::compile(chosen.as_ref().unwrap_or(said), support, &mut binder.scope(support))?;
             rule.validate_entry_subject(None)?;
-            let mods = duration_mods(clause, act, &durations);
-            let lifetime = if during.is_some() { crate::restrict::Lifetime::during_next_turn(&mods, &act.action)? }
-                else { crate::restrict::Lifetime::compile(&mods, &act.action)? };
+            let lifetime = if during.is_some() { crate::restrict::Lifetime::during_next_turn(&mods, said)? }
+                else { crate::restrict::Lifetime::compile(&mods, said)? };
             e.instrs.push(Instr::Register { subject, rule, lifetime, during });
             e.end_act(false, optional_branch);
             continue;

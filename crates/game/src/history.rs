@@ -391,7 +391,7 @@ impl Game {
 
     /// What happened this turn or the one before: what was noted, and this turn what has not
     /// been yet, as it is now.
-    fn facts_of(&self, turn: Turn) -> impl Iterator<Item=std::borrow::Cow<'_, Fact>> {
+    pub(crate) fn facts_of(&self, turn: Turn) -> impl Iterator<Item=std::borrow::Cow<'_, Fact>> {
         use std::borrow::Cow;
         let from = self.this_turn.noted.max(self.log.start());
         let pending = if turn == Turn::This {self.log.since(from)} else {&[]};

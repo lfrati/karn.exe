@@ -139,15 +139,26 @@ enum Cant {
     /// Casting any spell, optionally from described source zones (601.3), optionally only
     /// spells with these characteristics, as the spell would have them (601.3e).
     /// `own`: the zones are the caster's own ("can't cast spells from anywhere other than their
-    /// hands": each caster's hand, 601.2a), not any player's.
-    Cast { from: Option<expr::Set>, except: bool, spell: Option<expr::Filter>, own: bool },
+    /// hands": each caster's hand, 601.2a), not any player's. `limit`: "more than one spell each
+    /// turn": how many such spells the player may cast each turn, those they cast this turn
+    /// before the rule applied counted too (Arcane Laboratory, Deafening Silence rulings).
+    Cast { from: Option<expr::Set>, except: bool, spell: Option<expr::Filter>, own: bool, limit: Option<u32> },
 }
 
 impl Cant {
     fn compile(item: &Forbidden, support: &Support<'_>, bind: Bind<'_>) -> Res<Cant> {
-        if item.within.is_some() {
-            return unsupported("prohibition: a window of its own");
-        }
+        // "can't cast more than one spell each turn": a number each turn, not none at all
+        let limit = match (&item.event, item.within) {
+            (EventAction::Deed(d), Some(Within::EachTurn)) if !d.passive && d.verb == Verb::Cast => match d.noun(Role::What).map(|w| &w.quant) {
+                Some(Quant::Indefinite(Count::AtLeast(Amount::Const(n)))) if *n >= 1 => Some(*n - 1),
+                _ => return unsupported("prohibition: casting more than some number each turn, not a constant"),
+            },
+            (EventAction::Deed(d), None) if !d.passive && d.verb == Verb::Cast
+                && matches!(d.noun(Role::What).map(|w| &w.quant), Some(Quant::Indefinite(Count::AtLeast(_)))) =>
+                return unsupported("prohibition: casting more than some number, counted in no window"),
+            (_, None) => None,
+            (_, Some(_)) => return unsupported("prohibition: a window of its own"),
+        };
         // "by more than one creature": a number of blockers rather than one of them
         let blockers = |s: &Selector, bind: Bind<'_>| match &s.quant {
             Quant::Indefinite(Count::AtLeast(Amount::Const(n))) if s.chooser.is_none() && s.random.is_none() => {
@@ -190,7 +201,9 @@ impl Cant {
             EventAction::Deed(d) if !d.passive && d.args.is_empty() && d.verb == Verb::Enter => Cant::Happen(Happening::Enters),
             EventAction::Deed(d) if !d.passive && d.verb == Verb::Cast => {
                 let Some(what) = d.noun(Role::What) else { return unsupported("cast prohibition: no spell description"); };
-                Noun::compile(what, support, &mut *bind)?;
+                // "more than one spell": counted by `limit`; what is cast is one such spell
+                let one = Selector { quant: Quant::Indefinite(Count::Exactly(Amount::Const(1))), ..what.clone() };
+                Noun::compile(if limit.is_some() { &one } else { what }, support, &mut *bind)?;
                 // the spell's own characteristics, as the announced face and choices give
                 // them (601.3e); not who controls or owns it, nor where it is
                 if what.set != (ObjectSet { filter: what.set.filter.clone(), ..ObjectSet::of(Domain::Spell) })
@@ -199,6 +212,7 @@ impl Cant {
                 }
                 let spell = (what.set.filter != ir::Filter::All(vec![])).then(|| expr::Filter::compile(&what.set.filter, support, &mut *bind)).transpose()?;
                 let from = d.zone(Role::From);
+                if from.is_some() && limit.is_some() { return unsupported("cast prohibition: a number each turn, of spells cast from somewhere"); }
                 // "their hands" after a subject of players: the pronoun is the subject's, so each
                 // one's own hand; the zones are of any player, and the card is its caster's
                 let they = |o: &Selector| o.quant == Quant::Definite(Ref::Anaphor(ir::selector::Anaphor::They))
@@ -210,7 +224,7 @@ impl Cant {
                     ObjectSet { zone: Some(zone), ..ObjectSet::of(Domain::Card) }
                 });
                 Cant::Cast { from: set.as_ref().map(|s| expr::Set::compile(s, support, bind)).transpose()?,
-                    except: from.is_some_and(|f| f.other_than), spell, own }
+                    except: from.is_some_and(|f| f.other_than), spell, own, limit }
             }
             EventAction::CountersPut { kind, one_or_more: false, nth: None } => Cant::ReceiveCounters(kind.as_ref().map(|k|k.0.clone())),
             EventAction::GainsLife { amount: None } => Cant::Happen(Happening::GainsLife),
@@ -733,6 +747,18 @@ fn lasts_this_turn(mods: &[Modifier], a: &Action) -> bool {
     }
 }
 
+/// "This creature can't be blocked this turn except by creatures with haste.": the act names
+/// how long it lasts inside itself ([`Forbidden::within`]); the same act said without it, and
+/// that duration, as a resolving effect's rule lasts it ([`Lifetime::compile`]).
+pub(crate) fn duration_inside(action: &Action) -> Option<(Action, Modifier)> {
+    let Action::Cant(items) = action else { return None };
+    let windowed = |f: &Forbidden| matches!(f.event, EventAction::BecomesBlocked { except: true, .. }) && f.within == Some(Within::ThisTurn);
+    (!items.is_empty() && items.iter().all(windowed)).then(|| (
+        Action::Cant(items.iter().map(|f| Forbidden { within: None, ..f.clone() }).collect()),
+        Modifier::Duration(ir::effect::Duration::ThisTurn),
+    ))
+}
+
 /// Does the act last through next untap steps: "doesn't untap during its controller's next
 /// untap step", "don't untap during your next untap step"?
 fn through_next_untap(mods: &[Modifier], a: &Action) -> bool {
@@ -1050,13 +1076,14 @@ impl Game {
                     Cant::ReceiveCounters(kind) if would.verb() == Verb::PutCounters =>
                         kind.as_ref().is_none_or(|kind|would.counter_kind()==Some(kind.as_str()))
                             && would.role(Role::On).is_some_and(|holder|r.affects(self,holder)),
-                    Cant::Cast { from, except, spell, own } if would.verb() == Verb::Cast => {
+                    Cant::Cast { from, except, spell, own, limit } if would.verb() == Verb::Cast => {
                         would.doer().is_some_and(|player| r.affects(self, player))
                             && would.role(Role::What).is_some_and(|card| from.as_ref().is_none_or(|set|
                                 (set.contains(self, &r.ctx, &r.locals, card)
                                     && (!own || matches!((card, would.doer()), (Target::Object(c), Some(Target::Player(p))) if self.obj(c).owner == p))) != *except)
                                 // as the card is, without an announced face (see [`Game::cast_forbidden`])
                                 && spell.as_ref().is_none_or(|filter| filter.matches(self, &r.ctx, &r.locals, card)))
+                            && limit.is_none_or(|n| matches!(would.doer(), Some(Target::Player(p)) if self.cast_this_turn(&r, p, spell.as_ref()) >= n))
                     }
                     _ => false,
                 }
@@ -1070,7 +1097,7 @@ impl Game {
     pub(crate) fn cast_forbidden(&self, player: PlayerId, card: ObjId, cast_as: crate::card::CastAs, x: Option<u32>) -> bool {
         self.in_force().iter().any(|r| {
             r.rule.cants().iter().any(|item| {
-                let Cant::Cast { from, except, spell, own } = item else { return false };
+                let Cant::Cast { from, except, spell, own, limit } = item else { return false };
                 r.affects(self, Target::Player(player))
                     && from.as_ref().is_none_or(|set| (set.contains(self, &r.ctx, &r.locals, Target::Object(card))
                         && (!own || self.obj(card).owner == player)) != *except)
@@ -1078,8 +1105,21 @@ impl Game {
                         let ctx = Ctx { casting: Some((card, cast_as)), x, ..r.ctx.clone() };
                         filter.matches(self, &ctx, &r.locals, Target::Object(card))
                     })
+                    && limit.is_none_or(|n| self.cast_this_turn(&r, player, spell.as_ref()) >= n)
             })
         })
+    }
+
+    /// How many spells this player has cast this turn that a cast limit counts: those its
+    /// description says, as each was as it was cast (608.2h), countered or not.
+    fn cast_this_turn(&self, r: &InForce<'_>, player: PlayerId, spell: Option<&expr::Filter>) -> u32 {
+        let mut count = 0u32;
+        for fact in self.facts_of(crate::history::Turn::This) {
+            if fact.verb() != Verb::Cast || fact.doer() != Some(Target::Player(player)) { continue; }
+            let Some(cast) = fact.role(Role::What) else { continue };
+            if spell.is_none_or(|filter| filter.matches(self, &r.ctx, &r.locals, cast)) { count = count.saturating_add(1); }
+        }
+        count
     }
 
     /// Restrictions apply even to casts offered during resolution (101.2, 307.5).

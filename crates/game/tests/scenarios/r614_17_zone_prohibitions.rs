@@ -117,8 +117,10 @@ fn r614_17_a_present_prohibition_filters_simultaneous_returns_by_source_characte
 }
 #[test]
 fn unsupported_prospective_entry_and_cast_limit_restrictions_remain_refused() {
-    // "Players can't cast creature spells." is supported (r201_4a_named_characteristics)
-    for text in ["Creatures can't enter the battlefield.", "Players can't cast more than one spell each turn."] {
+    // "Players can't cast creature spells." is supported (r201_4a_named_characteristics), and
+    // "can't cast more than one spell each turn" (r601_3_more_than_one_spell_each_turn); a limit
+    // counted over untap steps is not
+    for text in ["Creatures can't enter the battlefield.", "Players can't untap more than one creature during their untap steps."] {
         let def = CardDef::new("Unsupported witness", "{0}", "Artifact", text, None).unwrap();
         let reason=if text.starts_with("Creatures") {"entry prohibition: only cards described in their source zones"}
             else {"prohibition: a window of its own"};
