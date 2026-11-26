@@ -1745,3 +1745,13 @@ fn r608_2b_an_ability_that_resolves_with_an_illegal_target() {
     assert_eq!(drake, said);
     declines("If you don't or can't draw a card, sacrifice ~.");
 }
+
+/// CR 120.4a: excess damage dealt to a player instead, said after the lead that says when (Ram
+/// Through); the riders about the ability itself still take no lead.
+#[test]
+fn r120_4a_excess_damage_when_the_lead_holds() {
+    let text = "Target creature you control deals damage equal to its power to target creature you don't control. If the creature you control has trample, excess damage is dealt to that creature's controller instead.";
+    let (_, printed) = read(text);
+    assert_eq!(printed, text);
+    declines("If you control a Forest, this ability triggers only once each turn.");
+}

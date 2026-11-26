@@ -1463,11 +1463,16 @@ fn build() -> Effects {
             _ => None,
         },
     );
+    // "If the creature you control has trample, excess damage is dealt to that creature's
+    // controller instead" (Ram Through): the one rider that holds only when its lead does
+    // (120.4a)
+    let led_rider = lit("excess damage is dealt to that creature's controller instead")
+        .to(Sentence::Rider(Rider::ExcessToController));
     // a lead governs something that happens or holds; the sentences about the ability itself
-    // (restrictions, riders, additional costs) take none
+    // (restrictions, other riders, additional costs) take none
     any_sentence.define(alt(
         "sentence after a lead",
-        vec![plain.clone(), simultaneous.clone(), same_way.clone(), led.clone(), choose_modes.clone(), statics.clone()],
+        vec![plain.clone(), simultaneous.clone(), same_way.clone(), led.clone(), choose_modes.clone(), statics.clone(), led_rider],
     ));
     // "X is the number of creatures you control."
     let x_is = lit("X is").then_keep(&amounts().amount).map(
