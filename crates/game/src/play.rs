@@ -2032,9 +2032,11 @@ impl Game {
                 return Err("a gift is promised to an opponent (702.174a)".into());
             }
         }
-        // targets its text has only as it was kicked, as its gift was promised, or as it was
-        // bargained, are chosen only then (702.33g, 702.174m, 702.166d)
-        for slot in &mut slots { slot.announce(kicks, gift.is_some(), optional); }
+        // targets its text has only as it was kicked, as its gift was promised, as it was
+        // bargained, or as its awaken cost was paid, are chosen only then (702.33g, 702.174m,
+        // 702.166d, 702.113b)
+        let alternative = match chosen { crate::announcement::CastCost::Alternative(row) => Some(row), _ => None };
+        for slot in &mut slots { slot.announce(kicks, gift.is_some(), optional, alternative); }
         Ok((slots, cost))
     }
 

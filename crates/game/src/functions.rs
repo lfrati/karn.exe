@@ -316,13 +316,17 @@ impl Functioning {
         // (702.172a, 702.183a)
         let modal = crate::keyword::modal_row(def).map(|(row, _)| row);
         let spell_bodies = if def.is(ir::CardType::Instant) || def.is(ir::CardType::Sorcery) {
-            // the gift's effect before any other of the spell's abilities (702.174j)
-            crate::keyword::gift_ability(def).map(|i| (i, Ok(()))).into_iter().chain(def.abilities.iter().enumerate().filter(|(i, a)| Some(*i) == modal || spell_instructions(a))
+            let mut printed: Vec<(usize, (usize, Res<()>))> = def.abilities.iter().enumerate().filter(|(i, a)| Some(*i) == modal || spell_instructions(a))
                 // a paragraph that replaces the one before it is that paragraph's last sentence
                 .filter(|(i, a)| !(*i > 0 && matches!(def.abilities[i - 1], Ability::Text(_)) && crate::program::replaces_previous(a).is_some()))
                 // a paragraph after another is followed as that one's later sentences (608.2c)
                 .filter(|(i, _)| !crate::program::continues_previous(def, *i))
-                .map(|(i, a)| (i, if matches!(a, Ability::Text(_)) || Some(i) == modal { Ok(()) } else { unsupported(format!("ability on a spell: {}", crate::select::name(a))) }))).collect()
+                .map(|(i, a)| (i, (i, if matches!(a, Ability::Text(_)) || Some(i) == modal { Ok(()) } else { unsupported(format!("ability on a spell: {}", crate::select::name(a))) }))).collect();
+            // a keyword's spell ability where the keyword is printed (702.113a)
+            printed.extend(crate::keyword::printed_spell_abilities(def).into_iter().map(|(row, made)| (row, (made, Ok(())))));
+            printed.sort_by_key(|(row, _)| *row);
+            // the gift's effect before any other of the spell's abilities (702.174j)
+            crate::keyword::gift_ability(def).map(|i| (i, Ok(()))).into_iter().chain(printed.into_iter().map(|(_, body)| body)).collect()
         } else { Vec::new() };
         Functioning {
             spell_bodies,

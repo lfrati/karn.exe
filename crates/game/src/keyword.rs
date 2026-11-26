@@ -1420,6 +1420,12 @@ pub(crate) fn gift_ability(def: &CardDef) -> Option<usize> {
     generated_by(def).find_map(|(made, instance)| gift_of(&instance.item).is_some().then_some(made))
 }
 
+/// The spell abilities a keyword makes that are followed where it is printed, awaken's
+/// (702.113a): each by the row printing it and its ability index.
+pub(crate) fn printed_spell_abilities(def: &CardDef) -> Vec<(usize, usize)> {
+    generated_by(def).filter(|(_, instance)| instance.item.keyword.name() == "Awaken").map(|(made, instance)| (instance.row, made)).collect()
+}
+
 /// One supported kicker cost and whether it can be paid repeatedly (702.33a,c).
 pub(crate) fn kicker(def: &CardDef) -> Option<(&ir::mana::ManaCost, bool)> {
     contributions(def).find_map(|(scope, gives)| match gives {

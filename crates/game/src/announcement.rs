@@ -33,21 +33,23 @@ pub enum CastCost {
 }
 
 /// The announcements a spell's text can make a target depend on (601.2c), each a bit of a
-/// mask: whether it was kicked (702.33g), whether its gift was promised (702.174m) and
-/// whether its optional additional cost was paid, as bargain's (702.166d). Bit `kicked |
-/// promised << 1 | optional paid << 2` stands
-/// for that combination.
-pub(crate) const ANY: u8 = 0b1111_1111;
+/// mask: whether it was kicked (702.33g), whether its gift was promised (702.174m), whether
+/// its optional additional cost was paid, as bargain's (702.166d), and whether the
+/// alternative cost its text asks about was paid, as awaken's (702.113b). Bit `kicked |
+/// promised << 1 | optional paid << 2 | alternative paid << 3` stands for that combination.
+pub(crate) const ANY: u16 = 0xFFFF;
 /// The announcements in which it was kicked.
-pub(crate) const KICKED: u8 = 0b1010_1010;
+pub(crate) const KICKED: u16 = 0xAAAA;
 /// The announcements in which its gift was promised.
-pub(crate) const PROMISED: u8 = 0b1100_1100;
+pub(crate) const PROMISED: u16 = 0xCCCC;
 /// The announcements in which its optional additional cost was paid.
-pub(crate) const OPTIONAL_PAID: u8 = 0b1111_0000;
+pub(crate) const OPTIONAL_PAID: u16 = 0xF0F0;
+/// The announcements in which the alternative cost asked about ([`TargetSpec::paid_row`]) was paid.
+pub(crate) const ALTERNATIVE_PAID: u16 = 0xFF00;
 
 /// The bit of this announcement.
-pub(crate) fn announced(kicks: u32, promised: bool, optional_paid: bool) -> u8 {
-    1 << (u8::from(kicks > 0) | u8::from(promised) << 1 | u8::from(optional_paid) << 2)
+pub(crate) fn announced(kicks: u32, promised: bool, optional_paid: bool, alternative_paid: bool) -> u16 {
+    1 << (u16::from(kicks > 0) | u16::from(promised) << 1 | u16::from(optional_paid) << 2 | u16::from(alternative_paid) << 3)
 }
 
 /// A collective restriction on the members of one target instance (601.2c).
@@ -63,7 +65,9 @@ pub struct TargetSpec {
     pub relation: Option<TargetRelation>,
     /// The announcements ([`ANY`]) in which the group is chosen; in others it is empty.
     /// Empty groups preserve compiled target indices (702.33g, 702.174m).
-    pub(crate) announced_mask: u8,
+    pub(crate) announced_mask: u16,
+    /// The row whose alternative cost [`ALTERNATIVE_PAID`] asks about, if its mask does.
+    pub(crate) paid_row: Option<usize>,
     dynamic_bounds: Option<(crate::program::expr::Amount, crate::program::expr::Amount)>,
     /// Each chosen object/player must differ from every choice in these earlier groups.
     pub distinct_from: Vec<usize>,
@@ -161,7 +165,7 @@ impl TargetSpec {
             return crate::unsupported("same graveyard target group: dependent earlier targets not implemented");
         }
         if bind.reads.len()>1 {return crate::unsupported("target relation: more than one earlier group");}
-        Ok(Self { selector,set,bounds,relation,dynamic_bounds,announced_mask:ANY,distinct_from:Vec::new(),dependency:bind.reads.first().copied(),base:0,divided:None })
+        Ok(Self { selector,set,bounds,relation,dynamic_bounds,announced_mask:ANY,paid_row:None,distinct_from:Vec::new(),dependency:bind.reads.first().copied(),base:0,divided:None })
     }
     /// Compare actual graveyard identities among otherwise legal members. An
     /// already-illegal retained target cannot anchor a new target (115.7d-e),
@@ -197,8 +201,10 @@ impl TargetSpec {
         self.set.legal_target(game, ctx, locals, target) && self.group_legal(game, ctx, locals, group)
     }
     /// The group as this announcement leaves it: none chosen where its text does not apply.
-    pub(crate) fn announce(&mut self, kicks: u32, promised: bool, optional_paid: bool) {
-        if self.announced_mask & announced(kicks, promised, optional_paid) == 0 {
+    /// `alternative`: the row of the alternative cost the spell is cast for, if any (118.9).
+    pub(crate) fn announce(&mut self, kicks: u32, promised: bool, optional_paid: bool, alternative: Option<usize>) {
+        let alternative_paid = alternative.is_some() && alternative == self.paid_row;
+        if self.announced_mask & announced(kicks, promised, optional_paid, alternative_paid) == 0 {
             self.bounds = (0, 0);
             self.dynamic_bounds = None;
         }

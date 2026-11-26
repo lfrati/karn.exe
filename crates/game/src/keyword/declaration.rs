@@ -351,6 +351,19 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
         }
         "Transmute" | "Scavenge" | "Reinforce" | "Embalm" | "Eternalize" => generated(ability(item)?, true, vec![Context::PrintedOnly]),
         "Unearth" => generated(ability(item)?, true, vec![Context::PrintedOnly, Context::PermanentsOnly]),
+        // "Awaken N—[cost]" means "You may pay [cost] rather than pay this spell's mana cost
+        // as you cast this spell" and "If this spell's awaken cost was paid, put N +1/+1
+        // counters on target land you control. That land becomes a 0/0 Elemental creature with
+        // haste. It's still a land." (702.113a): a spell ability followed where the keyword is
+        // printed, whose target is chosen only as that cost is paid (702.113b)
+        "Awaken" => {
+            let KeywordParam::NumberAndMana(ir::Amount::Const(n), mana) = &item.param else { return refused(item) };
+            let Some(effect) = awaken(*n) else { return refused(item) };
+            Ok(Declared::new(vec![
+                (stack, Gives::Alternative { cost: ir::Cost(vec![ir::CostPart::Mana(mana.clone())]), from: None, when: None }),
+                (stack, Gives::Ability(effect)),
+            ], vec![Context::SpellsOnly, Context::PrintedOnly]))
+        }
         "Soulshift" | "Afterlife" => generated(ability(item)?, true, vec![Context::PermanentsOnly]),
         "Miracle" => {
             let Some(cost) = crate::miracle::cost(item) else { return refused(item) };
@@ -583,6 +596,14 @@ fn evoke_trigger() -> Ability {
             .expect("the grammar reads rule 702.74a");
         def.abilities[0].clone()
     }).clone()
+}
+/// Awaken's spell ability (702.113a), said as the rule says it. None for a number the rule
+/// text is not read with.
+fn awaken(n: u32) -> Option<Ability> {
+    let (count, plural) = crate::keyword::counted(n)?;
+    let text = format!("If this spell's awaken cost was paid, put {count} +1/+1 counter{plural} on target land you control. \
+        That land becomes a 0/0 Elemental creature with haste. It's still a land.");
+    Some(CardDef::new("Awaken rule", "", "Sorcery", &text, None).expect("the grammar reads rule 702.113a").abilities[0].clone())
 }
 /// The abilities of "Impending N" besides its alternative cost (702.176a): a replacement
 /// effect, a static ability and a triggered ability, each asking whether the impending cost

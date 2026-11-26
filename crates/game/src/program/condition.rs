@@ -471,13 +471,14 @@ impl Condition {
     /// false)? Only whether it was kicked and whether its gift was promised are known as the
     /// spell is announced; other facts affect resolution, not whether a target is announced
     /// (601.2c, 702.33g, 702.174m).
-    pub(super) fn announced_outcomes(&self) -> (u8, u8) {
-        use crate::announcement::{ANY, OPTIONAL_PAID, KICKED, PROMISED};
-        fn outcomes(asks: &Asks) -> (u8, u8) {
-            let said = |held: u8, negated: bool| if negated { (ANY & !held, held) } else { (held, ANY & !held) };
+    pub(super) fn announced_outcomes(&self) -> (u16, u16) {
+        use crate::announcement::{ANY, ALTERNATIVE_PAID, OPTIONAL_PAID, KICKED, PROMISED};
+        fn outcomes(asks: &Asks) -> (u16, u16) {
+            let said = |held: u16, negated: bool| if negated { (ANY & !held, held) } else { (held, ANY & !held) };
             match asks {
                 Asks::Kicked { negated } => said(KICKED, *negated),
                 Asks::OptionalPaid { negated } => said(OPTIONAL_PAID, *negated),
+                Asks::CostPaid { negated, .. } => said(ALTERNATIVE_PAID, *negated),
                 Asks::Gift { negated } => said(PROMISED, *negated),
                 Asks::And(parts) => parts.iter().map(outcomes).fold((ANY, 0), |(yes,no),(y,n)| (yes & y, no | n)),
                 Asks::Or(parts) => parts.iter().map(outcomes).fold((0, ANY), |(yes,no),(y,n)| (yes | y, no & n)),
@@ -485,6 +486,21 @@ impl Condition {
             }
         }
         outcomes(&self.0)
+    }
+
+    /// The rows whose alternative cost it asks was paid ("if this spell's awaken cost was
+    /// paid", 702.113a), each once.
+    pub(super) fn paid_rows(&self) -> Vec<usize> {
+        fn rows(asks: &Asks, out: &mut Vec<usize>) {
+            match asks {
+                Asks::CostPaid { row, .. } => if !out.contains(row) { out.push(*row) },
+                Asks::And(parts) | Asks::Or(parts) => for part in parts { rows(part, out) },
+                _ => {}
+            }
+        }
+        let mut out = Vec::new();
+        rows(&self.0, &mut out);
+        out
     }
 
     /// Does it ask whether its source came under its controller's control since an upkeep

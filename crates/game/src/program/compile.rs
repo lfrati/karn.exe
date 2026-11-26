@@ -1827,7 +1827,9 @@ struct Emit {
     /// a target relation names, the one its own sentence declares ("that player").
     sentence_targets: usize,
     target_relations: Vec<Slot>,
-    announced_mask: u8,
+    announced_mask: u16,
+    /// The row whose alternative cost the announcement mask's [`crate::announcement::ALTERNATIVE_PAID`] asks about.
+    paid_row: Option<usize>,
     alternative_kicker_targets: bool,
     target_x: Option<ir::Amount>,
     // Cached operand and ordinary-reference validity in its original binding context.
@@ -2354,6 +2356,7 @@ impl Emit {
                 }
                 spec.distinct_from = distinct;
                 spec.announced_mask = self.announced_mask;
+                spec.paid_row = self.paid_row;
                 self.targets.push(spec);
                 let out = self.slot();
                 self.instrs.push(Instr::Capture { operand: Operand::Targets(n), out });
@@ -3236,7 +3239,7 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
     }
     let heads: Vec<&Clause> = effect.0.iter().filter_map(head).collect();
     let base = binder.sentences;
-    let mut e = Emit { instrs: Vec::new(), acts: Vec::new(), next: initial.len(), targets: Vec::new(), relative_targets: None, sentence_targets: 0, target_relations: Vec::new(), announced_mask: crate::announcement::ANY, alternative_kicker_targets: false, target_x: None, clause_subject: None, contrast: None, captured_source: None, unless_open: None, unless_said: None, consented: false };
+    let mut e = Emit { instrs: Vec::new(), acts: Vec::new(), next: initial.len(), targets: Vec::new(), relative_targets: None, sentence_targets: 0, target_relations: Vec::new(), announced_mask: crate::announcement::ANY, paid_row: None, alternative_kicker_targets: false, target_x: None, clause_subject: None, contrast: None, captured_source: None, unless_open: None, unless_said: None, consented: false };
     fn group_subject(clause: &Clause) -> Option<&ObjectSet> {
         match clause.subject.as_ref()? {
             Subject::Set(set) if set.domain == Domain::Permanent => Some(set),
@@ -3724,6 +3727,14 @@ fn lower_steps(effect: &Effect, support: &Support<'_>, mut binder: Binder, initi
                     condition::Condition::present(*slot)
                 } else { condition::Condition::compile(c, support, &mut binder.scope(support))? };
                 let outcomes = if target_scope { condition.announced_outcomes() } else { (crate::announcement::ANY, crate::announcement::ANY) };
+                // a spell is cast for one alternative cost at most (118.9a): the targets its
+                // text has only as that cost was paid ask about one row
+                if target_scope {
+                    for row in condition.paid_rows() {
+                        if e.paid_row.is_some_and(|asked| asked != row) { return unsupported("targets chosen as either of two alternative costs was paid"); }
+                        e.paid_row = Some(row);
+                    }
+                }
                 target_branches.push((e.announced_mask, outcomes));
                 e.announced_mask &= outcomes.0;
                 let remember = e.slot();
