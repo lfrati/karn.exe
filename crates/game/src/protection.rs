@@ -11,7 +11,7 @@ use ir::token::{KeywordInstance, KeywordParam, Quality};
 use ir::{Atom, Filter, ObjectSet};
 
 /// Is this description only of characteristics a source has wherever it is: card types,
-/// subtypes, supertypes and colors (702.16a: "the ability applies to sources that are
+/// subtypes, supertypes, colors and mana value (702.16a: "the ability applies to sources that are
 /// permanents with that card type, subtype, or supertype and to any sources not on the
 /// battlefield that are of that card type, subtype, or supertype")?
 fn characteristic(f: &Filter) -> bool {
@@ -21,6 +21,8 @@ fn characteristic(f: &Filter) -> bool {
         Filter::Atom(Atom::Type(_) | Atom::Subtype(_) | Atom::Supertype(_) | Atom::Color(_) | Atom::Colorless
             | Atom::Multicolored | Atom::Monocolored) => true,
         Filter::Atom(Atom::Reference(r)) => r.form == ir::reference::RefForm::Choice,
+        // "protection from mana value 3 or less": a spell's includes its X (202.3, 107.3)
+        Filter::Atom(Atom::Stat { stat: ir::Stat::ManaValue, value: ir::Amount::Const(_), .. }) => true,
         _ => false,
     }
 }
@@ -189,6 +191,8 @@ impl Protection {
             effect: said.effect,
             was: None,
             x: None,
+            // a spell being cast has the mana value its chosen X gives it (202.3e, 601.2b)
+            casting_x: source.casting_x.or(source.x),
             face_then: None,
             then: None,
             ..*source
