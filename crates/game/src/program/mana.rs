@@ -195,6 +195,9 @@ pub enum Production {
     ChosenColor { amount: expr::Amount, color: crate::binding::Scalar },
     /// Mana types defined by another permanent's current abilities (106.7).
     CouldProduce { amount: expr::Amount, by: expr::Set, types: bool },
+    /// "one mana of any of the exiled card's colors": so many, each of a color one of the named
+    /// objects is as it is now (105.2); of none or colorless ones, no mana (106.5).
+    ColorsOf { amount: expr::Amount, of: expr::Subject },
     /// Mana that remembers what it may be spent on (106.6).
     Restricted { production: Box<Production>, spend: Spend },
 }
@@ -241,6 +244,12 @@ fn combinations<T: Copy>(n: u32, types: &[T], from: usize) -> Vec<Vec<T>> {
         .collect()
 }
 
+/// The colors the named objects are now, in WUBRG order (105.2).
+pub(super) fn colors_of(game: &Game, ctx: &Ctx, locals: &dyn expr::Locals, of: &expr::Subject) -> Vec<ir::Color> {
+    let objects: Vec<_> = of.evaluate(game, ctx, locals).into_iter().filter_map(|t| if let crate::event::Target::Object(o) = t { Some(o) } else { None }).collect();
+    COLORS.iter().copied().filter(|c| objects.iter().any(|o| ctx.seen_for(game, *o, crate::layers::Aspect::Colors).colors.contains(c))).collect()
+}
+
 impl Production {
 
     /// The production of this text. An amount is lowered with the definition's links: "the
@@ -285,6 +294,13 @@ impl Production {
                     amount: amount(n)?, types: *types,
                     by: expr::Set::compile(&by.set, support, &mut expr::linked(support))?,
                 }
+            },
+            // "any of the exiled card's colors": what this object's linked ability exiled (607.2a)
+            ManaSpec::Of { amount: n, color: ManaColor::Any(ManaTypes::ColorsOf(of)) }
+                if matches!(of.quant, Quant::Definite(ir::Ref::Anaphor(ir::Anaphor::TheParticiple { what: ir::Verb::Exile, .. })))
+                    && of.chooser.is_none() && of.random.is_none() && of.set == ir::ObjectSet::of(ir::Domain::Card) => {
+                if let ir::Amount::Const(n) = n && *n > LISTED { return unlisted(*n); }
+                Production::ColorsOf { amount: amount(n)?, of: expr::Subject::LinkedExile(support.exile_producer()?) }
             },
             // types the choice is made among that nothing computes yet: an object's colors
             // (105.2), the colors among a set, what a permanent produced (106.7)
@@ -356,6 +372,7 @@ impl Production {
             Production::Times { amount, .. } | Production::AnyOneColor(amount) | Production::AnyColors(amount) | Production::CommanderColors(amount) => amount.scalars(),
             Production::Restricted { production, .. } => production.scalars(),
             Production::CouldProduce { amount, by, .. } => amount.scalars().into_iter().chain(by.scalars()).collect(),
+            Production::ColorsOf { amount, .. } => amount.scalars(),
             Production::Fixed(_) | Production::OneOf(_) => Vec::new(),
         }
     }
@@ -425,6 +442,13 @@ impl Production {
                     .chain(types.then_some(ManaSymbol::Colorless))
                     .filter(|s| available.contains(*s)).collect();
                 if symbols.is_empty() { vec![Vec::new()] } else { combinations(n, &symbols, 0) }
+            },
+            Production::ColorsOf { amount, of } => {
+                let n = amount.evaluate(game, ctx, locals);
+                let colors = colors_of(game, ctx, locals, of);
+                if n == 0 || colors.is_empty() { vec![Vec::new()] }
+                else if n > LISTED { return unlisted(n); }
+                else { combinations(n, &colors, 0).into_iter().map(|o| o.into_iter().map(ManaSymbol::Color).collect()).collect() }
             },
             Production::Restricted { production, .. } => return production.options(game, ctx, locals),
         })

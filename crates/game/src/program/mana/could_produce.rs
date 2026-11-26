@@ -128,6 +128,9 @@ fn production_types(game: &Game, ctx: &Ctx, locals: &dyn expr::Locals, productio
             for object in members(game, by, ctx, locals) { result.include(dependency(object)); }
             if !types { result.0 &= 0b11111; }
         },
+        Production::ColorsOf { amount, of } => if amount.evaluate(game, ctx, locals) > 0 {
+            for color in super::colors_of(game, ctx, locals, of) { result.include(Types::of(ManaSymbol::Color(color))); }
+        },
         Production::Restricted { production, .. } => return production_types(game, ctx, locals, production, dependency),
     }
     Ok(result)
