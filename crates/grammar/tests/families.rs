@@ -1766,3 +1766,14 @@ fn r106_4_mana_added_with_an_ability() {
     assert_eq!(printed, text);
     declines("At the beginning of your main phase, if you haven't added mana with ~ this turn, draw a card.");
 }
+
+/// CR 209.1, 306.5b, 707.9b: a copy's starting loyalty, the loyalty number it is printed with and
+/// so the loyalty counters it enters with, a copiable value: as an exception to the copy (Jace,
+/// Mirror Mage) and said of the copy (Ob Nixilis, the Adversary).
+#[test]
+fn r707_9b_the_starting_loyalty_of_a_copy() {
+    let (_, printed) = read("When ~ enters, if ~ was kicked, create a token that's a copy of ~, except it's not legendary and its starting loyalty is 1.");
+    assert_eq!(printed, "When ~ enters, if ~ was kicked, create a token that's a copy of ~, except it isn't legendary and its starting loyalty is 1.");
+    let (_, printed) = read("The copy isn't legendary and has starting loyalty X.");
+    assert_eq!(printed, "The copy isn't legendary and has starting loyalty X.");
+}

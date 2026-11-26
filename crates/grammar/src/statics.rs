@@ -914,6 +914,11 @@ pub fn static_act(form: Form) -> P<Action> {
             )
             .to(StaticAct::AssignsByToughness),
             v("has no maximum hand size", "have no maximum hand size").to(StaticAct::NoMaximumHandSize),
+            // "The copy isn't legendary and has starting loyalty X" (Ob Nixilis, the Adversary)
+            act(v("has starting loyalty", "have starting loyalty").then_keep(&stat_amount()), StaticAct::StartingLoyalty, |a| match a {
+                StaticAct::StartingLoyalty(n) => Some(n.clone()),
+                _ => None,
+            }),
         ],
     );
     all.map(

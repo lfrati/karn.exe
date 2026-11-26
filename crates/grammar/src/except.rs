@@ -42,6 +42,14 @@ fn of(r: CopyRef) -> P<Exception> {
     if r == CopyRef::It {
         let self_ref = leaf("~", |k| matches!(k, Kind::SelfRef).then_some(()), |()| Some(Kind::SelfRef));
         changes.push(lit("its name is").skip(&self_ref).to(CopyChange::NamedThis));
+        // "except it's not legendary and its starting loyalty is 1" (Jace, Mirror Mage)
+        changes.push(lit("its starting loyalty is").then_keep(&crate::words::stat_amount()).map(
+            |n| Some(CopyChange::StartingLoyalty(n)),
+            |c| match c {
+                CopyChange::StartingLoyalty(n) => Some(n.clone()),
+                _ => None,
+            },
+        ));
         // "it enters with a shield counter on it if you control that creature"
         let condition = crate::kernel::lazy("condition", || crate::condition::conditions().condition.clone());
         changes.push(

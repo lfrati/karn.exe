@@ -536,6 +536,10 @@ pub enum StaticAct {
     SpendAsThough { mana: SpentMana, any: AnyMana, to: Option<SpendOn> },
     /// "have no maximum hand size" (402.2).
     NoMaximumHandSize,
+    /// "has starting loyalty X" (said of a copy): the loyalty number it is printed with (209.1),
+    /// and so the loyalty counters it enters with (306.5b), a copiable value (707.9b); the
+    /// static counterpart of [`crate::effect::CopyChange::StartingLoyalty`].
+    StartingLoyalty(Amount),
 }
 
 /// The condition an "as though" effect treats as true (609.4). It speaks of the object the ability

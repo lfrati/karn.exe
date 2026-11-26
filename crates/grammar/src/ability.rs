@@ -131,6 +131,19 @@ fn about_the_ability(s: &Sentence) -> bool {
     }
 }
 
+/// Is the sentence about the copy a keyword's trigger makes ("Casualty X. The copy isn't
+/// legendary and has starting loyalty X.", 702.153a), what it is or has?
+fn about_the_copy(keywords: &[ir::token::KeywordInstance], s: &Sentence) -> bool {
+    use ir::effect::Subject;
+    let copies = keywords.iter().any(|k| ir::Keyword::from_name("Casualty") == Some(k.keyword));
+    let Sentence::Do(body) = s else { return false };
+    let c = &body.first;
+    let of_the_copy = matches!(&c.subject, Some(Subject::Selector(x))
+        if x.quant == ir::Quant::Definite(ir::Ref::Anaphor(ir::selector::Anaphor::Copy { plural: false })));
+    let is_or_has = |a: &ir::Act| !a.may && a.mods.is_empty() && matches!(a.action, ir::Action::Static(_));
+    copies && of_the_copy && !c.may && !c.also && body.rest.is_empty() && is_or_has(&c.first) && c.rest.iter().all(|(_, a)| is_or_has(a))
+}
+
 fn ability(granted: bool) -> P<Ability> {
     let effect = if granted { quoted_effect() } else { effect() };
     let keywords = keywords(granted).map(
@@ -147,9 +160,11 @@ fn ability(granted: bool) -> P<Ability> {
         let kw = crate::keyword::keyword();
         let list = alt("keywords", vec![one_or_more(&kw), semicolon_list(&kw)]);
         v.push(list.skip(&lit(".")).then(&effect).map(
-            |(keywords, rider)| rider.0.iter().all(about_the_ability).then_some(Ability::KeywordsWith { keywords, rider }),
+            |(keywords, rider)| rider.0.iter().all(|s| about_the_ability(s) || about_the_copy(&keywords, s))
+                .then_some(Ability::KeywordsWith { keywords, rider }),
             |a| match a {
-                Ability::KeywordsWith { keywords, rider } if rider.0.iter().all(about_the_ability) => Some((keywords.clone(), rider.clone())),
+                Ability::KeywordsWith { keywords, rider } if rider.0.iter().all(|s| about_the_ability(s) || about_the_copy(keywords, s)) =>
+                    Some((keywords.clone(), rider.clone())),
                 _ => None,
             },
         ));

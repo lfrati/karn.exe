@@ -447,6 +447,9 @@ pub enum CopyChange {
     /// "it enters with a shield counter on it if you control that creature", "it enters with X
     /// additional +1/+1 counters on it": counters the copy enters with (614.1c).
     EntersWith { counters: crate::action::Counters, if_: Option<Box<crate::condition::Condition>> },
+    /// "its starting loyalty is 1": the loyalty number the copy is printed with (209.1), and so
+    /// the loyalty counters it enters with (306.5b), a copiable value (707.9b).
+    StartingLoyalty(crate::amount::Amount),
 }
 
 
