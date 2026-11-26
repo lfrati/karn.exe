@@ -1731,3 +1731,17 @@ fn r122_1_players_who_cant_get_counters() {
     let (_, printed) = read(text);
     assert_eq!(printed, text);
 }
+
+/// CR 608.2b, 701.12a: Gilded Drake's exchange. "If you don't or can't make an exchange" is not
+/// having made it, which covers not being able to (an exchange that can't be completed doesn't
+/// occur); "This ability still resolves if its target becomes illegal" is an exception to
+/// 608.2b, under which an ability whose every target is illegal doesn't resolve.
+#[test]
+fn r608_2b_an_ability_that_resolves_with_an_illegal_target() {
+    let text = "When ~ enters, exchange control of ~ and up to one target creature an opponent controls. If you don't or can't make an exchange, sacrifice ~. This ability still resolves if its target becomes illegal.";
+    let (drake, printed) = read(text);
+    assert_eq!(printed, "When ~ enters, exchange control of ~ and up to one target creature an opponent controls. If you don't, sacrifice ~. This ability still resolves if its target becomes illegal.");
+    let (said, _) = read("When ~ enters, exchange control of ~ and up to one target creature an opponent controls. If you don't, sacrifice ~. This ability still resolves if its target becomes illegal.");
+    assert_eq!(drake, said);
+    declines("If you don't or can't draw a card, sacrifice ~.");
+}

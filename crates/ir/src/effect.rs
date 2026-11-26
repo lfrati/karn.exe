@@ -393,6 +393,9 @@ pub enum Rider {
     /// "Spend only black mana on X.", "Spend only mana produced by basic lands to cast ~.": the
     /// same restriction (106.6) said of the payment, naming the mana by kind or source.
     SpendOnlyMana { mana: crate::mana::SpendableMana, on: crate::action::Coord<crate::mana::SpendOn> },
+    /// "This ability still resolves if its target becomes illegal.": an exception to 608.2b,
+    /// under which an ability whose every target is illegal doesn't resolve (Gilded Drake).
+    ResolvesIfTargetIllegal,
 }
 
 /// What "the same is true for" repeats the sentence before for.

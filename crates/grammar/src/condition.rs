@@ -1608,7 +1608,10 @@ fn clause(e: &Events) -> P<Condition> {
             "does",
             vec![lit("does").to(Outcome::Did), lit("doesn't").to(Outcome::Didnt), lit("can't").to(Outcome::Couldnt)],
         );
-        alt("did", vec![base_subject.then(&base_verb), singular.then(&third_verb)]).map(
+        // "If you don't or can't make an exchange": not having made it covers not being able to
+        // (701.12a: an exchange that can't be completed doesn't occur)
+        let exchange = lit("you don't or can't make an exchange").to((Selector::you(), Outcome::Didnt)).alias();
+        alt("did", vec![base_subject.then(&base_verb), singular.then(&third_verb), exchange]).map(
             |(who, outcome)| Some(Condition::Did { who: Box::new(who), outcome }),
             |c| match c {
                 Condition::Did { who, outcome } => Some(((**who).clone(), *outcome)),

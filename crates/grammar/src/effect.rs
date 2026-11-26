@@ -1165,6 +1165,7 @@ fn build() -> Effects {
             ),
             lit("spend this mana only on costs that contain {X}").to(Rider::SpendOnlyOnXCosts),
             lit("excess damage is dealt to that creature's controller instead").to(Rider::ExcessToController),
+            lit("this ability still resolves if its target becomes illegal").to(Rider::ResolvesIfTargetIllegal),
             lit("spend this mana only to pay cumulative upkeep costs").to(Rider::SpendOnlyOnCumulativeUpkeep),
             lit("this cost is reduced by")
                 .then_keep(&crate::mana::mana_cost())
