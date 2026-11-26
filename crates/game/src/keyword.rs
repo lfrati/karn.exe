@@ -473,6 +473,7 @@ pub(crate) fn executable(item: &ir::token::KeywordInstance) -> Option<Ability> {
     if let Some(ability) = blocked_trigger(item) { return Some(ability); }
     if let Some(ability) = soulshift(item) { return Some(ability); }
     if let Some(ability) = afterlife(item) { return Some(ability); }
+    if let Some(ability) = poisonous(item) { return Some(ability); }
     if let Some(ability) = renown(item) { return Some(ability); }
     if let Some(ability) = annihilator(item) { return Some(ability); }
     if let Some(ability) = station(item) { return Some(ability.clone()); }
@@ -701,6 +702,17 @@ fn afterlife(item: &ir::token::KeywordInstance) -> Option<Ability> {
     let text = format!("When this permanent is put into a graveyard from the battlefield, create {count} 1/1 white and black Spirit creature token{plural} with flying.");
     Some(CardDef::new("Afterlife rule", "", "Creature", &text, None)
         .expect("the grammar reads rule 702.135a").abilities[0].clone())
+}
+
+/// "Poisonous N" means "Whenever this creature deals combat damage to a player, that player
+/// gets N poison counters." (702.70a); each instance triggers separately (702.70b).
+fn poisonous(item: &ir::token::KeywordInstance) -> Option<Ability> {
+    if item.keyword.name() != "Poisonous" { return None; }
+    let KeywordParam::Number(ir::Amount::Const(n)) = item.param else { return None };
+    let (count, plural) = counted(n)?;
+    let text = format!("Whenever this creature deals combat damage to a player, that player gets {count} poison counter{plural}.");
+    Some(CardDef::new("Poisonous rule", "", "Creature", &text, None)
+        .expect("the grammar reads rule 702.70a").abilities[0].clone())
 }
 
 /// A rule's N in words as its text says it, "a" for one, with the plural ending of what it

@@ -364,7 +364,7 @@ pub(crate) fn declare(item: &KeywordInstance) -> Res<Declared> {
                 (stack, Gives::Ability(effect)),
             ], vec![Context::SpellsOnly, Context::PrintedOnly]))
         }
-        "Soulshift" | "Afterlife" => generated(ability(item)?, true, vec![Context::PermanentsOnly]),
+        "Soulshift" | "Afterlife" | "Poisonous" => generated(ability(item)?, true, vec![Context::PermanentsOnly]),
         "Miracle" => {
             let Some(cost) = crate::miracle::cost(item) else { return refused(item) };
             let ability = crate::miracle::trigger(&cost?);
