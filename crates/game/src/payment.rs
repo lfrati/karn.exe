@@ -268,12 +268,41 @@ impl Payment {
         Ok(true)
     }
 }
+/// One component of a total cost, as its payer orders them (601.2h): all of its mana,
+/// which is paid as one payment, or one of its other parts, counted from 0 in the order
+/// the cost is written. A part an announcement adds, such as the life paid for Phyrexian
+/// mana (107.4f), is counted after the written ones.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum CostComponent { Mana, Other(usize) }
+
+/// The mana of a total cost, validated against the pool as it was when the cost was locked
+/// (601.2g-h). It is spent when its turn among the components comes.
+#[derive(Debug, Clone)]
+struct Spend {
+    requirement: crate::mana::ReducedCost,
+    with: Option<Pool>,
+    on: Spent,
+    /// The pool it was validated against, what that leaves and the restricted mana spent.
+    before: Pool,
+    left: Pool,
+    spent: Vec<crate::state::Restricted>,
+}
+
 /// Once total payment is validated, each cost part commits once. A destination-order
 /// question retains the current part, prior cost inputs and actual public successors.
 #[derive(Debug, Clone)]
 pub(crate) struct Commitment {
     player: PlayerId,
-    payments: VecDeque<crate::cost::Payment>,
+    /// The object whose cost this is, which a {T} of a creature asks about (602.5a).
+    source: ObjId,
+    /// Its parts other than mana, as written (601.2h).
+    parts: Vec<crate::cost::Payment>,
+    /// Its mana, if it has any to pay.
+    mana: Option<Spend>,
+    /// The components still to pay, the next first.
+    order: VecDeque<CostComponent>,
+    /// The next component has been found payable and has begun (601.2h).
+    begun: bool,
     bound: crate::state::Bound,
     spent: Vec<crate::state::Restricted>,
     paid: crate::state::PaidMana,
@@ -284,20 +313,60 @@ pub(crate) struct Commitment {
     discard_result: Option<crate::operation::Completed>,
 }
 impl Commitment {
-    pub(crate) fn new(player: PlayerId, mut payments: Vec<crate::cost::Payment>, bound: crate::state::Bound, spent: Vec<crate::state::Restricted>, paid: crate::state::PaidMana) -> Self {
-        // 601.2h permits choosing payment order. Tap/remove counters before moving the
-        // resource out of its zone, even if the printed cost lists its sacrifice first.
-        payments.sort_by_key(|p| matches!(p, crate::cost::Payment::Objects { verb, .. } if *verb != ir::Verb::Tap));
-        Self { player, payments: payments.into(), bound, spent, paid, departure: None, counters: None, counter_answer: None, discard_started: false, discard_result: None }
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn new(player: PlayerId, source: ObjId, payments: Vec<crate::cost::Payment>, bound: crate::state::Bound,
+        requirement: crate::mana::ReducedCost, with: Option<Pool>, on: Spent, before: Pool, left: Pool, spent: Vec<crate::state::Restricted>) -> Self {
+        let has_mana = payments.iter().any(|p| matches!(p, crate::cost::Payment::Mana(_))) || left != before;
+        let parts: Vec<_> = payments.into_iter().filter(|p| !matches!(p, crate::cost::Payment::Mana(_))).collect();
+        let mana = has_mana.then_some(Spend { requirement, with, on, before, left, spent });
+        let mut commitment = Self { player, source, parts, mana, order: VecDeque::new(), begun: false, bound, spent: Vec::new(),
+            paid: crate::state::PaidMana::default(), departure: None, counters: None, counter_answer: None, discard_started: false, discard_result: None };
+        commitment.order = commitment.usual_order().into();
+        commitment
+    }
+    /// The order the components are paid in when it cannot matter which: the mana first,
+    /// then taps and counters, then what moves an object out of its zone, so that a
+    /// resource is tapped before it is sacrificed even when the cost lists its sacrifice
+    /// first (601.2h).
+    fn usual_order(&self) -> Vec<CostComponent> {
+        let mut others: Vec<usize> = (0..self.parts.len()).collect();
+        others.sort_by_key(|i| matches!(&self.parts[*i], crate::cost::Payment::Objects { verb, .. } if *verb != ir::Verb::Tap));
+        self.mana.iter().map(|_| CostComponent::Mana).chain(others.into_iter().map(CostComponent::Other)).collect()
     }
     fn answer(&mut self, answer: crate::state::Answer) {
         if self.counters.is_some() { self.counter_answer = Some(answer); }
         else { self.departure.as_mut().expect("the ordered cost part").2.answer(answer); }
     }
-    fn advance(&mut self, game: &mut Game) -> crate::Res<Option<Decision>> {
+    /// Spend the cost's mana (601.2h). It was validated against the pool as the cost was
+    /// locked; a component paid before it may have changed that pool, and then it is
+    /// spent from the pool as it now is, or can't be paid.
+    fn pay_mana(&mut self, game: &mut Game) -> crate::play::ActionResult<()> {
+        let Spend { requirement, with, on, before, left, spent } = self.mana.take().expect("a cost's mana is paid once");
+        let pool = &game.players[self.player].pool;
+        let (left, spent) = if *pool == before { (left, spent) } else {
+            game.spend_with(pool, &requirement, with.as_ref(), on).map_err(|e| match e {
+                crate::play::ActionError::Refused(reason) => format!("the mana of this cost can no longer be paid, after its other components paid before it: {reason} (601.2h)").into(),
+                e => e,
+            })?
+        };
+        self.paid = crate::state::PaidMana::between(&game.players[self.player].pool, &left, &spent);
+        self.spent = spent;
+        *game.mana_pool_mut(self.player) = left;
+        Ok(())
+    }
+    fn advance(&mut self, game: &mut Game) -> crate::play::ActionResult<Option<Decision>> {
         use crate::cost::Payment as Part;
         use ir::Verb;
-        while let Some(part) = self.payments.front().cloned() {
+        while let Some(component) = self.order.front().copied() {
+            let part = match component {
+                CostComponent::Mana => { self.pay_mana(game)?; Part::Mana(ir::mana::ManaCost(Vec::new())) },
+                CostComponent::Other(i) => self.parts[i].clone(),
+            };
+            // whether a component can be paid is asked as it is paid (601.2h)
+            if !self.begun {
+                game.payable_but_mana(self.player, self.source, std::slice::from_ref(&part))?;
+                self.begun = true;
+            }
             let placement = match &part {
                 Part::Loyalty(on, n) if *n >= 0 => Some((*on, "loyalty", *n as u32)),
                 Part::Blight { on, count } => Some((*on, "-1/-1", *count)),
@@ -316,7 +385,8 @@ impl Commitment {
 
                 game.check_triggers();
                 // A legally paid placement remains paid after replacement (118.11).
-                self.payments.pop_front();
+                self.order.pop_front();
+                self.begun = false;
                 if game.returning() { return Ok(None); }
                 continue;
             }
@@ -388,7 +458,8 @@ impl Commitment {
                     if verb == Verb::CollectEvidence { game.event_log_mut().push(Event::EvidenceCollected { player: self.player }); }
                 },
             }
-            self.payments.pop_front();
+            self.order.pop_front();
+            self.begun = false;
             // Written cost parts are sequential even within one announcement (601.2h).
             game.reconcile_linked_acquisitions();
             game.check_triggers();

@@ -500,16 +500,14 @@ impl Game {
         if payments.iter().any(|p| matches!(p, Payment::RemoveCounters { on: Target::Object(on), selected: false, .. } if *on == ctx.object_source())) {
             bound.inputs.push((crate::program::input::Input::CostSource, vec![Target::Object(ctx.object_source())]));
         }
-        // Record the actual payment, including colored/colorless restricted mana.
-        let paid = crate::state::PaidMana::between(&self.players[player].pool, &left, &spent);
-        // Spend mana once; the retained commitment owns the remaining parts (601.2h).
-        *self.mana_pool_mut(player) = left;
-        Ok(crate::payment::Commitment::new(player, payments, bound, spent, paid))
+        // The mana is spent once, as a component of the retained commitment (601.2h).
+        let before = self.players[player].pool.clone();
+        Ok(crate::payment::Commitment::new(player, ctx.object_source(), payments, bound, mana, with.cloned(), on, before, left, spent))
     }
 
     /// Can the player pay everything of this that is not mana? Returns the mana that is left
     /// to pay.
-    fn payable_but_mana(&self, player: PlayerId, source: ObjId, payments: &[Payment]) -> Result<ManaCost, String> {
+    pub(crate) fn payable_but_mana(&self, player: PlayerId, source: ObjId, payments: &[Payment]) -> Result<ManaCost, String> {
         let said = |o: ObjId| self.obj(o).chars.name.clone();
         // The life of every part is paid together (119.4): summed exactly, wider than any part.
         let (mut mana, mut life, mut spent) = (Vec::new(), 0u64, Vec::new());
